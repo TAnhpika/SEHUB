@@ -7,7 +7,6 @@ import {
   faCommentDots,
   faFileLines,
   faHome,
-  faRobot,
   faUserGroup,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
@@ -15,7 +14,6 @@ import styles from "./MainSidebar.module.css";
 
 const MAIN_LINKS = [
   { to: "/home", label: "Trang chủ", icon: faHome, end: true },
-  { to: "/support", label: "Trợ lý tư vấn thủ tục trường", icon: faRobot },
   { to: "/home/friends", label: "Tìm kiếm bạn bè", icon: faUserGroup },
 ];
 
