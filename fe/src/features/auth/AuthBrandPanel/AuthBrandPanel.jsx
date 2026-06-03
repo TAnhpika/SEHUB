@@ -26,7 +26,33 @@ const FEATURES = [
   },
 ];
 
-function AuthBrandPanel() {
+const PANEL_COPY = {
+  login: {
+    headline: (
+      <>
+        Chào mừng bạn
+        <br />
+        quay trở lại!
+      </>
+    ),
+  },
+  register: {
+    headline: (
+      <>
+        Bắt đầu hành trình
+        <br />
+        của bạn!
+      </>
+    ),
+  },
+};
+
+/**
+ * @param {{ variant?: "login" | "register" }} props
+ */
+function AuthBrandPanel({ variant = "login" }) {
+  const copy = PANEL_COPY[variant] ?? PANEL_COPY.login;
+
   return (
     <aside className={styles.panel} aria-label="Giới thiệu SEHub">
       <div className={styles["glow-top"]} aria-hidden="true" />
@@ -40,11 +66,7 @@ function AuthBrandPanel() {
       </Link>
 
       <div className={styles.intro}>
-        <h2 className={styles.headline}>
-          Chào mừng bạn
-          <br />
-          quay trở lại!
-        </h2>
+        <h2 className={styles.headline}>{copy.headline}</h2>
         <span className={styles.divider} aria-hidden="true" />
         <p className={styles.desc}>
           Tạo tài khoản để khám phá kho đề thi khổng lồ và kết nối với cộng đồng sinh viên FPT
