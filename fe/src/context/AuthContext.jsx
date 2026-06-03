@@ -6,10 +6,10 @@ const STORAGE_KEY = "sehubs_user";
 const TOKEN_KEY = "sehubs_token";
 
 const MOCK_USER = {
-  username: "tngo28299",
+  username: "anhcoding12345",
   email: "tngo28299@gmail.com",
-  displayName: "Thành Ngô",
-  initial: "T",
+  displayName: "Anhpika",
+  initial: "A",
   level: "Silver",
   points: 240,
   streak: 7,
@@ -19,29 +19,44 @@ const MOCK_USER = {
   role: "student",
 };
 
+function normalizeUser(stored) {
+  if (!stored) return null;
+
+  return {
+    ...MOCK_USER,
+    ...stored,
+    displayName: MOCK_USER.displayName,
+    initial: MOCK_USER.initial,
+  };
+}
+
 function readStoredUser() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    return raw ? normalizeUser(JSON.parse(raw)) : null;
   } catch {
     return null;
   }
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(readStoredUser);
+  const [user, setUser] = useState(() => {
+    const stored = readStoredUser();
+    if (stored) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+    }
+    return stored;
+  });
 
   const login = useCallback((credentials) => {
     const username = credentials?.username?.trim() || MOCK_USER.username;
     const email = username.includes("@") ? username : `${username}@gmail.com`;
 
-    const nextUser = {
+    const nextUser = normalizeUser({
       ...MOCK_USER,
       username,
       email,
-      displayName: credentials?.displayName?.trim() || MOCK_USER.displayName,
-      initial: email.charAt(0).toUpperCase(),
-    };
+    });
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
     localStorage.setItem(TOKEN_KEY, "mock-jwt-token");
