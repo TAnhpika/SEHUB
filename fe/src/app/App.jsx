@@ -9,6 +9,7 @@ import AuthPlaceholder from "@/features/auth/AuthPlaceholder";
 import LoginPage from "@/features/auth/LoginPage/LoginPage";
 import DocumentsPage from "@/features/documents/DocumentsPage/DocumentsPage";
 import FeedPage from "@/features/feed/FeedPage/FeedPage";
+import FriendProfilePage from "@/features/home/FriendProfilePage/FriendProfilePage";
 import FriendsPage from "@/features/home/FriendsPage/FriendsPage";
 import HomePage from "@/features/home/HomePage/HomePage";
 import LandingPage from "@/features/landing/LandingPage/LandingPage";
@@ -34,6 +35,7 @@ function App() {
               <Route element={<MainLayout />}>
                 <Route path="/home" element={<HomePage />} />
                 <Route path="/home/friends" element={<FriendsPage />} />
+                <Route path="/home/friends/:username" element={<FriendProfilePage />} />
                 <Route path="/profile/:username" element={<ProfilePage />} />
               </Route>
             </Route>

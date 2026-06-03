@@ -2,7 +2,6 @@ import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBook,
-  faChevronLeft,
   faCircleQuestion,
   faCommentDots,
   faFileLines,
@@ -91,10 +90,6 @@ function MainSidebar() {
         </Link>
         </div>
       </aside>
-
-      <button type="button" className={styles.collapse} aria-label="Thu gọn sidebar">
-        <FontAwesomeIcon icon={faChevronLeft} />
-      </button>
     </div>
   );
 }
