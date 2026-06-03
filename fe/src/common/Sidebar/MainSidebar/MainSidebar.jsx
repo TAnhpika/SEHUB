@@ -1,12 +1,15 @@
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faAward,
   faCommentDots,
   faHome,
   faUserGroup,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import SubjectNavSection from "@/common/Sidebar/SubjectNavSection/SubjectNavSection";
+import PricingModal from "@/features/landing/PricingModal/PricingModal";
 import styles from "./MainSidebar.module.css";
 
 const MAIN_LINKS = [
@@ -16,6 +19,7 @@ const MAIN_LINKS = [
 
 function MainSidebar() {
   const { pathname } = useLocation();
+  const [pricingOpen, setPricingOpen] = useState(false);
 
   return (
     <div className={styles.root}>
@@ -40,13 +44,23 @@ function MainSidebar() {
 
           <SubjectNavSection pathname={pathname} styles={styles} />
 
-          <div className={styles.discord}>
-            <p className={styles["discord-title"]}>Cộng đồng Discord</p>
-            <p className={styles["discord-desc"]}>
-              Tham gia server Discord để thảo luận, hỏi đáp và cập nhật tin tức mới nhất.
+          <div className={styles.premium}>
+            <div className={styles["premium-header"]}>
+              <span className={styles["premium-icon"]} aria-hidden="true">
+                <FontAwesomeIcon icon={faAward} />
+              </span>
+              <p className={styles["premium-title"]}>Nâng cấp Premium</p>
+            </div>
+            <p className={styles["premium-desc"]}>
+              Xem full đáp án, tài liệu, AI không giới hạn
             </p>
-            <Button size="sm" fullWidth className={styles["discord-btn"]}>
-              Nhấn vào đây để tham gia
+            <Button
+              size="sm"
+              fullWidth
+              className={styles["premium-btn"]}
+              onClick={() => setPricingOpen(true)}
+            >
+              Xem gói ngay
             </Button>
           </div>
 
@@ -56,6 +70,8 @@ function MainSidebar() {
           </Link>
         </div>
       </aside>
+
+      <PricingModal open={pricingOpen} onClose={() => setPricingOpen(false)} />
     </div>
   );
 }
