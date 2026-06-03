@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ToastProvider } from "@/common/Toast/ToastProvider";
 import PrivateRoute from "@/common/guards/PrivateRoute";
+import AuthLayout from "@/common/Layout/AuthLayout/AuthLayout";
 import CommunityLayout from "@/common/Layout/CommunityLayout/CommunityLayout";
 import GuestLayout from "@/common/Layout/GuestLayout/GuestLayout";
 import MainLayout from "@/common/Layout/MainLayout/MainLayout";
@@ -37,7 +38,9 @@ function App() {
               <Route path="/support" element={<SupportPage />} />
               <Route path="/register" element={<AuthPlaceholder />} />
             </Route>
-            <Route path="/login" element={<LoginPage />} />
+            <Route element={<AuthLayout />}>
+              <Route path="/login" element={<LoginPage />} />
+            </Route>
             <Route element={<PrivateRoute />}>
               <Route element={<MainLayout />}>
                 <Route path="/home" element={<HomePage />} />
