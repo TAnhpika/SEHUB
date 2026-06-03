@@ -286,6 +286,7 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
                 {!isOwner && (
                   <PostReportButton
                     postId={post.id}
+                    postTitle={post.title}
                     className={`${styles.share} ${styles.report}`}
                   />
                 )}

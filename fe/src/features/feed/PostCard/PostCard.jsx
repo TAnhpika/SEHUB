@@ -132,6 +132,7 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete }) {
           {!isOwner && (
             <PostReportButton
               postId={post.id}
+              postTitle={post.title}
               className={`${styles.share} ${styles.report}`}
             />
           )}
