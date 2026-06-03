@@ -1,16 +1,30 @@
+import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faXmark } from "@fortawesome/free-solid-svg-icons";
-import { CHAT_CONVERSATIONS } from "@/features/chat/messagesData";
+import ConversationChat from "@/features/chat/ConversationChat/ConversationChat";
+import { CHAT_CONVERSATIONS, getConversationById } from "@/features/chat/messagesData";
 import styles from "./ChatModal.module.css";
 
 function ChatModal({ onClose }) {
+  const [selectedId, setSelectedId] = useState(null);
+
+  const activeConversation = selectedId ? getConversationById(selectedId) : null;
+
+  if (activeConversation) {
+    return (
+      <div className={`${styles.modal} ${styles.chat}`}>
+        <ConversationChat
+          conversation={activeConversation}
+          compact
+          onBack={() => setSelectedId(null)}
+          onClose={onClose}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={styles.modal}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="chat-modal-title"
-    >
+    <div className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="chat-modal-title">
       <div className={styles.header}>
         <h2 id="chat-modal-title" className={styles.title}>
           Tin nhắn
@@ -23,7 +37,7 @@ function ChatModal({ onClose }) {
       <ul className={styles.list}>
         {CHAT_CONVERSATIONS.map((chat) => (
           <li key={chat.id}>
-            <button type="button" className={styles.item}>
+            <button type="button" className={styles.item} onClick={() => setSelectedId(chat.id)}>
               <span className={styles.avatarWrap}>
                 <span
                   className={styles.avatar}
