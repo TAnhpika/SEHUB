@@ -14,7 +14,9 @@ function MainLayout() {
   const isCreatePostPage = useMatch("/home/create-post");
   const isFeedbackPage = useMatch("/home/feedback");
   const isMessagesPage = useMatch("/home/messages");
-  const isPremiumPage = useMatch("/home/premium");
+  const isPremiumPage = useMatch({ path: "/home/premium", end: true });
+  const isCheckoutPage = useMatch("/home/premium/checkout/:planId");
+  const isPaymentSuccessPage = useMatch("/home/premium/success/:planId");
   const isPostDetailPage = useMatch("/home/posts/:postId");
   const hideRightSidebar =
     isFriendsArea ||
@@ -24,6 +26,8 @@ function MainLayout() {
     isFeedbackPage ||
     isMessagesPage ||
     isPremiumPage ||
+    isCheckoutPage ||
+    isPaymentSuccessPage ||
     isPostDetailPage;
 
   return (
@@ -53,10 +57,16 @@ function MainLayout() {
         !isFeedbackPage &&
         !isMessagesPage &&
         !isPremiumPage &&
+        !isCheckoutPage &&
+        !isPaymentSuccessPage &&
         !isPostDetailPage && (
         <Footer />
       )}
-      {!isMessagesPage && !isEditProfilePage && !isPremiumPage && <ChatFab />}
+      {!isMessagesPage &&
+        !isEditProfilePage &&
+        !isPremiumPage &&
+        !isCheckoutPage &&
+        !isPaymentSuccessPage && <ChatFab />}
     </div>
   );
 }

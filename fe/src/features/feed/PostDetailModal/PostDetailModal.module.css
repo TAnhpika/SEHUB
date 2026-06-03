@@ -233,7 +233,6 @@
 }
 
 .share {
-  margin-left: auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -249,9 +248,21 @@
   transition: color 0.15s ease, background 0.15s ease;
 }
 
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
 .share:hover {
   color: var(--color-primary);
   background: var(--color-primary-light);
+}
+
+.report:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
 }
 
 .comments {
