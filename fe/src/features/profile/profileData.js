@@ -1,5 +1,6 @@
 export const PROFILE_MOCK = {
   username: "anhcoding12345",
+  displayName: "Anhpika",
   initial: "A",
   level: "COPPER",
   nextLevel: "Silver",
@@ -125,9 +126,12 @@ function buildHeatmapCells() {
 export const HEATMAP_DATA = buildHeatmapCells();
 
 export function getProfileByUsername(username) {
+  const resolvedUsername = username || PROFILE_MOCK.username;
+
   return {
     ...PROFILE_MOCK,
-    username: username || PROFILE_MOCK.username,
-    initial: (username || PROFILE_MOCK.username).charAt(0).toUpperCase(),
+    username: resolvedUsername,
+    displayName: PROFILE_MOCK.displayName,
+    initial: PROFILE_MOCK.displayName.charAt(0).toUpperCase(),
   };
 }
