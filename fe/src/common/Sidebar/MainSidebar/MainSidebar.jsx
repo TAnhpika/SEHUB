@@ -7,6 +7,7 @@ import {
   faHome,
   faUserGroup,
 } from "@fortawesome/free-solid-svg-icons";
+import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import Button from "@/common/Button/Button";
 import SubjectNavSection from "@/common/Sidebar/SubjectNavSection/SubjectNavSection";
 import PricingModal from "@/features/landing/PricingModal/PricingModal";
@@ -63,6 +64,16 @@ function MainSidebar() {
               Xem gói ngay
             </Button>
           </div>
+
+          <a
+            href="https://discord.gg/sehub"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${styles["subject-link"]} ${styles["discord-link"]}`}
+          >
+            <FontAwesomeIcon icon={faDiscord} className={styles.icon} />
+            Cộng đồng Discord
+          </a>
 
           <Link to="/home/feedback" className={styles.feedback}>
             <FontAwesomeIcon icon={faCommentDots} className={styles.icon} />
