@@ -9,17 +9,21 @@ import styles from "./MainLayout.module.css";
 function MainLayout() {
   const isFriendsArea = useMatch({ path: "/home/friends", end: false });
   const isFriendProfilePage = useMatch("/home/friends/:username");
-  const isProfilePage = useMatch("/profile/:username");
+  const isProfilePage = useMatch({ path: "/profile/:username", end: true });
+  const isEditProfilePage = useMatch("/profile/:username/edit");
   const isCreatePostPage = useMatch("/home/create-post");
   const isFeedbackPage = useMatch("/home/feedback");
   const isMessagesPage = useMatch("/home/messages");
+  const isPremiumPage = useMatch("/home/premium");
   const isPostDetailPage = useMatch("/home/posts/:postId");
   const hideRightSidebar =
     isFriendsArea ||
     isProfilePage ||
+    isEditProfilePage ||
     isCreatePostPage ||
     isFeedbackPage ||
     isMessagesPage ||
+    isPremiumPage ||
     isPostDetailPage;
 
   return (
@@ -43,14 +47,16 @@ function MainLayout() {
       </div>
 
       {!isProfilePage &&
+        !isEditProfilePage &&
         !isFriendProfilePage &&
         !isCreatePostPage &&
         !isFeedbackPage &&
         !isMessagesPage &&
+        !isPremiumPage &&
         !isPostDetailPage && (
         <Footer />
       )}
-      {!isMessagesPage && <ChatFab />}
+      {!isMessagesPage && !isEditProfilePage && !isPremiumPage && <ChatFab />}
     </div>
   );
 }
