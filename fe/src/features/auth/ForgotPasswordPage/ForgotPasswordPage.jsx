@@ -9,7 +9,6 @@ import {
   faEnvelope,
   faEye,
   faEyeSlash,
-  faKey,
   faLock,
   faMobileScreenButton,
 } from "@fortawesome/free-solid-svg-icons";
@@ -80,6 +79,28 @@ function formatPhoneInput(value) {
   return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
 }
 
+function getPasswordStrengthLevel(value) {
+  let level = 0;
+
+  if (value.length >= 8) {
+    level = 1;
+  }
+
+  if (/[a-zA-Z]/.test(value) && /\d/.test(value)) {
+    level = 2;
+  }
+
+  if (value.length >= 12 && /[a-zA-Z]/.test(value) && /\d/.test(value)) {
+    level = 3;
+  }
+
+  return level;
+}
+
+function isValidResetPassword(value) {
+  return value.length >= 8 && /[a-zA-Z]/.test(value) && /\d/.test(value);
+}
+
 function ForgotPasswordPage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -91,6 +112,7 @@ function ForgotPasswordPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [resendSeconds, setResendSeconds] = useState(RESEND_SECONDS);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -179,8 +201,8 @@ function ForgotPasswordPage() {
   function handleResetPassword(event) {
     event.preventDefault();
 
-    if (password.length < 6) {
-      showToast("Mật khẩu phải có ít nhất 6 ký tự.");
+    if (!isValidResetPassword(password)) {
+      showToast("Mật khẩu phải có ít nhất 8 ký tự bao gồm chữ cái và số.");
       return;
     }
 
@@ -190,7 +212,7 @@ function ForgotPasswordPage() {
     }
 
     setIsSubmitting(true);
-    showToast("Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.");
+    showToast("Cập nhật mật khẩu thành công. Vui lòng đăng nhập lại.");
     navigate("/login", { replace: true });
   }
 
@@ -218,11 +240,7 @@ function ForgotPasswordPage() {
     setStep("contact");
   }
 
-  function handleBackFromReset() {
-    setPassword("");
-    setConfirmPassword("");
-    setStep("otp");
-  }
+  const passwordStrength = getPasswordStrengthLevel(password);
 
   const contactCopy = method ? CONTACT_COPY[method] : null;
   const otpSubtitle = method ? OTP_COPY[method] : "";
@@ -424,30 +442,36 @@ function ForgotPasswordPage() {
 
           {activeStep === "reset" ? (
             <>
-              <header className={styles["contact-header"]}>
-                <h1 id="forgot-password-reset-title" className={styles.title}>
-                  Đặt lại mật khẩu
+              <header className={styles["reset-header"]}>
+                <span className={styles["reset-badge"]} aria-hidden="true">
+                  <FontAwesomeIcon icon={faLock} className={styles["reset-badge-icon"]} />
+                </span>
+                <h1 id="forgot-password-reset-title" className={styles["reset-title"]}>
+                  Thiết lập mật khẩu
+                  <br />
+                  mới
                 </h1>
-                <p className={styles.subtitle}>
-                  Tạo mật khẩu mới an toàn cho tài khoản SEHub của bạn. Mật khẩu nên có ít nhất 6 ký tự.
+                <p className={styles["reset-subtitle"]}>
+                  Vui lòng nhập mật khẩu mới của bạn. Mật khẩu phải có ít nhất 8 ký tự bao gồm chữ
+                  cái và số.
                 </p>
               </header>
 
-              <form className={styles["contact-form"]} onSubmit={handleResetPassword}>
+              <form className={styles["reset-form"]} onSubmit={handleResetPassword}>
                 <div className={styles.fields}>
                   <label className={styles.field}>
-                    <span className={styles.label}>Mật khẩu mới</span>
+                    <span className={styles["reset-label"]}>Mật khẩu mới</span>
                     <span className={styles["input-wrap"]}>
                       <FontAwesomeIcon icon={faLock} className={styles["input-icon"]} />
                       <input
                         type={showPassword ? "text" : "password"}
-                        className={`${styles.input} ${styles["input-with-toggle"]}`}
+                        className={`${styles.input} ${styles["reset-input"]} ${styles["input-with-toggle"]}`}
                         value={password}
                         onChange={(event) => setPassword(event.target.value)}
-                        placeholder="••••••••"
+                        placeholder="Nhập mật khẩu mới"
                         autoComplete="new-password"
                         required
-                        minLength={6}
+                        minLength={8}
                       />
                       <button
                         type="button"
@@ -458,49 +482,58 @@ function ForgotPasswordPage() {
                         <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
                       </button>
                     </span>
+                    <div className={styles["strength-bars"]} aria-hidden="true">
+                      {[1, 2, 3].map((level) => (
+                        <span
+                          key={level}
+                          className={
+                            passwordStrength >= level
+                              ? `${styles["strength-bar"]} ${styles["strength-bar-active"]}`
+                              : styles["strength-bar"]
+                          }
+                        />
+                      ))}
+                    </div>
                   </label>
 
                   <label className={styles.field}>
-                    <span className={styles.label}>Xác nhận mật khẩu</span>
+                    <span className={styles["reset-label"]}>Xác nhận mật khẩu</span>
                     <span className={styles["input-wrap"]}>
-                      <FontAwesomeIcon icon={faKey} className={styles["input-icon"]} />
+                      <FontAwesomeIcon icon={faLock} className={styles["input-icon"]} />
                       <input
-                        type={showPassword ? "text" : "password"}
-                        className={styles.input}
+                        type={showConfirmPassword ? "text" : "password"}
+                        className={`${styles.input} ${styles["reset-input"]} ${styles["input-with-toggle"]}`}
                         value={confirmPassword}
                         onChange={(event) => setConfirmPassword(event.target.value)}
-                        placeholder="••••••••"
+                        placeholder="Nhập lại mật khẩu mới"
                         autoComplete="new-password"
                         required
-                        minLength={6}
+                        minLength={8}
                       />
+                      <button
+                        type="button"
+                        className={styles["toggle-password"]}
+                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                        aria-label={showConfirmPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                      >
+                        <FontAwesomeIcon icon={showConfirmPassword ? faEyeSlash : faEye} />
+                      </button>
                     </span>
                   </label>
                 </div>
 
-                <button type="submit" className={styles["submit-btn"]} disabled={isSubmitting}>
-                  Hoàn tất
+                <button type="submit" className={styles["update-btn"]} disabled={isSubmitting}>
+                  Cập nhật mật khẩu
                   <FontAwesomeIcon icon={faArrowRight} className={styles["submit-icon"]} />
                 </button>
               </form>
 
-              <div className={styles["change-method"]}>
-                <button type="button" className={styles["change-method-btn"]} onClick={handleBackFromReset}>
+              <div className={styles["reset-back"]}>
+                <Link to="/login" className={styles["change-method-btn"]}>
                   <FontAwesomeIcon icon={faArrowLeft} className={styles["back-icon"]} />
-                  Quay lại
-                </button>
+                  Quay lại đăng nhập
+                </Link>
               </div>
-
-              <footer className={styles["assist-footer"]}>
-                <p>
-                  Gặp sự cố?{" "}
-                  <Link to="/support" className={styles["support-link"]}>
-                    Liên hệ hỗ trợ
-                  </Link>
-                </p>
-              </footer>
-
-              <p className={styles["page-tagline"]}>© 2024 SEHub AI. Empowering students globally.</p>
             </>
           ) : null}
         </div>
