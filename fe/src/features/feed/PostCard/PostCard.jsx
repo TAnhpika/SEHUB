@@ -8,16 +8,21 @@ import {
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import styles from "./PostCard.module.css";
 
-function PostCard({ post }) {
-  const { requireAuth } = useRequireAuth();
+function PostCard({ post, interactive = false }) {
+  const { isAuthenticated, requireAuth } = useRequireAuth();
+  const canInteract = interactive || isAuthenticated;
 
   function handleOpenPost() {
-    requireAuth("Vui lòng đăng nhập để xem bài viết.");
+    if (!canInteract) {
+      requireAuth("Vui lòng đăng nhập để xem bài viết.");
+    }
   }
 
   function handleInteract(event) {
     event.stopPropagation();
-    requireAuth("Vui lòng đăng nhập để tương tác với bài viết.");
+    if (!canInteract) {
+      requireAuth("Vui lòng đăng nhập để tương tác với bài viết.");
+    }
   }
 
   return (

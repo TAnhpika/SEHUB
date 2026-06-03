@@ -1,11 +1,16 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ToastProvider } from "@/common/Toast/ToastProvider";
+import PrivateRoute from "@/common/guards/PrivateRoute";
 import CommunityLayout from "@/common/Layout/CommunityLayout/CommunityLayout";
 import GuestLayout from "@/common/Layout/GuestLayout/GuestLayout";
+import MainLayout from "@/common/Layout/MainLayout/MainLayout";
 import { AuthProvider } from "@/context/AuthContext";
 import AuthPlaceholder from "@/features/auth/AuthPlaceholder";
+import LoginPage from "@/features/auth/LoginPage/LoginPage";
 import DocumentsPage from "@/features/documents/DocumentsPage/DocumentsPage";
 import FeedPage from "@/features/feed/FeedPage/FeedPage";
+import FriendsPage from "@/features/home/FriendsPage/FriendsPage";
+import HomePage from "@/features/home/HomePage/HomePage";
 import LandingPage from "@/features/landing/LandingPage/LandingPage";
 import PracticeQuestionsPage from "@/features/practice/PracticeQuestionsPage/PracticeQuestionsPage";
 import ReviewQuestionsPage from "@/features/review/ReviewQuestionsPage/ReviewQuestionsPage";
@@ -21,8 +26,14 @@ function App() {
             <Route element={<GuestLayout />}>
               <Route path="/" element={<LandingPage />} />
               <Route path="/support" element={<SupportPage />} />
-              <Route path="/login" element={<AuthPlaceholder />} />
               <Route path="/register" element={<AuthPlaceholder />} />
+            </Route>
+            <Route path="/login" element={<LoginPage />} />
+            <Route element={<PrivateRoute />}>
+              <Route element={<MainLayout />}>
+                <Route path="/home" element={<HomePage />} />
+                <Route path="/home/friends" element={<FriendsPage />} />
+              </Route>
             </Route>
             <Route path="/community" element={<CommunityLayout />}>
               <Route index element={<FeedPage />} />
