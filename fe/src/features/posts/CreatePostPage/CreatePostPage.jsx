@@ -365,7 +365,7 @@ function CreatePostPage() {
         </div>
 
         {!anonymous && user && (
-          <p className={styles.author-note}>
+          <p className={styles["author-note"]}>
             Bài viết sẽ được đăng dưới tên <strong>{user.displayName}</strong>.
           </p>
         )}
