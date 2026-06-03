@@ -1,0 +1,630 @@
+# SEHUB Frontend — Cursor Rules
+
+# Đặt file này tại: .cursor/rules
+
+---
+
+## Dự án là gì
+
+SEHUB là nền tảng học tập và cộng đồng sinh viên FPT.
+Có 5 loại người dùng: Guest, Student Free, Student Premium, Moderator, Admin.
+Chi tiết nghiệp vụ xem trong file SEHUB_PhanTichNghiepVu.md trong project.
+Chi tiết kiến trúc xem trong ARCHITECTURE.md.
+
+---
+
+## Stack — Chỉ dùng những thứ này, không thêm thư viện khác khi chưa hỏi
+
+- React 18 + Vite
+- React Router DOM v7
+- Redux Toolkit + createAsyncThunk (không dùng RTK Query)
+- CSS Modules (mỗi component có subfolder riêng chứa index.jsx + \*.module.css)
+- CSS Variables cho màu, spacing, radius (định nghĩa trong src/styles/variables.css)
+- Font Awesome 6 (@fortawesome/react-fontawesome) — dùng cho tất cả icon
+- Axios qua `src/services/axiosInstance.js`
+- Không dùng: Tailwind, Bootstrap, styled-components, emotion, MUI, Ant Design, Chakra, React Query, SWR, emoji làm icon
+
+---
+
+## Cấu trúc file — Feature-based
+
+Mỗi khi tạo file mới, đặt đúng chỗ:
+
+- Logic nghiệp vụ của một feature → `src/features/<tên-feature>/`
+- Component dùng chung → `src/common/`
+- Layout wrapper → `src/common/layout/`
+- Biến thể Header → `src/common/header/`
+- Biến thể Sidebar → `src/common/sidebar/`
+- Footer → `src/common/footer/Footer/`
+- Widget UI (Button, Input...) → `src/common/<TênComponent>/`
+- Route guards → `src/common/guards/`
+- Custom hook dùng chung → `src/hooks/`
+- Util/helper thuần → `src/utils/`
+- CSS Variables toàn app → `src/styles/variables.css`
+- CSS reset + typography → `src/styles/global.css`
+- Ảnh tĩnh → `src/img/`
+
+Không được tạo file component ở root `src/` hay tạo thư mục `pages/` riêng.
+
+---
+
+## Layout Mapping — Bắt buộc dùng đúng layout
+
+| Layout        | Header                                           | Sidebar            | Footer | Dùng cho                                      |
+| ------------- | ------------------------------------------------ | ------------------ | ------ | --------------------------------------------- |
+| `GuestLayout` | `GuestHeader` — logo + Login/Register            | `CommunitySidebar` | ✅     | Trang chưa đăng nhập: Feed, ExamList, Pricing |
+| `MainLayout`  | `MainHeader` — **search** + thông báo + avatar   | `MainSidebar`      | ✅     | Trang sau đăng nhập: Profile, Chat, ExamDo    |
+| `AdminLayout` | `AdminHeader` — **search** + breadcrumb + avatar | `AdminSidebar`     | ❌     | Toàn bộ `/admin/*`                            |
+| `AuthLayout`  | ❌                                               | ❌                 | ❌     | `/login`, `/register`, `/forgot-password`     |
+
+Không tự tạo header hay sidebar inline trong page — luôn dùng Layout component bọc ngoài.
+
+---
+
+## Quy tắc đặt tên
+
+- Component: PascalCase — `PostCard/`, `UserDetailPage/`
+- Mỗi component nằm trong **subfolder riêng cùng tên**, bên trong có 2 file (tên file = tên folder):
+  ```
+  PostCard/
+  ├── PostCard.jsx         ← logic + JSX
+  └── PostCard.module.css  ← style riêng
+  ```
+- File logic/slice: camelCase + hậu tố Slice — `feedSlice.js`
+- File thunk: camelCase + hậu tố Thunks — `feedThunks.js`
+- File service: camelCase + hậu tố Service — `feedService.js`
+- Hook: bắt đầu bằng `use` — `useAuth.js`
+- Util: camelCase mô tả chức năng — `formatCurrency.js`
+- **Class trong CSS Module: kebab-case** — `.card-title`, `.like-btn`, `.error-msg`
+- Guards không có CSS nên không cần subfolder — đặt thẳng file `.jsx`
+
+---
+
+## Cách viết Component
+
+```jsx
+// Mỗi component nằm trong subfolder riêng:
+// src/features/feed/PostCard/PostCard.jsx
+// src/features/feed/PostCard/PostCard.module.css
+
+// Luôn dùng function declaration, không dùng arrow function cho component chính
+// Luôn import CSS Module cùng tên
+// Prop types viết bằng JSDoc comment phía trên component
+// Không dùng inline style trừ trường hợp giá trị động (vd: width tính theo %)
+
+import styles from "./PostCard.module.css";
+
+/**
+ * @param {{ post: object, onLike: function }} props
+ */
+function PostCard({ post, onLike }) {
+  return (
+    <div className={styles.card}>
+      <h3 className={styles["card-title"]}>{post.title}</h3>
+      <p className={styles["card-summary"]}>{post.summary}</p>
+      <button className={styles["like-btn"]} onClick={onLike}>
+        Like
+      </button>
+    </div>
+  );
+}
+
+export default PostCard;
+```
+
+Không viết:
+
+```jsx
+const PostCard = ({ post }) => { ... }        // Không dùng arrow function cho component chính
+export default () => { ... }                  // Tuyệt đối không anonymous export
+<div style={{ color: '#5b4fcf' }}>            // Không hardcode màu inline — dùng CSS Module
+<div className="card title summary">          // Không dùng class toàn cục — dùng styles['...']
+```
+
+Import component từ subfolder:
+
+```jsx
+// Ghi rõ tên file — không dùng index
+import PostCard from "../PostCard/PostCard";
+import Button from "@/common/Button/Button";
+import GuestLayout from "@/common/layout/GuestLayout/GuestLayout";
+```
+
+---
+
+## Cách viết CSS Module
+
+```css
+/* PostCard.module.css */
+
+/* Luôn dùng biến từ variables.css — không hardcode màu, size, radius */
+/* Tên class: kebab-case */
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 1rem;
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 0.25rem;
+}
+
+.card-summary {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.like-btn {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.like-btn:hover {
+  color: var(--color-primary-hover);
+}
+```
+
+Không viết:
+
+```css
+color: #333; /* Không hardcode — dùng var(--color-text) */
+border-radius: 8px; /* Không hardcode — dùng var(--radius-md) */
+background: #5b4fcf; /* Không hardcode — dùng var(--color-primary) */
+.likeBtn {
+} /* Không camelCase — dùng .like-btn */
+.LikeBtn {
+} /* Không PascalCase — dùng .like-btn */
+```
+
+---
+
+## CSS Variables — src/styles/variables.css
+
+Đây là nơi duy nhất định nghĩa màu sắc, spacing, radius. Toàn bộ CSS Module đều đọc từ đây.
+
+```css
+:root {
+  /* Màu chính — lấy từ Figma, chỉnh tại đây khi Figma update */
+  --color-primary: #5b4fcf;
+  --color-primary-hover: #4a3fb8;
+  --color-primary-light: #ede9ff;
+
+  /* Nền & bề mặt */
+  --color-bg: #f8f7ff;
+  --color-surface: #ffffff;
+
+  /* Chữ */
+  --color-text: #1a1a2e;
+  --color-text-muted: #6b7280;
+
+  /* Viền */
+  --color-border: #e5e7eb;
+
+  /* Trạng thái */
+  --color-danger: #ef4444;
+  --color-danger-bg: #fee2e2;
+  --color-success: #22c55e;
+  --color-success-bg: #dcfce7;
+  --color-warning: #f59e0b;
+  --color-warning-bg: #fef3c7;
+
+  /* Cấp độ */
+  --color-bronze: #92400e;
+  --color-bronze-bg: #fef3c7;
+  --color-silver: #4b5563;
+  --color-silver-bg: #f3f4f6;
+  --color-gold: #b45309;
+  --color-gold-bg: #fffbeb;
+  --color-platinum: #0891b2;
+  --color-platinum-bg: #ecfeff;
+
+  /* Bo góc */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Đổ bóng */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+  /* Typography */
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+```
+
+---
+
+## Các pattern CSS hay dùng
+
+**Button primary:**
+
+```css
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 500;
+  font-size: 0.875rem;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.btn:hover {
+  background: var(--color-primary-hover);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+```
+
+**Button danger:**
+
+```css
+.btn-danger {
+  background: var(--color-danger);
+  color: #fff;
+  /* ... các thuộc tính còn lại như .btn */
+}
+```
+
+**Button outline:**
+
+```css
+.btn-outline {
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+.btn-outline:hover {
+  background: var(--color-bg);
+}
+```
+
+**Badge:**
+
+```css
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.badge-free {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+.badge-premium {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+.badge-banned {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+.badge-pending {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+```
+
+**Input:**
+
+```css
+.input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+```
+
+**Table:**
+
+```css
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.thead {
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+.th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+.td {
+  padding: 0.75rem 1rem;
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
+}
+.tr:hover .td {
+  background: var(--color-bg);
+}
+```
+
+---
+
+## Icon — Font Awesome 6
+
+Luôn dùng Font Awesome cho icon, không dùng emoji hay ký tự đặc biệt:
+
+```jsx
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faHeart, faComment, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
+
+// Icon trong button:
+<button className={styles['like-btn']}>
+  <FontAwesomeIcon icon={faHeart} />
+  Like
+</button>
+
+// Icon đứng một mình:
+<FontAwesomeIcon icon={faTrash} className={styles['delete-icon']} />
+```
+
+- Chỉ import đúng icon cần dùng — không import `{ library }` toàn bộ
+- Solid (`free-solid-svg-icons`): action, trạng thái đang active
+- Regular (`free-regular-svg-icons`): trạng thái chưa active (tim rỗng, bookmark rỗng...)
+
+---
+
+## Ảnh — src/img/
+
+- Ảnh tĩnh (logo, default avatar, banner...) đặt trong `src/img/`
+- Ảnh từ API (avatar user, ảnh upload...) dùng URL từ response — không đặt trong `img/`
+
+```jsx
+import logo from '../../img/logo.png';
+import defaultAvatar from '../../img/default-avatar.png';
+
+<img src={logo} alt="SEHUB Logo" className={styles.logo} />
+
+// Ảnh từ API:
+<img src={user.avatarUrl || defaultAvatar} alt={user.name} className={styles.avatar} />
+```
+
+---
+
+```js
+// src/features/feed/feedSlice.js
+import { createSlice } from "@reduxjs/toolkit";
+import { fetchPosts } from "./feedThunks";
+
+const initialState = {
+  posts: [],
+  currentPost: null,
+  isLoading: false,
+  error: null,
+};
+
+const feedSlice = createSlice({
+  name: "feed",
+  initialState,
+  reducers: {
+    clearError: (state) => {
+      state.error = null;
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchPosts.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchPosts.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.posts = action.payload;
+      })
+      .addCase(fetchPosts.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      });
+  },
+});
+
+export const { clearError } = feedSlice.actions;
+export default feedSlice.reducer;
+```
+
+---
+
+## Cách viết Thunk
+
+```js
+// src/features/feed/feedThunks.js
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import { getPostsAPI } from "./feedService";
+
+export const fetchPosts = createAsyncThunk(
+  "feed/fetchPosts",
+  async (params, { rejectWithValue }) => {
+    try {
+      const response = await getPostsAPI(params);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Có lỗi xảy ra");
+    }
+  },
+);
+```
+
+---
+
+## Cách viết Service
+
+```js
+// src/features/feed/feedService.js
+import axiosInstance from "../../services/axiosInstance";
+
+export const getPostsAPI = (params) => axiosInstance.get("/posts", { params });
+export const createPostAPI = (data) => axiosInstance.post("/posts", data);
+export const updatePostAPI = (id, data) =>
+  axiosInstance.put(`/posts/${id}`, data);
+export const deletePostAPI = (id) => axiosInstance.delete(`/posts/${id}`);
+```
+
+---
+
+## Routing & Guards
+
+```jsx
+// Route chỉ cần đăng nhập:
+<Route element={<PrivateRoute />}>
+  <Route path="/profile/:username" element={<ProfilePage />} />
+</Route>
+
+// Route chỉ Premium:
+<Route element={<PremiumRoute />}>
+  <Route path="/exams/:id/do" element={<ExamDoPage />} />
+</Route>
+
+// Route chỉ Admin:
+<Route element={<AdminRoute />}>
+  <Route path="/admin/*" element={<AdminLayout />} />
+</Route>
+```
+
+Không tự viết logic check role trong từng page — luôn dùng guard.
+
+---
+
+## Xử lý Loading & Error
+
+Mọi page fetch dữ liệu phải xử lý đủ 3 trạng thái:
+
+```jsx
+import styles from "./FeedPage.module.css";
+
+function FeedPage() {
+  const { posts, isLoading, error } = useSelector((state) => state.feed);
+
+  if (isLoading) return <Spinner />;
+  if (error) return <p className={styles.error}>{error}</p>;
+  if (posts.length === 0) return <EmptyState message="Chưa có bài viết nào" />;
+
+  return (
+    <div className={styles.list}>
+      {posts.map((post) => (
+        <PostCard key={post.id} post={post} />
+      ))}
+    </div>
+  );
+}
+```
+
+---
+
+## Phân quyền hiển thị UI
+
+```jsx
+import useAuth from "../../hooks/useAuth";
+
+function ExamDetailPage() {
+  const { isPremium, isAdmin } = useAuth();
+
+  return (
+    <div className={styles.page}>
+      <QuestionList />
+      {(isPremium || isAdmin) && <AnswerSection />}
+    </div>
+  );
+}
+```
+
+---
+
+## Format dữ liệu
+
+```jsx
+import { formatCurrency } from '../../utils/formatCurrency';
+import { formatDate } from '../../utils/formatDate';
+
+// Đúng:
+<span>{formatCurrency(1200000)}</span>    // → "1.200.000 ₫"
+<span>{formatDate(post.createdAt)}</span>  // → "28/05/2025"
+
+// Sai:
+<span>{post.price.toLocaleString()} VND</span>
+```
+
+---
+
+## Quy tắc chung khi gen code
+
+1. **Luôn đọc ARCHITECTURE.md trước** khi tạo file mới để đặt đúng thư mục
+2. **Luôn đọc file nghiệp vụ** để hiểu quyền của từng role trước khi viết UI có điều kiện
+3. **Mỗi component phải có file `.module.css` riêng cùng tên** — không share CSS giữa các component
+4. **Không hardcode màu, size, radius** trong CSS — luôn dùng biến từ `variables.css`
+5. **Không tạo state local** cho dữ liệu đã có trong Redux store — dùng `useSelector`
+6. **Dùng `useState` local** chỉ cho: form input, toggle UI, modal open/close
+7. **Không gọi API trực tiếp trong component** — luôn dispatch thunk
+8. **Mọi form submit** phải disable button + hiện spinner khi đang loading
+9. **Mọi action nguy hiểm** (xóa, khóa tài khoản, hard delete) phải có modal xác nhận
+10. **Không để `console.log`** trong code được commit
+11. **Khi không chắc** về logic nghiệp vụ → hỏi lại, không tự suy diễn
+
+---
+
+## Thứ tự build Giai đoạn 1
+
+Cursor sẽ build theo thứ tự này, không nhảy cóc:
+
+1. Setup: Vite + Redux store + axiosInstance + Router + variables.css + global.css
+2. Auth: Login → Register → ForgotPassword → Guards
+3. Layout: GuestLayout → MainLayout → AdminLayout
+4. UI Components: Button, Input, Modal, Badge, Spinner, EmptyState, Pagination, Table
+5. Feed: FeedPage → PostCard → CreatePost → PostDetail
+6. Exam: ExamList → ExamDetail → ExamDo (Premium) → ExamResult
+7. Document: DocumentList → DocumentDetail
+8. Profile: ProfilePage (cơ bản)
+9. Premium: PricingPage → CheckoutPage
+10. Admin: Dashboard → Users → Exams → Documents → Moderation → Gamification → Payments → Settings
