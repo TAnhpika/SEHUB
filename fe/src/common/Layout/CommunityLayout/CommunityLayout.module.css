@@ -12,18 +12,24 @@
   display: grid;
   grid-template-columns: var(--feed-sidebar-fixed) minmax(0, 1fr);
   gap: 0;
-  align-items: stretch;
+  align-items: start;
 }
 
 .col-left {
-  padding: 1rem 0;
+  position: sticky;
+  top: var(--header-height);
+  align-self: start;
+  padding: 1rem 0.75rem 1rem 0;
   border-right: 1px solid var(--color-border);
+  max-height: calc(100vh - var(--header-height));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .col-left > * {
-  position: sticky;
-  top: var(--header-height);
-  padding-right: 0.75rem;
+  position: static;
+  top: auto;
+  padding-right: 0;
 }
 
 .col-center {
@@ -38,12 +44,18 @@
 }
 
 .col-right {
+  position: sticky;
+  top: var(--header-height);
+  align-self: start;
   padding: 1rem 0;
+  max-height: calc(100vh - var(--header-height));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .col-right > * {
-  position: sticky;
-  top: var(--header-height);
+  position: static;
+  top: auto;
 }
 
 .layout > footer {
