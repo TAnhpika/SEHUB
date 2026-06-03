@@ -1,17 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
   faArrowRight,
   faChevronRight,
+  faClock,
   faEnvelope,
   faMobileScreenButton,
 } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context/AuthContext";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
+import OtpInput from "@/features/auth/ForgotPasswordPage/OtpInput";
 import styles from "./ForgotPasswordPage.module.css";
+
+const RESEND_SECONDS = 60;
 
 const METHODS = [
   {
@@ -51,13 +55,49 @@ const CONTACT_COPY = {
   },
 };
 
+const OTP_COPY = {
+  email:
+    "Mã xác thực đã được gửi đến email của bạn. Vui lòng kiểm tra và nhập mã gồm 6 chữ số bên dưới.",
+  phone:
+    "Mã xác thực đã được gửi đến số điện thoại của bạn. Vui lòng kiểm tra tin nhắn SMS và nhập mã gồm 6 chữ số bên dưới.",
+};
+
 function ForgotPasswordPage() {
   const { isAuthenticated } = useAuth();
   const { showToast } = useToast();
   const [step, setStep] = useState("method");
   const [method, setMethod] = useState(null);
   const [contact, setContact] = useState("");
+  const [otp, setOtp] = useState("");
+  const [resendSeconds, setResendSeconds] = useState(RESEND_SECONDS);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const activeStep =
+    step === "otp" && method && contact
+      ? "otp"
+      : step === "contact" && method
+        ? "contact"
+        : "method";
+
+  useEffect(() => {
+    if (activeStep !== "otp") {
+      return;
+    }
+
+    setResendSeconds(RESEND_SECONDS);
+  }, [activeStep, contact]);
+
+  useEffect(() => {
+    if (activeStep !== "otp" || resendSeconds <= 0) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setResendSeconds((current) => current - 1);
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [activeStep, resendSeconds]);
 
   if (isAuthenticated) {
     return <Navigate to="/home" replace />;
@@ -94,29 +134,67 @@ function ForgotPasswordPage() {
     }
 
     setIsSubmitting(true);
-
-    const channel = method === "email" ? "email" : "SMS";
-    showToast(`Mã xác minh 6 chữ số đã được gửi qua ${channel}. (Mock — bước OTP sẽ được triển khai tiếp.)`);
+    setOtp("");
+    setStep("otp");
     setIsSubmitting(false);
+  }
+
+  function handleVerifyOtp(event) {
+    event.preventDefault();
+
+    if (otp.length !== 6) {
+      showToast("Vui lòng nhập đủ 6 chữ số OTP.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    showToast("Xác minh OTP thành công. (Mock — bước đặt lại mật khẩu sẽ được triển khai tiếp.)");
+    setIsSubmitting(false);
+  }
+
+  function handleResendOtp() {
+    if (resendSeconds > 0) {
+      return;
+    }
+
+    setOtp("");
+    setResendSeconds(RESEND_SECONDS);
+    const channel = method === "email" ? "email" : "SMS";
+    showToast(`Mã xác minh mới đã được gửi qua ${channel}. (Mock)`);
   }
 
   function handleChangeMethod() {
     setContact("");
+    setOtp("");
     setStep("method");
   }
 
+  function handleBackFromOtp() {
+    setOtp("");
+    setStep("contact");
+  }
+
   const contactCopy = method ? CONTACT_COPY[method] : null;
-  const activeStep = step === "contact" && method ? "contact" : "method";
+  const otpSubtitle = method ? OTP_COPY[method] : "";
+
+  const formWrapClassName =
+    activeStep === "contact"
+      ? `${styles.formWrap} ${styles["form-wrap-compact"]}`
+      : styles.formWrap;
+
+  const sectionLabelId =
+    activeStep === "method"
+      ? "forgot-password-title"
+      : activeStep === "contact"
+        ? "forgot-password-contact-title"
+        : "forgot-password-otp-title";
 
   return (
     <div className={styles.page}>
       <AuthBrandPanel variant="forgot-password" />
 
-      <section
-        className={styles.formSection}
-        aria-labelledby={activeStep === "method" ? "forgot-password-title" : "forgot-password-contact-title"}
-      >
-        <div className={activeStep === "contact" ? `${styles.formWrap} ${styles["form-wrap-compact"]}` : styles.formWrap}>
+      <section className={styles.formSection} aria-labelledby={sectionLabelId}>
+        <div className={formWrapClassName}>
           {activeStep === "method" ? (
             <>
               <header className={styles.header}>
@@ -182,7 +260,9 @@ function ForgotPasswordPage() {
                 <p>© 2024 SEHub AI. Empowering students globally.</p>
               </footer>
             </>
-          ) : (
+          ) : null}
+
+          {activeStep === "contact" ? (
             <>
               <header className={styles["contact-header"]}>
                 <h1 id="forgot-password-contact-title" className={styles.title}>
@@ -232,7 +312,57 @@ function ForgotPasswordPage() {
 
               <p className={styles["page-tagline"]}>© 2024 SEHub AI. Empowering students globally.</p>
             </>
-          )}
+          ) : null}
+
+          {activeStep === "otp" ? (
+            <>
+              <header className={styles["otp-header"]}>
+                <h1 id="forgot-password-otp-title" className={styles.title}>
+                  Xác nhận mã OTP
+                </h1>
+                <p className={styles.subtitle}>{otpSubtitle}</p>
+              </header>
+
+              <form className={styles["otp-form"]} onSubmit={handleVerifyOtp}>
+                <OtpInput value={otp} onChange={setOtp} disabled={isSubmitting} />
+
+                <div className={styles["otp-actions"]}>
+                  <button
+                    type="submit"
+                    className={styles["submit-btn"]}
+                    disabled={otp.length !== 6 || isSubmitting}
+                  >
+                    Tiếp tục
+                    <FontAwesomeIcon icon={faArrowRight} className={styles["submit-icon"]} />
+                  </button>
+
+                  <div className={styles["resend-row"]}>
+                    {resendSeconds > 0 ? (
+                      <p className={styles["resend-timer"]}>
+                        <FontAwesomeIcon icon={faClock} className={styles["resend-icon"]} />
+                        Gửi lại mã sau{" "}
+                        <span className={styles["resend-count"]}>{resendSeconds}</span> s
+                      </p>
+                    ) : (
+                      <button type="button" className={styles["resend-btn"]} onClick={handleResendOtp}>
+                        <FontAwesomeIcon icon={faClock} className={styles["resend-icon"]} />
+                        Gửi lại mã
+                      </button>
+                    )}
+
+                    <button type="button" className={styles["otp-back-btn"]} onClick={handleBackFromOtp}>
+                      <FontAwesomeIcon icon={faArrowLeft} className={styles["back-icon"]} />
+                      Quay lại
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              <footer className={styles.footer}>
+                <p>© 2024 SEHub AI. Empowering students globally.</p>
+              </footer>
+            </>
+          ) : null}
         </div>
       </section>
     </div>
