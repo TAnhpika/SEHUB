@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faPlus } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
@@ -11,11 +11,12 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import styles from "./FeedPage.module.css";
 
 function FeedPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [posts, setPosts] = useState(() => [...MOCK_POSTS]);
   const [selectedPost, setSelectedPost] = useState(null);
   const [editOnOpen, setEditOnOpen] = useState(false);
-  const { requireAuth } = useRequireAuth();
+  const { isAuthenticated, requireAuth } = useRequireAuth();
   const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
 
   const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE);
@@ -33,7 +34,11 @@ function FeedPage() {
   }
 
   function handleCreatePost() {
-    requireAuth("Vui lòng đăng nhập để tạo bài viết.");
+    if (!isAuthenticated) {
+      requireAuth("Vui lòng đăng nhập để tạo bài viết.");
+      return;
+    }
+    navigate("/home/create-post");
   }
 
   function handleOpenPost(post) {

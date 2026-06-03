@@ -9,7 +9,8 @@ function MainLayout() {
   const isFriendsArea = useMatch({ path: "/home/friends", end: false });
   const isFriendProfilePage = useMatch("/home/friends/:username");
   const isProfilePage = useMatch("/profile/:username");
-  const hideRightSidebar = isFriendsArea || isProfilePage;
+  const isCreatePostPage = useMatch("/home/create-post");
+  const hideRightSidebar = isFriendsArea || isProfilePage || isCreatePostPage;
 
   return (
     <div className={styles.layout}>
@@ -31,7 +32,7 @@ function MainLayout() {
         )}
       </div>
 
-      {!isProfilePage && !isFriendProfilePage && <Footer />}
+      {!isProfilePage && !isFriendProfilePage && !isCreatePostPage && <Footer />}
     </div>
   );
 }
