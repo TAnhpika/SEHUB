@@ -1,6 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faXmark } from "@fortawesome/free-solid-svg-icons";
-import { CHAT_CONVERSATIONS } from "@/features/chat/chatData";
+import { CHAT_CONVERSATIONS } from "@/features/chat/messagesData";
 import styles from "./ChatModal.module.css";
 
 function ChatModal({ onClose }) {
