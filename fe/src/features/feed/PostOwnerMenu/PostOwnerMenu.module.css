@@ -71,3 +71,9 @@
 .danger:hover {
   background: var(--color-danger-bg);
 }
+
+.divider {
+  height: 1px;
+  margin: 0.25rem 0;
+  background: var(--color-border-light);
+}
