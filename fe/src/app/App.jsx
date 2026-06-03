@@ -13,6 +13,8 @@ import FriendProfilePage from "@/features/home/FriendProfilePage/FriendProfilePa
 import FriendsPage from "@/features/home/FriendsPage/FriendsPage";
 import HomePage from "@/features/home/HomePage/HomePage";
 import LandingPage from "@/features/landing/LandingPage/LandingPage";
+import CreatePostPage from "@/features/posts/CreatePostPage/CreatePostPage";
+import PostDetailPage from "@/features/feed/PostDetailPage/PostDetailPage";
 import ProfilePage from "@/features/profile/ProfilePage/ProfilePage";
 import PracticeQuestionsPage from "@/features/practice/PracticeQuestionsPage/PracticeQuestionsPage";
 import ReviewQuestionsPage from "@/features/review/ReviewQuestionsPage/ReviewQuestionsPage";
@@ -34,6 +36,8 @@ function App() {
             <Route element={<PrivateRoute />}>
               <Route element={<MainLayout />}>
                 <Route path="/home" element={<HomePage />} />
+                <Route path="/home/create-post" element={<CreatePostPage />} />
+                <Route path="/home/posts/:postId" element={<PostDetailPage />} />
                 <Route path="/home/friends" element={<FriendsPage />} />
                 <Route path="/home/friends/:username" element={<FriendProfilePage />} />
                 <Route path="/profile/:username" element={<ProfilePage />} />
