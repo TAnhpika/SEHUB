@@ -50,7 +50,7 @@ function MainLayout() {
         !isPostDetailPage && (
         <Footer />
       )}
-      <ChatFab />
+      {!isMessagesPage && <ChatFab />}
     </div>
   );
 }
