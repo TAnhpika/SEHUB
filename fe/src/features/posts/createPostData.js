@@ -10,14 +10,6 @@ export const SEMESTERS = [
   "Học kỳ 9",
 ];
 
-export const MAJORS = [
-  "Software Engineering",
-  "Artificial Intelligence",
-  "Information Security",
-  "Business Administration",
-  "Graphic Design",
-  "Digital Marketing",
-  "Khác",
-];
+export const MAJORS = ["SE", "AI"];
 
 export const MAX_CONTENT_LENGTH = 10000;
