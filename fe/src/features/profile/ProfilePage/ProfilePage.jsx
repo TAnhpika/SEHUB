@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { useParams } from "react-router-dom";
 import ActivityHeatmap from "@/features/profile/ActivityHeatmap/ActivityHeatmap";
 import BadgesSection from "@/features/profile/BadgesSection/BadgesSection";
-import ChatFab from "@/features/profile/ChatFab/ChatFab";
 import ProfileCard from "@/features/profile/ProfileCard/ProfileCard";
 import RecentPosts from "@/features/profile/RecentPosts/RecentPosts";
 import {
@@ -27,8 +26,6 @@ function ProfilePage() {
         <BadgesSection badges={BADGES} />
         <RecentPosts posts={RECENT_POSTS} />
       </div>
-
-      <ChatFab />
     </div>
   );
 }
