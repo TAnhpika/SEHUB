@@ -22,6 +22,7 @@ import SubjectDetailPage from "@/features/subjects/SubjectDetailPage/SubjectDeta
 import ExamDetailPage from "@/features/exams/ExamDetailPage/ExamDetailPage";
 import FeedbackPage from "@/features/feedback/FeedbackPage/FeedbackPage";
 import MessagesPage from "@/features/chat/MessagesPage/MessagesPage";
+import EditProfilePage from "@/features/profile/EditProfilePage/EditProfilePage";
 import SupportPage from "@/features/support/SupportPage/SupportPage";
 
 function App() {
@@ -45,6 +46,7 @@ function App() {
                 <Route path="/home/messages" element={<MessagesPage />} />
                 <Route path="/home/friends" element={<FriendsPage />} />
                 <Route path="/home/friends/:username" element={<FriendProfilePage />} />
+                <Route path="/profile/:username/edit" element={<EditProfilePage />} />
                 <Route path="/profile/:username" element={<ProfilePage />} />
               </Route>
             </Route>
