@@ -1,8 +1,9 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBell,
   faChevronDown,
+  faFire,
   faMagnifyingGlass,
   faRightFromBracket,
   faUser,
@@ -12,13 +13,13 @@ import logoSrc from "@/img/logo.png";
 import styles from "./MainHeader.module.css";
 
 function MainHeader() {
-  const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  const isHome = pathname === "/home";
-  const isCommunity = pathname.startsWith("/community");
-  const isSupport = pathname.startsWith("/support");
+  const email = user?.email ?? "tngo28299@gmail.com";
+  const initial = user?.initial ?? email.charAt(0).toUpperCase();
+  const unreadCount = user?.unreadNotifications ?? 7;
+  const streakCount = user?.streak ?? 7;
 
   function handleLogout() {
     logout();
@@ -39,59 +40,57 @@ function MainHeader() {
           <span className={styles["brand-text"]}>SEHub</span>
         </Link>
 
-        <div className={styles.search}>
-          <FontAwesomeIcon icon={faMagnifyingGlass} className={styles["search-icon"]} />
-          <input
-            type="search"
-            className={styles["search-input"]}
-            placeholder="Tìm kiếm bài viết, môn học..."
-            aria-label="Tìm kiếm"
-          />
+        <div className={styles["search-wrap"]}>
+          <div className={styles.search}>
+            <FontAwesomeIcon icon={faMagnifyingGlass} className={styles["search-icon"]} />
+            <input
+              type="search"
+              className={styles["search-input"]}
+              placeholder="Tìm kiếm..."
+              aria-label="Tìm kiếm"
+            />
+          </div>
         </div>
 
-        <nav className={styles.nav} aria-label="Điều hướng chính">
-          <Link
-            to="/home"
-            className={`${styles["nav-link"]} ${isHome ? styles["nav-active"] : ""}`}
-          >
-            Trang chủ
-          </Link>
-          <Link
-            to="/community"
-            className={`${styles["nav-link"]} ${isCommunity ? styles["nav-active"] : ""}`}
-          >
-            Cộng đồng
-          </Link>
-          <Link
-            to="/support"
-            className={`${styles["nav-link"]} ${isSupport ? styles["nav-active"] : ""}`}
-          >
-            Hỗ trợ
-          </Link>
-        </nav>
-
         <div className={styles.actions}>
-          <button type="button" className={styles["notify-btn"]} aria-label="Thông báo (3 chưa đọc)">
-            <FontAwesomeIcon icon={faBell} />
-            <span className={styles["notify-badge"]}>3</span>
+          <button
+            type="button"
+            className={styles["icon-btn"]}
+            aria-label={`Thông báo (${unreadCount} chưa đọc)`}
+          >
+            <FontAwesomeIcon icon={faBell} className={styles["bell-icon"]} />
+            <span className={styles.badge}>{unreadCount}</span>
+          </button>
+
+          <button
+            type="button"
+            className={styles["icon-btn"]}
+            aria-label={`Streak ${streakCount} ngày`}
+          >
+            <FontAwesomeIcon icon={faFire} className={styles["fire-icon"]} />
+            <span className={styles.badge}>{streakCount}</span>
           </button>
 
           <div className={styles.profile}>
-            <span className={styles.avatar} aria-hidden="true">
-              {user?.initial ?? "S"}
-            </span>
-            <div className={styles["profile-meta"]}>
-              <span className={styles.username}>{user?.username ?? "student"}</span>
-              <span className={styles.level}>{user?.level ?? "Bronze"}</span>
-            </div>
-            <FontAwesomeIcon icon={faChevronDown} className={styles["profile-chevron"]} />
+            <button type="button" className={styles["profile-trigger"]} aria-haspopup="menu">
+              <span className={styles.avatar} aria-hidden="true">
+                {initial}
+              </span>
+              <span className={styles.email}>{email}</span>
+              <FontAwesomeIcon icon={faChevronDown} className={styles.chevron} />
+            </button>
 
-            <div className={styles["profile-menu"]}>
-              <button type="button" className={styles["menu-item"]}>
+            <div className={styles["profile-menu"]} role="menu">
+              <button type="button" className={styles["menu-item"]} role="menuitem">
                 <FontAwesomeIcon icon={faUser} />
                 Hồ sơ cá nhân
               </button>
-              <button type="button" className={styles["menu-item"]} onClick={handleLogout}>
+              <button
+                type="button"
+                className={styles["menu-item"]}
+                role="menuitem"
+                onClick={handleLogout}
+              >
                 <FontAwesomeIcon icon={faRightFromBracket} />
                 Đăng xuất
               </button>
