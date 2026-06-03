@@ -24,6 +24,8 @@ import FeedbackPage from "@/features/feedback/FeedbackPage/FeedbackPage";
 import MessagesPage from "@/features/chat/MessagesPage/MessagesPage";
 import EditProfilePage from "@/features/profile/EditProfilePage/EditProfilePage";
 import PremiumPage from "@/features/premium/PremiumPage/PremiumPage";
+import CheckoutPage from "@/features/premium/CheckoutPage/CheckoutPage";
+import PaymentSuccessPage from "@/features/premium/PaymentSuccessPage/PaymentSuccessPage";
 import SupportPage from "@/features/support/SupportPage/SupportPage";
 
 function App() {
@@ -46,6 +48,8 @@ function App() {
                 <Route path="/home/feedback" element={<FeedbackPage />} />
                 <Route path="/home/messages" element={<MessagesPage />} />
                 <Route path="/home/premium" element={<PremiumPage />} />
+                <Route path="/home/premium/checkout/:planId" element={<CheckoutPage />} />
+                <Route path="/home/premium/success/:planId" element={<PaymentSuccessPage />} />
                 <Route path="/home/friends" element={<FriendsPage />} />
                 <Route path="/home/friends/:username" element={<FriendProfilePage />} />
                 <Route path="/profile/:username/edit" element={<EditProfilePage />} />
