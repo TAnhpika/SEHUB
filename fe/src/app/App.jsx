@@ -20,6 +20,7 @@ import PracticeQuestionsPage from "@/features/practice/PracticeQuestionsPage/Pra
 import ReviewQuestionsPage from "@/features/review/ReviewQuestionsPage/ReviewQuestionsPage";
 import SubjectDetailPage from "@/features/subjects/SubjectDetailPage/SubjectDetailPage";
 import ExamDetailPage from "@/features/exams/ExamDetailPage/ExamDetailPage";
+import FeedbackPage from "@/features/feedback/FeedbackPage/FeedbackPage";
 import SupportPage from "@/features/support/SupportPage/SupportPage";
 
 function App() {
@@ -39,6 +40,7 @@ function App() {
                 <Route path="/home" element={<HomePage />} />
                 <Route path="/home/create-post" element={<CreatePostPage />} />
                 <Route path="/home/posts/:postId" element={<PostDetailPage />} />
+                <Route path="/home/feedback" element={<FeedbackPage />} />
                 <Route path="/home/friends" element={<FriendsPage />} />
                 <Route path="/home/friends/:username" element={<FriendProfilePage />} />
                 <Route path="/profile/:username" element={<ProfilePage />} />
