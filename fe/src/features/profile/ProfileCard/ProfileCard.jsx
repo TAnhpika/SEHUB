@@ -4,19 +4,17 @@ import {
   faCalendarDays,
   faClock,
   faComment,
-  faEllipsisVertical,
   faFileLines,
   faGem,
   faMedal,
 } from "@fortawesome/free-solid-svg-icons";
+import ProfileCardMenu from "@/features/profile/ProfileCard/ProfileCardMenu";
 import styles from "./ProfileCard.module.css";
 
-function ProfileCard({ profile }) {
+function ProfileCard({ profile, isOwner = false }) {
   return (
     <aside className={styles.card}>
-      <button type="button" className={styles.menu} aria-label="Tùy chọn hồ sơ">
-        <FontAwesomeIcon icon={faEllipsisVertical} />
-      </button>
+      {isOwner && <ProfileCardMenu username={profile.username} />}
 
       <div className={styles.hero}>
         <span className={styles.badge} aria-hidden="true">
