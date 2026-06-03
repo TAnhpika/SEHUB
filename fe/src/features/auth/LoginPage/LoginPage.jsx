@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { useAuth } from "@/context/AuthContext";
+import { MODERATOR_TEST_ACCOUNTS } from "@/features/moderator/moderatorMockData";
 import logoSrc from "@/img/logo.png";
 import styles from "./LoginPage.module.css";
 
@@ -26,8 +27,17 @@ function LoginPage() {
     event.preventDefault();
     setIsSubmitting(true);
 
-    login({ username, password });
-    navigate(redirectTo, { replace: true });
+    const loggedInUser = login({ username, password });
+    const destination =
+      loggedInUser?.role === "moderator" || loggedInUser?.role === "admin"
+        ? "/moderator/practice-exams/add"
+        : redirectTo;
+    navigate(destination, { replace: true });
+  }
+
+  function fillTestAccount(account) {
+    setUsername(account.username);
+    setPassword(account.password);
   }
 
   return (
@@ -89,6 +99,26 @@ function LoginPage() {
             <FontAwesomeIcon icon={faArrowRight} />
           </Button>
         </form>
+
+        {import.meta.env.DEV && (
+          <div className={styles.devAccounts}>
+            <p className={styles.devTitle}>Tài khoản test Moderator</p>
+            <ul className={styles.devList}>
+              {MODERATOR_TEST_ACCOUNTS.map((account) => (
+                <li key={account.username}>
+                  <button
+                    type="button"
+                    className={styles.devBtn}
+                    onClick={() => fillTestAccount(account)}
+                  >
+                    {account.roleLabel}: <code>{account.username}</code> /{" "}
+                    <code>{account.password}</code>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <p className={styles.footer}>
           Chưa có tài khoản? <Link to="/register">Đăng ký miễn phí</Link>
