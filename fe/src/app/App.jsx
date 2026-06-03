@@ -19,6 +19,7 @@ import ProfilePage from "@/features/profile/ProfilePage/ProfilePage";
 import PracticeQuestionsPage from "@/features/practice/PracticeQuestionsPage/PracticeQuestionsPage";
 import ReviewQuestionsPage from "@/features/review/ReviewQuestionsPage/ReviewQuestionsPage";
 import SubjectDetailPage from "@/features/subjects/SubjectDetailPage/SubjectDetailPage";
+import ExamDetailPage from "@/features/exams/ExamDetailPage/ExamDetailPage";
 import SupportPage from "@/features/support/SupportPage/SupportPage";
 
 function App() {
@@ -50,15 +51,27 @@ function App() {
                 path="final-exam/:courseCode"
                 element={<SubjectDetailPage page="review" />}
               />
+              <Route
+                path="final-exam/:courseCode/:examId"
+                element={<ExamDetailPage page="review" />}
+              />
               <Route path="pratical-exam" element={<PracticeQuestionsPage />} />
               <Route
                 path="pratical-exam/:courseCode"
                 element={<SubjectDetailPage page="practice" />}
               />
+              <Route
+                path="pratical-exam/:courseCode/:examId"
+                element={<ExamDetailPage page="practice" />}
+              />
               <Route path="documents" element={<DocumentsPage />} />
               <Route
                 path="documents/:courseCode"
                 element={<SubjectDetailPage page="documents" />}
+              />
+              <Route
+                path="documents/:courseCode/:examId"
+                element={<ExamDetailPage page="documents" />}
               />
             </Route>
             <Route path="/landing" element={<Navigate to="/" replace />} />
