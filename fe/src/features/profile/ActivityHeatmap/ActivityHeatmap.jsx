@@ -8,9 +8,11 @@ const LEVEL_CLASS = {
   3: styles.l3,
 };
 
+const DAY_LABEL_ROWS = [0, 2, 4];
+const WEEKS = 26;
+
 function ActivityHeatmap({ totalActivities }) {
-  const weeks = Array.from({ length: 26 }, (_, index) => index);
-  const days = [0, 2, 4];
+  const weeks = Array.from({ length: WEEKS }, (_, index) => index);
 
   return (
     <section className={styles.panel}>
@@ -30,8 +32,12 @@ function ActivityHeatmap({ totalActivities }) {
 
         <div className={styles["grid-wrap"]}>
           <div className={styles.days} aria-hidden="true">
-            {days.map((dayIndex) => (
-              <span key={dayIndex} className={styles.day}>
+            {DAY_LABEL_ROWS.map((dayIndex) => (
+              <span
+                key={dayIndex}
+                className={styles.day}
+                style={{ "--row-index": dayIndex }}
+              >
                 {HEATMAP_DATA.dayLabels[dayIndex]}
               </span>
             ))}
@@ -60,9 +66,9 @@ function ActivityHeatmap({ totalActivities }) {
 
         <div className={styles.legend}>
           <span>Ít</span>
-          <span className={`${styles.cell} ${styles.l1}`} />
-          <span className={`${styles.cell} ${styles.l2}`} />
-          <span className={`${styles.cell} ${styles.l3}`} />
+          <span className={`${styles["legend-cell"]} ${styles.l1}`} />
+          <span className={`${styles["legend-cell"]} ${styles.l2}`} />
+          <span className={`${styles["legend-cell"]} ${styles.l3}`} />
           <span>Nhiều</span>
         </div>
       </div>
