@@ -1,48 +1,14 @@
 import { useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faCircleInfo,
-  faFaceSmile,
-  faImage,
-  faMagnifyingGlass,
-  faPaperPlane,
-  faPenToSquare,
-  faPhone,
-  faPlus,
-  faUser,
-  faVideo,
-} from "@fortawesome/free-solid-svg-icons";
+import { faMagnifyingGlass, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
+import ConversationAvatar from "@/features/chat/ConversationAvatar/ConversationAvatar";
+import ConversationChat from "@/features/chat/ConversationChat/ConversationChat";
 import { CONVERSATIONS } from "@/features/chat/messagesData";
 import styles from "./MessagesPage.module.css";
-
-function ConversationAvatar({ conversation }) {
-  return (
-    <span className={styles["avatar-wrap"]}>
-      <span
-        className={styles.avatar}
-        style={{ background: conversation.avatarBg, color: conversation.avatarColor }}
-        aria-hidden="true"
-      >
-        {conversation.initials ? (
-          conversation.initials
-        ) : (
-          <FontAwesomeIcon icon={faUser} className={styles["avatar-icon"]} />
-        )}
-      </span>
-      {conversation.online != null && (
-        <span
-          className={`${styles["status-dot"]} ${conversation.online ? styles.online : styles.offline}`}
-          aria-hidden="true"
-        />
-      )}
-    </span>
-  );
-}
 
 function MessagesPage() {
   const [selectedId, setSelectedId] = useState(CONVERSATIONS[0].id);
   const [query, setQuery] = useState("");
-  const [draft, setDraft] = useState("");
 
   const filteredConversations = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -114,93 +80,7 @@ function MessagesPage() {
       </aside>
 
       <section className={styles.chat} aria-label="Khung chat">
-        <header className={styles["chat-header"]}>
-          <div className={styles["chat-user"]}>
-            <ConversationAvatar conversation={activeConversation} />
-            <div>
-              <p className={styles["chat-name"]}>{activeConversation.name}</p>
-              <p className={styles["chat-status"]}>
-                {activeConversation.typing
-                  ? "Đang nhập..."
-                  : activeConversation.online
-                    ? "Đang hoạt động"
-                    : "Ngoại tuyến"}
-              </p>
-            </div>
-          </div>
-
-          <div className={styles["chat-actions"]}>
-            <button type="button" className={styles["action-btn"]} aria-label="Gọi thoại">
-              <FontAwesomeIcon icon={faPhone} />
-            </button>
-            <button type="button" className={styles["action-btn"]} aria-label="Gọi video">
-              <FontAwesomeIcon icon={faVideo} />
-            </button>
-            <button type="button" className={styles["action-btn"]} aria-label="Thông tin hội thoại">
-              <FontAwesomeIcon icon={faCircleInfo} />
-            </button>
-          </div>
-        </header>
-
-        <div className={styles["chat-body"]}>
-          {activeConversation.messages.map((message) => {
-            if (message.type === "date") {
-              return (
-                <div key={message.id} className={styles["date-divider"]}>
-                  <span>{message.label}</span>
-                </div>
-              );
-            }
-
-            const isSent = message.type === "sent";
-
-            return (
-              <div
-                key={message.id}
-                className={`${styles["message-row"]} ${isSent ? styles.sent : styles.received}`}
-              >
-                <div className={styles.bubble}>{message.text}</div>
-                <span className={styles["message-time"]}>{message.time}</span>
-              </div>
-            );
-          })}
-
-          {activeConversation.typing && (
-            <div className={`${styles["message-row"]} ${styles.received}`}>
-              <div className={`${styles.bubble} ${styles.typing}`} aria-label="Đang nhập">
-                <span />
-                <span />
-                <span />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <footer className={styles["chat-footer"]}>
-          <button type="button" className={styles["footer-btn"]} aria-label="Thêm">
-            <FontAwesomeIcon icon={faPlus} />
-          </button>
-          <button type="button" className={styles["footer-btn"]} aria-label="Gửi ảnh">
-            <FontAwesomeIcon icon={faImage} />
-          </button>
-
-          <label className={styles["input-wrap"]}>
-            <input
-              type="text"
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              placeholder="Nhập tin nhắn..."
-              aria-label="Nhập tin nhắn"
-            />
-            <button type="button" className={styles.emoji} aria-label="Chọn emoji">
-              <FontAwesomeIcon icon={faFaceSmile} />
-            </button>
-          </label>
-
-          <button type="button" className={styles.send} aria-label="Gửi tin nhắn">
-            <FontAwesomeIcon icon={faPaperPlane} />
-          </button>
-        </footer>
+        <ConversationChat conversation={activeConversation} />
       </section>
     </div>
   );
