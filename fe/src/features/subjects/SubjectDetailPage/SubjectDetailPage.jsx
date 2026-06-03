@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChevronDown,
@@ -21,6 +21,7 @@ import styles from "./SubjectDetailPage.module.css";
 
 function SubjectDetailPage({ page }) {
   const { courseCode } = useParams();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [yearFilter, setYearFilter] = useState("all");
   const [termFilter, setTermFilter] = useState("all");
@@ -30,8 +31,8 @@ function SubjectDetailPage({ page }) {
   const config = SUBJECT_DETAIL_CONFIG[page];
   const code = courseCode?.toUpperCase() ?? "";
   const allExams = useMemo(
-    () => getExamPapersForCourse(code, config.examType),
-    [code, config.examType],
+    () => getExamPapersForCourse(code, config.examType, config.codePrefix),
+    [code, config.examType, config.codePrefix],
   );
 
   const exams = useMemo(
@@ -62,8 +63,9 @@ function SubjectDetailPage({ page }) {
     document.getElementById("feed-top")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  function handleExamClick() {
-    requireAuth("Vui lòng đăng nhập để xem đề thi.");
+  function handleExamClick(exam) {
+    if (!requireAuth("Vui lòng đăng nhập để xem đề thi.")) return;
+    navigate(`${config.detailBase}/${code}/${encodeURIComponent(exam.id)}`);
   }
 
   return (
@@ -139,7 +141,7 @@ function SubjectDetailPage({ page }) {
                   <button
                     type="button"
                     className={styles["exam-link"]}
-                    onClick={handleExamClick}
+                    onClick={() => handleExamClick(exam)}
                   >
                     <span className={styles["exam-code"]}>{exam.id}</span>
                     <FontAwesomeIcon icon={faChevronRight} className={styles.chevron} />
