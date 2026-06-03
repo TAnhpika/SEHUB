@@ -8,6 +8,7 @@ import MainLayout from "@/common/Layout/MainLayout/MainLayout";
 import { AuthProvider } from "@/context/AuthContext";
 import LoginPage from "@/features/auth/LoginPage/LoginPage";
 import RegisterPage from "@/features/auth/RegisterPage/RegisterPage";
+import ForgotPasswordPage from "@/features/auth/ForgotPasswordPage/ForgotPasswordPage";
 import DocumentsPage from "@/features/documents/DocumentsPage/DocumentsPage";
 import FeedPage from "@/features/feed/FeedPage/FeedPage";
 import FriendProfilePage from "@/features/home/FriendProfilePage/FriendProfilePage";
@@ -40,6 +41,7 @@ function App() {
             <Route element={<AuthLayout />}>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             </Route>
             <Route element={<PrivateRoute />}>
               <Route element={<MainLayout />}>
