@@ -88,6 +88,7 @@ function PricingContent() {
             <Button
               look={plan.ctaLook}
               fullWidth
+              to={`/home/premium/checkout/${plan.id}`}
               className={
                 plan.id === "full"
                   ? styles["plan-btn-outline"]
