@@ -56,7 +56,7 @@ function LoginPage() {
 
   return (
     <div className={styles.page}>
-      <AuthBrandPanel />
+      <AuthBrandPanel variant="login" />
 
       <section className={styles.formSection} aria-labelledby="login-title">
         <div className={styles.formWrap}>
