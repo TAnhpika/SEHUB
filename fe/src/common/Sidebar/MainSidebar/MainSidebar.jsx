@@ -10,6 +10,7 @@ import {
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import Button from "@/common/Button/Button";
 import SubjectNavSection from "@/common/Sidebar/SubjectNavSection/SubjectNavSection";
+import InteractionNavSection from "@/common/Sidebar/InteractionNavSection/InteractionNavSection";
 import PricingModal from "@/features/landing/PricingModal/PricingModal";
 import styles from "./MainSidebar.module.css";
 
@@ -44,6 +45,8 @@ function MainSidebar() {
           </nav>
 
           <SubjectNavSection pathname={pathname} styles={styles} />
+
+          <InteractionNavSection pathname={pathname} styles={styles} />
 
           <div className={styles.premium}>
             <div className={styles["premium-header"]}>
