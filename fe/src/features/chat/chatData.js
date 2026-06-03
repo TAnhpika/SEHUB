@@ -1,5 +1,15 @@
 export const CHAT_CONVERSATIONS = [
   {
+    id: "unknown",
+    name: "Unknown User",
+    initials: null,
+    avatarBg: "#dbeafe",
+    avatarColor: "#2563eb",
+    preview: "ngonn",
+    time: "18 ngày trước",
+    online: null,
+  },
+  {
     id: "1",
     name: "Phuong Thao",
     initials: "PT",

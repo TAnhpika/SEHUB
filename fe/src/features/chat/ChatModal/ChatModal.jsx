@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { CHAT_CONVERSATIONS } from "@/features/chat/chatData";
 import styles from "./ChatModal.module.css";
 
@@ -30,12 +30,18 @@ function ChatModal({ onClose }) {
                   style={{ background: chat.avatarBg, color: chat.avatarColor }}
                   aria-hidden="true"
                 >
-                  {chat.initials}
+                  {chat.initials ? (
+                    chat.initials
+                  ) : (
+                    <FontAwesomeIcon icon={faUser} className={styles["avatar-icon"]} />
+                  )}
                 </span>
-                <span
-                  className={`${styles.status} ${chat.online ? styles.online : styles.offline}`}
-                  aria-label={chat.online ? "Đang trực tuyến" : "Ngoại tuyến"}
-                />
+                {chat.online != null && (
+                  <span
+                    className={`${styles.status} ${chat.online ? styles.online : styles.offline}`}
+                    aria-label={chat.online ? "Đang trực tuyến" : "Ngoại tuyến"}
+                  />
+                )}
               </span>
 
               <span className={styles.content}>
