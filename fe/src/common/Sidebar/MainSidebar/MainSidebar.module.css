@@ -131,6 +131,39 @@
   opacity: 1;
 }
 
+.badge-link {
+  justify-content: space-between;
+}
+
+.link-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.message-badge {
+  flex-shrink: 0;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.3125rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: #e53935;
+  border-radius: var(--radius-full);
+}
+
+.subject-link.active .message-badge {
+  color: #fff;
+  background: rgb(255 255 255 / 24%);
+  border: 1px solid rgb(255 255 255 / 35%);
+}
+
 .premium {
   margin: 0.75rem 0 0.625rem;
   padding: 0.625rem 0.75rem;
