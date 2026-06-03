@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -11,7 +10,6 @@ import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import Button from "@/common/Button/Button";
 import SubjectNavSection from "@/common/Sidebar/SubjectNavSection/SubjectNavSection";
 import InteractionNavSection from "@/common/Sidebar/InteractionNavSection/InteractionNavSection";
-import PricingModal from "@/features/landing/PricingModal/PricingModal";
 import styles from "./MainSidebar.module.css";
 
 const MAIN_LINKS = [
@@ -21,7 +19,6 @@ const MAIN_LINKS = [
 
 function MainSidebar() {
   const { pathname } = useLocation();
-  const [pricingOpen, setPricingOpen] = useState(false);
 
   return (
     <div className={styles.root}>
@@ -65,7 +62,7 @@ function MainSidebar() {
                 size="sm"
                 fullWidth
                 className={styles["premium-btn"]}
-                onClick={() => setPricingOpen(true)}
+                to="/home/premium"
               >
                 Xem gói ngay
               </Button>
@@ -88,8 +85,6 @@ function MainSidebar() {
           </div>
         </div>
       </aside>
-
-      <PricingModal open={pricingOpen} onClose={() => setPricingOpen(false)} />
     </div>
   );
 }
