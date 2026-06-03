@@ -69,13 +69,13 @@ function MainSidebar() {
             href="https://discord.gg/sehub"
             target="_blank"
             rel="noopener noreferrer"
-            className={`${styles["subject-link"]} ${styles["discord-link"]}`}
+            className={styles["subject-link"]}
           >
             <FontAwesomeIcon icon={faDiscord} className={styles.icon} />
             Cộng đồng Discord
           </a>
 
-          <Link to="/home/feedback" className={styles.feedback}>
+          <Link to="/home/feedback" className={styles["subject-link"]}>
             <FontAwesomeIcon icon={faCommentDots} className={styles.icon} />
             Gửi phản hồi
           </Link>
