@@ -1,0 +1,76 @@
+:root {
+  /* Brand — xanh SEHub / CTA (#2563EB) */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-dark: #1e40af;
+  --color-primary-light: #eff6ff;
+  --color-primary-soft: #dbeafe;
+  --color-primary-ring: rgba(37, 99, 235, 0.25);
+
+  --color-brand-navy: #2563eb;
+
+  --color-badge-bg: #dbeafe;
+  --color-badge-text: #1d4ed8;
+
+  --color-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f1f5f9;
+  --color-surface-elevated: #f8fafc;
+
+  --color-text: #1e293b;
+  --color-text-muted: #475569;
+  --color-text-subtle: #64748b;
+
+  --color-border: #e2e8f0;
+  --color-border-light: #f1f5f9;
+
+  --color-danger: #ef4444;
+  --color-danger-bg: #fee2e2;
+  --color-success: #22c55e;
+  --color-success-bg: #dcfce7;
+  --color-warning: #f59e0b;
+  --color-warning-bg: #fef3c7;
+
+  --color-icon-blue-bg: #eff6ff;
+  --color-icon-blue: #2563eb;
+  --color-icon-purple-bg: #eff6ff;
+  --color-icon-purple: #2563eb;
+  --color-icon-amber-bg: #fffbeb;
+  --color-icon-amber: #d97706;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(30, 41, 59, 0.05);
+  --shadow-md: 0 4px 20px rgba(30, 41, 59, 0.08);
+  --shadow-lg: 0 12px 40px rgba(37, 99, 235, 0.14);
+  --shadow-card: 0 2px 8px rgba(30, 41, 59, 0.06);
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --layout-max-width: 1680px;
+  --layout-gutter: 1.25rem;
+  --header-height: 72px;
+  /* Sidebar trái cố định, nội dung chiếm phần còn lại */
+  --feed-sidebar-fixed: 220px;
+  --feed-sidebar-width: var(--feed-sidebar-fixed);
+  --feed-main-width: minmax(0, 1fr);
+  --color-feed-bg: #eef2f7;
+
+  --gradient-hero: linear-gradient(
+    160deg,
+    #eff6ff 0%,
+    #fafafa 45%,
+    #ffffff 100%
+  );
+  --gradient-primary: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    #3b82f6 100%
+  );
+  --gradient-logo: linear-gradient(145deg, #3b82f6 0%, var(--color-primary) 100%);
+}
