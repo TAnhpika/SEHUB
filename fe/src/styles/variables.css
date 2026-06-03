@@ -61,9 +61,11 @@
   --feed-main-width: minmax(0, 1fr);
   --color-feed-bg: #eef2f7;
 
-  --color-purple: #7c3aed;
-  --color-purple-hover: #6d28d9;
-  --color-purple-soft: #ede9fe;
+  --color-purple: var(--color-primary);
+  --color-purple-hover: var(--color-primary-hover);
+  --color-purple-soft: var(--color-primary-light);
+
+  --gradient-streak-badge: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);
 
   --gradient-hero: linear-gradient(
     160deg,
@@ -77,4 +79,25 @@
     #3b82f6 100%
   );
   --gradient-logo: linear-gradient(145deg, #3b82f6 0%, var(--color-primary) 100%);
+
+  /* Auth — Login (Figma node 6:2) */
+  --color-auth-bg: #f7f9fb;
+  --color-auth-heading: #191c1e;
+  --color-auth-label: #434655;
+  --color-auth-link: #004ac6;
+  --color-auth-on-brand: #ffffff;
+  --color-auth-input-bg: #f2f4f6;
+  --color-auth-input-border: rgba(195, 198, 215, 0.3);
+  --color-auth-social-border: rgba(195, 198, 215, 0.5);
+  --gradient-auth-brand: linear-gradient(
+    120deg,
+    #2563eb 0%,
+    #004ac6 50%,
+    #0a192f 100%
+  );
+  --shadow-auth-logo: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-auth-feature: 0 4px 20px rgba(0, 0, 0, 0.05);
+  --shadow-auth-submit: 0 10px 15px -3px rgba(37, 99, 235, 0.2),
+    0 4px 6px -4px rgba(37, 99, 235, 0.2);
 }

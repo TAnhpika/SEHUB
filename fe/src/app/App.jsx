@@ -1,12 +1,14 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ToastProvider } from "@/common/Toast/ToastProvider";
 import PrivateRoute from "@/common/guards/PrivateRoute";
+import AuthLayout from "@/common/Layout/AuthLayout/AuthLayout";
 import CommunityLayout from "@/common/Layout/CommunityLayout/CommunityLayout";
 import GuestLayout from "@/common/Layout/GuestLayout/GuestLayout";
 import MainLayout from "@/common/Layout/MainLayout/MainLayout";
 import { AuthProvider } from "@/context/AuthContext";
-import AuthPlaceholder from "@/features/auth/AuthPlaceholder";
 import LoginPage from "@/features/auth/LoginPage/LoginPage";
+import RegisterPage from "@/features/auth/RegisterPage/RegisterPage";
+import ForgotPasswordPage from "@/features/auth/ForgotPasswordPage/ForgotPasswordPage";
 import DocumentsPage from "@/features/documents/DocumentsPage/DocumentsPage";
 import FeedPage from "@/features/feed/FeedPage/FeedPage";
 import FriendProfilePage from "@/features/home/FriendProfilePage/FriendProfilePage";
@@ -24,6 +26,8 @@ import FeedbackPage from "@/features/feedback/FeedbackPage/FeedbackPage";
 import MessagesPage from "@/features/chat/MessagesPage/MessagesPage";
 import EditProfilePage from "@/features/profile/EditProfilePage/EditProfilePage";
 import PremiumPage from "@/features/premium/PremiumPage/PremiumPage";
+import CheckoutPage from "@/features/premium/CheckoutPage/CheckoutPage";
+import PaymentSuccessPage from "@/features/premium/PaymentSuccessPage/PaymentSuccessPage";
 import SupportPage from "@/features/support/SupportPage/SupportPage";
 import ModeratorRoute from "@/common/guards/ModeratorRoute";
 import ModeratorLayout from "@/common/Layout/ModeratorLayout/ModeratorLayout";
@@ -38,9 +42,12 @@ function App() {
             <Route element={<GuestLayout />}>
               <Route path="/" element={<LandingPage />} />
               <Route path="/support" element={<SupportPage />} />
-              <Route path="/register" element={<AuthPlaceholder />} />
             </Route>
-            <Route path="/login" element={<LoginPage />} />
+            <Route element={<AuthLayout />}>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            </Route>
             <Route element={<PrivateRoute />}>
               <Route element={<MainLayout />}>
                 <Route path="/home" element={<HomePage />} />
@@ -49,6 +56,8 @@ function App() {
                 <Route path="/home/feedback" element={<FeedbackPage />} />
                 <Route path="/home/messages" element={<MessagesPage />} />
                 <Route path="/home/premium" element={<PremiumPage />} />
+                <Route path="/home/premium/checkout/:planId" element={<CheckoutPage />} />
+                <Route path="/home/premium/success/:planId" element={<PaymentSuccessPage />} />
                 <Route path="/home/friends" element={<FriendsPage />} />
                 <Route path="/home/friends/:username" element={<FriendProfilePage />} />
                 <Route path="/profile/:username/edit" element={<EditProfilePage />} />
