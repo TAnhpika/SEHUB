@@ -11,6 +11,21 @@
   background: var(--gradient-auth-brand);
 }
 
+.panel-spread {
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5rem;
+}
+
 .glow-top,
 .glow-bottom {
   position: absolute;
@@ -151,10 +166,24 @@
   letter-spacing: 0.02em;
 }
 
+.feature-title-upper {
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
 .feature-desc {
   font-size: 0.875rem;
   line-height: 1.43;
   color: rgba(255, 255, 255, 0.8);
+}
+
+.panel-footer {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.43;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 @media (max-width: 960px) {
@@ -162,6 +191,10 @@
     gap: 2.5rem;
     min-height: auto;
     padding: 2.5rem 1.5rem;
+  }
+
+  .content {
+    gap: 2.5rem;
   }
 
   .features {
