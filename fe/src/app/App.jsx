@@ -25,6 +25,9 @@ import MessagesPage from "@/features/chat/MessagesPage/MessagesPage";
 import EditProfilePage from "@/features/profile/EditProfilePage/EditProfilePage";
 import PremiumPage from "@/features/premium/PremiumPage/PremiumPage";
 import SupportPage from "@/features/support/SupportPage/SupportPage";
+import ModeratorRoute from "@/common/guards/ModeratorRoute";
+import ModeratorLayout from "@/common/Layout/ModeratorLayout/ModeratorLayout";
+import AddPracticeExamPage from "@/features/moderator/practiceExams/AddPracticeExamPage/AddPracticeExamPage";
 
 function App() {
   return (
@@ -81,6 +84,12 @@ function App() {
                 path="documents/:courseCode/:examId"
                 element={<ExamDetailPage page="documents" />}
               />
+            </Route>
+            <Route element={<ModeratorRoute />}>
+              <Route path="/moderator" element={<ModeratorLayout />}>
+                <Route index element={<Navigate to="/moderator/practice-exams/add" replace />} />
+                <Route path="practice-exams/add" element={<AddPracticeExamPage />} />
+              </Route>
             </Route>
             <Route path="/landing" element={<Navigate to="/" replace />} />
           </Routes>
