@@ -1,24 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faBook,
-  faCircleQuestion,
-  faFileLines,
-  faHome,
-  faUserGroup,
-} from "@fortawesome/free-solid-svg-icons";
+import { faHome, faUserGroup } from "@fortawesome/free-solid-svg-icons";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import SubjectNavSection from "@/common/Sidebar/SubjectNavSection/SubjectNavSection";
 import styles from "./FeedSidebar.module.css";
 
 const MAIN_LINKS = [
   { to: "/community", label: "Trang chủ", icon: faHome, end: true },
   { label: "Tìm kiếm bạn bè", icon: faUserGroup, requiresAuth: true },
-];
-
-const SUBJECT_LINKS = [
-  { to: "/community/final-exam", label: "Câu hỏi ôn tập", icon: faCircleQuestion },
-  { to: "/community/pratical-exam", label: "Câu hỏi thực hành", icon: faBook },
-  { to: "/community/documents", label: "Tài liệu", icon: faFileLines },
 ];
 
 function FeedSidebar() {
@@ -63,41 +52,7 @@ function FeedSidebar() {
           })}
         </nav>
 
-        <div className={styles.divider} aria-hidden="true" />
-
-        <div className={styles.section}>
-          <p className={styles["section-title"]}>Môn học</p>
-          <ul className={styles.list}>
-            {SUBJECT_LINKS.map((item) => {
-              const isActive = item.to
-                ? pathname === item.to || pathname.startsWith(`${item.to}/`)
-                : false;
-
-              if (item.to) {
-                return (
-                  <li key={item.label}>
-                    <Link
-                      to={item.to}
-                      className={`${styles["subject-link"]} ${isActive ? styles.active : ""}`}
-                    >
-                      <FontAwesomeIcon icon={item.icon} className={styles.icon} />
-                      {item.label}
-                    </Link>
-                  </li>
-                );
-              }
-
-              return (
-                <li key={item.label}>
-                  <button type="button" className={styles["subject-link"]}>
-                    <FontAwesomeIcon icon={item.icon} className={styles.icon} />
-                    {item.label}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        <SubjectNavSection pathname={pathname} styles={styles} />
       </div>
     </aside>
   );
