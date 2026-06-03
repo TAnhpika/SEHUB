@@ -22,8 +22,9 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/common/Toast/ToastProvider";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
-import { isOwnComment, isOwnPost } from "@/features/feed/postUtils";
+import { copyPostLink, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
 import styles from "./PostDetailModal.module.css";
 
 function formatCommentTime(date) {
@@ -38,6 +39,7 @@ function formatCommentTime(date) {
 
 function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditMode = false }) {
   const { user } = useAuth();
+  const { showCopyToast } = useToast();
   const [comments, setComments] = useState([]);
   const [commentCount, setCommentCount] = useState(0);
   const [draft, setDraft] = useState("");
@@ -148,6 +150,15 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
   function handleDeletePost() {
     onDelete?.(post);
     onClose();
+  }
+
+  async function handleShare() {
+    try {
+      await copyPostLink(post.id);
+      showCopyToast();
+    } catch {
+      showCopyToast();
+    }
   }
 
   function handleStartEditComment(comment) {
@@ -270,7 +281,7 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
                 <FontAwesomeIcon icon={faEye} />
                 {post.views}
               </span>
-              <button type="button" className={styles.share} aria-label="Chia sẻ">
+              <button type="button" className={styles.share} aria-label="Chia sẻ" onClick={handleShare}>
                 <FontAwesomeIcon icon={faShareNodes} />
               </button>
             </div>

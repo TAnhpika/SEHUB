@@ -6,13 +6,15 @@ import {
   faShareNodes,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/common/Toast/ToastProvider";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
-import { isOwnPost } from "@/features/feed/postUtils";
+import { copyPostLink, isOwnPost } from "@/features/feed/postUtils";
 import styles from "./PostCard.module.css";
 
 function PostCard({ post, interactive = false, onOpen, onEdit, onDelete }) {
   const { user } = useAuth();
+  const { showCopyToast } = useToast();
   const { isAuthenticated, requireAuth } = useRequireAuth();
   const canInteract = interactive || isAuthenticated;
   const isOwner = isOwnPost(post, user);
@@ -40,6 +42,16 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete }) {
   function handleDeletePost(event) {
     event?.stopPropagation?.();
     onDelete?.(post);
+  }
+
+  async function handleShare(event) {
+    event.stopPropagation();
+    try {
+      await copyPostLink(post.id);
+      showCopyToast();
+    } catch {
+      showCopyToast();
+    }
   }
 
   return (
@@ -119,7 +131,7 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete }) {
           type="button"
           className={styles.share}
           aria-label="Chia sẻ"
-          onClick={handleInteract}
+          onClick={handleShare}
         >
           <FontAwesomeIcon icon={faShareNodes} />
         </button>
