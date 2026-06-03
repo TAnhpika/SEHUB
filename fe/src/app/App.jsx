@@ -12,6 +12,7 @@ import FeedPage from "@/features/feed/FeedPage/FeedPage";
 import FriendsPage from "@/features/home/FriendsPage/FriendsPage";
 import HomePage from "@/features/home/HomePage/HomePage";
 import LandingPage from "@/features/landing/LandingPage/LandingPage";
+import ProfilePage from "@/features/profile/ProfilePage/ProfilePage";
 import PracticeQuestionsPage from "@/features/practice/PracticeQuestionsPage/PracticeQuestionsPage";
 import ReviewQuestionsPage from "@/features/review/ReviewQuestionsPage/ReviewQuestionsPage";
 import SubjectDetailPage from "@/features/subjects/SubjectDetailPage/SubjectDetailPage";
@@ -33,6 +34,7 @@ function App() {
               <Route element={<MainLayout />}>
                 <Route path="/home" element={<HomePage />} />
                 <Route path="/home/friends" element={<FriendsPage />} />
+                <Route path="/profile/:username" element={<ProfilePage />} />
               </Route>
             </Route>
             <Route path="/community" element={<CommunityLayout />}>

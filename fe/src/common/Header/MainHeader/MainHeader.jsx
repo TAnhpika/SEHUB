@@ -1,5 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Link, useNavigate } from "react-router-dom";import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBell,
   faChevronDown,
@@ -81,10 +80,14 @@ function MainHeader() {
             </button>
 
             <div className={styles["profile-menu"]} role="menu">
-              <button type="button" className={styles["menu-item"]} role="menuitem">
+              <Link
+                to={`/profile/${user?.username ?? "anhcoding12345"}`}
+                className={styles["menu-item"]}
+                role="menuitem"
+              >
                 <FontAwesomeIcon icon={faUser} />
                 Hồ sơ cá nhân
-              </button>
+              </Link>
               <button
                 type="button"
                 className={styles["menu-item"]}
