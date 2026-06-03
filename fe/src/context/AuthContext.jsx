@@ -1,11 +1,15 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import {
+  findModeratorTestAccount,
+  toAuthUser,
+} from "@/features/moderator/moderatorMockData";
 
 const AuthContext = createContext(null);
 
 const STORAGE_KEY = "sehubs_user";
 const TOKEN_KEY = "sehubs_token";
 
-const MOCK_USER = {
+const MOCK_STUDENT = {
   username: "anhcoding12345",
   email: "tngo28299@gmail.com",
   displayName: "Anhpika",
@@ -22,11 +26,14 @@ const MOCK_USER = {
 function normalizeUser(stored) {
   if (!stored) return null;
 
+  const base = stored.role === "student" ? MOCK_STUDENT : stored;
+
   return {
-    ...MOCK_USER,
+    ...base,
     ...stored,
-    displayName: MOCK_USER.displayName,
-    initial: MOCK_USER.initial,
+    displayName: stored.displayName ?? base.displayName,
+    initial: stored.initial ?? base.initial,
+    role: stored.role ?? "student",
   };
 }
 
@@ -49,12 +56,22 @@ export function AuthProvider({ children }) {
   });
 
   const login = useCallback((credentials) => {
-    const username = credentials?.username?.trim() || MOCK_USER.username;
-    const email = username.includes("@") ? username : `${username}@gmail.com`;
+    const identifier = credentials?.username?.trim() || MOCK_STUDENT.username;
+    const password = credentials?.password ?? "";
 
+    const testAccount = findModeratorTestAccount(identifier, password);
+    if (testAccount) {
+      const nextUser = normalizeUser(toAuthUser(testAccount));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+      localStorage.setItem(TOKEN_KEY, "mock-jwt-token");
+      setUser(nextUser);
+      return nextUser;
+    }
+
+    const email = identifier.includes("@") ? identifier : `${identifier}@gmail.com`;
     const nextUser = normalizeUser({
-      ...MOCK_USER,
-      username,
+      ...MOCK_STUDENT,
+      username: identifier,
       email,
     });
 
@@ -76,6 +93,7 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(user),
       isPremium: false,
       isAdmin: user?.role === "admin",
+      isModerator: user?.role === "moderator" || user?.role === "admin",
       login,
       logout,
     }),
