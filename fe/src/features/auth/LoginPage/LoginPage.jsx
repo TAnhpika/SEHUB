@@ -4,6 +4,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faEye, faEyeSlash, faLock } from "@fortawesome/free-solid-svg-icons";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { useAuth } from "@/context/AuthContext";
+import { MODERATOR_TEST_ACCOUNTS } from "@/features/moderator/moderatorMockData";
+import logoSrc from "@/img/logo.png";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import styles from "./LoginPage.module.css";
 
@@ -35,6 +37,17 @@ function LoginPage() {
     event.preventDefault();
     setIsSubmitting(true);
 
+    const loggedInUser = login({ username, password });
+    const destination =
+      loggedInUser?.role === "moderator" || loggedInUser?.role === "admin"
+        ? "/moderator/practice-exams/add"
+        : redirectTo;
+    navigate(destination, { replace: true });
+  }
+
+  function fillTestAccount(account) {
+    setUsername(account.username);
+    setPassword(account.password);
     try {
       if (rememberMe) {
         localStorage.setItem(REMEMBER_KEY, email.trim());
@@ -131,6 +144,44 @@ function LoginPage() {
             <div className={styles.divider} role="separator">
               <span>Hoặc</span>
             </div>
+          </label>
+
+          <div className={styles.meta}>
+            <Link to="/forgot-password" className={styles.link}>
+              Quên mật khẩu?
+            </Link>
+          </div>
+
+          <Button type="submit" fullWidth size="lg" disabled={isSubmitting} className={styles.submit}>
+            Đăng nhập
+            <FontAwesomeIcon icon={faArrowRight} />
+          </Button>
+        </form>
+
+        {import.meta.env.DEV && (
+          <div className={styles.devAccounts}>
+            <p className={styles.devTitle}>Tài khoản test Moderator</p>
+            <ul className={styles.devList}>
+              {MODERATOR_TEST_ACCOUNTS.map((account) => (
+                <li key={account.username}>
+                  <button
+                    type="button"
+                    className={styles.devBtn}
+                    onClick={() => fillTestAccount(account)}
+                  >
+                    {account.roleLabel}: <code>{account.username}</code> /{" "}
+                    <code>{account.password}</code>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <p className={styles.footer}>
+          Chưa có tài khoản? <Link to="/register">Đăng ký miễn phí</Link>
+        </p>
+      </div>
 
             <button type="button" className={styles["google-btn"]} onClick={handleGoogleLogin}>
               <FontAwesomeIcon icon={faGoogle} className={styles["google-icon"]} />
