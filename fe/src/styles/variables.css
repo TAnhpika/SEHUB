@@ -65,6 +65,8 @@
   --color-purple-hover: var(--color-primary-hover);
   --color-purple-soft: var(--color-primary-light);
 
+  --gradient-streak-badge: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);
+
   --gradient-hero: linear-gradient(
     160deg,
     #eff6ff 0%,

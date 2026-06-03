@@ -43,7 +43,7 @@
   font-weight: 700;
   line-height: 1;
   color: #fff;
-  background: var(--color-purple);
+  background: var(--gradient-streak-badge);
   border-radius: var(--radius-full);
   border: 1.5px solid var(--color-surface);
 }
