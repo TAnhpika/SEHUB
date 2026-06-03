@@ -12,7 +12,8 @@
   display: grid;
   grid-template-columns: var(--feed-sidebar-fixed) minmax(0, 1fr) minmax(240px, 280px);
   gap: 1.25rem;
-  align-items: start;
+  align-items: stretch;
+  min-height: calc(100vh - var(--header-height));
 }
 
 .workspace-single {
@@ -24,12 +25,22 @@
   position: sticky;
   top: var(--header-height);
   align-self: start;
-  padding: 1rem 0.75rem 1rem 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: calc(100vh - var(--header-height));
+  min-height: calc(100vh - var(--header-height));
+  max-height: calc(100vh - var(--header-height));
+  padding: 0.625rem 0.75rem 0;
+  background: var(--color-surface);
   border-right: 1px solid var(--color-border);
-  overflow: visible;
+  overflow: hidden;
 }
 
 .col-left > * {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
   position: static;
   top: auto;
   padding-right: 0;
@@ -44,14 +55,15 @@
 .col-right {
   position: sticky;
   top: var(--header-height);
-  align-self: start;
-  padding: 1rem 0;
-  max-height: calc(100vh - var(--header-height));
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  align-self: stretch;
+  height: calc(100vh - var(--header-height));
+  min-height: calc(100vh - var(--header-height));
+  padding: 0.625rem 0;
+  overflow: hidden;
 }
 
 .col-right > * {
+  height: 100%;
   position: static;
   top: auto;
 }
