@@ -31,8 +31,9 @@ function MainSidebar() {
   const { pathname } = useLocation();
 
   return (
-    <aside className={styles.sidebar} aria-label="Điều hướng chính">
-      <div className={styles.panel}>
+    <div className={styles.root}>
+      <aside className={styles.sidebar} aria-label="Điều hướng chính">
+        <div className={styles.panel}>
         <nav className={styles.nav}>
           {MAIN_LINKS.map((item) => {
             const isActive = item.end ? pathname === item.to : pathname.startsWith(item.to);
@@ -88,12 +89,13 @@ function MainSidebar() {
           <FontAwesomeIcon icon={faCommentDots} className={styles.icon} />
           Gửi phản hồi
         </Link>
-      </div>
+        </div>
+      </aside>
 
       <button type="button" className={styles.collapse} aria-label="Thu gọn sidebar">
         <FontAwesomeIcon icon={faChevronLeft} />
       </button>
-    </aside>
+    </div>
   );
 }
 
