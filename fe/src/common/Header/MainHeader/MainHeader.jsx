@@ -1,4 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Link, useNavigate } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBell,
   faChevronDown,
@@ -15,8 +16,8 @@ function MainHeader() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  const email = user?.email ?? "tngo28299@gmail.com";
-  const initial = user?.initial ?? email.charAt(0).toUpperCase();
+  const displayName = user?.displayName ?? "Anhpika";
+  const initial = user?.initial ?? displayName.charAt(0).toUpperCase();
   const unreadCount = user?.unreadNotifications ?? 7;
   const streakCount = user?.streak ?? 7;
 
@@ -75,7 +76,7 @@ function MainHeader() {
               <span className={styles.avatar} aria-hidden="true">
                 {initial}
               </span>
-              <span className={styles.email}>{email}</span>
+              <span className={styles.email}>{displayName}</span>
               <FontAwesomeIcon icon={faChevronDown} className={styles.chevron} />
             </button>
 

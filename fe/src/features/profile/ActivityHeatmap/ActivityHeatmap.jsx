@@ -13,6 +13,7 @@ const WEEKS = 26;
 
 function ActivityHeatmap({ totalActivities }) {
   const weeks = Array.from({ length: WEEKS }, (_, index) => index);
+  const isEmpty = totalActivities === 0;
 
   return (
     <section className={styles.panel}>
@@ -21,6 +22,9 @@ function ActivityHeatmap({ totalActivities }) {
         <p className={styles.subtitle}>{totalActivities} hoạt động trong 6 tháng qua</p>
       </header>
 
+      {isEmpty ? (
+        <p className={styles.empty}>Chưa có hoạt động nào. Bắt đầu hoạt động!</p>
+      ) : (
       <div className={styles.chart}>
         <div className={styles.months} aria-hidden="true">
           {HEATMAP_DATA.months.map((month) => (
@@ -72,6 +76,7 @@ function ActivityHeatmap({ totalActivities }) {
           <span>Nhiều</span>
         </div>
       </div>
+      )}
     </section>
   );
 }

@@ -43,6 +43,15 @@
   gap: 1.25rem;
 }
 
+.workspace-auth {
+  grid-template-columns: var(--feed-sidebar-fixed) minmax(0, 1fr);
+  gap: 0;
+}
+
+.workspace-auth .col-center {
+  padding: 1rem 0 1.5rem;
+}
+
 .col-right {
   position: sticky;
   top: var(--header-height);
