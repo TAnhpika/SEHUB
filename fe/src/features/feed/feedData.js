@@ -1,3 +1,5 @@
+import { MAJORS, SEMESTERS } from "@/features/posts/createPostData";
+
 export const POSTS_PER_PAGE = 5;
 
 const AUTHORS = [
@@ -88,6 +90,8 @@ export const MOCK_POSTS = Array.from({ length: 60 }, (_, index) => {
     excerpt,
     body: excerpt,
     tags: index === 0 ? ["Review"] : TAG_SETS[index % TAG_SETS.length],
+    semester: SEMESTERS[index % SEMESTERS.length],
+    major: MAJORS[index % MAJORS.length],
     timeAgo: TIMES[index % TIMES.length],
     publishedAt: PUBLISHED_DATES[index % PUBLISHED_DATES.length],
     likes: index === 0 ? 2 : 48 + (index % 80),
@@ -106,3 +110,10 @@ export const MOCK_POSTS = Array.from({ length: 60 }, (_, index) => {
         : [],
   };
 });
+
+export function getPostById(postId) {
+  const id = Number(postId);
+  if (!Number.isFinite(id)) return null;
+  return MOCK_POSTS.find((post) => post.id === id) ?? null;
+}
+

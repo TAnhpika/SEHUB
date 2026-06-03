@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import Pagination from "@/common/Pagination/Pagination";
 import PostCard from "@/features/feed/PostCard/PostCard";
 import PostDetailModal from "@/features/feed/PostDetailModal/PostDetailModal";
+import PostFeedFilters from "@/features/feed/PostFeedFilters/PostFeedFilters";
 import { MOCK_POSTS, POSTS_PER_PAGE } from "@/features/feed/feedData";
+import { filterPosts } from "@/features/feed/feedFilterData";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import styles from "./FeedPage.module.css";
 
@@ -16,16 +18,33 @@ function FeedPage() {
   const [posts, setPosts] = useState(() => [...MOCK_POSTS]);
   const [selectedPost, setSelectedPost] = useState(null);
   const [editOnOpen, setEditOnOpen] = useState(false);
+  const [semesterFilter, setSemesterFilter] = useState("all");
+  const [majorFilter, setMajorFilter] = useState("all");
   const { isAuthenticated, requireAuth } = useRequireAuth();
   const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
 
-  const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE);
+  const filteredPosts = useMemo(
+    () => filterPosts(posts, semesterFilter, majorFilter),
+    [posts, semesterFilter, majorFilter],
+  );
+
+  const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
   const safePage = Math.min(currentPage, totalPages || 1);
 
   const pagePosts = useMemo(() => {
     const start = (safePage - 1) * POSTS_PER_PAGE;
-    return posts.slice(start, start + POSTS_PER_PAGE);
-  }, [posts, safePage]);
+    return filteredPosts.slice(start, start + POSTS_PER_PAGE);
+  }, [filteredPosts, safePage]);
+
+  function handleSemesterChange(value) {
+    setSemesterFilter(value);
+    setSearchParams({});
+  }
+
+  function handleMajorChange(value) {
+    setMajorFilter(value);
+    setSearchParams({});
+  }
 
   function goToPage(page) {
     if (page < 1 || page > totalPages || page === safePage) return;
@@ -85,29 +104,29 @@ function FeedPage() {
             Tạo bài viết
           </Button>
 
-          <div className={styles.filters}>
-            <button type="button" className={styles.filter}>
-              Học kỳ 6
-              <FontAwesomeIcon icon={faChevronDown} />
-            </button>
-            <button type="button" className={styles.filter}>
-              Tất cả chuyên ngành
-              <FontAwesomeIcon icon={faChevronDown} />
-            </button>
-          </div>
+          <PostFeedFilters
+            semester={semesterFilter}
+            major={majorFilter}
+            onSemesterChange={handleSemesterChange}
+            onMajorChange={handleMajorChange}
+          />
         </div>
       </header>
 
       <div className={styles.list}>
-        {pagePosts.map((post) => (
-          <PostCard
-            key={post.id}
-            post={post}
-            onOpen={handleOpenPost}
-            onEdit={handleEditPost}
-            onDelete={handleDeletePost}
-          />
-        ))}
+        {pagePosts.length > 0 ? (
+          pagePosts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              onOpen={handleOpenPost}
+              onEdit={handleEditPost}
+              onDelete={handleDeletePost}
+            />
+          ))
+        ) : (
+          <p className={styles.empty}>Không có bài viết phù hợp với bộ lọc.</p>
+        )}
       </div>
 
       <PostDetailModal
