@@ -10,7 +10,7 @@ export const SUBJECT_LINKS = [
   { to: "/community/final-exam", label: "Câu hỏi ôn tập", icon: faCircleQuestion },
   {
     to: "/community/pratical-exam",
-    label: "Câu hỏi thực hành tài liệu",
+    label: "Câu hỏi thực hành",
     icon: faBook,
   },
   { to: "/community/documents", label: "Tài liệu", icon: faFileLines },

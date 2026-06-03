@@ -51,7 +51,7 @@ function HomeSidebar() {
           {FEATURED_POSTS.map((title, index) => (
             <li
               key={title}
-              className={index < FEATURED_POSTS.length - 1 ? styles.item : undefined}
+              className={`${styles["post-item"]} ${index < FEATURED_POSTS.length - 1 ? styles.item : ""}`}
             >
               <button type="button" className={styles["post-link"]}>
                 {title}

@@ -3,6 +3,7 @@ import MainHeader from "@/common/Header/MainHeader/MainHeader";
 import MainSidebar from "@/common/Sidebar/MainSidebar/MainSidebar";
 import HomeSidebar from "@/common/Sidebar/HomeSidebar/HomeSidebar";
 import Footer from "@/common/Footer/Footer";
+import ChatFab from "@/features/chat/ChatFab/ChatFab";
 import styles from "./MainLayout.module.css";
 
 function MainLayout() {
@@ -11,9 +12,15 @@ function MainLayout() {
   const isProfilePage = useMatch("/profile/:username");
   const isCreatePostPage = useMatch("/home/create-post");
   const isFeedbackPage = useMatch("/home/feedback");
+  const isMessagesPage = useMatch("/home/messages");
   const isPostDetailPage = useMatch("/home/posts/:postId");
   const hideRightSidebar =
-    isFriendsArea || isProfilePage || isCreatePostPage || isFeedbackPage || isPostDetailPage;
+    isFriendsArea ||
+    isProfilePage ||
+    isCreatePostPage ||
+    isFeedbackPage ||
+    isMessagesPage ||
+    isPostDetailPage;
 
   return (
     <div className={styles.layout}>
@@ -35,9 +42,15 @@ function MainLayout() {
         )}
       </div>
 
-      {!isProfilePage && !isFriendProfilePage && !isCreatePostPage && !isFeedbackPage && !isPostDetailPage && (
+      {!isProfilePage &&
+        !isFriendProfilePage &&
+        !isCreatePostPage &&
+        !isFeedbackPage &&
+        !isMessagesPage &&
+        !isPostDetailPage && (
         <Footer />
       )}
+      {!isMessagesPage && <ChatFab />}
     </div>
   );
 }
