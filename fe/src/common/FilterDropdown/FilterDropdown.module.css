@@ -30,6 +30,7 @@
 .trigger-label {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chevron {
@@ -43,6 +44,7 @@
   top: calc(100% + 0.375rem);
   right: 0;
   z-index: 30;
+  width: max-content;
   min-width: 100%;
   max-height: 16rem;
   overflow-y: auto;
@@ -66,6 +68,7 @@
   font-weight: 500;
   color: var(--color-text);
   text-align: left;
+  white-space: nowrap;
   background: transparent;
   border: none;
   border-radius: var(--radius-md);
@@ -92,4 +95,5 @@
 
 .option-label {
   min-width: 0;
+  white-space: nowrap;
 }
