@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
+import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
 import { copyPostLink, isOwnPost } from "@/features/feed/postUtils";
 import styles from "./PostCard.module.css";
 
@@ -127,14 +128,23 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete }) {
             {post.views}
           </button>
         </div>
-        <button
-          type="button"
-          className={styles.share}
-          aria-label="Chia sẻ"
-          onClick={handleShare}
-        >
-          <FontAwesomeIcon icon={faShareNodes} />
-        </button>
+        <div className={styles.actions}>
+          {!isOwner && (
+            <PostReportButton
+              postId={post.id}
+              postTitle={post.title}
+              className={`${styles.share} ${styles.report}`}
+            />
+          )}
+          <button
+            type="button"
+            className={styles.share}
+            aria-label="Chia sẻ"
+            onClick={handleShare}
+          >
+            <FontAwesomeIcon icon={faShareNodes} />
+          </button>
+        </div>
       </footer>
     </article>
   );

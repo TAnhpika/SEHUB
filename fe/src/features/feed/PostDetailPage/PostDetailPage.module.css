@@ -93,6 +93,11 @@
   background: var(--color-primary-light);
 }
 
+.report:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
 .title {
   font-size: clamp(1.375rem, 3vw, 1.75rem);
   font-weight: 800;
