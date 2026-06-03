@@ -33,7 +33,7 @@ function ChatFab() {
   return (
     <div ref={rootRef} className={styles.root}>
       {open ? (
-        <ChatModal onClose={() => setOpen(false)} />
+        <ChatModal key="chat-modal" onClose={() => setOpen(false)} />
       ) : (
         <button
           type="button"
