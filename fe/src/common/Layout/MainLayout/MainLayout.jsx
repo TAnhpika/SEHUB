@@ -8,26 +8,22 @@ import styles from "./MainLayout.module.css";
 function MainLayout() {
   const isFriendsPage = useMatch("/home/friends");
   const isProfilePage = useMatch("/profile/:username");
-  const hideSidebars = isFriendsPage || isProfilePage;
+  const hideRightSidebar = isFriendsPage || isProfilePage;
 
   return (
     <div className={styles.layout}>
       <MainHeader />
 
-      <div
-        className={`${styles.workspace} ${hideSidebars ? styles["workspace-single"] : ""} ${isProfilePage ? styles["workspace-profile"] : ""}`}
-      >
-        {!isProfilePage && (
-          <div className={styles["col-left"]}>
-            <MainSidebar />
-          </div>
-        )}
+      <div className={`${styles.workspace} ${hideRightSidebar ? styles["workspace-single"] : ""}`}>
+        <div className={styles["col-left"]}>
+          <MainSidebar />
+        </div>
 
         <main className={styles["col-center"]} id="home-top">
           <Outlet />
         </main>
 
-        {!hideSidebars && (
+        {!hideRightSidebar && (
           <div className={styles["col-right"]}>
             <HomeSidebar />
           </div>

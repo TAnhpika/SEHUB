@@ -2,21 +2,30 @@ import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBook,
+  faChevronLeft,
   faCircleQuestion,
+  faCommentDots,
   faFileLines,
   faHome,
+  faRobot,
   faUserGroup,
 } from "@fortawesome/free-solid-svg-icons";
+import Button from "@/common/Button/Button";
 import styles from "./MainSidebar.module.css";
 
 const MAIN_LINKS = [
   { to: "/home", label: "Trang chủ", icon: faHome, end: true },
+  { to: "/support", label: "Trợ lý tư vấn thủ tục trường", icon: faRobot },
   { to: "/home/friends", label: "Tìm kiếm bạn bè", icon: faUserGroup },
 ];
 
 const SUBJECT_LINKS = [
   { to: "/community/final-exam", label: "Câu hỏi ôn tập", icon: faCircleQuestion },
-  { to: "/community/pratical-exam", label: "Câu hỏi thực hành", icon: faBook },
+  {
+    to: "/community/pratical-exam",
+    label: "Câu hỏi thực hành tài liệu",
+    icon: faBook,
+  },
   { to: "/community/documents", label: "Tài liệu", icon: faFileLines },
 ];
 
@@ -66,7 +75,26 @@ function MainSidebar() {
             })}
           </ul>
         </div>
+
+        <div className={styles.discord}>
+          <p className={styles["discord-title"]}>Cộng đồng Discord</p>
+          <p className={styles["discord-desc"]}>
+            Tham gia server Discord để thảo luận, hỏi đáp và cập nhật tin tức mới nhất.
+          </p>
+          <Button size="sm" fullWidth className={styles["discord-btn"]}>
+            Nhấn vào đây để tham gia
+          </Button>
+        </div>
+
+        <Link to="/support#contact" className={styles.feedback}>
+          <FontAwesomeIcon icon={faCommentDots} className={styles.icon} />
+          Gửi phản hồi
+        </Link>
       </div>
+
+      <button type="button" className={styles.collapse} aria-label="Thu gọn sidebar">
+        <FontAwesomeIcon icon={faChevronLeft} />
+      </button>
     </aside>
   );
 }
