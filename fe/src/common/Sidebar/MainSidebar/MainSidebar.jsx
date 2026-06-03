@@ -50,7 +50,7 @@ function MainSidebar() {
             </Button>
           </div>
 
-          <Link to="/support#contact" className={styles.feedback}>
+          <Link to="/home/feedback" className={styles.feedback}>
             <FontAwesomeIcon icon={faCommentDots} className={styles.icon} />
             Gửi phản hồi
           </Link>
