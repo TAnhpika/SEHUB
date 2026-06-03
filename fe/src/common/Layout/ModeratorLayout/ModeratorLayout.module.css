@@ -1,0 +1,21 @@
+.layout {
+  --moderator-primary: #004ac6;
+  --moderator-sidebar-width: 256px;
+  --moderator-bg: #f7f9fb;
+
+  display: flex;
+  min-height: 100vh;
+  background: var(--moderator-bg);
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.content {
+  flex: 1;
+  padding: 2rem 1.5rem 5rem;
+}
