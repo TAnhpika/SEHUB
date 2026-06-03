@@ -1,13 +1,13 @@
 import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faBell,
   faChevronDown,
   faMagnifyingGlass,
   faRightFromBracket,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context/AuthContext";
+import NotificationDropdown from "./NotificationDropdown";
 import StreakDropdown from "./StreakDropdown";
 import logoSrc from "@/img/logo.png";
 import styles from "./MainHeader.module.css";
@@ -53,14 +53,7 @@ function MainHeader() {
         </div>
 
         <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles["icon-btn"]}
-            aria-label={`Thông báo (${unreadCount} chưa đọc)`}
-          >
-            <FontAwesomeIcon icon={faBell} className={styles["bell-icon"]} />
-            <span className={styles.badge}>{unreadCount}</span>
-          </button>
+          <NotificationDropdown unreadCount={unreadCount} />
 
           <StreakDropdown streakCount={streakCount} />
 

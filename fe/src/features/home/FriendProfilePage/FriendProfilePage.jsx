@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import ActivityHeatmap from "@/features/profile/ActivityHeatmap/ActivityHeatmap";
 import BadgesSection from "@/features/profile/BadgesSection/BadgesSection";
-import ChatFab from "@/features/profile/ChatFab/ChatFab";
 import RecentPosts from "@/features/profile/RecentPosts/RecentPosts";
 import { BADGES } from "@/features/profile/profileData";
 import FriendProfileCard from "@/features/home/FriendProfileCard/FriendProfileCard";
@@ -31,8 +30,6 @@ function FriendProfilePage() {
         <BadgesSection badges={BADGES} />
         <RecentPosts posts={profile.posts} />
       </div>
-
-      <ChatFab />
     </div>
   );
 }
