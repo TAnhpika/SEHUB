@@ -10,6 +10,7 @@
 .sidebar {
   position: sticky;
   top: calc(var(--header-height) + 1rem);
+  align-self: start;
 }
 
 .main {
