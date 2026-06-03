@@ -15,17 +15,23 @@ function ReportPostModal({ open, onClose, postId, postTitle }) {
   useEffect(() => {
     if (!open) return undefined;
 
-    const previousOverflow = document.body.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousScrollbarGutter = document.documentElement.style.scrollbarGutter;
 
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
     }
 
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    document.documentElement.style.scrollbarGutter = "auto";
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.documentElement.style.scrollbarGutter = previousScrollbarGutter;
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [open, onClose]);
