@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -7,6 +7,10 @@ import {
   faChevronRight,
   faClock,
   faEnvelope,
+  faEye,
+  faEyeSlash,
+  faKey,
+  faLock,
   faMobileScreenButton,
 } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
@@ -44,11 +48,11 @@ const CONTACT_COPY = {
     autoComplete: "email",
   },
   phone: {
-    title: "Nhập Số điện thoại của bạn",
+    title: "Nhập số điện thoại của bạn",
     subtitle:
-      "Chúng tôi sẽ gửi mã xác minh gồm 6 chữ số qua tin nhắn SMS đến số này để xác thực tài khoản của bạn.",
+      "Chúng tôi sẽ gửi mã xác minh gồm 6 chữ số đến số điện thoại này để xác thực tài khoản của bạn.",
     label: "Số điện thoại",
-    placeholder: "0912345678",
+    placeholder: "09xx xxx xxx",
     icon: faMobileScreenButton,
     inputType: "tel",
     autoComplete: "tel",
@@ -59,25 +63,45 @@ const OTP_COPY = {
   email:
     "Mã xác thực đã được gửi đến email của bạn. Vui lòng kiểm tra và nhập mã gồm 6 chữ số bên dưới.",
   phone:
-    "Mã xác thực đã được gửi đến số điện thoại của bạn. Vui lòng kiểm tra tin nhắn SMS và nhập mã gồm 6 chữ số bên dưới.",
+    "Mã xác thực đã được gửi đến số điện thoại của bạn. Vui lòng kiểm tra tin nhắn và nhập mã gồm 6 chữ số bên dưới.",
 };
 
+function formatPhoneInput(value) {
+  const digits = value.replace(/\D/g, "").slice(0, 10);
+
+  if (digits.length <= 4) {
+    return digits;
+  }
+
+  if (digits.length <= 7) {
+    return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+  }
+
+  return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
+}
+
 function ForgotPasswordPage() {
+  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { showToast } = useToast();
   const [step, setStep] = useState("method");
   const [method, setMethod] = useState(null);
   const [contact, setContact] = useState("");
   const [otp, setOtp] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [resendSeconds, setResendSeconds] = useState(RESEND_SECONDS);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const activeStep =
-    step === "otp" && method && contact
-      ? "otp"
-      : step === "contact" && method
-        ? "contact"
-        : "method";
+    step === "reset" && method && contact
+      ? "reset"
+      : step === "otp" && method && contact
+        ? "otp"
+        : step === "contact" && method
+          ? "contact"
+          : "method";
 
   useEffect(() => {
     if (activeStep !== "otp") {
@@ -128,8 +152,8 @@ function ForgotPasswordPage() {
       return;
     }
 
-    if (method === "phone" && !/^0\d{9,10}$/.test(value.replace(/\s/g, ""))) {
-      showToast("Số điện thoại không hợp lệ.");
+    if (method === "phone" && !/^0\d{9}$/.test(value.replace(/\s/g, ""))) {
+      showToast("Số điện thoại không hợp lệ. Vui lòng nhập 10 chữ số bắt đầu bằng 0.");
       return;
     }
 
@@ -148,8 +172,26 @@ function ForgotPasswordPage() {
     }
 
     setIsSubmitting(true);
-    showToast("Xác minh OTP thành công. (Mock — bước đặt lại mật khẩu sẽ được triển khai tiếp.)");
+    setStep("reset");
     setIsSubmitting(false);
+  }
+
+  function handleResetPassword(event) {
+    event.preventDefault();
+
+    if (password.length < 6) {
+      showToast("Mật khẩu phải có ít nhất 6 ký tự.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      showToast("Mật khẩu xác nhận không khớp.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    showToast("Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.");
+    navigate("/login", { replace: true });
   }
 
   function handleResendOtp() {
@@ -166,6 +208,8 @@ function ForgotPasswordPage() {
   function handleChangeMethod() {
     setContact("");
     setOtp("");
+    setPassword("");
+    setConfirmPassword("");
     setStep("method");
   }
 
@@ -174,11 +218,17 @@ function ForgotPasswordPage() {
     setStep("contact");
   }
 
+  function handleBackFromReset() {
+    setPassword("");
+    setConfirmPassword("");
+    setStep("otp");
+  }
+
   const contactCopy = method ? CONTACT_COPY[method] : null;
   const otpSubtitle = method ? OTP_COPY[method] : "";
 
   const formWrapClassName =
-    activeStep === "contact"
+    activeStep === "contact" || activeStep === "reset"
       ? `${styles.formWrap} ${styles["form-wrap-compact"]}`
       : styles.formWrap;
 
@@ -187,7 +237,9 @@ function ForgotPasswordPage() {
       ? "forgot-password-title"
       : activeStep === "contact"
         ? "forgot-password-contact-title"
-        : "forgot-password-otp-title";
+        : activeStep === "otp"
+          ? "forgot-password-otp-title"
+          : "forgot-password-reset-title";
 
   return (
     <div className={styles.page}>
@@ -280,7 +332,13 @@ function ForgotPasswordPage() {
                       type={contactCopy?.inputType}
                       className={styles.input}
                       value={contact}
-                      onChange={(event) => setContact(event.target.value)}
+                      onChange={(event) =>
+                        setContact(
+                          method === "phone"
+                            ? formatPhoneInput(event.target.value)
+                            : event.target.value,
+                        )
+                      }
                       placeholder={contactCopy?.placeholder}
                       autoComplete={contactCopy?.autoComplete}
                       required
@@ -361,6 +419,88 @@ function ForgotPasswordPage() {
               <footer className={styles.footer}>
                 <p>© 2024 SEHub AI. Empowering students globally.</p>
               </footer>
+            </>
+          ) : null}
+
+          {activeStep === "reset" ? (
+            <>
+              <header className={styles["contact-header"]}>
+                <h1 id="forgot-password-reset-title" className={styles.title}>
+                  Đặt lại mật khẩu
+                </h1>
+                <p className={styles.subtitle}>
+                  Tạo mật khẩu mới an toàn cho tài khoản SEHub của bạn. Mật khẩu nên có ít nhất 6 ký tự.
+                </p>
+              </header>
+
+              <form className={styles["contact-form"]} onSubmit={handleResetPassword}>
+                <div className={styles.fields}>
+                  <label className={styles.field}>
+                    <span className={styles.label}>Mật khẩu mới</span>
+                    <span className={styles["input-wrap"]}>
+                      <FontAwesomeIcon icon={faLock} className={styles["input-icon"]} />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        className={`${styles.input} ${styles["input-with-toggle"]}`}
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        placeholder="••••••••"
+                        autoComplete="new-password"
+                        required
+                        minLength={6}
+                      />
+                      <button
+                        type="button"
+                        className={styles["toggle-password"]}
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                      >
+                        <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
+                      </button>
+                    </span>
+                  </label>
+
+                  <label className={styles.field}>
+                    <span className={styles.label}>Xác nhận mật khẩu</span>
+                    <span className={styles["input-wrap"]}>
+                      <FontAwesomeIcon icon={faKey} className={styles["input-icon"]} />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        className={styles.input}
+                        value={confirmPassword}
+                        onChange={(event) => setConfirmPassword(event.target.value)}
+                        placeholder="••••••••"
+                        autoComplete="new-password"
+                        required
+                        minLength={6}
+                      />
+                    </span>
+                  </label>
+                </div>
+
+                <button type="submit" className={styles["submit-btn"]} disabled={isSubmitting}>
+                  Hoàn tất
+                  <FontAwesomeIcon icon={faArrowRight} className={styles["submit-icon"]} />
+                </button>
+              </form>
+
+              <div className={styles["change-method"]}>
+                <button type="button" className={styles["change-method-btn"]} onClick={handleBackFromReset}>
+                  <FontAwesomeIcon icon={faArrowLeft} className={styles["back-icon"]} />
+                  Quay lại
+                </button>
+              </div>
+
+              <footer className={styles["assist-footer"]}>
+                <p>
+                  Gặp sự cố?{" "}
+                  <Link to="/support" className={styles["support-link"]}>
+                    Liên hệ hỗ trợ
+                  </Link>
+                </p>
+              </footer>
+
+              <p className={styles["page-tagline"]}>© 2024 SEHub AI. Empowering students globally.</p>
             </>
           ) : null}
         </div>
