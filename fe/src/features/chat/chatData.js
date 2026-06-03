@@ -1,0 +1,32 @@
+export const CHAT_CONVERSATIONS = [
+  {
+    id: "1",
+    name: "Phuong Thao",
+    initials: "PT",
+    avatarBg: "#dbeafe",
+    avatarColor: "#2563eb",
+    preview: "Hiện tại thì ổn rồi đó...",
+    time: "14:25",
+    online: true,
+  },
+  {
+    id: "2",
+    name: "R",
+    initials: "R",
+    avatarBg: "#ede9fe",
+    avatarColor: "#7c3aed",
+    preview: "Bạn: ổn rồi",
+    time: "1 ngày",
+    online: false,
+  },
+  {
+    id: "3",
+    name: "Lê Anh",
+    initials: "LA",
+    avatarBg: "#ffedd5",
+    avatarColor: "#ea580c",
+    preview: "Ok nhé, mai gặp",
+    time: "2 ngày",
+    online: false,
+  },
+];

@@ -5,6 +5,7 @@ import FeedSidebar from "@/common/Sidebar/FeedSidebar/FeedSidebar";
 import MainSidebar from "@/common/Sidebar/MainSidebar/MainSidebar";
 import CommunitySidebar from "@/common/Sidebar/CommunitySidebar/CommunitySidebar";
 import Footer from "@/common/Footer/Footer";
+import ChatFab from "@/features/chat/ChatFab/ChatFab";
 import { useAuth } from "@/context/AuthContext";
 import styles from "./CommunityLayout.module.css";
 
@@ -41,6 +42,8 @@ function CommunityLayout() {
       </div>
 
       <Footer />
+
+      {isAuthenticated && <ChatFab />}
     </div>
   );
 }
