@@ -6,9 +6,10 @@ import Footer from "@/common/Footer/Footer";
 import styles from "./MainLayout.module.css";
 
 function MainLayout() {
-  const isFriendsPage = useMatch("/home/friends");
+  const isFriendsArea = useMatch({ path: "/home/friends", end: false });
+  const isFriendProfilePage = useMatch("/home/friends/:username");
   const isProfilePage = useMatch("/profile/:username");
-  const hideRightSidebar = isFriendsPage || isProfilePage;
+  const hideRightSidebar = isFriendsArea || isProfilePage;
 
   return (
     <div className={styles.layout}>
@@ -30,7 +31,7 @@ function MainLayout() {
         )}
       </div>
 
-      {!isProfilePage && <Footer />}
+      {!isProfilePage && !isFriendProfilePage && <Footer />}
     </div>
   );
 }

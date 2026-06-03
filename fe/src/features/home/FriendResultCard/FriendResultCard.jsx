@@ -1,8 +1,9 @@
+import { Link } from "react-router-dom";
 import styles from "./FriendResultCard.module.css";
 
 function FriendResultCard({ user }) {
   return (
-    <article className={styles.card}>
+    <Link to={`/home/friends/${user.username}`} className={styles.card}>
       <span className={styles.avatar} aria-hidden="true">
         {user.initial}
       </span>
@@ -13,7 +14,7 @@ function FriendResultCard({ user }) {
           Level: <span className={styles["level-value"]}>{user.level}</span>
         </p>
       </div>
-    </article>
+    </Link>
   );
 }
 
