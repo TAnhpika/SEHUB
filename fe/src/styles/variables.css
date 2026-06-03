@@ -61,9 +61,9 @@
   --feed-main-width: minmax(0, 1fr);
   --color-feed-bg: #eef2f7;
 
-  --color-purple: #7c3aed;
-  --color-purple-hover: #6d28d9;
-  --color-purple-soft: #ede9fe;
+  --color-purple: var(--color-primary);
+  --color-purple-hover: var(--color-primary-hover);
+  --color-purple-soft: var(--color-primary-light);
 
   --gradient-hero: linear-gradient(
     160deg,
