@@ -5,17 +5,24 @@ import {
   faHeart,
   faShareNodes,
 } from "@fortawesome/free-solid-svg-icons";
+import { useAuth } from "@/context/AuthContext";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
+import { isOwnPost } from "@/features/feed/postUtils";
 import styles from "./PostCard.module.css";
 
-function PostCard({ post, interactive = false }) {
+function PostCard({ post, interactive = false, onOpen, onEdit, onDelete }) {
+  const { user } = useAuth();
   const { isAuthenticated, requireAuth } = useRequireAuth();
   const canInteract = interactive || isAuthenticated;
+  const isOwner = isOwnPost(post, user);
 
   function handleOpenPost() {
     if (!canInteract) {
       requireAuth("Vui lòng đăng nhập để xem bài viết.");
+      return;
     }
+    onOpen?.(post);
   }
 
   function handleInteract(event) {
@@ -23,6 +30,16 @@ function PostCard({ post, interactive = false }) {
     if (!canInteract) {
       requireAuth("Vui lòng đăng nhập để tương tác với bài viết.");
     }
+  }
+
+  function handleEditPost(event) {
+    event?.stopPropagation?.();
+    onEdit?.(post);
+  }
+
+  function handleDeletePost(event) {
+    event?.stopPropagation?.();
+    onDelete?.(post);
   }
 
   return (
@@ -46,10 +63,15 @@ function PostCard({ post, interactive = false }) {
           <div>
             <p className={styles.username}>{post.author.username}</p>
             <p className={styles.meta}>
-              {post.timeAgo} · {post.author.club}
+              {post.publishedAt ?? post.timeAgo}
+              {!isOwner && post.author.club ? ` · ${post.author.club}` : ""}
             </p>
           </div>
         </div>
+
+        {isOwner && (
+          <PostOwnerMenu onEdit={handleEditPost} onDelete={handleDeletePost} />
+        )}
       </header>
 
       <h2 className={styles.title}>{post.title}</h2>
