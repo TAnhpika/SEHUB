@@ -20,7 +20,7 @@ export const PRICING_PLANS = [
     name: "1 Học kỳ",
     duration: "8 tháng",
     price: "35.000 đ/tháng",
-    savings: "Tiết kiệm 29%",
+    savings: "Tiết kiệm 28%",
     popular: true,
     features: [
       "Tất cả tính năng gói 1 tháng",
@@ -35,7 +35,7 @@ export const PRICING_PLANS = [
     name: "Toàn khóa học",
     duration: "4 năm",
     price: "20.000 đ/tháng",
-    savings: "Tiết kiệm 59%",
+    savings: "Tiết kiệm 58%",
     popular: false,
     features: [
       "Tất cả tính năng trọn đời",
