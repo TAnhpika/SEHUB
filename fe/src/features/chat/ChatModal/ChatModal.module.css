@@ -10,6 +10,12 @@
   overflow: hidden;
 }
 
+.modal.chat {
+  width: 22rem;
+  height: 28rem;
+  max-height: calc(100vh - 6rem);
+}
+
 .header {
   display: flex;
   align-items: center;
