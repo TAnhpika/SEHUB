@@ -3,12 +3,12 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBell,
   faChevronDown,
-  faFire,
   faMagnifyingGlass,
   faRightFromBracket,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context/AuthContext";
+import StreakDropdown from "./StreakDropdown";
 import logoSrc from "@/img/logo.png";
 import styles from "./MainHeader.module.css";
 
@@ -62,14 +62,7 @@ function MainHeader() {
             <span className={styles.badge}>{unreadCount}</span>
           </button>
 
-          <button
-            type="button"
-            className={styles["icon-btn"]}
-            aria-label={`Streak ${streakCount} ngày`}
-          >
-            <FontAwesomeIcon icon={faFire} className={styles["fire-icon"]} />
-            <span className={styles.badge}>{streakCount}</span>
-          </button>
+          <StreakDropdown streakCount={streakCount} />
 
           <div className={styles.profile}>
             <button type="button" className={styles["profile-trigger"]} aria-haspopup="menu">
