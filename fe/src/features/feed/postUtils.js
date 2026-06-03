@@ -12,7 +12,12 @@ export function isOwnComment(comment, user) {
 
 export function getPostShareUrl(postId) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  return `${origin}/home?post=${postId}`;
+  return `${origin}/home/posts/${postId}`;
+}
+
+export function parsePostId(value) {
+  const id = Number(value);
+  return Number.isFinite(id) && id > 0 ? id : null;
 }
 
 export async function copyPostLink(postId) {
