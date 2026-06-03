@@ -12,9 +12,24 @@ import { faCircleInfo, faXmark } from "@fortawesome/free-solid-svg-icons";
 import styles from "./Toast.module.css";
 
 const ToastContext = createContext(null);
+const COPY_TOAST_DURATION = 3200;
 
 function ToastViewport({ toast, onClose }) {
   if (!toast) return null;
+
+  if (toast.variant === "copy") {
+    return (
+      <div className={`${styles.viewport} ${styles["viewport-top"]}`} role="status" aria-live="polite">
+        <div className={styles["toast-copy"]}>
+          <div className={styles["toast-copy-body"]}>
+            <p className={styles["toast-copy-title"]}>{toast.title}</p>
+            <p className={styles["toast-copy-message"]}>{toast.message}</p>
+          </div>
+          <span className={styles.progress} aria-hidden="true" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.viewport} role="status" aria-live="polite">
@@ -73,7 +88,23 @@ export function ToastProvider({ children }) {
       timerRef.current = setTimeout(() => {
         setToast(null);
         timerRef.current = null;
-      }, 3200);
+      }, COPY_TOAST_DURATION);
+    },
+    [clearTimers],
+  );
+
+  const showCopyToast = useCallback(
+    ({
+      title = "Đã sao chép",
+      message = "Link bài viết đã được sao chép vào clipboard",
+    } = {}) => {
+      clearTimers();
+      setToast({ variant: "copy", title, message });
+
+      timerRef.current = setTimeout(() => {
+        setToast(null);
+        timerRef.current = null;
+      }, COPY_TOAST_DURATION);
     },
     [clearTimers],
   );
@@ -109,10 +140,11 @@ export function ToastProvider({ children }) {
   const value = useMemo(
     () => ({
       showToast,
+      showCopyToast,
       showCountdownToast,
       hideToast,
     }),
-    [showToast, showCountdownToast, hideToast],
+    [showToast, showCopyToast, showCountdownToast, hideToast],
   );
 
   return (
