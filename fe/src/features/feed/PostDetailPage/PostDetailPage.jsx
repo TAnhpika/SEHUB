@@ -173,6 +173,7 @@ function PostDetailPage() {
               {!isOwner && (
                 <PostReportButton
                   postId={post.id}
+                  postTitle={post.title}
                   className={`${styles.share} ${styles.report}`}
                 />
               )}
