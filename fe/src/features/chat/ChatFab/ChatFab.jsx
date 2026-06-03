@@ -32,17 +32,18 @@ function ChatFab() {
 
   return (
     <div ref={rootRef} className={styles.root}>
-      {open && <ChatModal onClose={() => setOpen(false)} />}
-
-      <button
-        type="button"
-        className={`${styles.fab} ${open ? styles.active : ""}`}
-        aria-label={open ? "Đóng tin nhắn" : "Mở tin nhắn"}
-        aria-expanded={open}
-        onClick={() => setOpen((prev) => !prev)}
-      >
-        <FontAwesomeIcon icon={faCommentDots} />
-      </button>
+      {open ? (
+        <ChatModal onClose={() => setOpen(false)} />
+      ) : (
+        <button
+          type="button"
+          className={styles.fab}
+          aria-label="Mở tin nhắn"
+          onClick={() => setOpen(true)}
+        >
+          <FontAwesomeIcon icon={faCommentDots} />
+        </button>
+      )}
     </div>
   );
 }
