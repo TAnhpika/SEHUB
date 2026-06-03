@@ -25,8 +25,8 @@ function normalizeUser(stored) {
   return {
     ...MOCK_USER,
     ...stored,
-    displayName: MOCK_USER.displayName,
-    initial: MOCK_USER.initial,
+    displayName: stored.displayName ?? MOCK_USER.displayName,
+    initial: stored.initial ?? MOCK_USER.initial,
   };
 }
 
@@ -56,6 +56,28 @@ export function AuthProvider({ children }) {
       ...MOCK_USER,
       username,
       email,
+      displayName: credentials?.displayName ?? MOCK_USER.displayName,
+    });
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+    localStorage.setItem(TOKEN_KEY, "mock-jwt-token");
+    setUser(nextUser);
+    return nextUser;
+  }, []);
+
+  const register = useCallback(({ fullName, email }) => {
+    const trimmedEmail = email?.trim() || MOCK_USER.email;
+    const username = trimmedEmail.includes("@")
+      ? trimmedEmail.split("@")[0]
+      : trimmedEmail;
+    const displayName = fullName?.trim() || username;
+
+    const nextUser = normalizeUser({
+      ...MOCK_USER,
+      username,
+      email: trimmedEmail,
+      displayName,
+      initial: displayName.charAt(0).toUpperCase(),
     });
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
@@ -77,9 +99,10 @@ export function AuthProvider({ children }) {
       isPremium: false,
       isAdmin: user?.role === "admin",
       login,
+      register,
       logout,
     }),
-    [user, login, logout],
+    [user, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
