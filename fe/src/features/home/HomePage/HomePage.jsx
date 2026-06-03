@@ -69,7 +69,7 @@ function HomePage() {
         </div>
 
         <div className={styles["header-actions"]}>
-          <Button look="soft" size="sm" className={styles["create-btn"]}>
+          <Button look="soft" size="sm" className={styles["create-btn"]} to="/home/create-post">
             <FontAwesomeIcon icon={faPlus} />
             Tạo bài viết
           </Button>
