@@ -9,16 +9,16 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  padding: 4rem;
+  padding: 3rem 4rem;
   background: var(--color-auth-bg);
 }
 
 .formWrap {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
   width: min(448px, 100%);
-  padding-top: 2rem;
+  padding-top: 1rem;
 }
 
 .header {
@@ -28,7 +28,7 @@
 }
 
 .title {
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: clamp(1.75rem, 4vw, 3rem);
   font-weight: 700;
   line-height: 1.17;
   color: var(--color-auth-heading);
@@ -125,36 +125,6 @@
   color: var(--color-primary);
 }
 
-.remember {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  font-size: 0.875rem;
-  color: var(--color-auth-label);
-  cursor: pointer;
-}
-
-.checkbox {
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  accent-color: var(--color-primary);
-  cursor: pointer;
-}
-
-.forgot-link {
-  align-self: flex-start;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-auth-link);
-  text-decoration: none;
-  letter-spacing: 0.02em;
-}
-
-.forgot-link:hover {
-  color: var(--color-primary-hover);
-}
-
 .submit-btn {
   position: relative;
   width: 100%;
@@ -236,18 +206,18 @@
   color: var(--color-text-subtle);
 }
 
-.register-link {
+.login-link {
   font-weight: 600;
   color: var(--color-primary);
   text-decoration: none;
 }
 
-.register-link:hover {
+.login-link:hover {
   color: var(--color-primary-hover);
 }
 
 .tagline {
-  padding-top: 2rem;
+  padding-top: 1.5rem;
   font-size: 0.75rem;
   font-weight: 600;
   color: rgba(100, 116, 139, 0.4);
