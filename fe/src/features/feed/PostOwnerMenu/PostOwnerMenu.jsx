@@ -1,13 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faEllipsis,
   faEllipsisVertical,
   faPen,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import styles from "./PostOwnerMenu.module.css";
 
-function PostOwnerMenu({ onEdit, onDelete }) {
+function PostOwnerMenu({
+  onEdit,
+  onDelete,
+  editLabel = "Chỉnh sửa",
+  deleteLabel = "Xóa bài",
+  menuAriaLabel = "Tùy chọn",
+  horizontal = false,
+  showDivider = false,
+}) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
 
@@ -46,20 +55,21 @@ function PostOwnerMenu({ onEdit, onDelete }) {
       <button
         type="button"
         className={styles.trigger}
-        aria-label="Tùy chọn bài viết"
+        aria-label={menuAriaLabel}
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={handleToggle}
       >
-        <FontAwesomeIcon icon={faEllipsisVertical} />
+        <FontAwesomeIcon icon={horizontal ? faEllipsis : faEllipsisVertical} />
       </button>
 
       {open && (
         <div className={styles.menu} role="menu">
           <button type="button" className={styles.item} role="menuitem" onClick={handleEdit}>
             <FontAwesomeIcon icon={faPen} />
-            Chỉnh sửa
+            {editLabel}
           </button>
+          {showDivider && <div className={styles.divider} aria-hidden="true" />}
           <button
             type="button"
             className={`${styles.item} ${styles.danger}`}
@@ -67,7 +77,7 @@ function PostOwnerMenu({ onEdit, onDelete }) {
             onClick={handleDelete}
           >
             <FontAwesomeIcon icon={faTrash} />
-            Xóa bài
+            {deleteLabel}
           </button>
         </div>
       )}

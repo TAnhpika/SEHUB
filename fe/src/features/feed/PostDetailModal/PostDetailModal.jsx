@@ -5,7 +5,6 @@ import {
   faBold,
   faCode,
   faComment,
-  faEllipsis,
   faEye,
   faHeart,
   faHighlighter,
@@ -24,7 +23,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context/AuthContext";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
-import { isOwnPost } from "@/features/feed/postUtils";
+import { isOwnComment, isOwnPost } from "@/features/feed/postUtils";
 import styles from "./PostDetailModal.module.css";
 
 function formatCommentTime(date) {
@@ -47,6 +46,8 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
   const [editBody, setEditBody] = useState("");
   const [displayTitle, setDisplayTitle] = useState("");
   const [displayBody, setDisplayBody] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editCommentDraft, setEditCommentDraft] = useState("");
 
   useEffect(() => {
     if (!open) return undefined;
@@ -74,6 +75,8 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
     setEditTitle(post.title);
     setEditBody(post.body ?? post.excerpt);
     setIsEditing(initialEditMode);
+    setEditingCommentId(null);
+    setEditCommentDraft("");
   }, [post, initialEditMode]);
 
   if (!open || !post) return null;
@@ -94,6 +97,7 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
       author: {
         name: user?.displayName ?? "Anhpika",
         initial: user?.initial ?? "A",
+        username: user?.username,
       },
       time: formatCommentTime(new Date()),
       content,
@@ -144,6 +148,39 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
   function handleDeletePost() {
     onDelete?.(post);
     onClose();
+  }
+
+  function handleStartEditComment(comment) {
+    setEditingCommentId(comment.id);
+    setEditCommentDraft(comment.content);
+  }
+
+  function handleCancelEditComment() {
+    setEditingCommentId(null);
+    setEditCommentDraft("");
+  }
+
+  function handleSaveEditComment(commentId) {
+    const content = editCommentDraft.trim();
+    if (!content) return;
+
+    setComments((prev) =>
+      prev.map((item) => (item.id === commentId ? { ...item, content } : item)),
+    );
+    setEditingCommentId(null);
+    setEditCommentDraft("");
+  }
+
+  function handleDeleteComment(commentId) {
+    const confirmed = window.confirm("Bạn có chắc muốn xóa bình luận này?");
+    if (!confirmed) return;
+
+    setComments((prev) => prev.filter((item) => item.id !== commentId));
+    setCommentCount((prev) => Math.max(0, prev - 1));
+    if (editingCommentId === commentId) {
+      setEditingCommentId(null);
+      setEditCommentDraft("");
+    }
   }
 
   return (
@@ -240,7 +277,11 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
           </article>
 
           <section className={styles.comments} aria-label="Bình luận">
-            {comments.map((comment) => (
+            {comments.map((comment) => {
+              const commentIsOwner = isOwnComment(comment, user);
+              const isEditingComment = editingCommentId === comment.id;
+
+              return (
               <article key={comment.id} className={styles.comment}>
                 <div className={styles["comment-head"]}>
                   <div className={styles["comment-author"]}>
@@ -252,17 +293,58 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
                       <p className={styles["comment-time"]}>{comment.time}</p>
                     </div>
                   </div>
-                  <button type="button" className={styles["comment-menu"]} aria-label="Tùy chọn">
-                    <FontAwesomeIcon icon={faEllipsis} />
-                  </button>
+                  {commentIsOwner && !isEditingComment && (
+                    <PostOwnerMenu
+                      horizontal
+                      showDivider
+                      editLabel="Sửa"
+                      deleteLabel="Xóa"
+                      menuAriaLabel="Tùy chọn bình luận"
+                      onEdit={() => handleStartEditComment(comment)}
+                      onDelete={() => handleDeleteComment(comment.id)}
+                    />
+                  )}
                 </div>
-                <p className={styles["comment-content"]}>{comment.content}</p>
-                <button type="button" className={styles.reply}>
-                  <FontAwesomeIcon icon={faReply} />
-                  Trả lời
-                </button>
+
+                {isEditingComment ? (
+                  <div className={styles["comment-edit"]}>
+                    <textarea
+                      className={styles["comment-edit-input"]}
+                      value={editCommentDraft}
+                      onChange={(event) => setEditCommentDraft(event.target.value)}
+                      rows={3}
+                      aria-label="Chỉnh sửa bình luận"
+                    />
+                    <div className={styles["comment-edit-actions"]}>
+                      <button
+                        type="button"
+                        className={styles["comment-edit-save"]}
+                        onClick={() => handleSaveEditComment(comment.id)}
+                      >
+                        Lưu
+                      </button>
+                      <button
+                        type="button"
+                        className={styles["comment-edit-cancel"]}
+                        onClick={handleCancelEditComment}
+                      >
+                        Hủy
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className={styles["comment-content"]}>{comment.content}</p>
+                )}
+
+                {!isEditingComment && (
+                  <button type="button" className={styles.reply}>
+                    <FontAwesomeIcon icon={faReply} />
+                    Trả lời
+                  </button>
+                )}
               </article>
-            ))}
+              );
+            })}
 
             <div className={styles.editor}>
               <div className={styles["editor-panel"]}>
