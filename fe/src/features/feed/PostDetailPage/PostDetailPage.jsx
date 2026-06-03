@@ -24,7 +24,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { getPostById } from "@/features/feed/feedData";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
-import { copyPostLink, isOwnComment } from "@/features/feed/postUtils";
+import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
+import { copyPostLink, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
 import styles from "./PostDetailPage.module.css";
 
 function formatCommentTime(date) {
@@ -72,6 +73,7 @@ function PostDetailPage() {
     return <Navigate to="/home" replace />;
   }
 
+  const isOwner = isOwnPost(post, user);
   const hasDraft = draft.trim().length > 0;
   const shortDate = formatShortDate(post.publishedAt);
 
@@ -168,6 +170,12 @@ function PostDetailPage() {
             </div>
 
             <div className={styles.actions}>
+              {!isOwner && (
+                <PostReportButton
+                  postId={post.id}
+                  className={`${styles.share} ${styles.report}`}
+                />
+              )}
               <button type="button" className={styles.share} aria-label="Chia sẻ" onClick={handleShare}>
                 <FontAwesomeIcon icon={faShareNodes} />
               </button>
