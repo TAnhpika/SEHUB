@@ -18,17 +18,23 @@ export const SUBJECT_DETAIL_CONFIG = {
   review: {
     titlePrefix: "Đề thi cuối kỳ",
     backTo: "/community/final-exam",
+    detailBase: "/community/final-exam",
     examType: "Cuối kỳ",
+    codePrefix: "FE",
   },
   practice: {
     titlePrefix: "Đề thi thực hành",
     backTo: "/community/pratical-exam",
+    detailBase: "/community/pratical-exam",
     examType: "Thực hành",
+    codePrefix: "PE",
   },
   documents: {
     titlePrefix: "Tài liệu học tập",
     backTo: "/community/documents",
+    detailBase: "/community/documents",
     examType: "Tài liệu",
+    codePrefix: "FE",
   },
 };
 
@@ -49,19 +55,19 @@ const UPLOAD_TIMES = [
   "2024-10-23, 22:54:46",
 ];
 
-function buildExamCode(courseCode, termCode, year, suffix = "") {
-  const base = `FE-${courseCode}-${termCode}${year}`;
+function buildExamCode(courseCode, termCode, year, prefix = "FE", suffix = "") {
+  const base = `${prefix}-${courseCode}-${termCode}${year}`;
   return suffix ? `${base}-${suffix}` : base;
 }
 
-export function getExamPapersForCourse(courseCode, examType) {
+export function getExamPapersForCourse(courseCode, examType, codePrefix = "FE") {
   const normalized = courseCode.toUpperCase();
   const exams = [];
 
   YEARS.forEach((year) => {
     TERMS.forEach((term, termIndex) => {
       exams.push({
-        id: buildExamCode(normalized, term.code, year),
+        id: buildExamCode(normalized, term.code, year, codePrefix),
         courseCode: normalized,
         year: String(year),
         term: term.code,
@@ -74,7 +80,7 @@ export function getExamPapersForCourse(courseCode, examType) {
   });
 
   exams.push({
-    id: buildExamCode(normalized, "SP", 2025, "RE"),
+    id: buildExamCode(normalized, "SP", 2025, codePrefix, "RE"),
     courseCode: normalized,
     year: "2025",
     term: "SP",
@@ -97,4 +103,13 @@ export function filterExamPapers(exams, yearFilter, termFilter) {
     const matchTerm = termFilter === "all" || exam.term === termFilter;
     return matchYear && matchTerm;
   });
+}
+
+export function getExamById(courseCode, examId, pageKey) {
+  const config = SUBJECT_DETAIL_CONFIG[pageKey];
+  if (!config) return null;
+
+  const normalizedCode = courseCode?.toUpperCase() ?? "";
+  const exams = getExamPapersForCourse(normalizedCode, config.examType, config.codePrefix);
+  return exams.find((exam) => exam.id === examId) ?? null;
 }
