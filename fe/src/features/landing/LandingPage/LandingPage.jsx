@@ -50,6 +50,10 @@ const STATS = [
   { value: "26", label: "Kết nối" },
 ];
 
+function scrollToSection(id) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function LandingPage() {
   const [pricingOpen, setPricingOpen] = useState(false);
 
@@ -73,11 +77,16 @@ function LandingPage() {
               một nền tảng được thiết kế chuyên biệt cho sinh viên IT.
             </p>
             <div className={styles["hero-actions"]}>
-              <Button size="lg" className={styles["btn-primary-round"]}>
+              <Button to="/register" size="lg" className={styles["btn-primary-round"]}>
                 Đăng ký miễn phí
                 <FontAwesomeIcon icon={faArrowRight} />
               </Button>
-              <Button look="outline" size="lg" className={styles["btn-outline-round"]}>
+              <Button
+                look="outline"
+                size="lg"
+                className={styles["btn-outline-round"]}
+                onClick={() => scrollToSection("features")}
+              >
                 <FontAwesomeIcon icon={faPlay} />
                 Xem chi tiết
               </Button>
