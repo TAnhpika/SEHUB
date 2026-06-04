@@ -2,10 +2,9 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate, Navigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faEye, faEyeSlash, faLock } from "@fortawesome/free-solid-svg-icons";
-import { faGoogle } from "@fortawesome/free-brands-svg-icons";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context";
+import googleGSrc from "@/img/google-g.png";
 import { MODERATOR_TEST_ACCOUNTS } from "@/features/moderator/moderatorMockData";
-import logoSrc from "@/img/logo.png";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import styles from "./LoginPage.module.css";
 
@@ -33,21 +32,7 @@ function LoginPage() {
     return <Navigate to={redirectTo} replace />;
   }
 
-  function handleSubmit(event) {
-    event.preventDefault();
-    setIsSubmitting(true);
-
-    const loggedInUser = login({ username, password });
-    const destination =
-      loggedInUser?.role === "moderator" || loggedInUser?.role === "admin"
-        ? "/moderator/practice-exams/add"
-        : redirectTo;
-    navigate(destination, { replace: true });
-  }
-
-  function fillTestAccount(account) {
-    setUsername(account.username);
-    setPassword(account.password);
+  function persistRememberMe() {
     try {
       if (rememberMe) {
         localStorage.setItem(REMEMBER_KEY, email.trim());
@@ -57,14 +42,46 @@ function LoginPage() {
     } catch {
       /* ignore storage errors */
     }
+  }
 
-    login({ username: email.trim(), password });
-    navigate(redirectTo, { replace: true });
+  function navigateAfterLogin(loggedInUser) {
+    const destination =
+      loggedInUser?.role === "moderator" || loggedInUser?.role === "admin"
+        ? "/moderator/practice-exams/add"
+        : redirectTo;
+    navigate(destination, { replace: true });
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    setIsSubmitting(true);
+    persistRememberMe();
+
+    const loggedInUser = login({ username: email.trim(), password });
+    navigateAfterLogin(loggedInUser);
+  }
+
+  function fillTestAccount(account) {
+    setEmail(account.username);
+    setPassword(account.password);
+    setRememberMe(true);
+
+    const loggedInUser = login({
+      username: account.username,
+      password: account.password,
+    });
+    try {
+      localStorage.setItem(REMEMBER_KEY, account.username);
+    } catch {
+      /* ignore storage errors */
+    }
+    navigateAfterLogin(loggedInUser);
   }
 
   function handleGoogleLogin() {
-    login({ username: "google_user", password: "" });
-    navigate(redirectTo, { replace: true });
+    setIsSubmitting(true);
+    const loggedInUser = login({ username: "google_user", password: "" });
+    navigateAfterLogin(loggedInUser);
   }
 
   return (
@@ -72,7 +89,8 @@ function LoginPage() {
       <AuthBrandPanel variant="login" />
 
       <section className={styles.formSection} aria-labelledby="login-title">
-        <div className={styles.formWrap}>
+        <div className={styles.formMain}>
+          <div className={styles.formWrap}>
           <header className={styles.header}>
             <h1 id="login-title" className={styles.title}>
               Đăng nhập
@@ -122,19 +140,21 @@ function LoginPage() {
                 </span>
               </label>
 
-              <label className={styles.remember}>
-                <input
-                  type="checkbox"
-                  className={styles.checkbox}
-                  checked={rememberMe}
-                  onChange={(event) => setRememberMe(event.target.checked)}
-                />
-                <span>Ghi nhớ đăng nhập</span>
-              </label>
+              <div className={styles["meta-row"]}>
+                <label className={styles.remember}>
+                  <input
+                    type="checkbox"
+                    className={styles.checkbox}
+                    checked={rememberMe}
+                    onChange={(event) => setRememberMe(event.target.checked)}
+                  />
+                  <span>Ghi nhớ đăng nhập</span>
+                </label>
 
-              <Link to="/forgot-password" className={styles["forgot-link"]}>
-                Quên mật khẩu?
-              </Link>
+                <Link to="/forgot-password" className={styles["forgot-link"]}>
+                  Quên mật khẩu?
+                </Link>
+              </div>
             </div>
 
             <button type="submit" className={styles["submit-btn"]} disabled={isSubmitting}>
@@ -144,47 +164,15 @@ function LoginPage() {
             <div className={styles.divider} role="separator">
               <span>Hoặc</span>
             </div>
-          </label>
-
-          <div className={styles.meta}>
-            <Link to="/forgot-password" className={styles.link}>
-              Quên mật khẩu?
-            </Link>
-          </div>
-
-          <Button type="submit" fullWidth size="lg" disabled={isSubmitting} className={styles.submit}>
-            Đăng nhập
-            <FontAwesomeIcon icon={faArrowRight} />
-          </Button>
-        </form>
-
-        {import.meta.env.DEV && (
-          <div className={styles.devAccounts}>
-            <p className={styles.devTitle}>Tài khoản test Moderator</p>
-            <ul className={styles.devList}>
-              {MODERATOR_TEST_ACCOUNTS.map((account) => (
-                <li key={account.username}>
-                  <button
-                    type="button"
-                    className={styles.devBtn}
-                    onClick={() => fillTestAccount(account)}
-                  >
-                    {account.roleLabel}: <code>{account.username}</code> /{" "}
-                    <code>{account.password}</code>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <p className={styles.footer}>
-          Chưa có tài khoản? <Link to="/register">Đăng ký miễn phí</Link>
-        </p>
-      </div>
 
             <button type="button" className={styles["google-btn"]} onClick={handleGoogleLogin}>
-              <FontAwesomeIcon icon={faGoogle} className={styles["google-icon"]} />
+              <img
+                src={googleGSrc}
+                alt=""
+                className={styles["google-icon"]}
+                decoding="async"
+                aria-hidden="true"
+              />
               Tiếp tục với Google
             </button>
 
@@ -196,8 +184,29 @@ function LoginPage() {
             </p>
           </form>
 
-          <p className={styles.tagline}>EMPOWERING STUDENTS GLOBALLY</p>
+          {import.meta.env.DEV && (
+            <details className={styles.devAccounts}>
+              <summary className={styles.devSummary}>Tài khoản test (dev)</summary>
+              <ul className={styles.devList}>
+                {MODERATOR_TEST_ACCOUNTS.map((account) => (
+                  <li key={account.username}>
+                    <button
+                      type="button"
+                      className={styles.devBtn}
+                      onClick={() => fillTestAccount(account)}
+                    >
+                      {account.roleLabel}: <code>{account.username}</code> /{" "}
+                      <code>{account.password}</code>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+          </div>
         </div>
+
+        <p className={styles.tagline}>EMPOWERING STUDENTS GLOBALLY</p>
       </section>
     </div>
   );
