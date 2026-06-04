@@ -9,9 +9,9 @@ import {
   faLock,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
-import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
-import { useAuth } from "@/context/AuthContext";
+import googleGSrc from "@/img/google-g.png";
+import { useAuth } from "@/context";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import styles from "./RegisterPage.module.css";
 
@@ -59,7 +59,8 @@ function RegisterPage() {
       <AuthBrandPanel variant="register" />
 
       <section className={styles.formSection} aria-labelledby="register-title">
-        <div className={styles.formWrap}>
+        <div className={styles.formMain}>
+          <div className={styles.formWrap}>
           <header className={styles.header}>
             <h1 id="register-title" className={styles.title}>
               Tạo tài khoản mới
@@ -80,7 +81,7 @@ function RegisterPage() {
                     className={styles.input}
                     value={fullName}
                     onChange={(event) => setFullName(event.target.value)}
-                    placeholder="Nhập họ tên của bạn"
+                    placeholder="Nhập họ và tên của bạn"
                     autoComplete="name"
                     required
                   />
@@ -155,7 +156,13 @@ function RegisterPage() {
             </div>
 
             <button type="button" className={styles["google-btn"]} onClick={handleGoogleSignup}>
-              <FontAwesomeIcon icon={faGoogle} className={styles["google-icon"]} />
+              <img
+                src={googleGSrc}
+                alt=""
+                className={styles["google-icon"]}
+                decoding="async"
+                aria-hidden="true"
+              />
               Tiếp tục với Google
             </button>
 
@@ -166,9 +173,10 @@ function RegisterPage() {
               </Link>
             </p>
           </form>
-
-          <p className={styles.tagline}>EMPOWERING STUDENTS GLOBALLY</p>
+          </div>
         </div>
+
+        <p className={styles.tagline}>EMPOWERING STUDENTS GLOBALLY</p>
       </section>
     </div>
   );
