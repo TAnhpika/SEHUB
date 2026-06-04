@@ -1,11 +1,13 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import { MODERATOR_NAV_ITEMS } from "@/features/moderator/moderatorNavData";
 import styles from "./ModeratorSidebar.module.css";
 
 function ModeratorSidebar() {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const displayName = user?.displayName ?? "Admin User";
   const roleLabel =
     user?.roleLabel ??
@@ -36,14 +38,27 @@ function ModeratorSidebar() {
         ))}
       </nav>
 
-      <div className={styles.profile}>
-        <div className={styles.avatar} aria-hidden>
-          {user?.initial ?? "A"}
+      <div className={styles.footer}>
+        <div className={styles.profile}>
+          <div className={styles.avatar} aria-hidden>
+            {user?.initial ?? "A"}
+          </div>
+          <div>
+            <p className={styles.name}>{displayName}</p>
+            <p className={styles.role}>{roleLabel}</p>
+          </div>
         </div>
-        <div>
-          <p className={styles.name}>{displayName}</p>
-          <p className={styles.role}>{roleLabel}</p>
-        </div>
+        <button
+          type="button"
+          className={styles.logout}
+          onClick={() => {
+            logout();
+            navigate("/login");
+          }}
+        >
+          <FontAwesomeIcon icon={faRightFromBracket} />
+          Đăng xuất
+        </button>
       </div>
     </aside>
   );
