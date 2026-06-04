@@ -36,6 +36,7 @@ import AddFinalExamWizard from "@/features/moderator/finalExams/AddFinalExamWiza
 import FinalExamInfoStep from "@/features/moderator/finalExams/steps/FinalExamInfoStep";
 import FinalExamQuestionsStep from "@/features/moderator/finalExams/steps/FinalExamQuestionsStep";
 import FinalExamReviewStep from "@/features/moderator/finalExams/steps/FinalExamReviewStep";
+import ViolatingAccountsPage from "@/features/moderator/violations/ViolatingAccountsPage/ViolatingAccountsPage";
 
 function App() {
   return (
@@ -102,6 +103,7 @@ function App() {
               <Route path="/moderator" element={<ModeratorLayout />}>
                 <Route index element={<Navigate to="/moderator/final-exams/add" replace />} />
                 <Route path="practice-exams/add" element={<AddPracticeExamPage />} />
+                <Route path="violations" element={<ViolatingAccountsPage />} />
                 <Route path="final-exams/add" element={<AddFinalExamWizard />}>
                   <Route index element={<FinalExamInfoStep />} />
                   <Route path="questions" element={<FinalExamQuestionsStep />} />
