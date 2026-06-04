@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context";
 import { MODERATOR_NAV_ITEMS } from "@/features/moderator/moderatorNavData";
 import styles from "./ModeratorSidebar.module.css";
 

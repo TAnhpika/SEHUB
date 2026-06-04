@@ -22,7 +22,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context";
 import { MAJORS, MAX_CONTENT_LENGTH, SEMESTERS } from "@/features/posts/createPostData";
 import styles from "./CreatePostPage.module.css";
 

@@ -89,10 +89,13 @@
   --color-auth-input-bg: #f2f4f6;
   --color-auth-input-border: rgba(195, 198, 215, 0.3);
   --color-auth-social-border: rgba(195, 198, 215, 0.5);
+  --auth-panel-width: 42%;
   --gradient-auth-brand: linear-gradient(
-    120deg,
-    #2563eb 0%,
-    #004ac6 50%,
+    100deg,
+    #4d7cff 0%,
+    #3b6fef 22%,
+    #2563eb 42%,
+    #004ac6 62%,
     #0a192f 100%
   );
   --shadow-auth-logo: 0 10px 15px -3px rgba(0, 0, 0, 0.1),

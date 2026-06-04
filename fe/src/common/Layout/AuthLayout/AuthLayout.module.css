@@ -1,4 +1,23 @@
 .shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
   min-height: 100vh;
   background: var(--color-auth-bg);
+}
+
+.shell > * {
+  display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+@media (max-width: 960px) {
+  .shell > * {
+    max-height: none;
+    overflow: visible;
+  }
 }

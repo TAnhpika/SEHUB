@@ -13,7 +13,7 @@ import {
   faMobileScreenButton,
 } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import OtpInput from "@/features/auth/ForgotPasswordPage/OtpInput";
 import styles from "./ForgotPasswordPage.module.css";
@@ -246,9 +246,9 @@ function ForgotPasswordPage() {
   const otpSubtitle = method ? OTP_COPY[method] : "";
 
   const formWrapClassName =
-    activeStep === "contact" || activeStep === "reset"
-      ? `${styles.formWrap} ${styles["form-wrap-compact"]}`
-      : styles.formWrap;
+    activeStep === "method"
+      ? `${styles.formWrap} ${styles["form-wrap-method"]}`
+      : `${styles.formWrap} ${styles["form-wrap-compact"]}`;
 
   const sectionLabelId =
     activeStep === "method"
@@ -264,7 +264,8 @@ function ForgotPasswordPage() {
       <AuthBrandPanel variant="forgot-password" />
 
       <section className={styles.formSection} aria-labelledby={sectionLabelId}>
-        <div className={formWrapClassName}>
+        <div className={styles.formMain}>
+          <div className={formWrapClassName}>
           {activeStep === "method" ? (
             <>
               <header className={styles.header}>
@@ -325,10 +326,6 @@ function ForgotPasswordPage() {
                   </Link>
                 </div>
               </form>
-
-              <footer className={styles.footer}>
-                <p>© 2024 SEHub AI. Empowering students globally.</p>
-              </footer>
             </>
           ) : null}
 
@@ -385,8 +382,6 @@ function ForgotPasswordPage() {
                   </Link>
                 </p>
               </footer>
-
-              <p className={styles["page-tagline"]}>© 2024 SEHub AI. Empowering students globally.</p>
             </>
           ) : null}
 
@@ -433,10 +428,6 @@ function ForgotPasswordPage() {
                   </div>
                 </div>
               </form>
-
-              <footer className={styles.footer}>
-                <p>© 2024 SEHub AI. Empowering students globally.</p>
-              </footer>
             </>
           ) : null}
 
@@ -536,7 +527,10 @@ function ForgotPasswordPage() {
               </div>
             </>
           ) : null}
+          </div>
         </div>
+
+        <p className={styles.tagline}>EMPOWERING STUDENTS GLOBALLY</p>
       </section>
     </div>
   );

@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
 import {
   GENDER_OPTIONS,

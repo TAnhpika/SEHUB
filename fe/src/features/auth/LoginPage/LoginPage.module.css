@@ -1,24 +1,40 @@
 .page {
   display: flex;
+  align-items: stretch;
+  width: 100%;
+  height: 100vh;
+  max-height: 100vh;
   min-height: 100vh;
+  overflow: hidden;
 }
 
 .formSection {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  flex: 1 1 auto;
+  align-items: stretch;
+  min-width: 0;
+  height: 100%;
+  max-height: 100vh;
+  padding: 2.5rem 4rem 1.5rem;
+  overflow: hidden;
+  background: var(--color-auth-bg);
+}
+
+.formMain {
   display: flex;
-  flex: 1;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  padding: 4rem;
-  background: var(--color-auth-bg);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .formWrap {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
   width: min(448px, 100%);
-  padding-top: 2rem;
 }
 
 .header {
@@ -28,9 +44,9 @@
 }
 
 .title {
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: clamp(2rem, 4vh, 3rem);
   font-weight: 700;
-  line-height: 1.17;
+  line-height: 1.2;
   color: var(--color-auth-heading);
   letter-spacing: -0.02em;
 }
@@ -125,6 +141,14 @@
   color: var(--color-primary);
 }
 
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .remember {
   display: flex;
   gap: 0.5rem;
@@ -143,7 +167,6 @@
 }
 
 .forgot-link {
-  align-self: flex-start;
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--color-auth-link);
@@ -227,24 +250,38 @@
 }
 
 .google-icon {
-  font-size: 1.125rem;
+  display: block;
+  width: 1.375rem;
+  height: 1.375rem;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 .devAccounts {
-  margin-top: 1.25rem;
-  padding: 0.875rem 1rem;
-  background: var(--color-surface-elevated);
+  width: min(448px, 100%);
+  margin-top: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--color-surface);
   border: 1px dashed var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
 }
 
-.devTitle {
-  margin: 0 0 0.5rem;
-  font-size: 0.75rem;
+.devSummary {
+  font-size: 0.6875rem;
   font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  cursor: pointer;
+  list-style: none;
+}
+
+.devSummary::-webkit-details-marker {
+  display: none;
+}
+
+.devAccounts[open] .devList {
+  margin-top: 0.5rem;
 }
 
 .devList {
@@ -297,7 +334,9 @@
 }
 
 .tagline {
-  padding-top: 2rem;
+  justify-self: center;
+  width: min(448px, 100%);
+  padding: 1.25rem 0 0.5rem;
   font-size: 0.75rem;
   font-weight: 600;
   color: rgba(100, 116, 139, 0.4);
@@ -306,18 +345,41 @@
   letter-spacing: 0.1em;
 }
 
-@media (max-width: 960px) {
-  .page {
-    flex-direction: column;
-  }
-
+@media (max-height: 760px) {
   .formSection {
-    min-height: auto;
-    padding: 2.5rem 1.5rem 3rem;
+    padding: 1.5rem 3rem 1rem;
   }
 
   .formWrap {
-    padding-top: 0;
+    gap: 1.25rem;
+  }
+
+  .title {
+    font-size: 1.75rem;
+  }
+}
+
+@media (max-width: 960px) {
+  .page {
+    flex-direction: column;
+    height: auto;
+    max-height: none;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .formSection {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    height: auto;
+    max-height: none;
+    padding: 2.5rem 1.5rem 2rem;
+    overflow: visible;
+  }
+
+  .formMain {
+    overflow: visible;
   }
 }
 
