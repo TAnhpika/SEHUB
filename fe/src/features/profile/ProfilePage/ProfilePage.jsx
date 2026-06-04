@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context";
 import ActivityHeatmap from "@/features/profile/ActivityHeatmap/ActivityHeatmap";
 import BadgesSection from "@/features/profile/BadgesSection/BadgesSection";
 import ProfileCard from "@/features/profile/ProfileCard/ProfileCard";

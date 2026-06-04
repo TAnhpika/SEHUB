@@ -1,6 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFire, faTrophy } from "@fortawesome/free-solid-svg-icons";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context";
 import { FEATURED_POSTS } from "@/features/feed/feedData";
 import styles from "./HomeSidebar.module.css";
 

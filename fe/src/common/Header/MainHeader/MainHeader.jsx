@@ -6,7 +6,7 @@ import {
   faRightFromBracket,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context";
 import NotificationDropdown from "./NotificationDropdown";
 import StreakDropdown from "./StreakDropdown";
 import logoSrc from "@/img/logo.png";

@@ -20,7 +20,7 @@ import {
   faShareNodes,
   faStrikethrough,
 } from "@fortawesome/free-solid-svg-icons";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { getPostById } from "@/features/feed/feedData";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";

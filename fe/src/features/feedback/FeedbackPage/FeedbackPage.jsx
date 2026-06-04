@@ -7,7 +7,7 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
 import {
   ACCEPTED_FILE_TYPES,

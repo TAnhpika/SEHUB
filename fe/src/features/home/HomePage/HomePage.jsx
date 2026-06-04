@@ -10,7 +10,7 @@ import PostFeedFilters from "@/features/feed/PostFeedFilters/PostFeedFilters";
 import { MOCK_POSTS, POSTS_PER_PAGE } from "@/features/feed/feedData";
 import { filterPosts } from "@/features/feed/feedFilterData";
 import { parsePostId } from "@/features/feed/postUtils";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context";
 import styles from "./HomePage.module.css";
 
 function HomePage() {
