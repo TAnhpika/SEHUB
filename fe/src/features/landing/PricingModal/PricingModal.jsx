@@ -12,12 +12,40 @@ function PricingModal({ open, onClose }) {
       if (event.key === "Escape") onClose();
     }
 
-    document.body.style.overflow = "hidden";
+    const scrollY = window.scrollY;
+    const { style: bodyStyle } = document.body;
+    const { style: htmlStyle } = document.documentElement;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    const prevBody = {
+      overflow: bodyStyle.overflow,
+      position: bodyStyle.position,
+      top: bodyStyle.top,
+      width: bodyStyle.width,
+      paddingRight: bodyStyle.paddingRight,
+    };
+    const prevHtmlOverflow = htmlStyle.overflow;
+
+    bodyStyle.overflow = "hidden";
+    bodyStyle.position = "fixed";
+    bodyStyle.top = `-${scrollY}px`;
+    bodyStyle.width = "100%";
+    if (scrollbarWidth > 0) {
+      bodyStyle.paddingRight = `${scrollbarWidth}px`;
+    }
+    htmlStyle.overflow = "hidden";
+
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.body.style.overflow = "";
+      bodyStyle.overflow = prevBody.overflow;
+      bodyStyle.position = prevBody.position;
+      bodyStyle.top = prevBody.top;
+      bodyStyle.width = prevBody.width;
+      bodyStyle.paddingRight = prevBody.paddingRight;
+      htmlStyle.overflow = prevHtmlOverflow;
       window.removeEventListener("keydown", handleKeyDown);
+      window.scrollTo(0, scrollY);
     };
   }, [open, onClose]);
 
