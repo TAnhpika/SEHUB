@@ -39,6 +39,7 @@ import FinalExamReviewStep from "@/features/moderator/finalExams/steps/FinalExam
 import ViolatingAccountsPage from "@/features/moderator/violations/ViolatingAccountsPage/ViolatingAccountsPage";
 import ContentModerationPage from "@/features/moderator/content/ContentModerationPage/ContentModerationPage";
 import FeaturedPostsPage from "@/features/moderator/featured/FeaturedPostsPage/FeaturedPostsPage";
+import ReportsPage from "@/features/moderator/reports/ReportsPage/ReportsPage";
 
 function App() {
   return (
@@ -108,6 +109,7 @@ function App() {
                 <Route path="violations" element={<ViolatingAccountsPage />} />
                 <Route path="content" element={<ContentModerationPage />} />
                 <Route path="featured" element={<FeaturedPostsPage />} />
+                <Route path="reports" element={<ReportsPage />} />
                 <Route path="final-exams/add" element={<AddFinalExamWizard />}>
                   <Route index element={<FinalExamInfoStep />} />
                   <Route path="questions" element={<FinalExamQuestionsStep />} />
