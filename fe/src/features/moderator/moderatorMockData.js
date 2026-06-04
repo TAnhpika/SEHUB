@@ -84,6 +84,48 @@ export const PRACTICE_EXAM_SUBMISSIONS_MOCK = [
   },
 ];
 
+export const FINAL_EXAM_INFO_MOCK = {
+  subjectCode: "IT005",
+  subjectName: "Mạng máy tính",
+  semesterLabel: "Học kỳ 1 2023-2024",
+  examCode: "FE-IT005-SP2023",
+  durationMinutes: 60,
+  totalQuestions: 50,
+};
+
+export const FINAL_EXAM_SAMPLE_QUESTION = {
+  content: "",
+  answers: { A: "", B: "", C: "", D: "" },
+  correctAnswer: "A",
+  explanation: "",
+  showExplanation: false,
+};
+
+/** 22 câu đã nhập + câu 23 đang soạn (theo Figma: 23/50) */
+export function buildFinalExamQuestionsMock() {
+  const filled = Array.from({ length: 22 }, (_, index) => ({
+    id: `q-${index + 1}`,
+    content: `Câu hỏi mẫu số ${index + 1} — nội dung đã lưu.`,
+    answers: {
+      A: `Đáp án A câu ${index + 1}`,
+      B: `Đáp án B câu ${index + 1}`,
+      C: `Đáp án C câu ${index + 1}`,
+      D: `Đáp án D câu ${index + 1}`,
+    },
+    correctAnswer: "A",
+    explanation: "",
+    showExplanation: false,
+  }));
+
+  return [
+    ...filled,
+    {
+      id: "q-23",
+      ...FINAL_EXAM_SAMPLE_QUESTION,
+    },
+  ];
+}
+
 export function findModeratorTestAccount(identifier, password) {
   const key = identifier?.trim().toLowerCase();
   if (!key) return null;
