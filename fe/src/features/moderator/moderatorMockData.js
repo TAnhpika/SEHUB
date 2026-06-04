@@ -26,6 +26,11 @@ export const MODERATOR_TEST_ACCOUNTS = [
   },
 ];
 
+/** Chỉ tài khoản moderator dùng để test màn /moderator. Admin có màn riêng (chưa làm). */
+export const MODERATOR_LOGIN_ACCOUNTS = MODERATOR_TEST_ACCOUNTS.filter(
+  (account) => account.role === "moderator",
+);
+
 export const PRACTICE_EXAM_DRAFT_MOCK = {
   subject: "PRF192",
   semester: "Học kỳ 5",
