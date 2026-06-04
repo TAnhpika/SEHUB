@@ -5,7 +5,7 @@ import AuthLayout from "@/common/Layout/AuthLayout/AuthLayout";
 import CommunityLayout from "@/common/Layout/CommunityLayout/CommunityLayout";
 import GuestLayout from "@/common/Layout/GuestLayout/GuestLayout";
 import MainLayout from "@/common/Layout/MainLayout/MainLayout";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider } from "@/context";
 import LoginPage from "@/features/auth/LoginPage/LoginPage";
 import RegisterPage from "@/features/auth/RegisterPage/RegisterPage";
 import ForgotPasswordPage from "@/features/auth/ForgotPasswordPage/ForgotPasswordPage";
