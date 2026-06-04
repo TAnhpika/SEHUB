@@ -1,0 +1,80 @@
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-bottom: 2rem;
+}
+
+.header {
+  padding: 0 0.25rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 600;
+  color: #191c1e;
+}
+
+.subtitle {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.card {
+  padding: 1.5rem 2rem;
+  background: #fff;
+  border: 1px solid rgba(195, 198, 215, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+}
+
+.cardTitle {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #191c1e;
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 0;
+}
+
+.meta dt {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.meta dd {
+  margin: 0.25rem 0 0;
+  font-size: 0.9375rem;
+  color: #191c1e;
+}
+
+.previewList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-left: 1.25rem;
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #434655;
+}
+
+.correct {
+  color: var(--moderator-primary, #004ac6);
+}
+
+.more {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
