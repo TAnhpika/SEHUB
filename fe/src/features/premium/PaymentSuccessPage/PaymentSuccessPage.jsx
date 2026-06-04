@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { useAuth } from "@/context";
 import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faCopy } from "@fortawesome/free-solid-svg-icons";
@@ -16,8 +17,13 @@ function PaymentSuccessPage() {
   const { planId } = useParams();
   const location = useLocation();
   const { showToast } = useToast();
+  const { activatePremium } = useAuth();
   const plan = useMemo(() => getPlanById(planId), [planId]);
   const transactionId = location.state?.transactionId ?? buildTransactionId();
+
+  useEffect(() => {
+    activatePremium();
+  }, [activatePremium]);
 
   if (!planId || !PRICING_PLANS.some((item) => item.id === planId)) {
     return <Navigate to="/home/premium" replace />;
