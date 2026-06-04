@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faBolt,
   faFileLines,
   faFire,
   faHeadset,
@@ -28,17 +29,30 @@ const FEATURES = [
   },
 ];
 
+const RECOVERY_STEPS = [
+  "Chọn Email hoặc SMS",
+  "Nhập liên hệ đã đăng ký",
+  "Xác nhận mã OTP 6 số",
+  "Đặt mật khẩu mới",
+];
+
 const FORGOT_FEATURES = [
   {
     icon: faShieldHalved,
     title: "BẢO MẬT ĐA LỚP",
-    desc: "Quy trình xác minh nghiêm ngặt đảm bảo chỉ bạn mới có thể truy cập lại tài khoản.",
+    desc: "Xác minh nghiêm ngặt — chỉ bạn truy cập lại được tài khoản.",
+    uppercase: true,
+  },
+  {
+    icon: faBolt,
+    title: "NHANH CHÓNG",
+    desc: "Mã OTP gửi trong vài phút, hiệu lực ngắn để bảo vệ tài khoản.",
     uppercase: true,
   },
   {
     icon: faHeadset,
     title: "HỖ TRỢ 24/7",
-    desc: "Đội ngũ kỹ thuật luôn sẵn sàng nếu bạn gặp bất kỳ trở ngại nào trong quá trình khôi phục.",
+    desc: "Đội ngũ sẵn sàng hỗ trợ nếu bạn gặp trở ngại khi khôi phục.",
     uppercase: true,
   },
 ];
@@ -70,7 +84,9 @@ const PANEL_COPY = {
   },
   "forgot-password": {
     headline: "Khôi phục mật khẩu",
-    desc: "Đừng lo lắng, chúng tôi sẽ giúp bạn lấy lại quyền truy cập vào tài khoản SEHub của mình thông qua quy trình xác minh an toàn.",
+    desc: "Lấy lại quyền truy cập SEHub qua xác minh Email hoặc SMS — an toàn và nhanh chóng.",
+    steps: RECOVERY_STEPS,
+    stepsTitle: "Quy trình khôi phục",
     features: FORGOT_FEATURES,
     showDivider: false,
     showFooter: true,
@@ -104,6 +120,22 @@ function AuthBrandPanel({ variant = "login" }) {
           <p className={styles.desc}>{copy.desc}</p>
         </div>
 
+        {copy.steps?.length ? (
+          <div className={styles["steps-block"]}>
+            <p className={styles["steps-label"]}>{copy.stepsTitle}</p>
+            <ol className={styles.steps}>
+              {copy.steps.map((step, index) => (
+                <li key={step} className={styles["step-item"]}>
+                  <span className={styles["step-num"]} aria-hidden="true">
+                    {index + 1}
+                  </span>
+                  <span className={styles["step-text"]}>{step}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ) : null}
+
         <ul className={styles.features}>
           {copy.features.map((item) => (
             <li key={item.title} className={styles["feature-card"]}>
@@ -128,7 +160,7 @@ function AuthBrandPanel({ variant = "login" }) {
       </div>
 
       {copy.showFooter ? (
-        <p className={styles["panel-footer"]}>© 2024 SEHub AI Platform</p>
+        <p className={styles["panel-footer"]}>© 2026 SEHub AI Platform</p>
       ) : null}
     </aside>
   );
