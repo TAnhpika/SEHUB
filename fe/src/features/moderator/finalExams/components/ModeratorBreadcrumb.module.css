@@ -1,0 +1,28 @@
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #434655;
+}
+
+.breadcrumb a {
+  color: #434655;
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  color: var(--moderator-primary, #004ac6);
+}
+
+.chevron {
+  font-size: 0.5rem;
+  opacity: 0.7;
+}
+
+.current {
+  color: #191c1e;
+}
