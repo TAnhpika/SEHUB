@@ -3,10 +3,10 @@
   inset: 0;
   z-index: 200;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   padding: 1.5rem 1rem;
-  overflow-y: auto;
+  overflow: hidden;
   background: rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(4px);
 }
@@ -14,11 +14,20 @@
 .dialog {
   position: relative;
   width: min(960px, 100%);
+  max-height: min(90vh, calc(100dvh - 3rem));
   margin: auto;
   padding: 2rem 1.75rem 2.25rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
   background: var(--color-surface);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
+  -ms-overflow-style: none;
+}
+
+.dialog::-webkit-scrollbar {
+  display: none;
 }
 
 .close {
