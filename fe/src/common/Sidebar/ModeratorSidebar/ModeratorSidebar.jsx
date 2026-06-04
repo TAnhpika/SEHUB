@@ -9,9 +9,6 @@ function ModeratorSidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const displayName = user?.displayName ?? "Admin User";
-  const roleLabel =
-    user?.roleLabel ??
-    (user?.role === "admin" ? "Quản trị viên" : "Kiểm duyệt viên");
 
   return (
     <aside className={styles.sidebar}>
@@ -45,7 +42,7 @@ function ModeratorSidebar() {
           </div>
           <div>
             <p className={styles.name}>{displayName}</p>
-            <p className={styles.role}>{roleLabel}</p>
+            <p className={styles.email}>{user?.email ?? "admin@sehub.edu.vn"}</p>
           </div>
         </div>
         <button
