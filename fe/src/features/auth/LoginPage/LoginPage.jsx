@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate, Navigate } from "react-router-dom";
+import { Link, useNavigate, Navigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faEye, faEyeSlash, faLock } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import googleGSrc from "@/img/google-g.png";
 import { MODERATOR_TEST_ACCOUNTS } from "@/features/moderator/moderatorMockData";
+import { MODERATOR_HOME_PATH } from "@/features/moderator/moderatorNavData";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import styles from "./LoginPage.module.css";
 
@@ -12,7 +13,6 @@ const REMEMBER_KEY = "sehubs_remember_login";
 
 function LoginPage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { login, isAuthenticated } = useAuth();
   const [email, setEmail] = useState(() => {
     try {
@@ -26,10 +26,8 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const redirectTo = location.state?.from || "/home";
-
   if (isAuthenticated) {
-    return <Navigate to={redirectTo} replace />;
+    return <Navigate to={MODERATOR_HOME_PATH} replace />;
   }
 
   function persistRememberMe() {
@@ -44,12 +42,8 @@ function LoginPage() {
     }
   }
 
-  function navigateAfterLogin(loggedInUser) {
-    const destination =
-      loggedInUser?.role === "moderator" || loggedInUser?.role === "admin"
-        ? "/moderator/practice-exams/add"
-        : redirectTo;
-    navigate(destination, { replace: true });
+  function navigateAfterLogin() {
+    navigate(MODERATOR_HOME_PATH, { replace: true });
   }
 
   function handleSubmit(event) {
@@ -57,8 +51,8 @@ function LoginPage() {
     setIsSubmitting(true);
     persistRememberMe();
 
-    const loggedInUser = login({ username: email.trim(), password });
-    navigateAfterLogin(loggedInUser);
+    login({ username: email.trim(), password });
+    navigateAfterLogin();
   }
 
   function fillTestAccount(account) {
@@ -66,7 +60,7 @@ function LoginPage() {
     setPassword(account.password);
     setRememberMe(true);
 
-    const loggedInUser = login({
+    login({
       username: account.username,
       password: account.password,
     });
@@ -75,13 +69,13 @@ function LoginPage() {
     } catch {
       /* ignore storage errors */
     }
-    navigateAfterLogin(loggedInUser);
+    navigateAfterLogin();
   }
 
   function handleGoogleLogin() {
     setIsSubmitting(true);
-    const loggedInUser = login({ username: "google_user", password: "" });
-    navigateAfterLogin(loggedInUser);
+    login({ username: "google_user", password: "" });
+    navigateAfterLogin();
   }
 
   return (
