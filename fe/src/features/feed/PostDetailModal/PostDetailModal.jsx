@@ -26,6 +26,7 @@ import { useToast } from "@/common/Toast/ToastProvider";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
 import { copyPostLink, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
+import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./PostDetailModal.module.css";
 
 function formatCommentTime(date) {
@@ -39,7 +40,7 @@ function formatCommentTime(date) {
 }
 
 function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditMode = false }) {
-  const { user } = useAuth();
+  const { user, isPremium } = useAuth();
   const { showCopyToast } = useToast();
   const [comments, setComments] = useState([]);
   const [commentCount, setCommentCount] = useState(0);
@@ -221,7 +222,14 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
                   {post.author.initial}
                 </span>
                 <div>
-                  <p className={styles.username}>{post.author.username}</p>
+                  <p
+                    className={withPremiumUsernameClass(
+                      styles.username,
+                      isOwner && isPremium,
+                    )}
+                  >
+                    {post.author.username}
+                  </p>
                   <p className={styles.date}>{post.publishedAt}</p>
                 </div>
               </div>
