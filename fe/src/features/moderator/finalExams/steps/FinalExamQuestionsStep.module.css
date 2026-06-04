@@ -1,0 +1,122 @@
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-bottom: 2rem;
+}
+
+.summary {
+  padding: 2rem;
+  background: #fff;
+  border: 1px solid rgba(195, 198, 215, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+}
+
+.summaryHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.title {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #191c1e;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.count {
+  margin: 0;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--moderator-primary, #004ac6);
+  background: rgba(0, 74, 198, 0.1);
+  border-radius: 9999px;
+}
+
+.progress {
+  height: 8px;
+  margin-top: 1rem;
+  overflow: hidden;
+  background: #e6e8ea;
+  border-radius: 9999px;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--moderator-primary, #004ac6);
+  border-radius: 9999px;
+  transition: width 0.2s ease;
+}
+
+.addQuestion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 88px;
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  background: #f7f9fb;
+  border: 2px dashed rgba(195, 198, 215, 0.6);
+  border-radius: 12px;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.addQuestion:hover {
+  color: var(--moderator-primary, #004ac6);
+  border-color: var(--moderator-primary, #004ac6);
+}
+
+.picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.pickerLabel {
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.pickerList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.pickerBtn {
+  min-width: 2rem;
+  padding: 0.25rem 0.5rem;
+  font-family: inherit;
+  font-size: 0.75rem;
+  color: #434655;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid rgba(195, 198, 215, 0.4);
+  border-radius: 6px;
+}
+
+.pickerBtn-active {
+  color: #fff;
+  background: var(--moderator-primary, #004ac6);
+  border-color: var(--moderator-primary, #004ac6);
+}
