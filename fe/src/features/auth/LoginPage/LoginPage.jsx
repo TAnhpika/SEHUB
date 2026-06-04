@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate, Navigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faEye, faEyeSlash, faLock } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
@@ -10,10 +10,28 @@ import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import styles from "./LoginPage.module.css";
 
 const REMEMBER_KEY = "sehubs_remember_login";
+const STUDENT_HOME_PATH = "/home";
+
+function resolvePostLoginPath(user, from) {
+  if (user?.role === "moderator" || user?.role === "admin") {
+    return MODERATOR_HOME_PATH;
+  }
+  const returnToProtected =
+    from &&
+    from !== "/login" &&
+    !from.startsWith("/moderator") &&
+    (from.startsWith("/home") || from.startsWith("/profile"));
+
+  if (returnToProtected) {
+    return from;
+  }
+  return STUDENT_HOME_PATH;
+}
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const location = useLocation();
+  const { login } = useAuth();
   const [email, setEmail] = useState(() => {
     try {
       return localStorage.getItem(REMEMBER_KEY) ?? "";
@@ -25,10 +43,6 @@ function LoginPage() {
   const [rememberMe, setRememberMe] = useState(Boolean(email));
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  if (isAuthenticated) {
-    return <Navigate to={MODERATOR_HOME_PATH} replace />;
-  }
 
   function persistRememberMe() {
     try {
@@ -42,8 +56,8 @@ function LoginPage() {
     }
   }
 
-  function navigateAfterLogin() {
-    navigate(MODERATOR_HOME_PATH, { replace: true });
+  function navigateAfterLogin(nextUser) {
+    navigate(resolvePostLoginPath(nextUser, location.state?.from), { replace: true });
   }
 
   function handleSubmit(event) {
@@ -51,8 +65,8 @@ function LoginPage() {
     setIsSubmitting(true);
     persistRememberMe();
 
-    login({ username: email.trim(), password });
-    navigateAfterLogin();
+    const nextUser = login({ username: email.trim(), password });
+    navigateAfterLogin(nextUser);
   }
 
   function fillTestAccount(account) {
@@ -60,7 +74,7 @@ function LoginPage() {
     setPassword(account.password);
     setRememberMe(true);
 
-    login({
+    const nextUser = login({
       username: account.username,
       password: account.password,
     });
@@ -69,13 +83,13 @@ function LoginPage() {
     } catch {
       /* ignore storage errors */
     }
-    navigateAfterLogin();
+    navigateAfterLogin(nextUser);
   }
 
   function handleGoogleLogin() {
     setIsSubmitting(true);
-    login({ username: "google_user", password: "" });
-    navigateAfterLogin();
+    const nextUser = login({ username: "google_user", password: "" });
+    navigateAfterLogin(nextUser);
   }
 
   return (
