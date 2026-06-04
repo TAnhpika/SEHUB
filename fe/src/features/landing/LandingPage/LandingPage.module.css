@@ -351,6 +351,7 @@
 .features {
   padding: 3rem 0 2rem;
   background: var(--color-surface);
+  scroll-margin-top: 5rem;
 }
 
 .features-grid {
