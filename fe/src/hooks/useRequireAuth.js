@@ -1,7 +1,7 @@
 import { useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useToast } from "@/common/Toast/ToastProvider";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context";
 
 const LOGIN_PATH = "/login";
 
