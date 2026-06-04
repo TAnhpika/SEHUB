@@ -6,7 +6,7 @@ import MainSidebar from "@/common/Sidebar/MainSidebar/MainSidebar";
 import CommunitySidebar from "@/common/Sidebar/CommunitySidebar/CommunitySidebar";
 import Footer from "@/common/Footer/Footer";
 import ChatFab from "@/features/chat/ChatFab/ChatFab";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context";
 import styles from "./CommunityLayout.module.css";
 
 function CommunityLayout() {
