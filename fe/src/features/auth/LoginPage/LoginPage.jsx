@@ -1,19 +1,28 @@
 import { useState } from "react";
-import { Link, useNavigate, Navigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, Navigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faEye, faEyeSlash, faLock } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import googleGSrc from "@/img/google-g.png";
-import { MODERATOR_TEST_ACCOUNTS } from "@/features/moderator/moderatorMockData";
-import { MODERATOR_HOME_PATH } from "@/features/moderator/moderatorNavData";
+import { MODERATOR_LOGIN_ACCOUNTS } from "@/features/moderator/moderatorMockData";
+import {
+  isModeratorRole,
+  MODERATOR_HOME_PATH,
+} from "@/features/moderator/moderatorNavData";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import styles from "./LoginPage.module.css";
 
 const REMEMBER_KEY = "sehubs_remember_login";
 
+function getPostLoginPath(user, fallback = "/home") {
+  return isModeratorRole(user) ? MODERATOR_HOME_PATH : fallback;
+}
+
 function LoginPage() {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const location = useLocation();
+  const { login, isAuthenticated, user } = useAuth();
+  const redirectTo = location.state?.from || "/home";
   const [email, setEmail] = useState(() => {
     try {
       return localStorage.getItem(REMEMBER_KEY) ?? "";
@@ -27,7 +36,7 @@ function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (isAuthenticated) {
-    return <Navigate to={MODERATOR_HOME_PATH} replace />;
+    return <Navigate to={getPostLoginPath(user, redirectTo)} replace />;
   }
 
   function persistRememberMe() {
@@ -42,8 +51,8 @@ function LoginPage() {
     }
   }
 
-  function navigateAfterLogin() {
-    navigate(MODERATOR_HOME_PATH, { replace: true });
+  function navigateAfterLogin(loggedInUser) {
+    navigate(getPostLoginPath(loggedInUser, redirectTo), { replace: true });
   }
 
   function handleSubmit(event) {
@@ -51,8 +60,8 @@ function LoginPage() {
     setIsSubmitting(true);
     persistRememberMe();
 
-    login({ username: email.trim(), password });
-    navigateAfterLogin();
+    const loggedInUser = login({ username: email.trim(), password });
+    navigateAfterLogin(loggedInUser);
   }
 
   function fillTestAccount(account) {
@@ -60,7 +69,7 @@ function LoginPage() {
     setPassword(account.password);
     setRememberMe(true);
 
-    login({
+    const loggedInUser = login({
       username: account.username,
       password: account.password,
     });
@@ -69,13 +78,13 @@ function LoginPage() {
     } catch {
       /* ignore storage errors */
     }
-    navigateAfterLogin();
+    navigateAfterLogin(loggedInUser);
   }
 
   function handleGoogleLogin() {
     setIsSubmitting(true);
-    login({ username: "google_user", password: "" });
-    navigateAfterLogin();
+    const loggedInUser = login({ username: "google_user", password: "" });
+    navigateAfterLogin(loggedInUser);
   }
 
   return (
@@ -182,7 +191,7 @@ function LoginPage() {
             <details className={styles.devAccounts}>
               <summary className={styles.devSummary}>Tài khoản test (dev)</summary>
               <ul className={styles.devList}>
-                {MODERATOR_TEST_ACCOUNTS.map((account) => (
+                {MODERATOR_LOGIN_ACCOUNTS.map((account) => (
                   <li key={account.username}>
                     <button
                       type="button"
