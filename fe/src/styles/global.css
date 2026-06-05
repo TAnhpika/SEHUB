@@ -16,3 +16,13 @@ body {
 #root {
   min-height: 100vh;
 }
+
+/* Tên user Premium — gradient tím sau thanh toán thành công */
+.username-premium {
+  font-weight: 700;
+  background: var(--gradient-premium-name);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}

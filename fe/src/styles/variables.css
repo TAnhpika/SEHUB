@@ -65,6 +65,17 @@
   --color-purple-hover: var(--color-primary-hover);
   --color-purple-soft: var(--color-primary-light);
 
+  /* Premium — tím gradient (thanh toán / badge Premium) */
+  --color-premium: #5b21ff;
+  --color-premium-mid: #9d50ff;
+  --color-premium-magenta: #c026d3;
+  --gradient-premium-name: linear-gradient(
+    90deg,
+    var(--color-premium) 0%,
+    var(--color-premium-mid) 55%,
+    var(--color-premium-magenta) 100%
+  );
+
   --gradient-streak-badge: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);
 
   --gradient-hero: linear-gradient(

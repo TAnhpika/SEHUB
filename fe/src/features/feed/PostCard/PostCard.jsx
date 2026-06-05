@@ -11,10 +11,11 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
 import { copyPostLink, isOwnPost } from "@/features/feed/postUtils";
+import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./PostCard.module.css";
 
 function PostCard({ post, interactive = false, onOpen, onEdit, onDelete }) {
-  const { user } = useAuth();
+  const { user, isPremium } = useAuth();
   const { showCopyToast } = useToast();
   const { isAuthenticated, requireAuth } = useRequireAuth();
   const canInteract = interactive || isAuthenticated;
@@ -74,7 +75,14 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete }) {
             {post.author.initial}
           </span>
           <div>
-            <p className={styles.username}>{post.author.username}</p>
+            <p
+              className={withPremiumUsernameClass(
+                styles.username,
+                isOwner && isPremium,
+              )}
+            >
+              {post.author.username}
+            </p>
             <p className={styles.meta}>
               {post.publishedAt ?? post.timeAgo}
               {!isOwner && post.author.club ? ` · ${post.author.club}` : ""}
