@@ -9,8 +9,8 @@ import styles from "./ModeratorHeader.module.css";
 
 const TOP_LINKS = [
   { label: "Trang chủ", to: "/home" },
-  { label: "Kiểm duyệt", to: "/moderator/practice-exams/add" },
-  { label: "Xử lý báo cáo", to: "/moderator/reports" },
+  { label: "Báo cáo", to: "/moderator/reports" },
+  { label: "Thêm đề TH", to: "/moderator/practice-exams/add" },
 ];
 
 function ModeratorHeader() {
