@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
+  faBookOpen,
+  faChartColumn,
   faCheck,
   faCircleCheck,
   faClock,
@@ -10,7 +12,12 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
-import { buildExamQuestions } from "@/features/exams/examDetailData";
+import {
+  getMockPeerComparison,
+  getPassStatus,
+  getScoreGrade,
+  getScoreOnTen,
+} from "@/features/exams/examResultInsights";
 import {
   clearExamSession,
   createExamSession,
@@ -24,23 +31,18 @@ import {
 } from "@/features/subjects/SubjectDetailPage/subjectDetailData";
 import styles from "./ExamResultPage.module.css";
 
-function ScoreRing({ percent }) {
-  const radius = 54;
+function ScoreRing({ percent, grade }) {
+  const radius = 62;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (percent / 100) * circumference;
 
   return (
     <div className={styles["score-ring"]} aria-hidden="true">
-      <svg viewBox="0 0 120 120" className={styles["score-ring-svg"]}>
+      <svg viewBox="0 0 140 140" className={styles["score-ring-svg"]}>
+        <circle cx="70" cy="70" r={radius} className={styles["score-ring-track"]} />
         <circle
-          cx="60"
-          cy="60"
-          r={radius}
-          className={styles["score-ring-track"]}
-        />
-        <circle
-          cx="60"
-          cy="60"
+          cx="70"
+          cy="70"
           r={radius}
           className={styles["score-ring-progress"]}
           strokeDasharray={circumference}
@@ -49,7 +51,7 @@ function ScoreRing({ percent }) {
       </svg>
       <div className={styles["score-ring-inner"]}>
         <span className={styles["score-ring-value"]}>{percent}%</span>
-        <span className={styles["score-ring-label"]}>Điểm số</span>
+        <span className={styles["score-ring-grade"]}>Hạng {grade}</span>
       </div>
     </div>
   );
@@ -58,18 +60,12 @@ function ScoreRing({ percent }) {
 function ExamResultPage({ page = "review" }) {
   const { courseCode, examId } = useParams();
   const navigate = useNavigate();
-  const [showDetail, setShowDetail] = useState(false);
   const config = SUBJECT_DETAIL_CONFIG[page];
   const decodedExamId = decodeURIComponent(examId ?? "");
 
   const exam = useMemo(
     () => getExamById(courseCode, decodedExamId, page),
     [courseCode, decodedExamId, page],
-  );
-
-  const questions = useMemo(
-    () => (exam ? buildExamQuestions(exam.questionCount, page) : []),
-    [exam, page],
   );
 
   const session = useMemo(
@@ -99,10 +95,16 @@ function ExamResultPage({ page = "review" }) {
   const doPath = `${detailPath}/do`;
   const durationMs = submittedAt - startedAt;
   const feedback = getScoreFeedback(result.scorePercent);
+  const grade = getScoreGrade(result.scorePercent);
+  const scoreOnTen = getScoreOnTen(result.correctCount, result.total);
+  const passStatus = getPassStatus(scoreOnTen);
+  const peer = getMockPeerComparison(result.scorePercent);
 
   const correctPercent = Math.round((result.correctCount / result.total) * 100);
   const wrongPercent = Math.round((result.wrongCount / result.total) * 100);
   const emptyPercent = Math.round((result.unansweredCount / result.total) * 100);
+  const wrongItems = result.items.filter((item) => item.selectedAnswer && !item.isCorrect);
+  const emptyItems = result.items.filter((item) => !item.selectedAnswer);
 
   function handleRetry() {
     clearExamSession(exam.id);
@@ -122,25 +124,67 @@ function ExamResultPage({ page = "review" }) {
         Quay lại đề thi
       </Link>
 
-      <section className={styles.hero} aria-label="Tổng kết bài thi">
-        <div className={styles["hero-icon"]} aria-hidden="true">
-          <FontAwesomeIcon icon={faCircleCheck} />
-        </div>
-        <div className={styles["hero-text"]}>
-          <h1 className={styles.title}>Hoàn thành bài thi!</h1>
-          <p className={styles.subtitle}>
-            Mã đề <strong>{exam.id}</strong> · {exam.courseCode}
-          </p>
-        </div>
-        <ScoreRing percent={result.scorePercent} />
-        <div className={styles.feedback}>
-          <span className={styles["feedback-badge"]}>{feedback.label}</span>
-          <p className={styles["feedback-message"]}>{feedback.message}</p>
+      <section className={styles.summary} aria-label="Kết quả làm bài">
+        <header className={styles["summary-head"]}>
+          <div className={styles["summary-title-wrap"]}>
+            <span className={styles["summary-icon"]} aria-hidden="true">
+              <FontAwesomeIcon icon={faChartColumn} />
+            </span>
+            <div>
+              <h1 className={styles.title}>Thống kê kết quả</h1>
+              <p className={styles.subtitle}>Mã đề {exam.id}</p>
+            </div>
+          </div>
+          <span
+            className={`${styles["pass-badge"]} ${
+              passStatus === "pass" ? styles["pass-badge-pass"] : styles["pass-badge-fail"]
+            }`}
+          >
+            <FontAwesomeIcon icon={passStatus === "pass" ? faCircleCheck : faXmark} />
+            {passStatus === "pass" ? "Đạt yêu cầu" : "Chưa đạt"}
+          </span>
+        </header>
+
+        <div className={styles["summary-body"]}>
+          <div className={styles["score-panel"]}>
+            <ScoreRing percent={result.scorePercent} grade={grade.label} />
+            <p className={styles["score-ten"]}>
+              <strong>{scoreOnTen}</strong>
+              <span>/10 điểm</span>
+            </p>
+            <p className={styles["score-caption"]}>
+              {result.correctCount}/{result.total} câu đúng
+            </p>
+          </div>
+
+          <div className={styles["info-panel"]}>
+            <dl className={styles["info-list"]}>
+              <div className={styles["info-row"]}>
+                <dt>Mã môn học</dt>
+                <dd>{exam.courseCode}</dd>
+              </div>
+              <div className={styles["info-row"]}>
+                <dt>Thời gian làm bài</dt>
+                <dd>{formatDuration(durationMs)}</dd>
+              </div>
+              <div className={styles["info-row"]}>
+                <dt>Đánh giá</dt>
+                <dd>{feedback.label}</dd>
+              </div>
+              <div className={styles["info-row"]}>
+                <dt>Nhận xét</dt>
+                <dd>{feedback.message}</dd>
+              </div>
+            </dl>
+
+            <p className={styles.insight}>{peer.message}</p>
+          </div>
         </div>
       </section>
 
-      <section className={styles.stats} aria-label="Thống kê bài làm">
-        <h2 className={styles["section-title"]}>Thống kê bài làm</h2>
+      <section className={styles.stats} aria-label="Thống kê chi tiết">
+        <h2 className={styles["section-title"]}>Thống kê chi tiết</h2>
+
         <div className={styles["stats-grid"]}>
           <article className={`${styles["stat-card"]} ${styles["stat-correct"]}`}>
             <span className={styles["stat-icon"]}>
@@ -170,38 +214,31 @@ function ExamResultPage({ page = "review" }) {
           </article>
         </div>
 
-        <div className={styles["progress-bar"]} aria-label="Tỷ lệ đúng, sai, bỏ trống">
-          <span
-            className={styles["progress-correct"]}
-            style={{ width: `${correctPercent}%` }}
-          />
-          <span
-            className={styles["progress-wrong"]}
-            style={{ width: `${wrongPercent}%` }}
-          />
-          <span
-            className={styles["progress-empty"]}
-            style={{ width: `${emptyPercent}%` }}
-          />
-        </div>
-        <div className={styles.legend}>
-          <span>
-            <i className={styles["legend-dot-correct"]} /> Đúng {correctPercent}%
-          </span>
-          <span>
-            <i className={styles["legend-dot-wrong"]} /> Sai {wrongPercent}%
-          </span>
-          <span>
-            <i className={styles["legend-dot-empty"]} /> Bỏ trống {emptyPercent}%
-          </span>
+        <div className={styles["progress-wrap"]}>
+          <div className={styles["progress-bar"]} aria-label="Tỷ lệ đúng, sai, bỏ trống">
+            <span className={styles["progress-correct"]} style={{ width: `${correctPercent}%` }} />
+            <span className={styles["progress-wrong"]} style={{ width: `${wrongPercent}%` }} />
+            <span className={styles["progress-empty"]} style={{ width: `${emptyPercent}%` }} />
+          </div>
+          <div className={styles.legend}>
+            <span>
+              <i className={styles["legend-dot-correct"]} /> Đúng {correctPercent}%
+            </span>
+            <span>
+              <i className={styles["legend-dot-wrong"]} /> Sai {wrongPercent}%
+            </span>
+            <span>
+              <i className={styles["legend-dot-empty"]} /> Bỏ trống {emptyPercent}%
+            </span>
+          </div>
         </div>
       </section>
 
-      <section className={styles.map} aria-label="Bảng câu hỏi">
+      <section className={styles.map} aria-label="Bảng thống kê câu hỏi">
         <div className={styles["map-head"]}>
           <h2 className={styles["section-title"]}>Bảng thống kê câu hỏi</h2>
           <p className={styles["map-meta"]}>
-            {result.correctCount}/{result.total} câu đúng
+            Nhấn vào ô để xem trạng thái từng câu
           </p>
         </div>
         <div className={styles["map-grid"]}>
@@ -222,62 +259,58 @@ function ExamResultPage({ page = "review" }) {
         </div>
       </section>
 
-      <section className={styles.detail} aria-label="Chi tiết từng câu">
-        <button
-          type="button"
-          className={styles["detail-toggle"]}
-          onClick={() => setShowDetail((open) => !open)}
-          aria-expanded={showDetail}
-        >
-          {showDetail ? "Ẩn chi tiết từng câu" : "Xem chi tiết từng câu"}
-        </button>
+      {(wrongItems.length > 0 || emptyItems.length > 0) && (
+        <section className={styles.review} aria-label="Phân tích câu cần ôn">
+          <h2 className={styles["section-title"]}>Phân tích câu cần ôn</h2>
 
-        {showDetail && (
-          <ul className={styles.list}>
-            {result.items.map((item, index) => (
-              <li key={item.questionId} className={styles.item}>
-                <div className={styles["item-head"]}>
-                  <span className={styles["item-index"]}>Câu {index + 1}</span>
-                  <span
-                    className={`${styles.badge} ${
-                      item.isCorrect
-                        ? styles["badge-correct"]
-                        : item.selectedAnswer
-                          ? styles["badge-wrong"]
-                          : styles["badge-empty"]
-                    }`}
-                  >
-                    {item.isCorrect ? "Đúng" : item.selectedAnswer ? "Sai" : "Bỏ trống"}
-                  </span>
-                </div>
-                <p className={styles["item-text"]}>{item.text}</p>
-                <ul className={styles.options}>
-                  {item.options.map((option) => {
-                    const isCorrect = option.key === item.correctAnswer;
-                    const isSelected = option.key === item.selectedAnswer;
+          {wrongItems.length > 0 && (
+            <div className={styles["review-group"]}>
+              <h3 className={styles["review-subtitle"]}>Câu trả lời sai ({wrongItems.length})</h3>
+              <ul className={styles.list}>
+                {wrongItems.map((item) => {
+                  const index = result.items.findIndex((entry) => entry.questionId === item.questionId);
+                  return (
+                    <li key={item.questionId} className={styles.item}>
+                      <div className={styles["item-head"]}>
+                        <span className={styles["item-index"]}>Câu {index + 1}</span>
+                        <span className={`${styles.badge} ${styles["badge-wrong"]}`}>Sai</span>
+                      </div>
+                      <p className={styles["item-text"]}>{item.text}</p>
+                      <p className={styles["item-answer"]}>
+                        Bạn chọn: <strong>{item.selectedAnswer}</strong> · Đáp án đúng:{" "}
+                        <strong>{item.correctAnswer}</strong>
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
 
-                    return (
-                      <li
-                        key={option.key}
-                        className={[
-                          styles.option,
-                          isCorrect && styles["option-correct"],
-                          isSelected && !isCorrect && styles["option-wrong"],
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                      >
-                        <span className={styles["option-key"]}>{option.key}</span>
-                        <span>{option.label}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+          {emptyItems.length > 0 && (
+            <div className={styles["review-group"]}>
+              <h3 className={styles["review-subtitle"]}>Câu bỏ trống ({emptyItems.length})</h3>
+              <ul className={styles.list}>
+                {emptyItems.map((item) => {
+                  const index = result.items.findIndex((entry) => entry.questionId === item.questionId);
+                  return (
+                    <li key={item.questionId} className={styles.item}>
+                      <div className={styles["item-head"]}>
+                        <span className={styles["item-index"]}>Câu {index + 1}</span>
+                        <span className={`${styles.badge} ${styles["badge-empty"]}`}>Bỏ trống</span>
+                      </div>
+                      <p className={styles["item-text"]}>{item.text}</p>
+                      <p className={styles["item-answer"]}>
+                        Đáp án đúng: <strong>{item.correctAnswer}</strong>
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className={styles.actions} aria-label="Hành động">
         <Button onClick={handleRetry}>
@@ -285,7 +318,8 @@ function ExamResultPage({ page = "review" }) {
           Làm lại
         </Button>
         <Button look="outline" to={detailPath}>
-          Quay lại đề thi
+          <FontAwesomeIcon icon={faBookOpen} />
+          Xem lại đề thi
         </Button>
         <Button look="soft" to="/community/final-exam">
           Khám phá đề khác
