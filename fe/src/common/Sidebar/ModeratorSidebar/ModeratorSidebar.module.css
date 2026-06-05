@@ -67,6 +67,20 @@
   text-align: center;
 }
 
+.adminLink {
+  display: block;
+  margin-bottom: 0.5rem;
+  padding: 0 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--moderator-primary, #004ac6);
+  text-decoration: none;
+}
+
+.adminLink:hover {
+  text-decoration: underline;
+}
+
 .profile {
   display: flex;
   align-items: center;
