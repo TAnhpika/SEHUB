@@ -57,7 +57,7 @@ import ModeratorContentPage from "@/features/moderator/content/ModeratorContentP
 import ModeratorFeaturedPage from "@/features/moderator/featured/ModeratorFeaturedPage";
 import ModeratorViolationsPage from "@/features/moderator/violations/ModeratorViolationsPage";
 import AddFinalExamPage from "@/features/moderator/finalExams/AddFinalExamPage";
-import NotFoundPage from "@/features/errors/NotFoundPage/NotFoundPage";
+import NotFound from "@/features/errors/NotFound/NotFound";
 
 function App() {
   return (
@@ -185,7 +185,7 @@ function App() {
               </Route>
             </Route>
             <Route path="/landing" element={<Navigate to="/" replace />} />
-            <Route path="*" element={<NotFoundPage />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </ToastProvider>
