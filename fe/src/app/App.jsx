@@ -23,6 +23,7 @@ import ReviewQuestionsPage from "@/features/review/ReviewQuestionsPage/ReviewQue
 import SubjectDetailPage from "@/features/subjects/SubjectDetailPage/SubjectDetailPage";
 import ExamDetailPage from "@/features/exams/ExamDetailPage/ExamDetailPage";
 import ExamDoPage from "@/features/exams/ExamDoPage/ExamDoPage";
+import PracticeDoPage from "@/features/exams/PracticeDoPage/PracticeDoPage";
 import ExamResultPage from "@/features/exams/ExamResultPage/ExamResultPage";
 import PremiumRoute from "@/common/guards/PremiumRoute";
 import FeedbackPage from "@/features/feedback/FeedbackPage/FeedbackPage";
@@ -103,6 +104,16 @@ function App() {
                 path="pratical-exam/:courseCode/:examId"
                 element={<ExamDetailPage page="practice" />}
               />
+              <Route element={<PremiumRoute />}>
+                <Route
+                  path="pratical-exam/:courseCode/:examId/do/:questionIndex"
+                  element={<PracticeDoPage />}
+                />
+                <Route
+                  path="pratical-exam/:courseCode/:examId/result/:questionIndex"
+                  element={<ExamResultPage page="practice" />}
+                />
+              </Route>
               <Route path="documents" element={<DocumentsPage />} />
               <Route
                 path="documents/:courseCode"

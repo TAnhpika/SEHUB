@@ -35,7 +35,14 @@ export function getOrCreateExamSession(examId) {
 
 export function saveExamAnswer(examId, questionId, answerKey) {
   const session = getOrCreateExamSession(examId);
-  session.answers[String(questionId)] = answerKey;
+  const key = String(questionId);
+
+  if (answerKey == null) {
+    delete session.answers[key];
+  } else {
+    session.answers[key] = answerKey;
+  }
+
   writeSession(examId, session);
   return session;
 }
@@ -71,6 +78,33 @@ export function gradeExam(questions, answers) {
   };
 }
 
+export function gradePracticeExam(questions, answers) {
+  const items = questions.map((question) => {
+    const selected = answers[String(question.id)] ?? null;
+    const isCompleted = selected === "done";
+
+    return {
+      questionId: question.id,
+      text: question.text,
+      correctAnswer: null,
+      selectedAnswer: isCompleted ? "done" : null,
+      isCorrect: isCompleted,
+    };
+  });
+
+  const correctCount = items.filter((item) => item.isCorrect).length;
+  const unansweredCount = items.filter((item) => !item.selectedAnswer).length;
+
+  return {
+    total: questions.length,
+    correctCount,
+    wrongCount: 0,
+    unansweredCount,
+    scorePercent: questions.length ? Math.round((correctCount / questions.length) * 100) : 0,
+    items,
+  };
+}
+
 export function getScoreFeedback(scorePercent) {
   if (scorePercent >= 90) {
     return { label: "Xuất sắc", message: "Bạn nắm vững kiến thức môn học này!" };
@@ -84,9 +118,12 @@ export function getScoreFeedback(scorePercent) {
   return { label: "Cần cố gắng", message: "Đừng nản, xem lại đáp án và thử làm lại nhé!" };
 }
 
-export function submitExamSession(examId, questions) {
+export function submitExamSession(examId, questions, pageKey = "review") {
   const session = getOrCreateExamSession(examId);
-  const result = gradeExam(questions, session.answers);
+  const result =
+    pageKey === "practice"
+      ? gradePracticeExam(questions, session.answers)
+      : gradeExam(questions, session.answers);
   const next = {
     ...session,
     submitted: true,
