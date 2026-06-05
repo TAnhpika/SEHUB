@@ -1,0 +1,85 @@
+.chartWrap {
+  width: 100%;
+  min-height: 160px;
+}
+
+.pieWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.pieChartBox {
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 220px;
+}
+
+.pieCenter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  align-items: center;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.pieCenterValue {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: #6b7280;
+  letter-spacing: -0.01em;
+}
+
+.pieCenterLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pieLegend {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 140px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pieLegendItem {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 13px;
+}
+
+.pieLegendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.pieLegendLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: #9ca3af;
+}
+
+.pieLegendValue {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  font-variant-numeric: tabular-nums;
+}
