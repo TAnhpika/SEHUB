@@ -1,5 +1,6 @@
 export const SAMPLE_QUESTION = {
   text: "Which is a function in C language?",
+  correctAnswer: "B",
   options: [
     { key: "A", label: "is_prime()" },
     { key: "B", label: "#include()" },
@@ -14,6 +15,7 @@ const REVIEW_QUESTION_TEMPLATES = [
   SAMPLE_QUESTION,
   {
     text: "What is the output of printf(\"%d\", 5 + 3 * 2);?",
+    correctAnswer: "B",
     options: [
       { key: "A", label: "16" },
       { key: "B", label: "11" },
@@ -23,6 +25,7 @@ const REVIEW_QUESTION_TEMPLATES = [
   },
   {
     text: "Which keyword is used to define a constant in C?",
+    correctAnswer: "A",
     options: [
       { key: "A", label: "const" },
       { key: "B", label: "define" },
@@ -32,6 +35,7 @@ const REVIEW_QUESTION_TEMPLATES = [
   },
   {
     text: "What does the sizeof operator return?",
+    correctAnswer: "B",
     options: [
       { key: "A", label: "Value of a variable" },
       { key: "B", label: "Size of a data type in bytes" },
@@ -41,6 +45,7 @@ const REVIEW_QUESTION_TEMPLATES = [
   },
   {
     text: "Which header file is required for printf()?",
+    correctAnswer: "B",
     options: [
       { key: "A", label: "<stdlib.h>" },
       { key: "B", label: "<stdio.h>" },
@@ -50,6 +55,7 @@ const REVIEW_QUESTION_TEMPLATES = [
   },
   {
     text: "What is the correct way to declare a pointer to int?",
+    correctAnswer: "B",
     options: [
       { key: "A", label: "int ptr;" },
       { key: "B", label: "int *ptr;" },
@@ -59,6 +65,7 @@ const REVIEW_QUESTION_TEMPLATES = [
   },
   {
     text: "Which loop executes at least once?",
+    correctAnswer: "C",
     options: [
       { key: "A", label: "for" },
       { key: "B", label: "while" },
@@ -68,6 +75,7 @@ const REVIEW_QUESTION_TEMPLATES = [
   },
   {
     text: "What is the default return type of a function in C if not specified?",
+    correctAnswer: "B",
     options: [
       { key: "A", label: "void" },
       { key: "B", label: "int" },
@@ -101,6 +109,7 @@ function buildReviewQuestions(count) {
       id: index + 1,
       kind: "review",
       text: template.text,
+      correctAnswer: template.correctAnswer,
       options: template.options.map((option) => ({ ...option })),
     };
   });
