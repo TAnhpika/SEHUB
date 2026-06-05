@@ -18,7 +18,7 @@ export const MODERATOR_TEST_ACCOUNTS = [
     username: "admin_sehub",
     email: "admin@sehubs.local",
     password: "admin123",
-    displayName: "Admin User",
+    displayName: "Quản trị SEHub",
     initial: "A",
     role: "admin",
     roleLabel: "Quản trị viên",
@@ -84,17 +84,66 @@ export const PRACTICE_EXAM_SUBMISSIONS_MOCK = [
   },
 ];
 
-export function findModeratorTestAccount(identifier, password) {
+/** Tài khoản SV demo — so sánh Basic vs Premium (tài liệu, đề TH…) */
+export const STUDENT_TEST_ACCOUNTS = [
+  {
+    username: "student_basic",
+    email: "basic@student.local",
+    password: "basic123",
+    displayName: "SV Basic",
+    initial: "B",
+    role: "student",
+    plan: "Basic",
+    level: "Bronze",
+    points: 45,
+    streak: 2,
+    unreadNotifications: 1,
+    levelProgress: 30,
+    pointsToNext: 55,
+  },
+  {
+    username: "student_premium",
+    email: "premium@student.local",
+    password: "premium123",
+    displayName: "SV Premium",
+    initial: "P",
+    role: "student",
+    plan: "Premium",
+    level: "Gold",
+    points: 920,
+    streak: 14,
+    unreadNotifications: 3,
+    levelProgress: 72,
+    pointsToNext: 80,
+  },
+];
+
+function matchTestAccount(accounts, identifier, password) {
   const key = identifier?.trim().toLowerCase();
   if (!key) return null;
 
   return (
-    MODERATOR_TEST_ACCOUNTS.find(
+    accounts.find(
       (account) =>
         (account.username.toLowerCase() === key ||
           account.email.toLowerCase() === key) &&
         account.password === password,
     ) ?? null
+  );
+}
+
+export function findModeratorTestAccount(identifier, password) {
+  return matchTestAccount(MODERATOR_TEST_ACCOUNTS, identifier, password);
+}
+
+export function findStudentTestAccount(identifier, password) {
+  return matchTestAccount(STUDENT_TEST_ACCOUNTS, identifier, password);
+}
+
+export function findTestAccount(identifier, password) {
+  return (
+    findModeratorTestAccount(identifier, password) ??
+    findStudentTestAccount(identifier, password)
   );
 }
 
