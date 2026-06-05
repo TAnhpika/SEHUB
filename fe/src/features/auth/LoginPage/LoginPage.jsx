@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate, Navigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faEye, faEyeSlash, faLock } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import googleGSrc from "@/img/google-g.png";
+import { getRoleHomePath } from "@/utils/roleHelpers";
 import { MODERATOR_TEST_ACCOUNTS } from "@/features/moderator/moderatorMockData";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import styles from "./LoginPage.module.css";
@@ -13,7 +14,7 @@ const REMEMBER_KEY = "sehubs_remember_login";
 function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isAuthenticated } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState(() => {
     try {
       return localStorage.getItem(REMEMBER_KEY) ?? "";
@@ -28,10 +29,6 @@ function LoginPage() {
 
   const redirectTo = location.state?.from || "/home";
 
-  if (isAuthenticated) {
-    return <Navigate to={redirectTo} replace />;
-  }
-
   function persistRememberMe() {
     try {
       if (rememberMe) {
@@ -45,11 +42,7 @@ function LoginPage() {
   }
 
   function navigateAfterLogin(loggedInUser) {
-    const destination =
-      loggedInUser?.role === "moderator" || loggedInUser?.role === "admin"
-        ? "/moderator/practice-exams/add"
-        : redirectTo;
-    navigate(destination, { replace: true });
+    navigate(getRoleHomePath(loggedInUser, redirectTo), { replace: true });
   }
 
   function handleSubmit(event) {
