@@ -1,0 +1,90 @@
+/* Bộ lọc kì / ngành — đồng bộ community (Tài liệu, đề thi, …) */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.track {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pill {
+  padding: 0.4375rem 0.9375rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.pill:hover:not(:disabled) {
+  color: var(--color-filter-active, #7c3aed);
+  border-color: color-mix(in srgb, var(--color-filter-active, #7c3aed) 35%, var(--color-border));
+}
+
+.pill:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.pillActive {
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--color-filter-active, #7c3aed);
+  border-color: var(--color-filter-active, #7c3aed);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-filter-active, #7c3aed) 32%, transparent);
+}
+
+.pillActive:hover:not(:disabled) {
+  color: #ffffff;
+  background: var(--color-filter-active, #7c3aed);
+}
+
+@media (max-width: 640px) {
+  .shell {
+    padding: 1rem 1.125rem;
+  }
+
+  .track {
+    gap: 0.375rem;
+  }
+
+  .pill {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+  }
+}
