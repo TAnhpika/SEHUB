@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChevronDown,
@@ -12,8 +12,9 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import {
   EXAMS_PER_PAGE,
   filterExamPapers,
+  getDocumentItemsForCourse,
   getExamPapersForCourse,
-  SUBJECT_DETAIL_CONFIG,
+  getSubjectDetailConfig,
   TERM_OPTIONS,
   YEAR_OPTIONS,
 } from "./subjectDetailData";
@@ -21,6 +22,7 @@ import styles from "./SubjectDetailPage.module.css";
 
 function SubjectDetailPage({ page }) {
   const { courseCode } = useParams();
+  const { pathname } = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [yearFilter, setYearFilter] = useState("all");
@@ -28,11 +30,22 @@ function SubjectDetailPage({ page }) {
 
   const { requireAuth } = useRequireAuth();
 
-  const config = SUBJECT_DETAIL_CONFIG[page];
+  const scope = pathname.startsWith("/home/") ? "home" : "community";
+  const config = getSubjectDetailConfig(page, scope);
+  const semesterQuery = searchParams.get("semester");
+  const backHref =
+    semesterQuery && semesterQuery !== "all"
+      ? `${config.backTo}?semester=${encodeURIComponent(semesterQuery)}`
+      : config.backTo;
   const code = courseCode?.toUpperCase() ?? "";
+  const isDocumentsPage = page === "documents";
+
   const allExams = useMemo(
-    () => getExamPapersForCourse(code, config.examType, config.codePrefix),
-    [code, config.examType, config.codePrefix],
+    () =>
+      isDocumentsPage
+        ? getDocumentItemsForCourse(code)
+        : getExamPapersForCourse(code, config.examType, config.codePrefix),
+    [code, config.examType, config.codePrefix, isDocumentsPage],
   );
 
   const exams = useMemo(
@@ -64,13 +77,16 @@ function SubjectDetailPage({ page }) {
   }
 
   function handleExamClick(exam) {
-    if (!requireAuth("Vui lòng đăng nhập để xem đề thi.")) return;
+    const loginMessage = isDocumentsPage
+      ? "Vui lòng đăng nhập để xem tài liệu."
+      : "Vui lòng đăng nhập để xem đề thi.";
+    if (!requireAuth(loginMessage)) return;
     navigate(`${config.detailBase}/${code}/${encodeURIComponent(exam.id)}`);
   }
 
   return (
     <div className={styles.page}>
-      <Link to={config.backTo} className={styles.back}>
+      <Link to={backHref} className={styles.back}>
         <FontAwesomeIcon icon={faChevronLeft} />
         Quay lại
       </Link>
@@ -125,13 +141,26 @@ function SubjectDetailPage({ page }) {
         </label>
       </div>
 
-      <section className={styles["table-wrap"]} aria-label={`Danh sách đề ${code}`}>
+      <section
+        className={styles["table-wrap"]}
+        aria-label={isDocumentsPage ? `Danh sách tài liệu ${code}` : `Danh sách đề ${code}`}
+      >
         <table className={styles.table}>
           <thead>
             <tr>
-              <th scope="col">Mã đề</th>
-              <th scope="col">Loại đề</th>
-              <th scope="col">Số câu hỏi</th>
+              {isDocumentsPage ? (
+                <>
+                  <th scope="col">Tên file</th>
+                  <th scope="col">Quyền truy cập</th>
+                  <th scope="col">Số trang</th>
+                </>
+              ) : (
+                <>
+                  <th scope="col">Mã đề</th>
+                  <th scope="col">Loại đề</th>
+                  <th scope="col">Số câu hỏi</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -143,7 +172,9 @@ function SubjectDetailPage({ page }) {
                     className={styles["exam-link"]}
                     onClick={() => handleExamClick(exam)}
                   >
-                    <span className={styles["exam-code"]}>{exam.id}</span>
+                    <span className={styles["exam-code"]}>
+                      {isDocumentsPage ? exam.name ?? exam.id : exam.id}
+                    </span>
                     <FontAwesomeIcon icon={faChevronRight} className={styles.chevron} />
                   </button>
                   <time className={styles.time} dateTime={exam.uploadedAt}>
@@ -158,7 +189,11 @@ function SubjectDetailPage({ page }) {
         </table>
 
         {exams.length === 0 && (
-          <p className={styles.empty}>Không có đề phù hợp với bộ lọc.</p>
+          <p className={styles.empty}>
+            {isDocumentsPage
+              ? "Chưa có tài liệu cho môn này."
+              : "Không có đề phù hợp với bộ lọc."}
+          </p>
         )}
       </section>
 
