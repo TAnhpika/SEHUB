@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
-  findModeratorTestAccount,
+  findTestAccount,
   toAuthUser,
 } from "@/features/moderator/moderatorMockData";
 import { AuthContext } from "./authContextValue";
@@ -20,12 +20,14 @@ const MOCK_STUDENT = {
   levelProgress: 68,
   pointsToNext: 60,
   role: "student",
+  plan: "Premium",
 };
 
 function normalizeUser(stored) {
   if (!stored) return null;
 
-  const base = stored.role === "student" ? MOCK_STUDENT : stored;
+  const isStaff = stored.role === "admin" || stored.role === "moderator";
+  const base = isStaff ? stored : { ...MOCK_STUDENT, plan: stored.plan ?? MOCK_STUDENT.plan };
 
   return {
     ...base,
@@ -33,6 +35,7 @@ function normalizeUser(stored) {
     displayName: stored.displayName ?? base.displayName,
     initial: stored.initial ?? base.initial,
     role: stored.role ?? "student",
+    plan: stored.plan ?? base.plan,
   };
 }
 
@@ -58,9 +61,12 @@ export function AuthProvider({ children }) {
     const identifier = credentials?.username?.trim() || MOCK_STUDENT.username;
     const password = credentials?.password ?? "";
 
-    const testAccount = findModeratorTestAccount(identifier, password);
+    const testAccount = findTestAccount(identifier, password);
     if (testAccount) {
-      const nextUser = normalizeUser(toAuthUser(testAccount));
+      const { password: _password, ...accountSafe } = testAccount;
+      const nextUser = normalizeUser(
+        testAccount.role === "student" ? accountSafe : toAuthUser(testAccount),
+      );
       localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
       localStorage.setItem(TOKEN_KEY, "mock-jwt-token");
       setUser(nextUser);
@@ -112,7 +118,7 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       isAuthenticated: Boolean(user),
-      isPremium: false,
+      isPremium: user?.plan === "Premium",
       isAdmin: user?.role === "admin",
       isModerator: user?.role === "moderator" || user?.role === "admin",
       login,
