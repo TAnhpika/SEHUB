@@ -56,13 +56,32 @@ export function gradeExam(questions, answers) {
   });
 
   const correctCount = items.filter((item) => item.isCorrect).length;
+  const wrongCount = items.filter(
+    (item) => item.selectedAnswer && !item.isCorrect,
+  ).length;
+  const unansweredCount = items.filter((item) => !item.selectedAnswer).length;
 
   return {
     total: questions.length,
     correctCount,
+    wrongCount,
+    unansweredCount,
     scorePercent: questions.length ? Math.round((correctCount / questions.length) * 100) : 0,
     items,
   };
+}
+
+export function getScoreFeedback(scorePercent) {
+  if (scorePercent >= 90) {
+    return { label: "Xuất sắc", message: "Bạn nắm vững kiến thức môn học này!" };
+  }
+  if (scorePercent >= 70) {
+    return { label: "Khá tốt", message: "Kết quả ổn, hãy ôn lại các câu sai để cải thiện." };
+  }
+  if (scorePercent >= 50) {
+    return { label: "Trung bình", message: "Cần luyện tập thêm để đạt điểm cao hơn." };
+  }
+  return { label: "Cần cố gắng", message: "Đừng nản, xem lại đáp án và thử làm lại nhé!" };
 }
 
 export function submitExamSession(examId, questions) {
