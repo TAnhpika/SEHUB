@@ -16,8 +16,8 @@ import styles from "./PostCard.module.css";
 function PostCard({ post, interactive = false, onOpen, onEdit, onDelete }) {
   const { user } = useAuth();
   const { showCopyToast } = useToast();
-  const { isAuthenticated, requireAuth } = useRequireAuth();
-  const canInteract = interactive || isAuthenticated;
+  const { needsLoginPrompt, requireAuth } = useRequireAuth();
+  const canInteract = interactive || !needsLoginPrompt;
   const isOwner = isOwnPost(post, user);
 
   function handleOpenPost() {
