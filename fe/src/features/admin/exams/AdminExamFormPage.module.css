@@ -1,0 +1,152 @@
+.typeSection {
+  margin-bottom: 1.25rem;
+}
+
+.typeSectionTitle {
+  margin: 0 0 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #737686;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.typeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+
+.typeCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem 1.125rem;
+  text-align: left;
+  cursor: pointer;
+  background: #fff;
+  border: 2px solid rgba(195, 198, 215, 0.45);
+  border-radius: 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.typeCard:hover:not(:disabled) {
+  border-color: #004ac6;
+}
+
+.typeCardActive {
+  border-color: #004ac6;
+  box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.12);
+}
+
+.typeCard:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.typeCardLabel {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #191c1e;
+}
+
+.typeCardDesc {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #737686;
+}
+
+.flowHint {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #434655;
+  background: #f7f9fb;
+  border-left: 3px solid #004ac6;
+  border-radius: 0 8px 8px 0;
+}
+
+.fileList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fileItem {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.8125rem;
+  background: #fff;
+  border: 1px solid rgba(195, 198, 215, 0.4);
+  border-radius: 8px;
+}
+
+.fileRemove {
+  padding: 0.25rem 0.5rem;
+  font-family: inherit;
+  font-size: 0.75rem;
+  color: #b91c1c;
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+.confirmRow {
+  display: flex;
+  gap: 0.625rem;
+  align-items: flex-start;
+  margin-top: 1rem;
+  padding: 0.875rem 1rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+}
+
+.confirmRow input {
+  margin-top: 0.2rem;
+}
+
+.confirmRow label {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #92400e;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.summaryItem dt {
+  margin: 0 0 0.2rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #737686;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.summaryItem dd {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #191c1e;
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(195, 198, 215, 0.35);
+}
