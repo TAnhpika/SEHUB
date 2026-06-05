@@ -18,7 +18,7 @@
 
 .workspace-single {
   grid-template-columns: var(--feed-sidebar-fixed) minmax(0, 1fr);
-  gap: 0;
+  gap: 1.25rem;
 }
 
 .col-left {
