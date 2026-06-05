@@ -39,9 +39,15 @@ export const MODERATOR_NAV_ITEMS = [
     icon: faFileCirclePlus,
   },
   {
+    id: "practice-submissions",
+    label: "Bài nộp thực hành",
+    to: "/moderator/practice-submissions",
+    icon: faClipboardList,
+  },
+  {
     id: "practice-exam",
     label: "Thêm đề thực hành",
     to: "/moderator/practice-exams/add",
-    icon: faClipboardList,
+    icon: faFileCirclePlus,
   },
 ];
