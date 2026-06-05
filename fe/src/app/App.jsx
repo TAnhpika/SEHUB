@@ -38,6 +38,7 @@ import FinalExamQuestionsStep from "@/features/moderator/finalExams/steps/FinalE
 import FinalExamReviewStep from "@/features/moderator/finalExams/steps/FinalExamReviewStep";
 import ViolatingAccountsPage from "@/features/moderator/violations/ViolatingAccountsPage/ViolatingAccountsPage";
 import ContentModerationPage from "@/features/moderator/content/ContentModerationPage/ContentModerationPage";
+import FeaturedPostsPage from "@/features/moderator/featured/FeaturedPostsPage/FeaturedPostsPage";
 
 function App() {
   return (
@@ -106,6 +107,7 @@ function App() {
                 <Route path="practice-exams/add" element={<AddPracticeExamPage />} />
                 <Route path="violations" element={<ViolatingAccountsPage />} />
                 <Route path="content" element={<ContentModerationPage />} />
+                <Route path="featured" element={<FeaturedPostsPage />} />
                 <Route path="final-exams/add" element={<AddFinalExamWizard />}>
                   <Route index element={<FinalExamInfoStep />} />
                   <Route path="questions" element={<FinalExamQuestionsStep />} />
