@@ -1,0 +1,162 @@
+.panel {
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+}
+
+.title {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.desc,
+.hint,
+.footnote {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.12);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.result {
+  padding: 0.875rem 1rem;
+  margin-bottom: 1rem;
+  background: #f7f9fb;
+  border: 1px solid rgba(195, 198, 215, 0.45);
+  border-radius: 10px;
+}
+
+.statusPending {
+  border-left: 3px solid #f59e0b;
+}
+
+.statusReviewed {
+  border-left: 3px solid #3b82f6;
+}
+
+.statusPass {
+  border-left: 3px solid #16a34a;
+}
+
+.statusFail {
+  border-left: 3px solid #dc2626;
+}
+
+.resultHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.resultLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.resultBadge {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1e40af;
+  background: #dbeafe;
+  border-radius: 9999px;
+}
+
+.statusPass .resultBadge {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.statusFail .resultBadge {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.resultMeta {
+  margin: 0.35rem 0 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-text-subtle);
+}
+
+.repoLink {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  word-break: break-all;
+}
+
+.resultGrade,
+.resultFeedback,
+.resultWaiting {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.footnote {
+  margin-bottom: 0;
+  font-size: 0.75rem;
+}
+
+.inlineLink {
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.inlineLink:hover {
+  text-decoration: underline;
+}
