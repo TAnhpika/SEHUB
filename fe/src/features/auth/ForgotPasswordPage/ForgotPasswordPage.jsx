@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -13,7 +13,6 @@ import {
   faMobileScreenButton,
 } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
-import { useAuth } from "@/context";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import OtpInput from "@/features/auth/ForgotPasswordPage/OtpInput";
 import styles from "./ForgotPasswordPage.module.css";
@@ -103,7 +102,6 @@ function isValidResetPassword(value) {
 
 function ForgotPasswordPage() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
   const { showToast } = useToast();
   const [step, setStep] = useState("method");
   const [method, setMethod] = useState(null);
@@ -144,10 +142,6 @@ function ForgotPasswordPage() {
 
     return () => window.clearTimeout(timer);
   }, [activeStep, resendSeconds]);
-
-  if (isAuthenticated) {
-    return <Navigate to="/home" replace />;
-  }
 
   function handleSelectMethod(event) {
     event.preventDefault();
