@@ -18,6 +18,7 @@ import {
   getScoreGrade,
   getScoreOnTen,
 } from "@/features/exams/examResultInsights";
+import { buildExamQuestions } from "@/features/exams/examDetailData";
 import {
   clearExamSession,
   createExamSession,
@@ -25,6 +26,11 @@ import {
   getExamSession,
   getScoreFeedback,
 } from "@/features/exams/examSession";
+import {
+  clearPracticeSession,
+  createPracticeSession,
+  getPracticeSession,
+} from "@/features/exams/practiceSession";
 import {
   getExamById,
   SUBJECT_DETAIL_CONFIG,
@@ -58,27 +64,44 @@ function ScoreRing({ percent, grade }) {
 }
 
 function ExamResultPage({ page = "review" }) {
-  const { courseCode, examId } = useParams();
+  const { courseCode, examId, questionIndex } = useParams();
   const navigate = useNavigate();
   const config = SUBJECT_DETAIL_CONFIG[page];
   const decodedExamId = decodeURIComponent(examId ?? "");
+  const isPracticeExam = page === "practice";
+  const questionNumber = Math.max(1, Number(questionIndex) || 1);
 
   const exam = useMemo(
     () => getExamById(courseCode, decodedExamId, page),
     [courseCode, decodedExamId, page],
   );
 
-  const session = useMemo(
-    () => (exam ? getExamSession(exam.id) : null),
-    [exam],
+  const questions = useMemo(
+    () => (exam ? buildExamQuestions(exam.questionCount, page) : []),
+    [exam, page],
   );
 
-  if (page !== "review") {
-    return <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />;
-  }
+  const question = questions[questionNumber - 1];
+
+  const session = useMemo(() => {
+    if (!exam) return null;
+    if (isPracticeExam && question) {
+      return getPracticeSession(exam.id, question.id);
+    }
+    return getExamSession(exam.id);
+  }, [exam, isPracticeExam, question]);
 
   if (!exam) {
     return <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />;
+  }
+
+  if (isPracticeExam && !question) {
+    return (
+      <Navigate
+        to={`${config.detailBase}/${exam.courseCode}/${encodeURIComponent(exam.id)}`}
+        replace
+      />
+    );
   }
 
   if (!session?.submitted || !session.result) {
@@ -90,9 +113,9 @@ function ExamResultPage({ page = "review" }) {
     );
   }
 
-  const { result, startedAt, submittedAt } = session;
+  const { result, startedAt, submittedAt, submission } = session;
   const detailPath = `${config.detailBase}/${exam.courseCode}/${encodeURIComponent(exam.id)}`;
-  const doPath = `${detailPath}/do`;
+  const doPath = isPracticeExam ? `${detailPath}/do/${questionNumber}` : `${detailPath}/do`;
   const durationMs = submittedAt - startedAt;
   const feedback = getScoreFeedback(result.scorePercent);
   const grade = getScoreGrade(result.scorePercent);
@@ -107,8 +130,13 @@ function ExamResultPage({ page = "review" }) {
   const emptyItems = result.items.filter((item) => !item.selectedAnswer);
 
   function handleRetry() {
-    clearExamSession(exam.id);
-    createExamSession(exam.id);
+    if (isPracticeExam && question) {
+      clearPracticeSession(exam.id, question.id);
+      createPracticeSession(exam.id, question.id);
+    } else {
+      clearExamSession(exam.id);
+      createExamSession(exam.id);
+    }
     navigate(doPath);
   }
 
@@ -117,11 +145,17 @@ function ExamResultPage({ page = "review" }) {
     return item.isCorrect ? "correct" : "wrong";
   }
 
+  const unitSingular = isPracticeExam ? "bài" : "câu";
+  const correctLabel = isPracticeExam ? "Hoàn thành" : "Câu đúng";
+  const wrongLabel = isPracticeExam ? "Chưa đạt" : "Câu sai";
+  const emptyLabel = isPracticeExam ? "Chưa làm" : "Bỏ trống";
+  const explorePath = isPracticeExam ? "/community/pratical-exam" : "/community/final-exam";
+
   return (
     <div className={styles.page}>
       <Link to={detailPath} className={styles.back}>
         <FontAwesomeIcon icon={faArrowLeft} />
-        Quay lại đề thi
+        {isPracticeExam ? "Quay lại bài thực hành" : "Quay lại đề thi"}
       </Link>
 
       <section className={styles.summary} aria-label="Kết quả làm bài">
@@ -132,7 +166,10 @@ function ExamResultPage({ page = "review" }) {
             </span>
             <div>
               <h1 className={styles.title}>Thống kê kết quả</h1>
-              <p className={styles.subtitle}>Mã đề {exam.id}</p>
+              <p className={styles.subtitle}>
+                Mã đề {exam.id}
+                {isPracticeExam ? ` · Bài thực hành ${questionNumber}` : ""}
+              </p>
             </div>
           </div>
           <span
@@ -153,7 +190,8 @@ function ExamResultPage({ page = "review" }) {
               <span>/10 điểm</span>
             </p>
             <p className={styles["score-caption"]}>
-              {result.correctCount}/{result.total} câu đúng
+              {result.correctCount}/{result.total}{" "}
+              {isPracticeExam ? "bài hoàn thành" : "câu đúng"}
             </p>
           </div>
 
@@ -175,9 +213,23 @@ function ExamResultPage({ page = "review" }) {
                 <dt>Nhận xét</dt>
                 <dd>{feedback.message}</dd>
               </div>
+              {isPracticeExam && submission && (
+                <div className={styles["info-row"]}>
+                  <dt>Hình thức nộp</dt>
+                  <dd>
+                    {submission.type === "github"
+                      ? `GitHub: ${submission.value}`
+                      : `File: ${submission.fileName}`}
+                  </dd>
+                </div>
+              )}
             </dl>
 
-            <p className={styles.insight}>{peer.message}</p>
+            <p className={styles.insight}>
+              {isPracticeExam
+                ? "Bài nộp của bạn đang chờ hệ thống xử lý. Bạn có thể làm bài thực hành khác trong đề."
+                : peer.message}
+            </p>
           </div>
         </div>
       </section>
@@ -191,19 +243,19 @@ function ExamResultPage({ page = "review" }) {
               <FontAwesomeIcon icon={faCheck} />
             </span>
             <p className={styles["stat-value"]}>{result.correctCount}</p>
-            <p className={styles["stat-label"]}>Câu đúng</p>
+            <p className={styles["stat-label"]}>{correctLabel}</p>
           </article>
           <article className={`${styles["stat-card"]} ${styles["stat-wrong"]}`}>
             <span className={styles["stat-icon"]}>
               <FontAwesomeIcon icon={faXmark} />
             </span>
             <p className={styles["stat-value"]}>{result.wrongCount}</p>
-            <p className={styles["stat-label"]}>Câu sai</p>
+            <p className={styles["stat-label"]}>{wrongLabel}</p>
           </article>
           <article className={`${styles["stat-card"]} ${styles["stat-empty"]}`}>
             <span className={styles["stat-icon"]}>—</span>
             <p className={styles["stat-value"]}>{result.unansweredCount}</p>
-            <p className={styles["stat-label"]}>Bỏ trống</p>
+            <p className={styles["stat-label"]}>{emptyLabel}</p>
           </article>
           <article className={`${styles["stat-card"]} ${styles["stat-time"]}`}>
             <span className={styles["stat-icon"]}>
@@ -222,35 +274,50 @@ function ExamResultPage({ page = "review" }) {
           </div>
           <div className={styles.legend}>
             <span>
-              <i className={styles["legend-dot-correct"]} /> Đúng {correctPercent}%
+              <i className={styles["legend-dot-correct"]} /> {correctLabel} {correctPercent}%
             </span>
             <span>
-              <i className={styles["legend-dot-wrong"]} /> Sai {wrongPercent}%
+              <i className={styles["legend-dot-wrong"]} /> {wrongLabel} {wrongPercent}%
             </span>
             <span>
-              <i className={styles["legend-dot-empty"]} /> Bỏ trống {emptyPercent}%
+              <i className={styles["legend-dot-empty"]} /> {emptyLabel} {emptyPercent}%
             </span>
           </div>
         </div>
       </section>
 
-      <section className={styles.map} aria-label="Bảng thống kê câu hỏi">
+      <section
+        className={styles.map}
+        aria-label={isPracticeExam ? "Bảng thống kê bài thực hành" : "Bảng thống kê câu hỏi"}
+      >
         <div className={styles["map-head"]}>
-          <h2 className={styles["section-title"]}>Bảng thống kê câu hỏi</h2>
+          <h2 className={styles["section-title"]}>
+            {isPracticeExam ? "Bảng thống kê bài thực hành" : "Bảng thống kê câu hỏi"}
+          </h2>
           <p className={styles["map-meta"]}>
-            Nhấn vào ô để xem trạng thái từng câu
+            Nhấn vào ô để xem trạng thái từng {unitSingular}
           </p>
         </div>
         <div className={styles["map-grid"]}>
           {result.items.map((item, index) => {
             const status = getQuestionStatus(item);
+            const statusLabel =
+              status === "correct"
+                ? isPracticeExam
+                  ? "Hoàn thành"
+                  : "Đúng"
+                : status === "wrong"
+                  ? isPracticeExam
+                    ? "Chưa đạt"
+                    : "Sai"
+                  : isPracticeExam
+                    ? "Chưa làm"
+                    : "Bỏ trống";
             return (
               <span
                 key={item.questionId}
                 className={`${styles["map-cell"]} ${styles[`map-cell-${status}`]}`}
-                title={`Câu ${index + 1}: ${
-                  status === "correct" ? "Đúng" : status === "wrong" ? "Sai" : "Bỏ trống"
-                }`}
+                title={`${isPracticeExam ? "Bài" : "Câu"} ${index + 1}: ${statusLabel}`}
               >
                 {index + 1}
               </span>
@@ -260,8 +327,13 @@ function ExamResultPage({ page = "review" }) {
       </section>
 
       {(wrongItems.length > 0 || emptyItems.length > 0) && (
-        <section className={styles.review} aria-label="Phân tích câu cần ôn">
-          <h2 className={styles["section-title"]}>Phân tích câu cần ôn</h2>
+        <section
+          className={styles.review}
+          aria-label={isPracticeExam ? "Phân tích bài cần ôn" : "Phân tích câu cần ôn"}
+        >
+          <h2 className={styles["section-title"]}>
+            {isPracticeExam ? "Phân tích bài cần ôn" : "Phân tích câu cần ôn"}
+          </h2>
 
           {wrongItems.length > 0 && (
             <div className={styles["review-group"]}>
@@ -289,20 +361,32 @@ function ExamResultPage({ page = "review" }) {
 
           {emptyItems.length > 0 && (
             <div className={styles["review-group"]}>
-              <h3 className={styles["review-subtitle"]}>Câu bỏ trống ({emptyItems.length})</h3>
+              <h3 className={styles["review-subtitle"]}>
+                {isPracticeExam ? "Bài chưa hoàn thành" : "Câu bỏ trống"} ({emptyItems.length})
+              </h3>
               <ul className={styles.list}>
                 {emptyItems.map((item) => {
                   const index = result.items.findIndex((entry) => entry.questionId === item.questionId);
                   return (
                     <li key={item.questionId} className={styles.item}>
                       <div className={styles["item-head"]}>
-                        <span className={styles["item-index"]}>Câu {index + 1}</span>
-                        <span className={`${styles.badge} ${styles["badge-empty"]}`}>Bỏ trống</span>
+                        <span className={styles["item-index"]}>
+                          {isPracticeExam ? "Bài" : "Câu"} {index + 1}
+                        </span>
+                        <span className={`${styles.badge} ${styles["badge-empty"]}`}>
+                          {isPracticeExam ? "Chưa làm" : "Bỏ trống"}
+                        </span>
                       </div>
                       <p className={styles["item-text"]}>{item.text}</p>
-                      <p className={styles["item-answer"]}>
-                        Đáp án đúng: <strong>{item.correctAnswer}</strong>
-                      </p>
+                      {isPracticeExam ? (
+                        <p className={styles["item-answer"]}>
+                          Chưa nộp bài cho bài thực hành này.
+                        </p>
+                      ) : (
+                        <p className={styles["item-answer"]}>
+                          Đáp án đúng: <strong>{item.correctAnswer}</strong>
+                        </p>
+                      )}
                     </li>
                   );
                 })}
@@ -321,8 +405,8 @@ function ExamResultPage({ page = "review" }) {
           <FontAwesomeIcon icon={faBookOpen} />
           Xem lại đề thi
         </Button>
-        <Button look="soft" to="/community/final-exam">
-          Khám phá đề khác
+        <Button look="soft" to={explorePath}>
+          {isPracticeExam ? "Khám phá bài thực hành khác" : "Khám phá đề khác"}
         </Button>
       </section>
     </div>
