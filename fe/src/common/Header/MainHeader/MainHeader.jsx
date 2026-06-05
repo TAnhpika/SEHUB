@@ -4,6 +4,7 @@ import {
   faChevronDown,
   faMagnifyingGlass,
   faRightFromBracket,
+  faShieldHalved,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
@@ -14,7 +15,8 @@ import styles from "./MainHeader.module.css";
 
 function MainHeader() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin, isModerator } = useAuth();
+  const brandTo = isAdmin ? "/admin" : "/home";
 
   const displayName = user?.displayName ?? "Anhpika";
   const initial = user?.initial ?? displayName.charAt(0).toUpperCase();
@@ -29,7 +31,7 @@ function MainHeader() {
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
-        <Link to="/home" className={styles.brand}>
+        <Link to={brandTo} className={styles.brand}>
           <img
             src={logoSrc}
             alt=""
@@ -67,6 +69,18 @@ function MainHeader() {
             </button>
 
             <div className={styles["profile-menu"]} role="menu">
+              {isAdmin ? (
+                <Link to="/admin" className={styles["menu-item"]} role="menuitem">
+                  <FontAwesomeIcon icon={faShieldHalved} />
+                  Quản trị hệ thống
+                </Link>
+              ) : null}
+              {isModerator ? (
+                <Link to="/moderator/reports" className={styles["menu-item"]} role="menuitem">
+                  <FontAwesomeIcon icon={faShieldHalved} />
+                  Kiểm duyệt
+                </Link>
+              ) : null}
               <Link
                 to={`/profile/${user?.username ?? "anhcoding12345"}`}
                 className={styles["menu-item"]}
