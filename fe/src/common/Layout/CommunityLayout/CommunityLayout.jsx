@@ -12,29 +12,30 @@ import styles from "./CommunityLayout.module.css";
 function CommunityLayout() {
   const { isAuthenticated } = useAuth();
   const isFeedHome = useMatch({ path: "/community", end: true });
+  const showStudentShell = isAuthenticated && !isFeedHome;
 
   const workspaceClass = [
     styles.workspace,
-    isAuthenticated && styles["workspace-auth"],
-    !isAuthenticated && isFeedHome && styles["workspace-feed"],
+    showStudentShell && styles["workspace-auth"],
+    !showStudentShell && isFeedHome && styles["workspace-feed"],
   ]
     .filter(Boolean)
     .join(" ");
 
   return (
     <div className={styles.layout}>
-      {isAuthenticated ? <MainHeader /> : <GuestHeader />}
+      {showStudentShell ? <MainHeader /> : <GuestHeader />}
 
       <div className={workspaceClass}>
         <div className={styles["col-left"]}>
-          {isAuthenticated ? <MainSidebar /> : <FeedSidebar />}
+          {showStudentShell ? <MainSidebar /> : <FeedSidebar />}
         </div>
 
         <main className={styles["col-center"]} id="feed-top">
           <Outlet />
         </main>
 
-        {!isAuthenticated && isFeedHome && (
+        {!showStudentShell && isFeedHome && (
           <div className={styles["col-right"]}>
             <CommunitySidebar />
           </div>
@@ -43,7 +44,7 @@ function CommunityLayout() {
 
       <Footer />
 
-      {isAuthenticated && <ChatFab />}
+      {showStudentShell && <ChatFab />}
     </div>
   );
 }
