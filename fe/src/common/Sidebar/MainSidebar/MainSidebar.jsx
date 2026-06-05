@@ -42,7 +42,7 @@ function MainSidebar() {
               })}
             </nav>
 
-            <SubjectNavSection pathname={pathname} styles={styles} />
+            <SubjectNavSection pathname={pathname} styles={styles} scope="home" />
 
             <InteractionNavSection pathname={pathname} styles={styles} />
           </div>
