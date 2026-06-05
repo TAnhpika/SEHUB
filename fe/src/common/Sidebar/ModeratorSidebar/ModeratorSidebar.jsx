@@ -1,11 +1,11 @@
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useAuth } from "@/context";
 import { MODERATOR_NAV_ITEMS } from "@/features/moderator/moderatorNavData";
 import styles from "./ModeratorSidebar.module.css";
 
 function ModeratorSidebar() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const displayName = user?.displayName ?? "Admin User";
   const roleLabel =
     user?.roleLabel ??
@@ -35,6 +35,12 @@ function ModeratorSidebar() {
           </NavLink>
         ))}
       </nav>
+
+      {isAdmin ? (
+        <Link to="/admin" className={styles.adminLink}>
+          → Khu vực Admin
+        </Link>
+      ) : null}
 
       <div className={styles.profile}>
         <div className={styles.avatar} aria-hidden>
