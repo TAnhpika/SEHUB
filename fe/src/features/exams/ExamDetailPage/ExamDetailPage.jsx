@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -16,20 +16,24 @@ import {
   EXAM_PREVIEW_LABELS,
   EXAM_TYPE_LABELS,
 } from "@/features/exams/examDetailData";
+import StudentDocumentViewer from "@/features/documents/StudentDocumentViewer/StudentDocumentViewer";
+import PracticeExamSubmitPanel from "@/features/exams/PracticeExamSubmitPanel/PracticeExamSubmitPanel";
 import {
   getExamById,
-  SUBJECT_DETAIL_CONFIG,
+  getSubjectDetailConfig,
 } from "@/features/subjects/SubjectDetailPage/subjectDetailData";
 import styles from "./ExamDetailPage.module.css";
 
 function ExamDetailPage({ page }) {
   const { courseCode, examId } = useParams();
-  const config = SUBJECT_DETAIL_CONFIG[page];
+  const { pathname } = useLocation();
+  const scope = pathname.startsWith("/home/") ? "home" : "community";
+  const config = getSubjectDetailConfig(page, scope);
   const decodedExamId = decodeURIComponent(examId ?? "");
 
   const exam = useMemo(
-    () => getExamById(courseCode, decodedExamId, page),
-    [courseCode, decodedExamId, page],
+    () => getExamById(courseCode, decodedExamId, page, scope),
+    [courseCode, decodedExamId, page, scope],
   );
 
   const questions = useMemo(
@@ -64,6 +68,8 @@ function ExamDetailPage({ page }) {
   const typeLabel = EXAM_TYPE_LABELS[page] ?? exam.type;
   const previewLabel = EXAM_PREVIEW_LABELS[page] ?? "Mục";
   const isReviewExam = page === "review";
+  const isPracticeExam = page === "practice";
+  const isDocumentPage = page === "documents" && exam.document;
   const listPath = `${config.detailBase}/${exam.courseCode}`;
 
   return (
@@ -73,24 +79,37 @@ function ExamDetailPage({ page }) {
         Quay lại
       </Link>
 
-      <section className={styles["info-card"]} aria-label="Thông tin đề thi">
-        <h2 className={styles["info-title"]}>Thông tin đề thi</h2>
-        <dl className={styles["info-grid"]}>
-          <div className={styles["info-item"]}>
-            <dt>Mã đề</dt>
-            <dd>{exam.id}</dd>
-          </div>
-          <div className={styles["info-item"]}>
-            <dt>Loại</dt>
-            <dd>{typeLabel}</dd>
-          </div>
-          <div className={styles["info-item"]}>
-            <dt>Tổng số câu</dt>
-            <dd>{exam.questionCount}</dd>
-          </div>
-        </dl>
-      </section>
+      {!isDocumentPage ? (
+        <section className={styles["info-card"]} aria-label="Thông tin đề thi">
+          <h2 className={styles["info-title"]}>Thông tin đề thi</h2>
+          <dl className={styles["info-grid"]}>
+            <div className={styles["info-item"]}>
+              <dt>Mã đề</dt>
+              <dd>{exam.id}</dd>
+            </div>
+            <div className={styles["info-item"]}>
+              <dt>Loại</dt>
+              <dd>{typeLabel}</dd>
+            </div>
+            <div className={styles["info-item"]}>
+              <dt>Tổng số câu</dt>
+              <dd>{exam.questionCount}</dd>
+            </div>
+          </dl>
+        </section>
+      ) : null}
 
+      {isDocumentPage ? <StudentDocumentViewer document={exam.document} /> : null}
+
+      {isPracticeExam && scope === "home" ? (
+        <PracticeExamSubmitPanel
+          courseCode={exam.courseCode}
+          examId={exam.id}
+          examTitle={exam.id}
+        />
+      ) : null}
+
+      {isDocumentPage ? null : (
       <section className={styles["exam-panel"]} aria-label="Xem trước đề thi">
         <header className={styles["panel-header"]}>
           <h2 className={styles["exam-code"]}>{exam.id}</h2>
@@ -190,11 +209,14 @@ function ExamDetailPage({ page }) {
           </aside>
         </div>
       </section>
+      )}
 
+      {!isDocumentPage ? (
       <section className={styles.related} aria-label="Related Exams">
         <h2 className={styles["related-title"]}>Related Exams</h2>
         <p className={styles["related-empty"]}>Không có đề thi liên quan</p>
       </section>
+      ) : null}
     </div>
   );
 }
