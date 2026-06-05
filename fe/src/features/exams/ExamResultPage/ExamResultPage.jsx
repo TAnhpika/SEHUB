@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -37,18 +37,23 @@ import {
 } from "@/features/subjects/SubjectDetailPage/subjectDetailData";
 import styles from "./ExamResultPage.module.css";
 
-function ScoreRing({ percent, grade }) {
-  const radius = 62;
+function ScoreRing({ percent }) {
+  const radius = 54;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (percent / 100) * circumference;
 
   return (
     <div className={styles["score-ring"]} aria-hidden="true">
-      <svg viewBox="0 0 140 140" className={styles["score-ring-svg"]}>
-        <circle cx="70" cy="70" r={radius} className={styles["score-ring-track"]} />
+      <svg viewBox="0 0 120 120" className={styles["score-ring-svg"]}>
         <circle
-          cx="70"
-          cy="70"
+          cx="60"
+          cy="60"
+          r={radius}
+          className={styles["score-ring-track"]}
+        />
+        <circle
+          cx="60"
+          cy="60"
           r={radius}
           className={styles["score-ring-progress"]}
           strokeDasharray={circumference}
@@ -57,19 +62,18 @@ function ScoreRing({ percent, grade }) {
       </svg>
       <div className={styles["score-ring-inner"]}>
         <span className={styles["score-ring-value"]}>{percent}%</span>
-        <span className={styles["score-ring-grade"]}>Hạng {grade}</span>
+        <span className={styles["score-ring-label"]}>Điểm số</span>
       </div>
     </div>
   );
 }
 
 function ExamResultPage({ page = "review" }) {
-  const { courseCode, examId, questionIndex } = useParams();
+  const { courseCode, examId } = useParams();
   const navigate = useNavigate();
+  const [showDetail, setShowDetail] = useState(false);
   const config = SUBJECT_DETAIL_CONFIG[page];
   const decodedExamId = decodeURIComponent(examId ?? "");
-  const isPracticeExam = page === "practice";
-  const questionNumber = Math.max(1, Number(questionIndex) || 1);
 
   const exam = useMemo(
     () => getExamById(courseCode, decodedExamId, page),
@@ -81,27 +85,17 @@ function ExamResultPage({ page = "review" }) {
     [exam, page],
   );
 
-  const question = questions[questionNumber - 1];
+  const session = useMemo(
+    () => (exam ? getExamSession(exam.id) : null),
+    [exam],
+  );
 
-  const session = useMemo(() => {
-    if (!exam) return null;
-    if (isPracticeExam && question) {
-      return getPracticeSession(exam.id, question.id);
-    }
-    return getExamSession(exam.id);
-  }, [exam, isPracticeExam, question]);
-
-  if (!exam) {
+  if (page !== "review") {
     return <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />;
   }
 
-  if (isPracticeExam && !question) {
-    return (
-      <Navigate
-        to={`${config.detailBase}/${exam.courseCode}/${encodeURIComponent(exam.id)}`}
-        replace
-      />
-    );
+  if (!exam) {
+    return <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />;
   }
 
   if (!session?.submitted || !session.result) {

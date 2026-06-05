@@ -43,6 +43,7 @@ export function saveExamAnswer(examId, questionId, answerKey) {
     session.answers[key] = answerKey;
   }
 
+  session.answers[String(questionId)] = answerKey;
   writeSession(examId, session);
   return session;
 }
@@ -118,12 +119,9 @@ export function getScoreFeedback(scorePercent) {
   return { label: "Cần cố gắng", message: "Đừng nản, xem lại đáp án và thử làm lại nhé!" };
 }
 
-export function submitExamSession(examId, questions, pageKey = "review") {
+export function submitExamSession(examId, questions) {
   const session = getOrCreateExamSession(examId);
-  const result =
-    pageKey === "practice"
-      ? gradePracticeExam(questions, session.answers)
-      : gradeExam(questions, session.answers);
+  const result = gradeExam(questions, session.answers);
   const next = {
     ...session,
     submitted: true,

@@ -34,7 +34,8 @@ function normalizeUser(stored) {
     ...stored,
     displayName: stored.displayName ?? base.displayName,
     initial: stored.initial ?? base.initial,
-    role,
+    role: stored.role ?? "student",
+    isPremium: Boolean(stored.isPremium),
     roleLabel:
       stored.roleLabel ??
       (role === "admin"
