@@ -18,7 +18,10 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
-import { PRACTICE_EXAM_SUBMISSIONS_MOCK } from "@/features/moderator/moderatorMockData";
+import {
+  getAllPracticeSubmissions,
+  getSubmissionStatusLabel,
+} from "@/features/exams/practiceExamSubmissions";
 import {
   DEMO_DRAFT,
   PRACTICE_SEMESTER_OPTIONS,
@@ -48,7 +51,7 @@ function AddPracticeExamPage() {
   const [attachments, setAttachments] = useState(DEMO_DRAFT.attachments);
   const [allowDiscussion, setAllowDiscussion] = useState(DEMO_DRAFT.allowDiscussion);
   const [pinExam, setPinExam] = useState(DEMO_DRAFT.pinExam);
-  const submissions = PRACTICE_EXAM_SUBMISSIONS_MOCK;
+  const submissions = getAllPracticeSubmissions();
   const [isDragging, setIsDragging] = useState(false);
 
   function handleSaveDraft() {
@@ -137,6 +140,9 @@ function AddPracticeExamPage() {
             Danh sách nộp bài
             <span className={styles.badge}>{submissions.length}</span>
           </button>
+          <Link to="/moderator/practice-submissions" className={styles["tab-link"]}>
+            Mở trang chấm bài →
+          </Link>
         </div>
 
         {activeTab === "create" ? (
@@ -352,9 +358,10 @@ function AddPracticeExamPage() {
               {submissions.map((item) => (
                 <li key={item.id} className={styles["submission-item"]}>
                   <div>
-                    <p className={styles["submission-name"]}>{item.studentName}</p>
+                    <p className={styles["submission-name"]}>{item.displayName}</p>
                     <p className={styles["submission-meta"]}>
-                      {item.studentId} · {new Date(item.submittedAt).toLocaleString("vi-VN")}
+                      @{item.student} · {item.courseCode} ·{" "}
+                      {new Date(item.submittedAt).toLocaleString("vi-VN")}
                     </p>
                     <a
                       href={item.githubUrl}
@@ -368,7 +375,7 @@ function AddPracticeExamPage() {
                   <span
                     className={`${styles["submission-status"]} ${styles[`status-${item.status}`]}`}
                   >
-                    {item.statusLabel}
+                    {getSubmissionStatusLabel(item.status)}
                   </span>
                 </li>
               ))}
