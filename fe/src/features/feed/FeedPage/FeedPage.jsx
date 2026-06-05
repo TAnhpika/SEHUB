@@ -20,7 +20,7 @@ function FeedPage() {
   const [editOnOpen, setEditOnOpen] = useState(false);
   const [semesterFilter, setSemesterFilter] = useState("all");
   const [majorFilter, setMajorFilter] = useState("all");
-  const { isAuthenticated, requireAuth } = useRequireAuth();
+  const { needsLoginPrompt, requireAuth } = useRequireAuth();
   const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
 
   const filteredPosts = useMemo(
@@ -53,7 +53,7 @@ function FeedPage() {
   }
 
   function handleCreatePost() {
-    if (!isAuthenticated) {
+    if (needsLoginPrompt) {
       requireAuth("Vui lòng đăng nhập để tạo bài viết.");
       return;
     }
