@@ -18,6 +18,7 @@ import { useRequirePremium } from "@/hooks/useRequirePremium";
 import ExamAiExplanation from "@/features/exams/ExamAiExplanation/ExamAiExplanation";
 import ExamCommentsPanel from "@/features/exams/ExamCommentsPanel/ExamCommentsPanel";
 import { getExamSession } from "@/features/exams/examSession";
+import { getPracticeSession } from "@/features/exams/practiceSession";
 import {
   buildExamQuestions,
   EXAM_PREVIEW_LABELS,
@@ -61,14 +62,22 @@ function ExamDetailPage({ page }) {
   const isFirstQuestion = currentIndex === 0;
   const isLastQuestion = currentIndex === questions.length - 1;
   const isReviewExam = page === "review";
-  const canUsePremiumFeatures = isReviewExam && isPremium;
+  const isPracticeExam = page === "practice";
+  const canUsePremiumFeatures = (isReviewExam || isPracticeExam) && isPremium;
   const typeLabel = EXAM_TYPE_LABELS[page] ?? exam.type;
   const previewLabel = EXAM_PREVIEW_LABELS[page] ?? "Mục";
   const listPath = `${config.detailBase}/${exam.courseCode}`;
   const doPath = `${config.detailBase}/${exam.courseCode}/${encodeURIComponent(exam.id)}/do`;
   const resultPath = `${config.detailBase}/${exam.courseCode}/${encodeURIComponent(exam.id)}/result`;
+  const practiceDoPath = `${doPath}/${currentIndex + 1}`;
+  const practiceResultPath = `${resultPath}/${currentIndex + 1}`;
   const submittedSession = getExamSession(exam.id);
-  const hasSubmittedResult = Boolean(submittedSession?.submitted);
+  const practiceSession = isPracticeExam
+    ? getPracticeSession(exam.id, currentQuestion.id)
+    : null;
+  const hasSubmittedResult = isPracticeExam
+    ? Boolean(practiceSession?.submitted)
+    : Boolean(submittedSession?.submitted);
 
   function goToPreviousQuestion() {
     if (isFirstQuestion) return;
@@ -81,13 +90,13 @@ function ExamDetailPage({ page }) {
   }
 
   function handleStartExam() {
-    if (!isReviewExam) return;
+    if (!isReviewExam && !isPracticeExam) return;
     if (!requirePremium()) return;
-    navigate(doPath);
+    navigate(isPracticeExam ? practiceDoPath : doPath);
   }
 
   function handleViewResult() {
-    navigate(resultPath);
+    navigate(isPracticeExam ? practiceResultPath : resultPath);
   }
 
   return (
@@ -124,6 +133,9 @@ function ExamDetailPage({ page }) {
           <div className={styles["panel-heading"]}>
             <h2 className={styles["exam-code"]}>{exam.id}</h2>
             {isReviewExam && <p className={styles.subtitle}>Luyện tập câu hỏi lẻ</p>}
+            {isPracticeExam && (
+              <p className={styles.subtitle}>Mỗi bài 30 phút · Nộp file hoặc GitHub</p>
+            )}
           </div>
           <div className={styles["panel-actions"]}>
             {hasSubmittedResult && canUsePremiumFeatures && (
@@ -131,14 +143,19 @@ function ExamDetailPage({ page }) {
                 Xem kết quả
               </button>
             )}
-            {isReviewExam ? (
+            {isReviewExam || isPracticeExam ? (
               <button
                 type="button"
-                className={`${styles["start-btn"]} ${canUsePremiumFeatures ? styles["start-btn-active"] : ""}`}
+                className={`${styles["start-btn"]} ${canUsePremiumFeatures && !hasSubmittedResult ? styles["start-btn-active"] : ""}`}
                 onClick={handleStartExam}
+                disabled={isPracticeExam && hasSubmittedResult}
               >
                 <FontAwesomeIcon icon={canUsePremiumFeatures ? faPlay : faLock} />
-                {canUsePremiumFeatures ? "Bắt đầu làm bài" : "Premium để làm bài"}
+                {hasSubmittedResult && isPracticeExam
+                  ? "Đã nộp bài này"
+                  : canUsePremiumFeatures
+                    ? "Bắt đầu làm bài"
+                    : "Premium để làm bài"}
               </button>
             ) : (
               <button type="button" className={styles["start-btn"]} disabled>

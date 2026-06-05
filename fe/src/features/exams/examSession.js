@@ -35,6 +35,14 @@ export function getOrCreateExamSession(examId) {
 
 export function saveExamAnswer(examId, questionId, answerKey) {
   const session = getOrCreateExamSession(examId);
+  const key = String(questionId);
+
+  if (answerKey == null) {
+    delete session.answers[key];
+  } else {
+    session.answers[key] = answerKey;
+  }
+
   session.answers[String(questionId)] = answerKey;
   writeSession(examId, session);
   return session;
@@ -65,6 +73,33 @@ export function gradeExam(questions, answers) {
     total: questions.length,
     correctCount,
     wrongCount,
+    unansweredCount,
+    scorePercent: questions.length ? Math.round((correctCount / questions.length) * 100) : 0,
+    items,
+  };
+}
+
+export function gradePracticeExam(questions, answers) {
+  const items = questions.map((question) => {
+    const selected = answers[String(question.id)] ?? null;
+    const isCompleted = selected === "done";
+
+    return {
+      questionId: question.id,
+      text: question.text,
+      correctAnswer: null,
+      selectedAnswer: isCompleted ? "done" : null,
+      isCorrect: isCompleted,
+    };
+  });
+
+  const correctCount = items.filter((item) => item.isCorrect).length;
+  const unansweredCount = items.filter((item) => !item.selectedAnswer).length;
+
+  return {
+    total: questions.length,
+    correctCount,
+    wrongCount: 0,
     unansweredCount,
     scorePercent: questions.length ? Math.round((correctCount / questions.length) * 100) : 0,
     items,
