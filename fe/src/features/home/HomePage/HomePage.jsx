@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
@@ -21,8 +21,12 @@ function HomePage() {
   const [editOnOpen, setEditOnOpen] = useState(false);
   const [semesterFilter, setSemesterFilter] = useState("all");
   const [majorFilter, setMajorFilter] = useState("all");
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
+
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
 
   useEffect(() => {
     const linkedPostId = parsePostId(searchParams.get("post"));
