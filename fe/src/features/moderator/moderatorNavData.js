@@ -7,6 +7,9 @@ import {
   faClipboardList,
 } from "@fortawesome/free-solid-svg-icons";
 
+/** Sau đăng nhập (mock) — màn nhập câu hỏi đề cuối kỳ */
+export const MODERATOR_HOME_PATH = "/moderator/final-exams/add/questions";
+
 export const MODERATOR_NAV_ITEMS = [
   {
     id: "reports",

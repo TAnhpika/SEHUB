@@ -35,6 +35,14 @@ import SupportPage from "@/features/support/SupportPage/SupportPage";
 import ModeratorRoute from "@/common/guards/ModeratorRoute";
 import ModeratorLayout from "@/common/Layout/ModeratorLayout/ModeratorLayout";
 import AddPracticeExamPage from "@/features/moderator/practiceExams/AddPracticeExamPage/AddPracticeExamPage";
+import AddFinalExamWizard from "@/features/moderator/finalExams/AddFinalExamWizard";
+import FinalExamInfoStep from "@/features/moderator/finalExams/steps/FinalExamInfoStep";
+import FinalExamQuestionsStep from "@/features/moderator/finalExams/steps/FinalExamQuestionsStep";
+import FinalExamReviewStep from "@/features/moderator/finalExams/steps/FinalExamReviewStep";
+import ViolatingAccountsPage from "@/features/moderator/violations/ViolatingAccountsPage/ViolatingAccountsPage";
+import ContentModerationPage from "@/features/moderator/content/ContentModerationPage/ContentModerationPage";
+import FeaturedPostsPage from "@/features/moderator/featured/FeaturedPostsPage/FeaturedPostsPage";
+import ReportsPage from "@/features/moderator/reports/ReportsPage/ReportsPage";
 
 function App() {
   return (
@@ -109,8 +117,17 @@ function App() {
             </Route>
             <Route element={<ModeratorRoute />}>
               <Route path="/moderator" element={<ModeratorLayout />}>
-                <Route index element={<Navigate to="/moderator/practice-exams/add" replace />} />
+                <Route index element={<Navigate to="/moderator/final-exams/add" replace />} />
                 <Route path="practice-exams/add" element={<AddPracticeExamPage />} />
+                <Route path="violations" element={<ViolatingAccountsPage />} />
+                <Route path="content" element={<ContentModerationPage />} />
+                <Route path="featured" element={<FeaturedPostsPage />} />
+                <Route path="reports" element={<ReportsPage />} />
+                <Route path="final-exams/add" element={<AddFinalExamWizard />}>
+                  <Route index element={<FinalExamInfoStep />} />
+                  <Route path="questions" element={<FinalExamQuestionsStep />} />
+                  <Route path="review" element={<FinalExamReviewStep />} />
+                </Route>
               </Route>
             </Route>
             <Route path="/landing" element={<Navigate to="/" replace />} />

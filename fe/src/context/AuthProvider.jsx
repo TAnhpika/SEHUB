@@ -26,7 +26,8 @@ const MOCK_STUDENT = {
 function normalizeUser(stored) {
   if (!stored) return null;
 
-  const base = stored.role === "student" ? MOCK_STUDENT : stored;
+  const role = stored.role ?? "student";
+  const base = role === "student" ? MOCK_STUDENT : stored;
 
   return {
     ...base,
@@ -35,6 +36,13 @@ function normalizeUser(stored) {
     initial: stored.initial ?? base.initial,
     role: stored.role ?? "student",
     isPremium: Boolean(stored.isPremium),
+    roleLabel:
+      stored.roleLabel ??
+      (role === "admin"
+        ? "Quản trị viên"
+        : role === "moderator"
+          ? "Kiểm duyệt viên"
+          : undefined),
   };
 }
 
@@ -75,6 +83,7 @@ export function AuthProvider({ children }) {
       username: identifier,
       email,
       displayName: credentials?.displayName ?? MOCK_STUDENT.displayName,
+      role: "student",
     });
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
