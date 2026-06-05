@@ -7,6 +7,7 @@ import {
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
+import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import NotificationDropdown from "./NotificationDropdown";
 import StreakDropdown from "./StreakDropdown";
 import logoSrc from "@/img/logo.png";
@@ -14,7 +15,7 @@ import styles from "./MainHeader.module.css";
 
 function MainHeader() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isPremium } = useAuth();
 
   const displayName = user?.displayName ?? "Anhpika";
   const initial = user?.initial ?? displayName.charAt(0).toUpperCase();
@@ -62,7 +63,9 @@ function MainHeader() {
               <span className={styles.avatar} aria-hidden="true">
                 {initial}
               </span>
-              <span className={styles.email}>{displayName}</span>
+              <span className={withPremiumUsernameClass(styles.email, isPremium)}>
+                {displayName}
+              </span>
               <FontAwesomeIcon icon={faChevronDown} className={styles.chevron} />
             </button>
 

@@ -20,6 +20,7 @@ const MOCK_STUDENT = {
   levelProgress: 68,
   pointsToNext: 60,
   role: "student",
+  isPremium: false,
 };
 
 function normalizeUser(stored) {
@@ -33,7 +34,8 @@ function normalizeUser(stored) {
     ...stored,
     displayName: stored.displayName ?? base.displayName,
     initial: stored.initial ?? base.initial,
-    role,
+    role: stored.role ?? "student",
+    isPremium: Boolean(stored.isPremium),
     roleLabel:
       stored.roleLabel ??
       (role === "admin"
@@ -117,18 +119,30 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  const activatePremium = useCallback(() => {
+    setUser((prev) => {
+      if (!prev || prev.isPremium) {
+        return prev;
+      }
+      const next = { ...prev, isPremium: true };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
       isAuthenticated: Boolean(user),
-      isPremium: false,
+      isPremium: Boolean(user?.isPremium),
       isAdmin: user?.role === "admin",
       isModerator: user?.role === "moderator" || user?.role === "admin",
       login,
       register,
       logout,
+      activatePremium,
     }),
-    [user, login, register, logout],
+    [user, login, register, logout, activatePremium],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

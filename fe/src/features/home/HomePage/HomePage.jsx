@@ -11,6 +11,7 @@ import { MOCK_POSTS, POSTS_PER_PAGE } from "@/features/feed/feedData";
 import { filterPosts } from "@/features/feed/feedFilterData";
 import { parsePostId } from "@/features/feed/postUtils";
 import { useAuth } from "@/context";
+import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./HomePage.module.css";
 
 function HomePage() {
@@ -21,7 +22,7 @@ function HomePage() {
   const [editOnOpen, setEditOnOpen] = useState(false);
   const [semesterFilter, setSemesterFilter] = useState("all");
   const [majorFilter, setMajorFilter] = useState("all");
-  const { user } = useAuth();
+  const { user, isPremium } = useAuth();
   const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
 
   useEffect(() => {
@@ -90,7 +91,11 @@ function HomePage() {
         <div className={styles["header-text"]}>
           <h1 className={styles.title}>Bài viết mới nhất</h1>
           <p className={styles.subtitle}>
-            Xin chào, <strong>{user?.displayName ?? user?.username}</strong> · 2 bài viết hôm
+            Xin chào,{" "}
+            <strong className={withPremiumUsernameClass("", isPremium)}>
+              {user?.displayName ?? user?.username}
+            </strong>{" "}
+            · 2 bài viết hôm
             nay
           </p>
         </div>
