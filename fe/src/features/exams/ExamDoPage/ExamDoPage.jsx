@@ -108,7 +108,7 @@ function ExamDoPage({ page = "review" }) {
       return;
     }
 
-    submitExamSession(exam.id, questions);
+    submitExamSession(exam.id, questions, page);
     showToast("Đã nộp bài thành công.");
     navigate(resultPath);
   }

@@ -43,6 +43,7 @@ function normalizeUser(stored) {
         : role === "moderator"
           ? "Kiểm duyệt viên"
           : undefined),
+    isPremium: Boolean(stored.isPremium),
   };
 }
 
