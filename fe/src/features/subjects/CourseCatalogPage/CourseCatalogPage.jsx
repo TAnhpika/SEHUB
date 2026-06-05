@@ -1,5 +1,5 @@
-import { Link } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import {
@@ -9,8 +9,18 @@ import {
 import styles from "./CourseCatalogPage.module.css";
 
 function CourseCatalogPage({ title, subtitle, courses, detailBasePath }) {
-  const [semesterFilter, setSemesterFilter] = useState("all");
+  const [searchParams] = useSearchParams();
+  const semesterFromUrl = searchParams.get("semester");
+  const [semesterFilter, setSemesterFilter] = useState(() =>
+    semesterFromUrl && semesterFromUrl !== "all" ? semesterFromUrl : "all",
+  );
   const [majorFilter, setMajorFilter] = useState("all");
+
+  useEffect(() => {
+    if (semesterFromUrl && semesterFromUrl !== "all") {
+      setSemesterFilter(semesterFromUrl);
+    }
+  }, [semesterFromUrl]);
 
   const filteredSemesters = useMemo(() => {
     return courses
@@ -74,7 +84,11 @@ function CourseCatalogPage({ title, subtitle, courses, detailBasePath }) {
               {group.courses.map((course, index) => (
                 <li key={`${group.semester}-${course.code}-${index}`}>
                   <Link
-                    to={`${detailBasePath}/${course.code}`}
+                    to={
+                      semesterFilter !== "all"
+                        ? `${detailBasePath}/${course.code}?semester=${semesterFilter}`
+                        : `${detailBasePath}/${course.code}`
+                    }
                     className={styles.card}
                   >
                     <span className={styles.code}>{course.code}</span>
