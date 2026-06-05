@@ -11,10 +11,13 @@ export function useRequireAuth() {
   const navigate = useNavigate();
   const location = useLocation();
   const pendingRef = useRef(false);
+  const isCommunityRoute = location.pathname.startsWith("/community");
+  /** Cộng đồng luôn coi như khách — cần toast + chuyển login khi tương tác. */
+  const needsLoginPrompt = !isAuthenticated || isCommunityRoute;
 
   const requireAuth = useCallback(
     (message = "Vui lòng đăng nhập để tiếp tục.") => {
-      if (isAuthenticated) return true;
+      if (!needsLoginPrompt) return true;
       if (pendingRef.current) return false;
 
       pendingRef.current = true;
@@ -34,8 +37,8 @@ export function useRequireAuth() {
 
       return false;
     },
-    [isAuthenticated, showCountdownToast, navigate, location.pathname, location.search],
+    [needsLoginPrompt, showCountdownToast, navigate, location.pathname, location.search],
   );
 
-  return { isAuthenticated, requireAuth };
+  return { isAuthenticated, needsLoginPrompt, requireAuth };
 }
