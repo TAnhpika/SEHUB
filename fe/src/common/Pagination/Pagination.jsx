@@ -13,13 +13,23 @@ export function getPageNumbers(current, total) {
   return [1, "ellipsis", current, "ellipsis", total];
 }
 
-function Pagination({ currentPage, totalPages, onPageChange, ariaLabel = "Phân trang" }) {
-  if (totalPages <= 1) return null;
+function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+  ariaLabel = "Phân trang",
+  alwaysShow = false,
+  flush = false,
+}) {
+  if (!alwaysShow && totalPages <= 1) return null;
 
   const pageNumbers = getPageNumbers(currentPage, totalPages);
 
   return (
-    <nav className={styles.pagination} aria-label={ariaLabel}>
+    <nav
+      className={`${styles.pagination} ${flush ? styles.flush : ""}`.trim()}
+      aria-label={ariaLabel}
+    >
       <button
         type="button"
         className={styles["page-btn"]}
