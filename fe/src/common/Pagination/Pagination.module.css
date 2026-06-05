@@ -7,6 +7,10 @@
   margin-top: 1.5rem;
 }
 
+.flush {
+  margin-top: 0;
+}
+
 .page-btn {
   padding: 0.5rem 0.875rem;
   font-family: inherit;
