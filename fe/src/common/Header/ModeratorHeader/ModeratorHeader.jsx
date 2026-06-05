@@ -9,7 +9,7 @@ import styles from "./ModeratorHeader.module.css";
 
 const TOP_LINKS = [
   { label: "Trang chủ", to: "/home" },
-  { label: "Kiểm duyệt", to: "/moderator/practice-exams/add" },
+  { label: "Kiểm duyệt", to: "/moderator/content" },
   { label: "Xử lý báo cáo", to: "/moderator/reports" },
 ];
 
@@ -21,7 +21,7 @@ function ModeratorHeader() {
         <input
           type="search"
           className={styles["search-input"]}
-          placeholder="Tìm kiếm..."
+          placeholder="Tìm kiếm nội dung..."
           aria-label="Tìm kiếm"
         />
       </div>
