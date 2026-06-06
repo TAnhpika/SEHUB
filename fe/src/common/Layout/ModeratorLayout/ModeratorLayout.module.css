@@ -1,8 +1,4 @@
 .layout {
-  --moderator-primary: #004ac6;
-  --moderator-sidebar-width: 256px;
-  --moderator-bg: #f7f9fb;
-
   display: flex;
   min-height: 100vh;
   background: var(--moderator-bg);
@@ -17,5 +13,11 @@
 
 .content {
   flex: 1;
-  padding: 2rem 1.5rem 5rem;
+  padding: 1.5rem 1.5rem 3rem;
+}
+
+@media (max-width: 768px) {
+  .content {
+    padding: 1rem 1rem 2.5rem;
+  }
 }
