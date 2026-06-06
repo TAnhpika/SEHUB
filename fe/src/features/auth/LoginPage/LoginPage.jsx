@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faEye, faEyeSlash, faLock } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import googleGSrc from "@/img/google-g.png";
+import { getRoleHomePath } from "@/utils/roleHelpers";
 import { MODERATOR_TEST_ACCOUNTS } from "@/features/moderator/moderatorMockData";
 import { MODERATOR_HOME_PATH } from "@/features/moderator/moderatorNavData";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
@@ -44,6 +45,8 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const redirectTo = location.state?.from || "/home";
+
   function persistRememberMe() {
     try {
       if (rememberMe) {
@@ -56,8 +59,8 @@ function LoginPage() {
     }
   }
 
-  function navigateAfterLogin(nextUser) {
-    navigate(resolvePostLoginPath(nextUser, location.state?.from), { replace: true });
+  function navigateAfterLogin(loggedInUser) {
+    navigate(getRoleHomePath(loggedInUser, redirectTo), { replace: true });
   }
 
   function handleSubmit(event) {

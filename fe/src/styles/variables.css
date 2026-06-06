@@ -65,6 +65,8 @@
   --color-purple-hover: var(--color-primary-hover);
   --color-purple-soft: var(--color-primary-light);
 
+  /* Pill filter — community catalog (Tài liệu, đề thi) */
+  --color-filter-active: #7c3aed;
   /* Premium — tím gradient (thanh toán / badge Premium) */
   --color-premium: #5b21ff;
   --color-premium-mid: #9d50ff;

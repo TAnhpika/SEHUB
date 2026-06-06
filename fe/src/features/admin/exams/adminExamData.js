@@ -1,0 +1,441 @@
+/** Mock data & helpers — quản lý đề thi Admin */
+
+import { addAdminDocumentFromApprovedExam } from "@/features/admin/documents/adminDocumentData";
+import { getSubmissionsByCourseCode } from "@/features/exams/practiceExamSubmissions";
+
+export const ADMIN_EXAMS_PAGE_SIZE = 5;
+
+export const EXAM_TRACKS = [
+  { id: "all", label: "Tất cả ngành" },
+  { id: "SE", label: "Khối SE" },
+  { id: "AI", label: "Khối AI" },
+];
+
+export const EXAM_SEMESTERS = [
+  { id: "all", label: "Tất cả kỳ" },
+  ...Array.from({ length: 9 }, (_, i) => {
+    const n = i + 1;
+    return { id: String(n), label: `Kì ${n}` };
+  }),
+];
+
+const TYPE_FINAL = "Cuối kỳ";
+const TYPE_PRACTICE = "Thực hành";
+
+/** Trạng thái đề — chỉ Admin thấy bản nháp; SV chỉ thấy đã xuất bản */
+export const EXAM_STATUS_LABELS = {
+  published: "Đã xuất bản",
+  draft: "Bản nháp",
+};
+
+export const EXAM_TYPE_OPTIONS = [
+  {
+    key: "final",
+    label: TYPE_FINAL,
+    description: "OCR file PDF/ảnh → ngân hàng câu trắc nghiệm. Premium làm bài online.",
+  },
+  {
+    key: "practice",
+    label: TYPE_PRACTICE,
+    description: "Upload PDF/ảnh/ZIP đề bài. Sinh viên Premium nộp link GitHub.",
+  },
+];
+
+export const FINAL_EXAM_DEFAULTS = {
+  durationMinutes: 60,
+  maxQuestions: 50,
+};
+
+/** Lý do Admin từ chối đề từ Mod */
+export const EXAM_REJECT_REASONS = [
+  { id: "ocr_error", label: "OCR sai / thiếu câu hỏi hoặc đáp án" },
+  { id: "duplicate", label: "Trùng đề đã publish (SHA / nội dung)" },
+  { id: "wrong_meta", label: "Sai mã môn, kỳ học hoặc loại đề" },
+  { id: "low_quality", label: "Chất lượng đề không đạt (mơ hồ, lỗi format)" },
+  { id: "policy", label: "Vi phạm quy định / nội dung không phù hợp" },
+  { id: "other", label: "Lý do khác" },
+];
+
+export const PRACTICE_EXAM_DEFAULTS = {
+  githubGuide:
+    "Nộp link repository GitHub công khai. README ghi rõ MSSV, họ tên và hướng dẫn chạy project.",
+};
+
+/** @type {import('./adminExamTypes').AdminExam[]} */
+let examsStore = [
+  {
+    id: "ex1",
+    code: "PRF192",
+    title: "Giữa kỳ Lập trình Web",
+    type: TYPE_PRACTICE,
+    typeKey: "practice",
+    track: "SE",
+    semester: "5",
+    status: "published",
+    questions: 0,
+    questionCount: 0,
+    updatedAt: "2026-05-28",
+    createdAt: "2026-05-10",
+    sha256: "a3f2c891d4e5b6a7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0",
+    description: "Xây dựng website theo rubric giữa kỳ. Nộp repo GitHub trước deadline.",
+    githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
+    deadline: "2026-06-15",
+    attachments: [{ id: "f1", name: "PRF192-midterm-brief.pdf", size: 1200000 }],
+  },
+  {
+    id: "ex2",
+    code: "MAE101",
+    title: "Cuối kỳ Toán rời rạc",
+    type: TYPE_FINAL,
+    typeKey: "final",
+    track: "SE",
+    semester: "3",
+    status: "published",
+    questions: 45,
+    questionCount: 45,
+    updatedAt: "2026-04-10",
+    createdAt: "2026-03-01",
+    sha256: "b4e3d792e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+    description: "45 câu trắc nghiệm, thời gian 60 phút.",
+  },
+  {
+    id: "ex3",
+    code: "SWP391",
+    title: "Đồ án tốt nghiệp — mẫu đề",
+    type: TYPE_PRACTICE,
+    typeKey: "practice",
+    track: "SE",
+    semester: "9",
+    status: "draft",
+    questions: 0,
+    questionCount: 0,
+    updatedAt: "2026-06-01",
+    createdAt: "2026-05-28",
+    sha256: "c5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4",
+    description: "Mô tả yêu cầu đồ án, rubric chấm.",
+  },
+  {
+    id: "ex4",
+    code: "DBI202",
+    title: "Giữa kỳ Cơ sở dữ liệu",
+    type: TYPE_FINAL,
+    typeKey: "final",
+    track: "SE",
+    semester: "5",
+    status: "published",
+    questions: 40,
+    questionCount: 40,
+    updatedAt: "2026-05-15",
+    createdAt: "2026-04-20",
+    sha256: "d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5",
+    description: "",
+  },
+  {
+    id: "ex5",
+    code: "AIL303",
+    title: "Cuối kỳ Machine Learning",
+    type: TYPE_FINAL,
+    typeKey: "final",
+    track: "AI",
+    semester: "6",
+    status: "published",
+    questions: 50,
+    questionCount: 50,
+    updatedAt: "2026-05-20",
+    createdAt: "2026-05-01",
+    sha256: "e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+    description: "",
+  },
+  {
+    id: "ex6",
+    code: "PRJ301",
+    title: "Thực hành Java OOP",
+    type: TYPE_PRACTICE,
+    typeKey: "practice",
+    track: "SE",
+    semester: "4",
+    status: "draft",
+    questions: 0,
+    questionCount: 0,
+    updatedAt: "2026-04-28",
+    createdAt: "2026-04-15",
+    sha256: "f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7",
+    description: "Lab 1–5 trên GitHub.",
+  },
+  {
+    id: "ex7",
+    code: "PRF192",
+    title: "Đề ôn PRF192 (bản scan cũ)",
+    type: TYPE_FINAL,
+    typeKey: "final",
+    track: "SE",
+    semester: "2",
+    status: "draft",
+    questions: 30,
+    questionCount: 30,
+    updatedAt: "2026-03-12",
+    createdAt: "2026-03-01",
+    sha256: "a3f2c891d4e5b6a7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0",
+    description: "Trùng hash với đề đã OCR — cần review.",
+  },
+  {
+    id: "ex8",
+    code: "NLP201",
+    title: "Thực hành NLP cơ bản",
+    type: TYPE_PRACTICE,
+    typeKey: "practice",
+    track: "AI",
+    semester: "7",
+    status: "published",
+    questions: 0,
+    questionCount: 0,
+    updatedAt: "2026-06-02",
+    createdAt: "2026-05-25",
+    sha256: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0b1a2",
+    description: "",
+  },
+];
+
+/** Hash trùng cố ý cho demo OCR */
+export const DEMO_DUPLICATE_SHA =
+  "a3f2c891d4e5b6a7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0";
+
+let pendingStore = [
+  {
+    id: "p1",
+    code: "PRF192",
+    title: "Đề thi giữa kỳ môn Lập trình Web",
+    submittedBy: "Nguyễn Kiểm Duyệt",
+    submittedAt: "2026-06-02",
+    type: TYPE_PRACTICE,
+    typeKey: "practice",
+    track: "SE",
+    semester: "5",
+    urgent: true,
+    fileName: "PRF192-midterm-brief.pdf",
+    description:
+      "Sinh viên nộp project React theo rubric giữa kỳ. README bắt buộc có MSSV và hướng dẫn chạy.",
+    githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
+  },
+  {
+    id: "p2",
+    code: "DBI202",
+    title: "Cuối kỳ Cơ sở dữ liệu",
+    submittedBy: "Nguyễn Kiểm Duyệt",
+    submittedAt: "2026-06-03",
+    type: TYPE_FINAL,
+    typeKey: "final",
+    track: "SE",
+    semester: "6",
+    urgent: false,
+    fileName: "DBI202-final.pdf",
+    description: "",
+    githubGuide: "",
+  },
+];
+
+export const MOCK_OCR_QUESTIONS = [
+  {
+    id: "q1",
+    text: "React Hook nào dùng để fetch dữ liệu khi mount?",
+    options: ["useState", "useEffect", "useMemo", "useRef"],
+    correct: 1,
+  },
+  {
+    id: "q2",
+    text: "Virtual DOM giúp tối ưu điều gì?",
+    options: ["Băng thông", "Số lần thao tác DOM", "CSS", "SEO"],
+    correct: 1,
+  },
+  {
+    id: "q3",
+    text: "Prop `key` trong list React dùng để?",
+    options: ["Style", "Nhận diện phần tử khi re-render", "Event", "Router"],
+    correct: 1,
+  },
+];
+
+export function getAdminExams() {
+  return [...examsStore];
+}
+
+export function getAdminExamById(id) {
+  return examsStore.find((e) => e.id === id) ?? null;
+}
+
+export function getAdminPendingExams() {
+  return [...pendingStore];
+}
+
+export function removeAdminExam(id) {
+  examsStore = examsStore.filter((e) => e.id !== id);
+}
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * @param {object} payload
+ * @returns {object}
+ */
+export function createAdminExam(payload) {
+  const typeKey = payload.typeKey ?? "final";
+  const newExam = {
+    id: `ex${Date.now()}`,
+    code: payload.code?.trim() ?? "",
+    title: payload.title?.trim() ?? "",
+    type: typeKey === "practice" ? TYPE_PRACTICE : TYPE_FINAL,
+    typeKey,
+    track: payload.track ?? "SE",
+    semester: payload.semester ?? "5",
+    status: payload.status ?? "draft",
+    questions: payload.questionCount ?? 0,
+    questionCount: payload.questionCount ?? 0,
+    updatedAt: todayIso(),
+    createdAt: todayIso(),
+    sha256: payload.sha256 ?? "",
+    description: payload.description ?? "",
+    durationMinutes: payload.durationMinutes ?? FINAL_EXAM_DEFAULTS.durationMinutes,
+    githubGuide: payload.githubGuide ?? "",
+    deadline: payload.deadline ?? "",
+    attachments: payload.attachments ?? [],
+    ocrConfirmed: payload.ocrConfirmed ?? false,
+  };
+  examsStore = [newExam, ...examsStore];
+  return newExam;
+}
+
+/**
+ * @param {string} id
+ * @param {object} payload
+ */
+export function updateAdminExam(id, payload) {
+  const index = examsStore.findIndex((e) => e.id === id);
+  if (index === -1) return null;
+  const prev = examsStore[index];
+  const typeKey = payload.typeKey ?? prev.typeKey;
+  const updated = {
+    ...prev,
+    ...payload,
+    type: typeKey === "practice" ? TYPE_PRACTICE : TYPE_FINAL,
+    typeKey,
+    questions: payload.questionCount ?? prev.questionCount,
+    updatedAt: todayIso(),
+  };
+  examsStore = examsStore.map((e, i) => (i === index ? updated : e));
+  return updated;
+}
+
+export function findDuplicateBySha(sha256, excludeId) {
+  if (!sha256) return null;
+  const norm = sha256.trim().toLowerCase();
+  return (
+    examsStore.find((e) => e.sha256?.toLowerCase() === norm && e.id !== excludeId) ?? null
+  );
+}
+
+export function mockComputeSha256() {
+  return DEMO_DUPLICATE_SHA;
+}
+
+export function mockComputeSha256Unique() {
+  return `unique${Date.now().toString(16)}${Math.random().toString(16).slice(2, 10)}`.padEnd(64, "0");
+}
+
+let approvedStore = [];
+let rejectedStore = [];
+
+export function approvePendingExam(pendingId) {
+  const item = pendingStore.find((p) => p.id === pendingId);
+  if (!item) return null;
+  pendingStore = pendingStore.filter((p) => p.id !== pendingId);
+  const isFinal = item.typeKey === "final";
+  const questionCount = isFinal ? MOCK_OCR_QUESTIONS.length : 0;
+  const newExam = {
+    id: `ex${Date.now()}`,
+    code: item.code,
+    title: item.title,
+    type: item.type,
+    typeKey: item.typeKey,
+    track: item.track,
+    semester: item.semester,
+    status: "published",
+    questions: questionCount,
+    questionCount,
+    updatedAt: new Date().toISOString().slice(0, 10),
+    createdAt: item.submittedAt,
+    sha256: mockComputeSha256Unique(),
+    description: isFinal
+      ? `Duyệt từ Mod — ${item.fileName}`
+      : item.description || `Duyệt từ Mod — ${item.fileName}`,
+    githubGuide: isFinal ? "" : item.githubGuide || PRACTICE_EXAM_DEFAULTS.githubGuide,
+    durationMinutes: isFinal ? FINAL_EXAM_DEFAULTS.durationMinutes : undefined,
+    attachments: [{ id: "mod-file", name: item.fileName, size: 0 }],
+    ocrConfirmed: isFinal,
+  };
+  examsStore = [newExam, ...examsStore];
+  addAdminDocumentFromApprovedExam(newExam);
+  const historyEntry = {
+    ...item,
+    approvedAt: new Date().toISOString().slice(0, 10),
+    publishedExamId: newExam.id,
+    questionCount,
+  };
+  approvedStore = [historyEntry, ...approvedStore];
+  return newExam;
+}
+
+export function getAdminApprovedExams() {
+  return [...approvedStore];
+}
+
+export function getAdminRejectedExams() {
+  return [...rejectedStore];
+}
+
+export function rejectPendingExam(pendingId, reasonPayload) {
+  const item = pendingStore.find((p) => p.id === pendingId);
+  if (!item) return null;
+  pendingStore = pendingStore.filter((p) => p.id !== pendingId);
+  const entry = {
+    ...item,
+    rejectedAt: new Date().toISOString().slice(0, 10),
+    rejectReasonId: reasonPayload.reasonId,
+    rejectReasonLabel: reasonPayload.reasonLabel,
+    rejectReasonDetail: reasonPayload.reasonDetail ?? "",
+    rejectReasonFull: reasonPayload.reasonFull,
+  };
+  rejectedStore = [entry, ...rejectedStore];
+  return entry;
+}
+
+export function getExamQuestions(examId) {
+  const exam = getAdminExamById(examId);
+  if (!exam || exam.questionCount === 0) return [];
+  if (examId === "ex2") {
+    return MOCK_OCR_QUESTIONS.concat([
+      {
+        id: "q4",
+        text: "Tập hợp rỗng có bao nhiêu phần tử?",
+        options: ["0", "1", "Không xác định", "∞"],
+        correct: 0,
+      },
+    ]);
+  }
+  return MOCK_OCR_QUESTIONS.slice(0, Math.min(exam.questionCount, MOCK_OCR_QUESTIONS.length));
+}
+
+export function getExamSubmissions(examId) {
+  const exam = getAdminExamById(examId);
+  if (!exam) return [];
+  return getSubmissionsByCourseCode(exam.code);
+}
+
+export function getSemesterLabel(id) {
+  return EXAM_SEMESTERS.find((s) => s.id === id)?.label ?? id;
+}
+
+export function getTrackLabel(id) {
+  return EXAM_TRACKS.find((t) => t.id === id)?.label ?? id;
+}

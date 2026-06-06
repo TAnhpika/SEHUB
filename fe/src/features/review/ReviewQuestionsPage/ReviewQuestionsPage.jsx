@@ -1,13 +1,14 @@
 import CourseCatalogPage from "@/features/subjects/CourseCatalogPage/CourseCatalogPage";
+import { getSubjectCatalogPath } from "@/utils/subjectPaths";
 import { REVIEW_COURSES } from "./reviewData";
 
-function ReviewQuestionsPage() {
+function ReviewQuestionsPage({ scope = "community" }) {
   return (
     <CourseCatalogPage
       title="Đề thi cuối kỳ"
       subtitle="Đề thi cuối kỳ và tài liệu học tập"
       courses={REVIEW_COURSES}
-      detailBasePath="/community/final-exam"
+      detailBasePath={getSubjectCatalogPath("review", scope)}
     />
   );
 }

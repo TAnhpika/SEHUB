@@ -18,7 +18,7 @@ export const MODERATOR_TEST_ACCOUNTS = [
     username: "admin_sehub",
     email: "admin@sehubs.local",
     password: "admin123",
-    displayName: "Admin User",
+    displayName: "Quản trị SEHub",
     initial: "A",
     role: "admin",
     roleLabel: "Quản trị viên",
@@ -84,59 +84,66 @@ export const PRACTICE_EXAM_SUBMISSIONS_MOCK = [
   },
 ];
 
-export const FINAL_EXAM_INFO_MOCK = {
-  subjectCode: "IT005",
-  subjectName: "Mạng máy tính",
-  semesterLabel: "Học kỳ 1 2023-2024",
-  examCode: "FE-IT005-SP2023",
-  durationMinutes: 60,
-  totalQuestions: 50,
-};
+/** Tài khoản SV demo — so sánh Basic vs Premium (tài liệu, đề TH…) */
+export const STUDENT_TEST_ACCOUNTS = [
+  {
+    username: "student_basic",
+    email: "basic@student.local",
+    password: "basic123",
+    displayName: "SV Basic",
+    initial: "B",
+    role: "student",
+    plan: "Basic",
+    level: "Bronze",
+    points: 45,
+    streak: 2,
+    unreadNotifications: 1,
+    levelProgress: 30,
+    pointsToNext: 55,
+  },
+  {
+    username: "student_premium",
+    email: "premium@student.local",
+    password: "premium123",
+    displayName: "SV Premium",
+    initial: "P",
+    role: "student",
+    plan: "Premium",
+    level: "Gold",
+    points: 920,
+    streak: 14,
+    unreadNotifications: 3,
+    levelProgress: 72,
+    pointsToNext: 80,
+  },
+];
 
-export const FINAL_EXAM_SAMPLE_QUESTION = {
-  content: "",
-  answers: { A: "", B: "", C: "", D: "" },
-  correctAnswer: "A",
-  explanation: "",
-  showExplanation: false,
-};
-
-/** 22 câu đã nhập + câu 23 đang soạn (theo Figma: 23/50) */
-export function buildFinalExamQuestionsMock() {
-  const filled = Array.from({ length: 22 }, (_, index) => ({
-    id: `q-${index + 1}`,
-    content: `Câu hỏi mẫu số ${index + 1} — nội dung đã lưu.`,
-    answers: {
-      A: `Đáp án A câu ${index + 1}`,
-      B: `Đáp án B câu ${index + 1}`,
-      C: `Đáp án C câu ${index + 1}`,
-      D: `Đáp án D câu ${index + 1}`,
-    },
-    correctAnswer: "A",
-    explanation: "",
-    showExplanation: false,
-  }));
-
-  return [
-    ...filled,
-    {
-      id: "q-23",
-      ...FINAL_EXAM_SAMPLE_QUESTION,
-    },
-  ];
-}
-
-export function findModeratorTestAccount(identifier, password) {
+function matchTestAccount(accounts, identifier, password) {
   const key = identifier?.trim().toLowerCase();
   if (!key) return null;
 
   return (
-    MODERATOR_TEST_ACCOUNTS.find(
+    accounts.find(
       (account) =>
         (account.username.toLowerCase() === key ||
           account.email.toLowerCase() === key) &&
         account.password === password,
     ) ?? null
+  );
+}
+
+export function findModeratorTestAccount(identifier, password) {
+  return matchTestAccount(MODERATOR_TEST_ACCOUNTS, identifier, password);
+}
+
+export function findStudentTestAccount(identifier, password) {
+  return matchTestAccount(STUDENT_TEST_ACCOUNTS, identifier, password);
+}
+
+export function findTestAccount(identifier, password) {
+  return (
+    findModeratorTestAccount(identifier, password) ??
+    findStudentTestAccount(identifier, password)
   );
 }
 

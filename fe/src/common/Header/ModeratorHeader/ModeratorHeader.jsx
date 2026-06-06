@@ -10,6 +10,12 @@ import { useAuth } from "@/context";
 import { useModeratorPage } from "@/features/moderator/context/ModeratorPageContext";
 import styles from "./ModeratorHeader.module.css";
 
+const TOP_LINKS = [
+  { label: "Trang chủ", to: "/home" },
+  { label: "Báo cáo", to: "/moderator/reports" },
+  { label: "Thêm đề TH", to: "/moderator/practice-exams/add" },
+];
+
 function ModeratorHeader() {
   const { user } = useAuth();
   const { pageMeta, setSidebarOpen } = useModeratorPage();

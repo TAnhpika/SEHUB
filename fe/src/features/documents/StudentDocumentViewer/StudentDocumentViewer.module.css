@@ -1,0 +1,183 @@
+.viewer {
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  background: #fff;
+  border: 1px solid rgba(195, 198, 215, 0.45);
+  border-radius: 12px;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.fileName {
+  margin: 0 0 0.25rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #191c1e;
+}
+
+.meta {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #434655;
+}
+
+.planBadge {
+  padding: 0.25rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 9999px;
+}
+
+.planBasic {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.planPremium {
+  color: #7c3aed;
+  background: #ede9fe;
+}
+
+.accessLabel {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #004ac6;
+}
+
+.locked {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 2rem 1rem;
+  text-align: center;
+  background: #f7f9fc;
+  border: 1px dashed rgba(195, 198, 215, 0.6);
+  border-radius: 10px;
+}
+
+.locked h3 {
+  margin: 0;
+  font-size: 1.0625rem;
+  color: #191c1e;
+}
+
+.locked p {
+  margin: 0;
+  max-width: 28rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #434655;
+}
+
+.lockIcon {
+  font-size: 2rem;
+  color: #9ca3af;
+}
+
+.upgradeBtn {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+  background: #004ac6;
+  border-radius: 8px;
+}
+
+.upgradeBtn:hover {
+  background: #003d9e;
+}
+
+.pages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.page {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+}
+
+.pageVisible {
+  background: #f7f9fc;
+  border: 1px solid rgba(0, 74, 198, 0.12);
+}
+
+.pageLocked {
+  background: #eef0f4;
+  border: 1px dashed #c3c6d7;
+  opacity: 0.85;
+}
+
+.pageLabel {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #434655;
+}
+
+.pageBody {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #191c1e;
+}
+
+.pageBlocked {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(195, 198, 215, 0.35);
+}
+
+.limitNote {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #b45309;
+}
+
+.downloadBtn {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  background: #004ac6;
+  border: none;
+  border-radius: 8px;
+}
+
+.downloadBtn:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+  background: #e5e7eb;
+}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate, Navigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faEnvelope,
@@ -17,7 +17,7 @@ import styles from "./RegisterPage.module.css";
 
 function RegisterPage() {
   const navigate = useNavigate();
-  const { register, isAuthenticated } = useAuth();
+  const { register } = useAuth();
   const { showToast } = useToast();
 
   const [fullName, setFullName] = useState("");
@@ -26,10 +26,6 @@ function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  if (isAuthenticated) {
-    return <Navigate to="/home" replace />;
-  }
 
   function handleSubmit(event) {
     event.preventDefault();

@@ -1,0 +1,171 @@
+/* Toolbar — 3 tầng, gọn và rõ hierarchy */
+
+.filterShell {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  background: #f7f9fb;
+  border: 1px solid rgba(195, 198, 215, 0.35);
+  border-radius: 12px;
+}
+
+.searchRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: min(100%, 280px);
+  padding: 0.625rem 1rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: #191c1e;
+  background: #fff;
+  border: 1px solid rgba(195, 198, 215, 0.5);
+  border-radius: 10px;
+  outline: none;
+}
+
+.searchInput:focus {
+  border-color: #004ac6;
+  box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.1);
+}
+
+.resultChip {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #004ac6;
+  white-space: nowrap;
+  background: rgba(210, 224, 254, 0.55);
+  border-radius: 9999px;
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.selectGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: flex-end;
+}
+
+.selectField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.selectField label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #737686;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.selectField select {
+  min-width: 9.5rem;
+  padding: 0.45rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  color: #191c1e;
+  background: #fff;
+  border: 1px solid rgba(195, 198, 215, 0.55);
+  border-radius: 8px;
+  outline: none;
+}
+
+.selectField select:focus {
+  border-color: #004ac6;
+}
+
+.sortField select {
+  min-width: 12.5rem;
+}
+
+.metaActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btnReset {
+  padding: 0.45rem 0.875rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #434655;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid #c3c6d7;
+  border-radius: 8px;
+}
+
+.btnReset:hover:not(:disabled) {
+  color: #004ac6;
+  border-color: #004ac6;
+}
+
+.btnReset:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* Footer phân trang — căn giữa */
+.tableFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem 1.25rem 1.5rem;
+  border-top: 1px solid rgba(195, 198, 215, 0.35);
+}
+
+.footerMeta {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #737686;
+  text-align: center;
+}
+
+.footerMeta strong {
+  font-weight: 600;
+  color: #191c1e;
+}
+
+.pageBadge {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.35rem 0.65rem;
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #434655;
+  background: #f2f4f6;
+  border-radius: 6px;
+}
+
+.paginationWrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.paginationWrap > * {
+  margin-top: 0 !important;
+}

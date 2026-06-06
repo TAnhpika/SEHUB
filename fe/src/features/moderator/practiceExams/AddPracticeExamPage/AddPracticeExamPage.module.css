@@ -43,7 +43,9 @@
 
 .tabs {
   display: flex;
-  gap: 0;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
   padding: 1rem 1.5rem 0;
   background: rgba(247, 249, 251, 0.5);
   border-bottom: 1px solid rgba(195, 198, 215, 0.2);
@@ -515,9 +517,28 @@
   background: #dbeafe;
 }
 
-.status-passed {
+.status-passed,
+.status-pass {
   color: #166534;
   background: #dcfce7;
+}
+
+.status-fail {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.tab-link {
+  margin-left: auto;
+  align-self: center;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--moderator-primary, #004ac6);
+  text-decoration: none;
+}
+
+.tab-link:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 960px) {

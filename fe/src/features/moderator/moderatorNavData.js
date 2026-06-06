@@ -56,24 +56,16 @@ export const MODERATOR_NAV_GROUPS = [
     ],
   },
   {
-    id: "exams",
-    label: "Đề thi",
-    items: [
-      {
-        id: "final-exam",
-        label: "Thêm đề cuối kỳ",
-        to: "/moderator/final-exams/add",
-        icon: faFileCirclePlus,
-        matchPaths: ["/moderator/final-exams/add"],
-      },
-      {
-        id: "practice-exam",
-        label: "Thêm đề thực hành",
-        to: "/moderator/practice-exams/add",
-        icon: faClipboardList,
-        matchPaths: ["/moderator/practice-exams/add"],
-      },
-    ],
+    id: "practice-submissions",
+    label: "Bài nộp thực hành",
+    to: "/moderator/practice-submissions",
+    icon: faClipboardList,
+  },
+  {
+    id: "practice-exam",
+    label: "Thêm đề thực hành",
+    to: "/moderator/practice-exams/add",
+    icon: faFileCirclePlus,
   },
 ];
 

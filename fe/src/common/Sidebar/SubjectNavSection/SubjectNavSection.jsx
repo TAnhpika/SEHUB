@@ -5,18 +5,23 @@ import {
   faCircleQuestion,
   faFileLines,
 } from "@fortawesome/free-solid-svg-icons";
+import { getSubjectNavLinks } from "@/utils/subjectPaths";
 
-export const SUBJECT_LINKS = [
-  { to: "/community/final-exam", label: "Câu hỏi ôn tập", icon: faCircleQuestion },
-  {
-    to: "/community/pratical-exam",
-    label: "Câu hỏi thực hành",
-    icon: faBook,
-  },
-  { to: "/community/documents", label: "Tài liệu", icon: faFileLines },
-];
+const SUBJECT_ICONS = {
+  review: faCircleQuestion,
+  practice: faBook,
+  documents: faFileLines,
+};
 
-function SubjectNavSection({ pathname, styles }) {
+/**
+ * @param {"community" | "home"} [scope="community"]
+ */
+function SubjectNavSection({ pathname, styles, scope = "community" }) {
+  const links = getSubjectNavLinks(scope).map((item) => ({
+    ...item,
+    icon: SUBJECT_ICONS[item.key],
+  }));
+
   return (
     <>
       <div className={styles.divider} aria-hidden="true" />
@@ -24,7 +29,7 @@ function SubjectNavSection({ pathname, styles }) {
       <div className={styles.section}>
         <p className={styles["section-title"]}>Môn học</p>
         <ul className={styles.list}>
-          {SUBJECT_LINKS.map((item) => {
+          {links.map((item) => {
             const isActive =
               pathname === item.to || pathname.startsWith(`${item.to}/`);
 
