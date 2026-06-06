@@ -1,0 +1,63 @@
+.shell {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.full {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--moderator-header-height) - 2rem);
+  min-height: 640px;
+  max-width: none;
+}
+
+.wizard {
+  max-width: 1280px;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.headerText {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 600;
+  color: var(--moderator-text);
+  letter-spacing: -0.02em;
+}
+
+.description {
+  margin: 0.375rem 0 0;
+  max-width: 560px;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--moderator-text-subtle);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.body {
+  min-width: 0;
+}
+
+.full .body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
