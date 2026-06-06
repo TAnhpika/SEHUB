@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheck,
@@ -10,6 +9,9 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import FilterDropdown from "@/common/FilterDropdown/FilterDropdown";
 import { useToast } from "@/common/Toast/ToastProvider";
+import ModeratorBadge from "@/features/moderator/components/ModeratorBadge/ModeratorBadge";
+import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
+import ModeratorToolbar from "@/features/moderator/components/ModeratorToolbar/ModeratorToolbar";
 import {
   CATEGORY_OPTIONS,
   CONTENT_QUEUE_MOCK,
@@ -22,22 +24,20 @@ import {
 } from "@/features/moderator/content/contentModerationData";
 import styles from "./ContentModerationPage.module.css";
 
+const CONTENT_CRUMBS = [
+  { label: "Trang chủ", to: "/home" },
+  { label: "Kiểm duyệt", to: "/moderator/content" },
+  { label: "Duyệt nội dung" },
+];
+
 function TypeBadge({ type }) {
   const meta = TYPE_META[type];
-  return (
-    <span className={`${styles.typeBadge} ${styles[`type-${meta.tone}`]}`}>
-      {meta.label}
-    </span>
-  );
+  return <ModeratorBadge label={meta.label} tone={meta.tone} />;
 }
 
 function StatusBadge() {
   const meta = STATUS_META.pending;
-  return (
-    <span className={`${styles.status} ${styles[`status-${meta.tone}`]}`}>
-      {meta.label}
-    </span>
-  );
+  return <ModeratorBadge label={meta.label} tone={meta.tone} dot />;
 }
 
 function ContentModerationPage() {
@@ -71,6 +71,21 @@ function ContentModerationPage() {
 
   const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * CONTENT_QUEUE_PAGE_SIZE + 1;
   const rangeEnd = Math.min(safePage * CONTENT_QUEUE_PAGE_SIZE, filtered.length);
+
+  const preModToggle = (
+    <label className={styles.preMod}>
+      <span className={styles.preModLabel}>Tiền kiểm duyệt (Pre-moderation)</span>
+      <input
+        type="checkbox"
+        className={styles.preModInput}
+        checked={preModeration}
+        onChange={(event) => setPreModeration(event.target.checked)}
+      />
+      <span className={styles.preModTrack} aria-hidden>
+        <span className={styles.preModThumb} />
+      </span>
+    </label>
+  );
 
   function handleFilterChange(setter) {
     return (value) => {
@@ -128,38 +143,21 @@ function ContentModerationPage() {
   }
 
   return (
-    <div className={styles.page}>
-      <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-        <Link to="/home">Trang chủ</Link>
-        <span className={styles.sep}>/</span>
-        <Link to="/moderator/content">Kiểm duyệt</Link>
-        <span className={styles.sep}>/</span>
-        <span className={styles.current}>Duyệt nội dung</span>
-      </nav>
-
-      <header className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Hàng đợi duyệt nội dung</h1>
-          <p className={styles.subtitle}>
-            Quản lý và xét duyệt các bài viết, bình luận chờ xuất bản.
-          </p>
-        </div>
-        <label className={styles.preMod}>
-          <span className={styles.preModLabel}>Tiền kiểm duyệt (Pre-moderation)</span>
-          <input
-            type="checkbox"
-            className={styles.preModInput}
-            checked={preModeration}
-            onChange={(event) => setPreModeration(event.target.checked)}
-          />
-          <span className={styles.preModTrack} aria-hidden>
-            <span className={styles.preModThumb} />
-          </span>
-        </label>
-      </header>
-
-      <div className={styles.filtersBar}>
-        <div className={styles.filtersLeft}>
+    <ModeratorPageShell
+      title="Hàng đợi duyệt nội dung"
+      description="Quản lý và xét duyệt các bài viết, bình luận chờ xuất bản."
+      crumbs={CONTENT_CRUMBS}
+      actions={preModToggle}
+    >
+      <section className={styles.card}>
+        <ModeratorToolbar
+          end={
+            <button type="button" className={styles.refreshBtn} onClick={handleRefresh}>
+              <FontAwesomeIcon icon={faRotateRight} />
+              Làm mới
+            </button>
+          }
+        >
           <div className={styles.tabs} role="tablist" aria-label="Loại nội dung">
             {TYPE_TABS.map((tab) => (
               <button
@@ -190,14 +188,8 @@ function ContentModerationPage() {
             onChange={handleFilterChange(setSort)}
             ariaLabel="Sắp xếp"
           />
-        </div>
-        <button type="button" className={styles.refreshBtn} onClick={handleRefresh}>
-          <FontAwesomeIcon icon={faRotateRight} />
-          Làm mới
-        </button>
-      </div>
+        </ModeratorToolbar>
 
-      <section className={styles.card}>
         {showBulkBar && (
           <div className={styles.bulkBar}>
             <p className={styles.bulkText}>Đã chọn {selectedCount} mục</p>
@@ -383,7 +375,7 @@ function ContentModerationPage() {
           </div>
         </footer>
       </section>
-    </div>
+    </ModeratorPageShell>
   );
 }
 
