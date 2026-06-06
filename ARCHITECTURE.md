@@ -367,19 +367,23 @@ Component
 
 Mỗi Layout ghép đúng Header + Sidebar tương ứng:
 
-| Layout        | Header                                           | Sidebar            | Footer      |
-| ------------- | ------------------------------------------------ | ------------------ | ----------- |
-| `GuestLayout` | `GuestHeader` — logo + Login/Register            | `CommunitySidebar` | ✅ `Footer` |
-| `MainLayout`  | `MainHeader` — **search** + thông báo + avatar   | `MainSidebar`      | ✅ `Footer` |
-| `AdminLayout` | `AdminHeader` — **search** + breadcrumb + avatar | `AdminSidebar`     | ❌          |
-| `AuthLayout`  | ❌                                               | ❌                 | ❌          |
+| Layout            | Header                                                      | Sidebar            | Footer      |
+| ----------------- | ----------------------------------------------------------- | ------------------ | ----------- |
+| `GuestLayout`     | `GuestHeader` — logo + Login/Register                       | `CommunitySidebar` | ✅ `Footer` |
+| `MainLayout`      | `MainHeader` — **search** + thông báo + avatar              | `MainSidebar`      | ✅ `Footer` |
+| `ModeratorLayout` | `ModeratorHeader` — **search** + breadcrumb + bell/avatar   | `ModeratorSidebar` | ❌          |
+| `AdminLayout`     | `AdminHeader` — **search** + breadcrumb + avatar            | `AdminSidebar`     | ❌          |
+| `AuthLayout`      | ❌                                                          | ❌                 | ❌          |
 
 Khi nào dùng layout nào:
 
 - `common/layout/GuestLayout` — tất cả trang chưa đăng nhập: Feed, ExamList, DocumentList, Pricing
 - `common/layout/MainLayout` — tất cả trang sau khi đăng nhập: Profile, Chat, ExamDo...
-- `common/layout/AdminLayout` — toàn bộ `/admin/*`
+- `common/layout/ModeratorLayout` — toàn bộ `/moderator/*` (kiểm duyệt viên)
+- `common/layout/AdminLayout` — toàn bộ `/admin/*` (quản trị hệ thống — chưa implement)
 - `common/layout/AuthLayout` — `/login`, `/register`, `/forgot-password`
+
+> **Ghi chú:** `ModeratorLayout` và `AdminLayout` là hai panel riêng. Moderator (`/moderator/*`) phục vụ nghiệp vụ kiểm duyệt cộng đồng (báo cáo, duyệt nội dung, đề thi…). Admin (`/admin/*`) dành cho quản trị hệ thống (dashboard, users, payments…) và nằm ngoài scope moderator hiện tại.
 
 Import ví dụ:
 
