@@ -128,7 +128,7 @@ function App() {
             </Route>
             <Route element={<ModeratorRoute />}>
               <Route path="/moderator" element={<ModeratorLayout />}>
-                <Route index element={<Navigate to="/moderator/final-exams/add" replace />} />
+                <Route index element={<Navigate to="/moderator/reports" replace />} />
                 <Route path="practice-exams/add" element={<AddPracticeExamPage />} />
                 <Route path="violations" element={<ViolatingAccountsPage />} />
                 <Route path="content" element={<ContentModerationPage />} />
