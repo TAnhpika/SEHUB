@@ -9,9 +9,10 @@ import {
   faMedal,
 } from "@fortawesome/free-solid-svg-icons";
 import ProfileCardMenu from "@/features/profile/ProfileCard/ProfileCardMenu";
+import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./ProfileCard.module.css";
 
-function ProfileCard({ profile, isOwner = false }) {
+function ProfileCard({ profile, isOwner = false, isPremiumUsername = false }) {
   return (
     <aside className={styles.card}>
       {isOwner && <ProfileCardMenu username={profile.username} />}
@@ -23,7 +24,11 @@ function ProfileCard({ profile, isOwner = false }) {
         <span className={styles.avatar} aria-hidden="true">
           {profile.initial}
         </span>
-        <h1 className={styles.username}>{profile.displayName ?? profile.username}</h1>
+        <h1
+          className={withPremiumUsernameClass(styles.username, isPremiumUsername)}
+        >
+          {profile.displayName ?? profile.username}
+        </h1>
       </div>
 
       <div className={styles.social}>
