@@ -26,6 +26,7 @@ import { getPostById } from "@/features/feed/feedData";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
 import { copyPostLink, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
+import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./PostDetailPage.module.css";
 
 function formatCommentTime(date) {
@@ -48,7 +49,7 @@ function formatShortDate(publishedAt) {
 function PostDetailPage() {
   const { postId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isPremium } = useAuth();
   const { showCopyToast } = useToast();
 
   const post = useMemo(() => getPostById(postId), [postId]);
@@ -160,7 +161,11 @@ function PostDetailPage() {
 
           <div className={styles["meta-row"]}>
             <div className={styles.meta}>
-              <span>{post.author.username}</span>
+              <span
+                className={withPremiumUsernameClass("", isOwner && isPremium)}
+              >
+                {post.author.username}
+              </span>
               <span aria-hidden="true">·</span>
               <span>{shortDate}</span>
               <span aria-hidden="true">·</span>

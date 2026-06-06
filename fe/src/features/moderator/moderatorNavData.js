@@ -1,42 +1,59 @@
 import {
   faClipboardCheck,
+  faClipboardList,
   faFileCirclePlus,
   faFlag,
   faStar,
   faUserSlash,
-  faClipboardList,
 } from "@fortawesome/free-solid-svg-icons";
+import { CONTENT_QUEUE_MOCK } from "@/features/moderator/content/contentModerationData";
+import { REPORTS_MOCK } from "@/features/moderator/reports/reportsData";
 
-export const MODERATOR_NAV_ITEMS = [
+/** Sau đăng nhập (mock) — hàng đợi báo cáo ưu tiên nghiệp vụ */
+export const MODERATOR_HOME_PATH = "/moderator/reports";
+
+export const MODERATOR_NAV_GROUPS = [
   {
-    id: "reports",
-    label: "Xử lý báo cáo",
-    to: "/moderator/reports",
-    icon: faFlag,
+    id: "community",
+    label: "Cộng đồng",
+    items: [
+      {
+        id: "reports",
+        label: "Xử lý báo cáo",
+        to: "/moderator/reports",
+        icon: faFlag,
+        badgeKey: "reports",
+        matchPaths: ["/moderator/reports"],
+      },
+      {
+        id: "content",
+        label: "Duyệt nội dung",
+        to: "/moderator/content",
+        icon: faClipboardCheck,
+        badgeKey: "content",
+        matchPaths: ["/moderator/content"],
+      },
+      {
+        id: "featured",
+        label: "Bài viết nổi bật",
+        to: "/moderator/featured",
+        icon: faStar,
+        matchPaths: ["/moderator/featured"],
+      },
+    ],
   },
   {
-    id: "content",
-    label: "Duyệt nội dung",
-    to: "/moderator/content",
-    icon: faClipboardCheck,
-  },
-  {
-    id: "featured",
-    label: "Bài viết nổi bật",
-    to: "/moderator/featured",
-    icon: faStar,
-  },
-  {
-    id: "violations",
-    label: "Tài khoản vi phạm",
-    to: "/moderator/violations",
-    icon: faUserSlash,
-  },
-  {
-    id: "final-exam",
-    label: "Thêm đề cuối kỳ",
-    to: "/moderator/final-exams/add",
-    icon: faFileCirclePlus,
+    id: "accounts",
+    label: "Tài khoản",
+    items: [
+      {
+        id: "violations",
+        label: "Tài khoản vi phạm",
+        to: "/moderator/violations",
+        icon: faUserSlash,
+        matchPaths: ["/moderator/violations"],
+      },
+    ],
   },
   {
     id: "practice-submissions",
@@ -51,3 +68,19 @@ export const MODERATOR_NAV_ITEMS = [
     icon: faFileCirclePlus,
   },
 ];
+
+export const MODERATOR_NAV_ITEMS = MODERATOR_NAV_GROUPS.flatMap((group) => group.items);
+
+export function isModeratorNavActive(item, pathname) {
+  const paths = item.matchPaths ?? [item.to];
+  return paths.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  );
+}
+
+export function getModeratorNavBadgeCounts() {
+  return {
+    reports: REPORTS_MOCK.filter((report) => report.status === "pending").length,
+    content: CONTENT_QUEUE_MOCK.length,
+  };
+}

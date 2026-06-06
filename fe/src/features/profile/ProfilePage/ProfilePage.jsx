@@ -14,14 +14,18 @@ import styles from "./ProfilePage.module.css";
 
 function ProfilePage() {
   const { username } = useParams();
-  const { user } = useAuth();
+  const { user, isPremium } = useAuth();
   const profile = useMemo(() => getProfileByUsername(username), [username]);
   const isOwner = user?.username === profile.username;
 
   return (
     <div className={styles.page}>
       <div className={styles.sidebar}>
-        <ProfileCard profile={profile} isOwner={isOwner} />
+        <ProfileCard
+          profile={profile}
+          isOwner={isOwner}
+          isPremiumUsername={isOwner && isPremium}
+        />
       </div>
 
       <div className={styles.main}>

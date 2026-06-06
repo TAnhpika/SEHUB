@@ -7,10 +7,13 @@ import styles from "./CommunityLayout.module.css";
 
 function CommunityLayout() {
   const isFeedHome = useMatch({ path: "/community", end: true });
+  const showStudentShell = isAuthenticated && !isFeedHome;
 
   const workspaceClass = [
     styles.workspace,
     isFeedHome && styles["workspace-feed"],
+    showStudentShell && styles["workspace-auth"],
+    !showStudentShell && isFeedHome && styles["workspace-feed"],
   ]
     .filter(Boolean)
     .join(" ");
@@ -22,13 +25,18 @@ function CommunityLayout() {
       <div className={workspaceClass}>
         <div className={styles["col-left"]}>
           <FeedSidebar />
+      {showStudentShell ? <MainHeader /> : <GuestHeader />}
+
+      <div className={workspaceClass}>
+        <div className={styles["col-left"]}>
+          {showStudentShell ? <MainSidebar /> : <FeedSidebar />}
         </div>
 
         <main className={styles["col-center"]} id="feed-top">
           <Outlet />
         </main>
 
-        {isFeedHome && (
+        {!showStudentShell && isFeedHome && (
           <div className={styles["col-right"]}>
             <CommunitySidebar />
           </div>
@@ -36,6 +44,8 @@ function CommunityLayout() {
       </div>
 
       <Footer />
+
+      {showStudentShell && <ChatFab />}
     </div>
   );
 }

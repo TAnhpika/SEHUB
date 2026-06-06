@@ -6,10 +6,28 @@ import { useAuth } from "@/context";
 import googleGSrc from "@/img/google-g.png";
 import { getRoleHomePath } from "@/utils/roleHelpers";
 import { MODERATOR_TEST_ACCOUNTS } from "@/features/moderator/moderatorMockData";
+import { MODERATOR_HOME_PATH } from "@/features/moderator/moderatorNavData";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import styles from "./LoginPage.module.css";
 
 const REMEMBER_KEY = "sehubs_remember_login";
+const STUDENT_HOME_PATH = "/home";
+
+function resolvePostLoginPath(user, from) {
+  if (user?.role === "moderator" || user?.role === "admin") {
+    return MODERATOR_HOME_PATH;
+  }
+  const returnToProtected =
+    from &&
+    from !== "/login" &&
+    !from.startsWith("/moderator") &&
+    (from.startsWith("/home") || from.startsWith("/profile"));
+
+  if (returnToProtected) {
+    return from;
+  }
+  return STUDENT_HOME_PATH;
+}
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -50,8 +68,8 @@ function LoginPage() {
     setIsSubmitting(true);
     persistRememberMe();
 
-    const loggedInUser = login({ username: email.trim(), password });
-    navigateAfterLogin(loggedInUser);
+    const nextUser = login({ username: email.trim(), password });
+    navigateAfterLogin(nextUser);
   }
 
   function fillTestAccount(account) {
@@ -59,7 +77,7 @@ function LoginPage() {
     setPassword(account.password);
     setRememberMe(true);
 
-    const loggedInUser = login({
+    const nextUser = login({
       username: account.username,
       password: account.password,
     });
@@ -68,13 +86,13 @@ function LoginPage() {
     } catch {
       /* ignore storage errors */
     }
-    navigateAfterLogin(loggedInUser);
+    navigateAfterLogin(nextUser);
   }
 
   function handleGoogleLogin() {
     setIsSubmitting(true);
-    const loggedInUser = login({ username: "google_user", password: "" });
-    navigateAfterLogin(loggedInUser);
+    const nextUser = login({ username: "google_user", password: "" });
+    navigateAfterLogin(nextUser);
   }
 
   return (

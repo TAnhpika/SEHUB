@@ -22,6 +22,10 @@ import PracticeQuestionsPage from "@/features/practice/PracticeQuestionsPage/Pra
 import ReviewQuestionsPage from "@/features/review/ReviewQuestionsPage/ReviewQuestionsPage";
 import SubjectDetailPage from "@/features/subjects/SubjectDetailPage/SubjectDetailPage";
 import ExamDetailPage from "@/features/exams/ExamDetailPage/ExamDetailPage";
+import ExamDoPage from "@/features/exams/ExamDoPage/ExamDoPage";
+import PracticeDoPage from "@/features/exams/PracticeDoPage/PracticeDoPage";
+import ExamResultPage from "@/features/exams/ExamResultPage/ExamResultPage";
+import PremiumRoute from "@/common/guards/PremiumRoute";
 import FeedbackPage from "@/features/feedback/FeedbackPage/FeedbackPage";
 import MessagesPage from "@/features/chat/MessagesPage/MessagesPage";
 import EditProfilePage from "@/features/profile/EditProfilePage/EditProfilePage";
@@ -58,6 +62,14 @@ import ModeratorFeaturedPage from "@/features/moderator/featured/ModeratorFeatur
 import ModeratorViolationsPage from "@/features/moderator/violations/ModeratorViolationsPage";
 import AddFinalExamPage from "@/features/moderator/finalExams/AddFinalExamPage";
 import NotFound from "@/features/errors/NotFound/NotFound";
+import AddFinalExamWizard from "@/features/moderator/finalExams/AddFinalExamWizard";
+import FinalExamInfoStep from "@/features/moderator/finalExams/steps/FinalExamInfoStep";
+import FinalExamQuestionsStep from "@/features/moderator/finalExams/steps/FinalExamQuestionsStep";
+import FinalExamReviewStep from "@/features/moderator/finalExams/steps/FinalExamReviewStep";
+import ViolatingAccountsPage from "@/features/moderator/violations/ViolatingAccountsPage/ViolatingAccountsPage";
+import ContentModerationPage from "@/features/moderator/content/ContentModerationPage/ContentModerationPage";
+import FeaturedPostsPage from "@/features/moderator/featured/FeaturedPostsPage/FeaturedPostsPage";
+import ReportsPage from "@/features/moderator/reports/ReportsPage/ReportsPage";
 
 function App() {
   return (
@@ -128,6 +140,16 @@ function App() {
                 path="final-exam/:courseCode/:examId"
                 element={<ExamDetailPage page="review" />}
               />
+              <Route element={<PremiumRoute />}>
+                <Route
+                  path="final-exam/:courseCode/:examId/do"
+                  element={<ExamDoPage page="review" />}
+                />
+                <Route
+                  path="final-exam/:courseCode/:examId/result"
+                  element={<ExamResultPage page="review" />}
+                />
+              </Route>
               <Route path="pratical-exam" element={<PracticeQuestionsPage />} />
               <Route
                 path="pratical-exam/:courseCode"
@@ -137,6 +159,16 @@ function App() {
                 path="pratical-exam/:courseCode/:examId"
                 element={<ExamDetailPage page="practice" />}
               />
+              <Route element={<PremiumRoute />}>
+                <Route
+                  path="pratical-exam/:courseCode/:examId/do/:questionIndex"
+                  element={<PracticeDoPage />}
+                />
+                <Route
+                  path="pratical-exam/:courseCode/:examId/result/:questionIndex"
+                  element={<ExamResultPage page="practice" />}
+                />
+              </Route>
               <Route path="documents" element={<DocumentsPage />} />
               <Route
                 path="documents/:courseCode"
@@ -182,6 +214,15 @@ function App() {
                 <Route path="final-exams/add" element={<AddFinalExamPage />} />
                 <Route path="practice-submissions" element={<ModeratorPracticeSubmissionsPage />} />
                 <Route path="practice-exams/add" element={<AddPracticeExamPage />} />
+                <Route path="violations" element={<ViolatingAccountsPage />} />
+                <Route path="content" element={<ContentModerationPage />} />
+                <Route path="featured" element={<FeaturedPostsPage />} />
+                <Route path="reports" element={<ReportsPage />} />
+                <Route path="final-exams/add" element={<AddFinalExamWizard />}>
+                  <Route index element={<FinalExamInfoStep />} />
+                  <Route path="questions" element={<FinalExamQuestionsStep />} />
+                  <Route path="review" element={<FinalExamReviewStep />} />
+                </Route>
               </Route>
             </Route>
             <Route path="/landing" element={<Navigate to="/" replace />} />
