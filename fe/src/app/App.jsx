@@ -61,6 +61,7 @@ import ModeratorContentPage from "@/features/moderator/content/ModeratorContentP
 import ModeratorFeaturedPage from "@/features/moderator/featured/ModeratorFeaturedPage";
 import ModeratorViolationsPage from "@/features/moderator/violations/ModeratorViolationsPage";
 import AddFinalExamPage from "@/features/moderator/finalExams/AddFinalExamPage";
+import NotFound from "@/features/errors/NotFound/NotFound";
 import AddFinalExamWizard from "@/features/moderator/finalExams/AddFinalExamWizard";
 import FinalExamInfoStep from "@/features/moderator/finalExams/steps/FinalExamInfoStep";
 import FinalExamQuestionsStep from "@/features/moderator/finalExams/steps/FinalExamQuestionsStep";
@@ -225,6 +226,7 @@ function App() {
               </Route>
             </Route>
             <Route path="/landing" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </ToastProvider>
