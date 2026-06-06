@@ -23,13 +23,14 @@ import {
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
+import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import { MAJORS, MAX_CONTENT_LENGTH, SEMESTERS } from "@/features/posts/createPostData";
 import styles from "./CreatePostPage.module.css";
 
 function CreatePostPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { user } = useAuth();
+  const { user, isPremium } = useAuth();
 
   const [title, setTitle] = useState("");
   const [semester, setSemester] = useState("");
@@ -366,7 +367,11 @@ function CreatePostPage() {
 
         {!anonymous && user && (
           <p className={styles["author-note"]}>
-            Bài viết sẽ được đăng dưới tên <strong>{user.displayName}</strong>.
+            Bài viết sẽ được đăng dưới tên{" "}
+            <strong className={withPremiumUsernameClass("", isPremium)}>
+              {user.displayName}
+            </strong>
+            .
           </p>
         )}
       </form>

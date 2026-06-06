@@ -36,6 +36,15 @@ function normalizeUser(stored) {
     initial: stored.initial ?? base.initial,
     role: stored.role ?? "student",
     plan: stored.plan ?? base.plan,
+    isPremium: Boolean(stored.isPremium),
+    roleLabel:
+      stored.roleLabel ??
+      (role === "admin"
+        ? "Quản trị viên"
+        : role === "moderator"
+          ? "Kiểm duyệt viên"
+          : undefined),
+    isPremium: Boolean(stored.isPremium),
   };
 }
 
@@ -79,6 +88,7 @@ export function AuthProvider({ children }) {
       username: identifier,
       email,
       displayName: credentials?.displayName ?? MOCK_STUDENT.displayName,
+      role: "student",
     });
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
@@ -114,6 +124,17 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  const activatePremium = useCallback(() => {
+    setUser((prev) => {
+      if (!prev || prev.isPremium) {
+        return prev;
+      }
+      const next = { ...prev, isPremium: true };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -124,8 +145,9 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
+      activatePremium,
     }),
-    [user, login, register, logout],
+    [user, login, register, logout, activatePremium],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

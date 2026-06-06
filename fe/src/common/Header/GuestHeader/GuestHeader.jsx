@@ -39,7 +39,11 @@ function GuestHeader() {
         </nav>
 
         <div className={styles.actions}>
-          <Link to="/login" className={styles["login-link"]}>
+          <Link
+            to="/login"
+            className={styles["login-link"]}
+            state={{ from: pathname }}
+          >
             Đăng nhập
           </Link>
           <Button to="/register" size="sm" className={styles["signup-btn"]}>
