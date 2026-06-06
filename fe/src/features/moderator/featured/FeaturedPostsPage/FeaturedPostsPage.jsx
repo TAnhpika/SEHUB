@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faComment,
@@ -9,6 +8,8 @@ import {
   faThumbsUp,
 } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
+import ModeratorEmptyState from "@/features/moderator/components/ModeratorEmptyState/ModeratorEmptyState";
+import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import {
   FEATURE_TAG_FILTERS,
   filterSearchPosts,
@@ -17,6 +18,12 @@ import {
   SEARCH_POSTS_INITIAL,
 } from "@/features/moderator/featured/featuredPostsData";
 import styles from "./FeaturedPostsPage.module.css";
+
+const FEATURED_CRUMBS = [
+  { label: "Trang chủ", to: "/home" },
+  { label: "Kiểm duyệt", to: "/moderator/content" },
+  { label: "Bài viết nổi bật" },
+];
 
 function PinnedCard({ post, onUnpin }) {
   return (
@@ -104,6 +111,12 @@ function FeaturedPostsPage() {
     [searchPool, query, tagFilter, pinnedIds],
   );
 
+  const pinCounter = (
+    <span className={styles.countBadge}>
+      {pinned.length}/{MAX_PINNED_POSTS} bài
+    </span>
+  );
+
   function handleUnpin(id) {
     const post = pinned.find((item) => item.id === id);
     if (!post) return;
@@ -161,35 +174,22 @@ function FeaturedPostsPage() {
   }
 
   return (
-    <div className={styles.page}>
-      <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-        <Link to="/home">Trang chủ</Link>
-        <span className={styles.sep}>/</span>
-        <Link to="/moderator/content">Kiểm duyệt</Link>
-        <span className={styles.sep}>/</span>
-        <span className={styles.current}>Bài viết nổi bật</span>
-      </nav>
-
-      <header className={styles.header}>
-        <h1 className={styles.title}>Quản lý bài viết nổi bật</h1>
-        <p className={styles.subtitle}>
-          Ghim các tài liệu và thông báo quan trọng lên đầu bảng tin cộng đồng.
-        </p>
-      </header>
-
+    <ModeratorPageShell
+      title="Quản lý bài viết nổi bật"
+      description="Ghim các tài liệu và thông báo quan trọng lên đầu bảng tin cộng đồng."
+      crumbs={FEATURED_CRUMBS}
+      actions={pinCounter}
+    >
       <div className={styles.grid}>
         <section className={styles.pinnedColumn} aria-labelledby="pinned-heading">
           <div className={styles.pinnedHeading}>
             <h2 id="pinned-heading" className={styles.sectionTitle}>
               Đang được ghim
             </h2>
-            <span className={styles.countBadge}>
-              {pinned.length}/{MAX_PINNED_POSTS} bài
-            </span>
           </div>
 
           {pinned.length === 0 ? (
-            <p className={styles.emptyPinned}>Chưa có bài viết nào được ghim.</p>
+            <ModeratorEmptyState message="Chưa có bài viết nào được ghim." />
           ) : (
             <div className={styles.pinnedList}>
               {pinned.map((post) => (
@@ -232,9 +232,7 @@ function FeaturedPostsPage() {
 
           <div className={styles.results}>
             {searchResults.length === 0 ? (
-              <p className={styles.emptyResults}>
-                Không tìm thấy bài viết phù hợp hoặc tất cả đã được ghim.
-              </p>
+              <ModeratorEmptyState message="Không tìm thấy bài viết phù hợp hoặc tất cả đã được ghim." />
             ) : (
               searchResults.map((post) => (
                 <SearchResultCard
@@ -248,7 +246,7 @@ function FeaturedPostsPage() {
           </div>
         </section>
       </div>
-    </div>
+    </ModeratorPageShell>
   );
 }
 
