@@ -1,17 +1,20 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChevronLeft,
   faChevronRight,
   faDownload,
   faEye,
-  faMagnifyingGlass,
+  faLock,
   faPlus,
   faTrophy,
 } from "@fortawesome/free-solid-svg-icons";
 import FilterDropdown from "@/common/FilterDropdown/FilterDropdown";
 import { useToast } from "@/common/Toast/ToastProvider";
+import ModeratorBadge from "@/features/moderator/components/ModeratorBadge/ModeratorBadge";
+import ModeratorConfirmDialog from "@/features/moderator/components/ModeratorConfirmDialog/ModeratorConfirmDialog";
+import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
+import ModeratorToolbar from "@/features/moderator/components/ModeratorToolbar/ModeratorToolbar";
 import {
   filterViolatingAccounts,
   RANK_META,
@@ -24,14 +27,21 @@ import {
 } from "@/features/moderator/violations/violationsData";
 import styles from "./ViolatingAccountsPage.module.css";
 
+const VIOLATIONS_CRUMBS = [
+  { label: "Trang chủ", to: "/home" },
+  { label: "Quản lý" },
+  { label: "Tài khoản vi phạm" },
+];
+
+const LOCK_DURATIONS = [
+  { value: 1, label: "1 ngày" },
+  { value: 7, label: "7 ngày" },
+  { value: 30, label: "30 ngày" },
+];
+
 function StatusBadge({ status }) {
   const meta = STATUS_META[status];
-  return (
-    <span className={`${styles.status} ${styles[`status-${meta.tone}`]}`}>
-      <span className={styles["status-dot"]} aria-hidden />
-      {meta.label}
-    </span>
-  );
+  return <ModeratorBadge label={meta.label} tone={meta.tone} dot />;
 }
 
 function RankBadge({ rank }) {
@@ -46,21 +56,24 @@ function RankBadge({ rank }) {
 
 function ViolatingAccountsPage() {
   const { showToast } = useToast();
+  const [accounts, setAccounts] = useState(VIOLATING_ACCOUNTS_MOCK);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [rankFilter, setRankFilter] = useState("all");
   const [sort, setSort] = useState("violations-desc");
   const [page, setPage] = useState(1);
+  const [lockTarget, setLockTarget] = useState(null);
+  const [lockDays, setLockDays] = useState(7);
 
   const filtered = useMemo(
     () =>
-      filterViolatingAccounts(VIOLATING_ACCOUNTS_MOCK, {
+      filterViolatingAccounts(accounts, {
         query,
         status: statusFilter,
         rank: rankFilter,
         sort,
       }),
-    [query, statusFilter, rankFilter, sort],
+    [accounts, query, statusFilter, rankFilter, sort],
   );
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / VIOLATIONS_PAGE_SIZE));
@@ -93,50 +106,58 @@ function ViolatingAccountsPage() {
     showToast(`Xem chi tiết: ${account.displayName} (${account.studentId})`);
   }
 
+  function openLockModal(account) {
+    setLockTarget(account);
+    setLockDays(7);
+  }
+
+  function closeLockModal() {
+    setLockTarget(null);
+  }
+
+  function confirmLock() {
+    if (!lockTarget) return;
+
+    setAccounts((prev) =>
+      prev.map((account) =>
+        account.id === lockTarget.id ? { ...account, status: "locked" } : account,
+      ),
+    );
+    showToast(
+      `Đã khóa tạm tài khoản ${lockTarget.username} trong ${lockDays} ngày (mock).`,
+    );
+    closeLockModal();
+  }
+
+  const headerActions = (
+    <div className={styles.headerActions}>
+      <button type="button" className={styles.btnOutline} onClick={handleExport}>
+        <FontAwesomeIcon icon={faDownload} />
+        Xuất báo cáo
+      </button>
+      <button type="button" className={styles.btnPrimary} onClick={handleAddWarning}>
+        <FontAwesomeIcon icon={faPlus} />
+        Thêm cảnh báo
+      </button>
+    </div>
+  );
+
   return (
-    <div className={styles.page}>
-      <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-        <Link to="/home">Trang chủ</Link>
-        <span className={styles.sep}>/</span>
-        <span>Quản lý</span>
-        <span className={styles.sep}>/</span>
-        <span className={styles.current}>Tài khoản vi phạm</span>
-      </nav>
-
-      <header className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Quản lý Tài khoản vi phạm</h1>
-          <p className={styles.subtitle}>
-            Giám sát và xử lý các tài khoản vi phạm tiêu chuẩn cộng đồng.
-          </p>
-        </div>
-        <div className={styles.headerActions}>
-          <button type="button" className={styles.btnOutline} onClick={handleExport}>
-            <FontAwesomeIcon icon={faDownload} />
-            Xuất báo cáo
-          </button>
-          <button type="button" className={styles.btnPrimary} onClick={handleAddWarning}>
-            <FontAwesomeIcon icon={faPlus} />
-            Thêm cảnh báo
-          </button>
-        </div>
-      </header>
-
+    <ModeratorPageShell
+      title="Quản lý Tài khoản vi phạm"
+      description="Giám sát và xử lý các tài khoản vi phạm tiêu chuẩn cộng đồng."
+      crumbs={VIOLATIONS_CRUMBS}
+      actions={headerActions}
+    >
       <section className={styles.card}>
-        <div className={styles.toolbar}>
-          <label className={styles.search}>
-            <FontAwesomeIcon icon={faMagnifyingGlass} className={styles.searchIcon} />
-            <input
-              type="search"
-              className={styles.searchInput}
-              placeholder="Tìm kiếm theo Tên, Email hoặc MSSV..."
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setPage(1);
-              }}
-            />
-          </label>
+        <ModeratorToolbar
+          searchValue={query}
+          onSearchChange={(value) => {
+            setQuery(value);
+            setPage(1);
+          }}
+          searchPlaceholder="Tìm kiếm theo Tên, Email hoặc MSSV..."
+        >
           <FilterDropdown
             options={STATUS_OPTIONS}
             value={statusFilter}
@@ -155,7 +176,7 @@ function ViolatingAccountsPage() {
             onChange={handleFilterChange(setSort)}
             ariaLabel="Sắp xếp"
           />
-        </div>
+        </ModeratorToolbar>
 
         <div className={styles.tableWrap}>
           <table className={styles.table}>
@@ -204,14 +225,25 @@ function ViolatingAccountsPage() {
                       <StatusBadge status={account.status} />
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        className={styles.detailBtn}
-                        onClick={() => handleDetail(account)}
-                      >
-                        <FontAwesomeIcon icon={faEye} />
-                        Chi tiết
-                      </button>
+                      <div className={styles.rowActions}>
+                        <button
+                          type="button"
+                          className={styles.lockBtn}
+                          onClick={() => openLockModal(account)}
+                          disabled={account.status === "locked"}
+                        >
+                          <FontAwesomeIcon icon={faLock} />
+                          Khóa tạm
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.detailBtn}
+                          onClick={() => handleDetail(account)}
+                        >
+                          <FontAwesomeIcon icon={faEye} />
+                          Chi tiết
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -261,7 +293,36 @@ function ViolatingAccountsPage() {
           </div>
         </footer>
       </section>
-    </div>
+
+      <ModeratorConfirmDialog
+        open={Boolean(lockTarget)}
+        title="Khóa tạm tài khoản"
+        description={
+          lockTarget
+            ? `Chọn thời hạn khóa cho tài khoản ${lockTarget.username} (${lockTarget.studentId}).`
+            : ""
+        }
+        confirmLabel="Xác nhận khóa"
+        variant="danger"
+        onConfirm={confirmLock}
+        onCancel={closeLockModal}
+      >
+        <div className={styles.lockOptions} role="radiogroup" aria-label="Thời hạn khóa">
+          {LOCK_DURATIONS.map((option) => (
+            <label key={option.value} className={styles.lockOption}>
+              <input
+                type="radio"
+                name="lockDuration"
+                value={option.value}
+                checked={lockDays === option.value}
+                onChange={() => setLockDays(option.value)}
+              />
+              <span>{option.label}</span>
+            </label>
+          ))}
+        </div>
+      </ModeratorConfirmDialog>
+    </ModeratorPageShell>
   );
 }
 

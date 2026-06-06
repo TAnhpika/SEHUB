@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faEllipsisVertical,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
+import ModeratorBadge from "@/features/moderator/components/ModeratorBadge/ModeratorBadge";
+import ModeratorEmptyState from "@/features/moderator/components/ModeratorEmptyState/ModeratorEmptyState";
+import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import {
   filterReports,
   REASON_META,
@@ -14,13 +16,15 @@ import {
 } from "@/features/moderator/reports/reportsData";
 import styles from "./ReportsPage.module.css";
 
+const REPORT_CRUMBS = [
+  { label: "Trang chủ", to: "/home" },
+  { label: "Kiểm duyệt", to: "/moderator/reports" },
+  { label: "Xử lý báo cáo" },
+];
+
 function ReasonBadge({ reason, size = "sm" }) {
   const meta = REASON_META[reason] ?? { label: reason, tone: "muted" };
-  return (
-    <span className={`${styles.reason} ${styles[`reason-${meta.tone}`]} ${styles[`reason-${size}`]}`}>
-      {meta.label}
-    </span>
-  );
+  return <ModeratorBadge label={meta.label} tone={meta.tone} size={size} />;
 }
 
 function TrustScore({ score }) {
@@ -67,9 +71,7 @@ function ReportListItem({ report, selected, onSelect }) {
 function ReportDetail({ report, onDismiss, onDelete }) {
   if (!report) {
     return (
-      <div className={styles.detailEmpty}>
-        <p>Chọn một báo cáo trong danh sách để xem chi tiết.</p>
-      </div>
+      <ModeratorEmptyState message="Chọn một báo cáo trong danh sách để xem chi tiết." />
     );
   }
 
@@ -178,19 +180,16 @@ function ReportsPage() {
   }
 
   return (
-    <div className={styles.page}>
-      <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-        <Link to="/home">Trang chủ</Link>
-        <span className={styles.sep}>/</span>
-        <Link to="/moderator/content">Kiểm duyệt</Link>
-        <span className={styles.sep}>/</span>
-        <span className={styles.current}>Xử lý báo cáo</span>
-      </nav>
-
+    <ModeratorPageShell
+      title="Xử lý báo cáo"
+      description="Xem xét và xử lý các báo cáo vi phạm từ cộng đồng."
+      crumbs={REPORT_CRUMBS}
+      variant="full"
+    >
       <div className={styles.workspace}>
         <aside className={styles.listPanel} aria-label="Danh sách báo cáo">
           <div className={styles.listHeader}>
-            <h1 className={styles.listTitle}>Danh sách báo cáo</h1>
+            <h2 className={styles.listTitle}>Danh sách báo cáo</h2>
             <div className={styles.tabs} role="tablist">
               {REPORT_STATUS_TABS.map((tab) => (
                 <button
@@ -231,7 +230,7 @@ function ReportsPage() {
           />
         </section>
       </div>
-    </div>
+    </ModeratorPageShell>
   );
 }
 
