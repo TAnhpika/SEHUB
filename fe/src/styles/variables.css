@@ -67,6 +67,16 @@
 
   /* Pill filter — community catalog (Tài liệu, đề thi) */
   --color-filter-active: #7c3aed;
+  /* Premium — tím gradient (thanh toán / badge Premium) */
+  --color-premium: #5b21ff;
+  --color-premium-mid: #9d50ff;
+  --color-premium-magenta: #c026d3;
+  --gradient-premium-name: linear-gradient(
+    90deg,
+    var(--color-premium) 0%,
+    var(--color-premium-mid) 55%,
+    var(--color-premium-magenta) 100%
+  );
 
   --gradient-streak-badge: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);
 
@@ -106,4 +116,26 @@
   --shadow-auth-feature: 0 4px 20px rgba(0, 0, 0, 0.05);
   --shadow-auth-submit: 0 10px 15px -3px rgba(37, 99, 235, 0.2),
     0 4px 6px -4px rgba(37, 99, 235, 0.2);
+
+  /* Moderator panel */
+  --moderator-primary: #004ac6;
+  --moderator-primary-hover: #003da3;
+  --moderator-primary-soft: rgba(210, 224, 254, 0.5);
+  --moderator-primary-muted: rgba(210, 224, 254, 0.35);
+  --moderator-sidebar-width: 256px;
+  --moderator-sidebar-collapsed: 72px;
+  --moderator-bg: #f7f9fb;
+  --moderator-surface: #ffffff;
+  --moderator-border: rgba(195, 198, 215, 0.3);
+  --moderator-border-light: rgba(195, 198, 215, 0.2);
+  --moderator-text: #191c1e;
+  --moderator-text-muted: #434655;
+  --moderator-text-subtle: #64748b;
+  --moderator-nav-active-bg: var(--moderator-primary-soft);
+  --moderator-nav-hover-bg: var(--moderator-primary-muted);
+  --moderator-badge-bg: #ba1a1a;
+  --moderator-badge-text: #ffffff;
+  --moderator-header-height: 64px;
+  --moderator-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  --moderator-radius: 12px;
 }

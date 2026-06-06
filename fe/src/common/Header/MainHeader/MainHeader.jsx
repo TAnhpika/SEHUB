@@ -8,6 +8,7 @@ import {
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
+import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import NotificationDropdown from "./NotificationDropdown";
 import StreakDropdown from "./StreakDropdown";
 import logoSrc from "@/img/logo.png";
@@ -64,7 +65,9 @@ function MainHeader() {
               <span className={styles.avatar} aria-hidden="true">
                 {initial}
               </span>
-              <span className={styles.email}>{displayName}</span>
+              <span className={withPremiumUsernameClass(styles.email, isPremium)}>
+                {displayName}
+              </span>
               <FontAwesomeIcon icon={faChevronDown} className={styles.chevron} />
             </button>
 
