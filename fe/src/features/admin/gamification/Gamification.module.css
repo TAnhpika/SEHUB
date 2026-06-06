@@ -1,0 +1,254 @@
+.statsStrip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 1100px) {
+  .statsStrip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .statsStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.statCard {
+  padding: 0.9rem 1rem;
+  background: #fff;
+  border: 1px solid rgba(195, 198, 215, 0.4);
+  border-radius: 12px;
+}
+
+.statLabel {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #737686;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.statValue {
+  margin-top: 0.2rem;
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #191c1e;
+}
+
+.statHint {
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: #434655;
+}
+
+.rankDot {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-right: 0.4rem;
+  vertical-align: middle;
+  border-radius: 9999px;
+}
+
+.badgeIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.125rem;
+  background: #f7f9fc;
+  border: 1px solid rgba(195, 198, 215, 0.45);
+  border-radius: 8px;
+}
+
+.categoryPill {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #1d4ed8;
+  background: #dbeafe;
+  border-radius: 9999px;
+}
+
+.categoryPillCommunity {
+  color: #6d28d9;
+  background: #ede9fe;
+}
+
+.categoryPillLearning {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.categoryPillExam {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.categoryPillStreak {
+  color: #c2410c;
+  background: #ffedd5;
+}
+
+.categoryPillSocial {
+  color: #be185d;
+  background: #fce7f3;
+}
+
+.ruleDesc {
+  max-width: 20rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #434655;
+}
+
+.slugCode {
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: #004ac6;
+}
+
+.toggleBtn {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(195, 198, 215, 0.55);
+  border-radius: 6px;
+}
+
+.toggleOn {
+  color: #166534;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.toggleOff {
+  color: #737686;
+  background: #f3f4f6;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 520px;
+  max-height: min(90vh, 720px);
+  overflow: hidden;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+}
+
+.modalHead {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, #eff6ff 0%, #f7f9fc 100%);
+  border-bottom: 1px solid rgba(195, 198, 215, 0.4);
+}
+
+.modalTitle {
+  margin: 0 0 0.25rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #191c1e;
+}
+
+.modalSubtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #434655;
+}
+
+.modalClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1rem;
+  color: #434655;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid rgba(195, 198, 215, 0.5);
+  border-radius: 8px;
+}
+
+.modalBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 0;
+  padding: 1.25rem 1.5rem 1.5rem;
+  overflow-y: auto;
+}
+
+.modalFooter {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+}
+
+.fieldRow2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 520px) {
+  .fieldRow2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hintError {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #b91c1c;
+}
+
+.checkRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.8125rem;
+  color: #434655;
+}
+
+.checkRow input {
+  width: 1rem;
+  height: 1rem;
+}
+
+.triggerPreview {
+  padding: 0.65rem 0.85rem;
+  font-size: 0.8125rem;
+  color: #1e40af;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+}

@@ -1,0 +1,851 @@
+/* KPI thanh toán */
+.kpiWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.kpiStrip {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+@media (max-width: 1280px) {
+  .kpiStrip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .kpiStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.kpiCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 1rem 1.125rem;
+  text-align: left;
+  background: #fff;
+  border: 1px solid rgba(195, 198, 215, 0.45);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.kpiCardClickable {
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.kpiCardClickable:hover {
+  border-color: rgba(0, 74, 198, 0.3);
+  box-shadow: 0 4px 14px rgba(0, 74, 198, 0.08);
+}
+
+.kpiCardActive {
+  border-color: #004ac6;
+  box-shadow: 0 0 0 2px rgba(0, 74, 198, 0.12);
+}
+
+.kpiIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin-bottom: 0.15rem;
+  font-size: 0.875rem;
+  border-radius: 8px;
+}
+
+.kpiSuccess .kpiIcon {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.kpiWarn .kpiIcon {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.kpiNeutral .kpiIcon {
+  color: #434655;
+  background: #f3f4f6;
+}
+
+.kpiRefund .kpiIcon {
+  color: #6d28d9;
+  background: #ede9fe;
+}
+
+.kpiDanger .kpiIcon {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.kpiWarn {
+  border-left: 3px solid #f59e0b;
+}
+
+.kpiRefund {
+  border-left: 3px solid #8b5cf6;
+}
+
+.kpiDanger {
+  border-left: 3px solid #ef4444;
+}
+
+.kpiLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #434655;
+}
+
+.kpiValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #191c1e;
+  letter-spacing: -0.02em;
+}
+
+.kpiHint {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: #6b7280;
+}
+
+.kpiFootnote {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  color: #434655;
+  background: #f7f9fc;
+  border: 1px solid rgba(195, 198, 215, 0.35);
+  border-radius: 8px;
+}
+
+/* Panel hoàn tiền */
+.refundPanel {
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, #faf5ff 0%, #f7f9fc 100%);
+  border: 1px solid rgba(139, 92, 246, 0.28);
+  border-radius: 12px;
+}
+
+.refundPanelHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.refundPanelTitleWrap {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.refundPanelIcon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1rem;
+  color: #6d28d9;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.12);
+}
+
+.refundPanelTitle {
+  margin: 0 0 0.25rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: #191c1e;
+}
+
+.refundPanelDesc {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #434655;
+}
+
+.refundPanelActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.refundPanelPrimary {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  background: #7c3aed;
+  border: none;
+  border-radius: 8px;
+}
+
+.refundPanelPrimary:hover {
+  background: #6d28d9;
+}
+
+.refundPanelLink {
+  padding: 0.4rem 0.85rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #6d28d9;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 8px;
+}
+
+.refundPanelLink:hover {
+  background: #ede9fe;
+}
+
+.refundList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.refundCard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1rem 1.125rem;
+  background: #fff;
+  border: 1px solid rgba(195, 198, 215, 0.45);
+  border-left: 3px solid #8b5cf6;
+  border-radius: 10px;
+}
+
+.refundCardMain {
+  flex: 1;
+  min-width: 220px;
+}
+
+.refundCardTop {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.refundPayos {
+  font-size: 0.9375rem;
+  color: #191c1e;
+}
+
+.refundMeta {
+  margin: 0 0 0.35rem;
+  font-size: 0.8125rem;
+  color: #434655;
+}
+
+.refundReason {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #5b21b6;
+}
+
+.refundDates {
+  display: grid;
+  gap: 0.5rem 1.25rem;
+  min-width: 140px;
+  margin: 0;
+}
+
+.refundDates div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.refundDates dt {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.refundDates dd {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #191c1e;
+}
+
+.flowBanner {
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: #1e3a8a;
+  background: #eff6ff;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: 10px;
+}
+
+.flowSteps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flowSteps li {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1d4ed8;
+  background: #fff;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: 9999px;
+}
+
+.tokenRules {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 720px) {
+  .tokenRules {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.tokenRuleCard {
+  padding: 0.75rem 1rem;
+  background: #f7f9fc;
+  border: 1px solid rgba(195, 198, 215, 0.4);
+  border-radius: 8px;
+}
+
+.tokenRuleCard strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.8125rem;
+  color: #191c1e;
+}
+
+.tokenRuleCard span {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #434655;
+}
+
+.payId {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #434655;
+}
+
+.transferCode {
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: #004ac6;
+}
+
+.actionCol {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  min-width: 8.5rem;
+  background: #fff;
+  box-shadow: -6px 0 10px rgba(15, 23, 42, 0.04);
+}
+
+thead .actionCol {
+  z-index: 2;
+}
+
+.actionCell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.refundHintBanner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.8125rem;
+  color: #5b21b6;
+  background: #faf5ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 10px;
+}
+
+.refundHintBanner strong {
+  color: #4c1d95;
+}
+
+.refundHintAction {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  background: #7c3aed;
+  border: none;
+  border-radius: 6px;
+}
+
+.refundHintAction:hover {
+  background: #6d28d9;
+}
+
+.confirmBtn {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  background: #004ac6;
+  border: none;
+  border-radius: 6px;
+}
+
+.confirmBtn:hover {
+  background: #003d9e;
+}
+
+.confirmBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.refundBtn {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6d28d9;
+  cursor: pointer;
+  background: #f5f3ff;
+  border: 1px solid #c4b5fd;
+  border-radius: 6px;
+}
+
+.refundBtn:hover {
+  color: #5b21b6;
+  background: #ede9fe;
+}
+
+.refundModalIcon {
+  color: #6d28d9;
+  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.15);
+}
+
+.refundSummary {
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #434655;
+  background: #faf5ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 10px;
+}
+
+.refundSummary p {
+  margin: 0;
+}
+
+.refundSummary p + p {
+  margin-top: 0.25rem;
+}
+
+.auditType {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  border-radius: 4px;
+}
+
+.auditPayos {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.auditToken {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.auditRefund {
+  color: #5b21b6;
+  background: #ede9fe;
+}
+
+.hintError {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #b45309;
+}
+
+.hintOk {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  color: #434655;
+}
+
+.formNote {
+  margin: 0 0 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #434655;
+}
+
+/* Modal cộng token thủ công */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.tokenModal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 560px;
+  max-height: min(90vh, 720px);
+  overflow: hidden;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+}
+
+.tokenModalHead {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, #eff6ff 0%, #f7f9fc 100%);
+  border-bottom: 1px solid rgba(195, 198, 215, 0.4);
+}
+
+.tokenModalHeadMain {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+}
+
+.tokenModalIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 1.125rem;
+  color: #004ac6;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 74, 198, 0.12);
+}
+
+.tokenModalTitle {
+  margin: 0 0 0.25rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #191c1e;
+}
+
+.tokenModalSubtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #434655;
+}
+
+.modalClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1rem;
+  color: #434655;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid rgba(195, 198, 215, 0.5);
+  border-radius: 8px;
+}
+
+.modalClose:hover {
+  color: #191c1e;
+  background: #f7f9fc;
+}
+
+.tokenModalBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
+  padding: 1.25rem 1.5rem 1.5rem;
+  overflow-y: auto;
+}
+
+.studentSearch {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.75rem;
+  font-size: 0.875rem;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.studentSearchInput {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.6rem 0.75rem 0.6rem 2.25rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  border: 1px solid #c3c6d7;
+  border-radius: 10px;
+  outline: none;
+}
+
+.studentSearchInput:focus {
+  border-color: #004ac6;
+  box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.1);
+}
+
+.studentCount {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1d4ed8;
+  background: #dbeafe;
+  border-radius: 9999px;
+}
+
+.studentList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.studentCard {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid rgba(195, 198, 215, 0.5);
+  border-radius: 10px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.studentCard:hover:not(:disabled) {
+  border-color: rgba(0, 74, 198, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 74, 198, 0.08);
+}
+
+.studentCardSelected {
+  border-color: #004ac6;
+  background: #f0f6ff;
+  box-shadow: 0 0 0 2px rgba(0, 74, 198, 0.12);
+}
+
+.studentCardDisabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.studentCardIcon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 0.9375rem;
+  color: #166534;
+  background: #dcfce7;
+  border-radius: 8px;
+}
+
+.studentCardMain {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.studentCardName {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #191c1e;
+}
+
+.studentCardMeta {
+  font-size: 0.75rem;
+  color: #434655;
+}
+
+.studentCardStatus {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #004ac6;
+}
+
+.studentCardTokens {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 0.1rem;
+  align-items: flex-end;
+  font-size: 0.6875rem;
+  color: #434655;
+}
+
+.studentCardTokens strong {
+  font-size: 0.875rem;
+  color: #191c1e;
+}
+
+.studentEmpty {
+  margin: 0;
+  padding: 1.5rem 1rem;
+  font-size: 0.875rem;
+  text-align: center;
+  color: #434655;
+  background: #f7f9fc;
+  border: 1px dashed #c3c6d7;
+  border-radius: 10px;
+}
+
+.grantFields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(195, 198, 215, 0.35);
+}
+
+.grantRow {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 480px) {
+  .grantRow {
+    grid-template-columns: 1fr auto;
+    align-items: end;
+  }
+}
+
+.grantField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.grantLabel {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #191c1e;
+}
+
+.grantInput,
+.grantTextarea {
+  padding: 0.625rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  border: 1px solid #c3c6d7;
+  border-radius: 8px;
+  outline: none;
+}
+
+.grantInput:focus,
+.grantTextarea:focus {
+  border-color: #004ac6;
+  box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.1);
+}
+
+.grantTextarea {
+  resize: vertical;
+}
+
+.grantSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.75rem;
+  color: #434655;
+  background: #f7f9fc;
+  border-radius: 8px;
+}
+
+.grantSummary strong {
+  font-size: 1.0625rem;
+  color: #004ac6;
+}
+
+.tokenModalFooter {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding-top: 0.25rem;
+}

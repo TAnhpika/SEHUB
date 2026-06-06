@@ -1,0 +1,239 @@
+.chartRoot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.chartSvg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.gridLine {
+  stroke: #e8edf3;
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.areaFill {
+  fill: url(#chartGradient);
+  opacity: 0.35;
+}
+
+/* gradient via defs in parent or fallback */
+.areaFill {
+  fill: rgba(37, 99, 235, 0.12);
+}
+
+.lineStroke {
+  stroke: #2563eb;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lineDot {
+  fill: #fff;
+  stroke: #2563eb;
+  stroke-width: 2.5;
+}
+
+.axisLabels {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0 0.5rem;
+}
+
+.axisLabel {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #94a3b8;
+  text-align: center;
+}
+
+/* Bar chart */
+.barChart {
+  height: 100%;
+  min-height: 220px;
+}
+
+.barChartPlot {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 100%;
+  min-height: 200px;
+  padding: 0 0.25rem;
+}
+
+.barCol {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+}
+
+.barValue {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.barTrack {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  width: 100%;
+  max-width: 48px;
+  min-height: 120px;
+  background: #f1f5f9;
+  border-radius: 8px 8px 4px 4px;
+}
+
+.barFill {
+  width: 100%;
+  background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%);
+  border-radius: 8px 8px 4px 4px;
+  transition: height 0.4s ease;
+}
+
+.barLabel {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+/* Donut */
+.donutWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.donutSvg {
+  flex-shrink: 0;
+  width: 140px;
+  height: 140px;
+}
+
+.donutBg {
+  fill: none;
+  stroke: #f1f5f9;
+  stroke-width: 18;
+}
+
+.donutSegment {
+  transition: stroke-dasharray 0.3s ease;
+}
+
+.donutTotal {
+  font-size: 1.25rem;
+  font-weight: 700;
+  fill: #0f172a;
+}
+
+.donutTotalLabel {
+  font-size: 0.625rem;
+  font-weight: 600;
+  fill: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.donutLegend {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 160px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legendItem {
+  display: grid;
+  grid-template-columns: 10px 1fr auto auto;
+  gap: 0.5rem 0.625rem;
+  align-items: center;
+  font-size: 0.8125rem;
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.legendLabel {
+  font-weight: 500;
+  color: #475569;
+}
+
+.legendValue {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.legendPct {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+/* Horizontal bars */
+.hBarList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hBarItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.hBarHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.hBarLabel {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.hBarValue {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.hBarTrack {
+  height: 8px;
+  overflow: hidden;
+  background: #f1f5f9;
+  border-radius: 9999px;
+}
+
+.hBarFill {
+  height: 100%;
+  min-width: 4px;
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
