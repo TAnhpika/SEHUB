@@ -1,10 +1,8 @@
 import { useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowUpFromBracket,
   faBold,
-  faChevronRight,
   faCloudArrowUp,
   faCode,
   faFileArchive,
@@ -18,6 +16,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
+import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import { PRACTICE_EXAM_SUBMISSIONS_MOCK } from "@/features/moderator/moderatorMockData";
 import {
   DEMO_DRAFT,
@@ -25,6 +24,12 @@ import {
   PRACTICE_SUBJECT_OPTIONS,
 } from "@/features/moderator/practiceExams/practiceExamData";
 import styles from "./AddPracticeExamPage.module.css";
+
+const PRACTICE_CRUMBS = [
+  { label: "Trang chủ", to: "/home" },
+  { label: "Đóng góp" },
+  { label: "Thêm đề thực hành" },
+];
 
 const ACCEPTED_TYPES = ".pdf,.zip,.rar,.docx";
 const MAX_FILE_MB = 50;
@@ -56,7 +61,7 @@ function AddPracticeExamPage() {
   }
 
   function handlePublish(event) {
-    event.preventDefault();
+    event?.preventDefault?.();
     if (!subject || !semester || !title.trim() || !description.trim()) {
       showToast("Vui lòng điền đầy đủ các trường bắt buộc.");
       return;
@@ -93,29 +98,24 @@ function AddPracticeExamPage() {
     addFiles(event.dataTransfer.files);
   }
 
+  const pageActions = (
+    <div className={styles.actions}>
+      <button type="button" className={styles["btn-draft"]} onClick={handleSaveDraft}>
+        Lưu nháp
+      </button>
+      <Button type="button" className={styles["btn-publish"]} onClick={handlePublish}>
+        <FontAwesomeIcon icon={faArrowUpFromBracket} />
+        Lưu &amp; Xuất bản
+      </Button>
+    </div>
+  );
+
   return (
-    <div className={styles.page}>
-      <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-        <Link to="/home">Trang chủ</Link>
-        <FontAwesomeIcon icon={faChevronRight} className={styles.chevron} />
-        <span>Đóng góp</span>
-        <FontAwesomeIcon icon={faChevronRight} className={styles.chevron} />
-        <span className={styles.current}>Thêm đề thực hành</span>
-      </nav>
-
-      <div className={styles["page-header"]}>
-        <h1 className={styles.title}>Thêm đề thi thực hành</h1>
-        <div className={styles.actions}>
-          <button type="button" className={styles["btn-draft"]} onClick={handleSaveDraft}>
-            Lưu nháp
-          </button>
-          <Button type="button" className={styles["btn-publish"]} onClick={handlePublish}>
-            <FontAwesomeIcon icon={faArrowUpFromBracket} />
-            Lưu &amp; Xuất bản
-          </Button>
-        </div>
-      </div>
-
+    <ModeratorPageShell
+      title="Thêm đề thi thực hành"
+      crumbs={PRACTICE_CRUMBS}
+      actions={pageActions}
+    >
       <section className={styles.card}>
         <div className={styles.tabs} role="tablist">
           <button
@@ -376,7 +376,7 @@ function AddPracticeExamPage() {
           </div>
         )}
       </section>
-    </div>
+    </ModeratorPageShell>
   );
 }
 
