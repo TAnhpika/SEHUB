@@ -155,7 +155,7 @@
   cursor: pointer;
 }
 
-.item-highlight .like {
+.like-active {
   font-weight: 700;
   color: #004ac6;
 }
@@ -201,4 +201,9 @@
   border-radius: var(--radius-sm);
   cursor: pointer;
   box-shadow: var(--shadow-auth-submit);
+}
+
+.send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
