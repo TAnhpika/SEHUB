@@ -6,28 +6,10 @@ import { useAuth } from "@/context";
 import googleGSrc from "@/img/google-g.png";
 import { getRoleHomePath } from "@/utils/roleHelpers";
 import { MODERATOR_TEST_ACCOUNTS } from "@/features/moderator/moderatorMockData";
-import { MODERATOR_HOME_PATH } from "@/features/moderator/moderatorNavData";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import styles from "./LoginPage.module.css";
 
 const REMEMBER_KEY = "sehubs_remember_login";
-const STUDENT_HOME_PATH = "/home";
-
-function resolvePostLoginPath(user, from) {
-  if (user?.role === "moderator" || user?.role === "admin") {
-    return MODERATOR_HOME_PATH;
-  }
-  const returnToProtected =
-    from &&
-    from !== "/login" &&
-    !from.startsWith("/moderator") &&
-    (from.startsWith("/home") || from.startsWith("/profile"));
-
-  if (returnToProtected) {
-    return from;
-  }
-  return STUDENT_HOME_PATH;
-}
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -47,6 +29,15 @@ function LoginPage() {
 
   const redirectTo = location.state?.from || "/home";
 
+  function navigateAfterLogin(loggedInUser) {
+    const isStaff =
+      loggedInUser?.role === "moderator" || loggedInUser?.role === "admin";
+    const destination = isStaff
+      ? getRoleHomePath(loggedInUser)
+      : getRoleHomePath(loggedInUser, redirectTo);
+    navigate(destination, { replace: true });
+  }
+
   function persistRememberMe() {
     try {
       if (rememberMe) {
@@ -57,10 +48,6 @@ function LoginPage() {
     } catch {
       /* ignore storage errors */
     }
-  }
-
-  function navigateAfterLogin(loggedInUser) {
-    navigate(getRoleHomePath(loggedInUser, redirectTo), { replace: true });
   }
 
   function handleSubmit(event) {
