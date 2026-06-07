@@ -1,6 +1,7 @@
 const PRACTICE_SESSION_PREFIX = "sehubs_practice_session_";
 
-export const PRACTICE_DURATION_MS = 30 * 60 * 1000;
+/** §3.4 — Làm bài thực hành: 85 phút mỗi bài */
+export const PRACTICE_DURATION_MS = 85 * 60 * 1000;
 
 function sessionKey(examId, questionId) {
   return `${PRACTICE_SESSION_PREFIX}${examId}_q${questionId}`;
