@@ -5,6 +5,7 @@ import AuthLayout from "@/common/Layout/AuthLayout/AuthLayout";
 import CommunityLayout from "@/common/Layout/CommunityLayout/CommunityLayout";
 import GuestLayout from "@/common/Layout/GuestLayout/GuestLayout";
 import MainLayout from "@/common/Layout/MainLayout/MainLayout";
+import ExamFocusLayout from "@/common/Layout/ExamFocusLayout/ExamFocusLayout";
 import { AuthProvider } from "@/context";
 import LoginPage from "@/features/auth/LoginPage/LoginPage";
 import RegisterPage from "@/features/auth/RegisterPage/RegisterPage";
@@ -124,6 +125,26 @@ function App() {
                 <Route path="/profile/:username/edit" element={<EditProfilePage />} />
                 <Route path="/profile/:username" element={<ProfilePage />} />
               </Route>
+              <Route element={<PremiumRoute />}>
+                <Route element={<ExamFocusLayout />}>
+                  <Route
+                    path="/exam/focus/final-exam/:courseCode/:examId/do"
+                    element={<ExamDoPage page="review" />}
+                  />
+                  <Route
+                    path="/exam/focus/final-exam/:courseCode/:examId/result"
+                    element={<ExamResultPage page="review" />}
+                  />
+                  <Route
+                    path="/exam/focus/pratical-exam/:courseCode/:examId/do/:questionIndex"
+                    element={<PracticeDoPage />}
+                  />
+                  <Route
+                    path="/exam/focus/pratical-exam/:courseCode/:examId/result/:questionIndex"
+                    element={<ExamResultPage page="practice" />}
+                  />
+                </Route>
+              </Route>
             </Route>
             <Route path="/community" element={<CommunityLayout />}>
               <Route index element={<FeedPage />} />
@@ -136,16 +157,6 @@ function App() {
                 path="final-exam/:courseCode/:examId"
                 element={<ExamDetailPage page="review" />}
               />
-              <Route element={<PremiumRoute />}>
-                <Route
-                  path="final-exam/:courseCode/:examId/do"
-                  element={<ExamDoPage page="review" />}
-                />
-                <Route
-                  path="final-exam/:courseCode/:examId/result"
-                  element={<ExamResultPage page="review" />}
-                />
-              </Route>
               <Route path="pratical-exam" element={<PracticeQuestionsPage />} />
               <Route
                 path="pratical-exam/:courseCode"
@@ -155,16 +166,6 @@ function App() {
                 path="pratical-exam/:courseCode/:examId"
                 element={<ExamDetailPage page="practice" />}
               />
-              <Route element={<PremiumRoute />}>
-                <Route
-                  path="pratical-exam/:courseCode/:examId/do/:questionIndex"
-                  element={<PracticeDoPage />}
-                />
-                <Route
-                  path="pratical-exam/:courseCode/:examId/result/:questionIndex"
-                  element={<ExamResultPage page="practice" />}
-                />
-              </Route>
               <Route path="documents" element={<DocumentsPage />} />
               <Route
                 path="documents/:courseCode"
