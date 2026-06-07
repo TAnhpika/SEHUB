@@ -18,7 +18,9 @@ function MainLayout() {
   const isCheckoutPage = useMatch("/home/premium/checkout/:planId");
   const isPaymentSuccessPage = useMatch("/home/premium/success/:planId");
   const isPostDetailPage = useMatch("/home/posts/:postId");
+  const isSearchPage = useMatch("/home/search");
   const hideRightSidebar =
+    isSearchPage ||
     isFriendsArea ||
     isProfilePage ||
     isEditProfilePage ||
@@ -59,7 +61,8 @@ function MainLayout() {
         !isPremiumPage &&
         !isCheckoutPage &&
         !isPaymentSuccessPage &&
-        !isPostDetailPage && (
+        !isPostDetailPage &&
+        !isSearchPage && (
         <Footer />
       )}
       {!isMessagesPage &&
