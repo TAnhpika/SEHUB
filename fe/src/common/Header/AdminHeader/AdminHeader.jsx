@@ -87,7 +87,6 @@ function AdminHeader() {
               className={styles.searchInput}
               placeholder="Tìm kiếm user, đề thi, báo cáo..."
             />
-            <kbd className={styles.searchKbd}>Ctrl K</kbd>
           </label>
         </div>
 
