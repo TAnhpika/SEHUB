@@ -4,6 +4,14 @@
   padding-bottom: 1rem;
 }
 
+.pageFocus {
+  height: 100%;
+  min-height: 0;
+  padding: 1rem;
+  overflow: auto;
+  box-sizing: border-box;
+}
+
 .back {
   display: inline-flex;
   align-items: center;
