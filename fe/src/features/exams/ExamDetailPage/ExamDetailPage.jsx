@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useLocation, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -34,7 +34,10 @@ import styles from "./ExamDetailPage.module.css";
 
 function ExamDetailPage({ page }) {
   const { courseCode, examId } = useParams();
+  const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { isPremium, isAuthenticated } = useAuth();
+  const { requirePremium } = useRequirePremium();
   const scope = pathname.startsWith("/home/") ? "home" : "community";
   const config = getSubjectDetailConfig(page, scope);
   const decodedExamId = decodeURIComponent(examId ?? "");
@@ -64,6 +67,7 @@ function ExamDetailPage({ page }) {
   const isLastQuestion = currentIndex === questions.length - 1;
   const isReviewExam = page === "review";
   const isPracticeExam = page === "practice";
+  const isDocumentPage = page === "documents" && exam.document;
   const canUsePremiumFeatures = (isReviewExam || isPracticeExam) && isPremium;
   const typeLabel = EXAM_TYPE_LABELS[page] ?? exam.type;
   const previewLabel = EXAM_PREVIEW_LABELS[page] ?? "Mục";
@@ -90,12 +94,15 @@ function ExamDetailPage({ page }) {
     setCurrentIndex((index) => index + 1);
   }
 
-  const typeLabel = EXAM_TYPE_LABELS[page] ?? exam.type;
-  const previewLabel = EXAM_PREVIEW_LABELS[page] ?? "Mục";
-  const isReviewExam = page === "review";
-  const isPracticeExam = page === "practice";
-  const isDocumentPage = page === "documents" && exam.document;
-  const listPath = `${config.detailBase}/${exam.courseCode}`;
+  function handleStartExam() {
+    if (!isReviewExam && !isPracticeExam) return;
+    if (!requirePremium()) return;
+    navigate(isPracticeExam ? practiceDoPath : doPath);
+  }
+
+  function handleViewResult() {
+    navigate(isPracticeExam ? practiceResultPath : resultPath);
+  }
 
   return (
     <div className={styles.page}>
