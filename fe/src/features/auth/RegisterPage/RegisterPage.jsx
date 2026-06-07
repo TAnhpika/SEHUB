@@ -84,12 +84,14 @@ function RegisterPage() {
       <section className={styles.formSection} aria-labelledby="register-title">
         <div className={styles.formMain}>
           <div className={styles.formWrap}>
+          <div className={styles.formCard}>
           <header className={styles.header}>
+            <span className={styles.eyebrow}>Đăng ký</span>
             <h1 id="register-title" className={styles.title}>
-              Tạo tài khoản mới
+              Bắt đầu hành trình của bạn!
             </h1>
             <p className={styles.subtitle}>
-              Bắt đầu hành trình học tập thông minh cùng SEHub
+              Tạo tài khoản để khám phá kho đề thi và kết nối cộng đồng SEHub.
             </p>
           </header>
 
@@ -127,47 +129,49 @@ function RegisterPage() {
                 </span>
               </label>
 
-              <label className={styles.field}>
-                <span className={styles.label}>Mật khẩu</span>
-                <span className={styles["input-wrap"]}>
-                  <FontAwesomeIcon icon={faLock} className={styles["input-icon"]} />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    className={styles.input}
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder="••••••••"
-                    autoComplete="new-password"
-                    required
-                    minLength={8}
-                  />
-                  <button
-                    type="button"
-                    className={styles["toggle-password"]}
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                  >
-                    <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
-                  </button>
-                </span>
-              </label>
+              <div className={styles.fieldRow}>
+                <label className={styles.field}>
+                  <span className={styles.label}>Mật khẩu</span>
+                  <span className={styles["input-wrap"]}>
+                    <FontAwesomeIcon icon={faLock} className={styles["input-icon"]} />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      className={styles.input}
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      placeholder="••••••••"
+                      autoComplete="new-password"
+                      required
+                      minLength={8}
+                    />
+                    <button
+                      type="button"
+                      className={styles["toggle-password"]}
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                    >
+                      <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
+                    </button>
+                  </span>
+                </label>
 
-              <label className={styles.field}>
-                <span className={styles.label}>Xác nhận mật khẩu</span>
-                <span className={styles["input-wrap"]}>
-                  <FontAwesomeIcon icon={faKey} className={styles["input-icon"]} />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    className={styles.input}
-                    value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
-                    placeholder="••••••••"
-                    autoComplete="new-password"
-                    required
-                    minLength={8}
-                  />
-                </span>
-              </label>
+                <label className={styles.field}>
+                  <span className={styles.label}>Xác nhận mật khẩu</span>
+                  <span className={styles["input-wrap"]}>
+                    <FontAwesomeIcon icon={faKey} className={styles["input-icon"]} />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      className={styles.input}
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      placeholder="••••••••"
+                      autoComplete="new-password"
+                      required
+                      minLength={8}
+                    />
+                  </span>
+                </label>
+              </div>
             </div>
 
             <button type="submit" className={styles["submit-btn"]} disabled={isSubmitting}>
@@ -195,11 +199,12 @@ function RegisterPage() {
                 Đăng nhập ngay
               </Link>
             </p>
+
+            <p className={styles.tagline}>EMPOWERING STUDENTS GLOBALLY</p>
           </form>
           </div>
+          </div>
         </div>
-
-        <p className={styles.tagline}>EMPOWERING STUDENTS GLOBALLY</p>
       </section>
     </div>
   );

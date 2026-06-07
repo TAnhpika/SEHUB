@@ -14,6 +14,7 @@ import FeedPage from "@/features/feed/FeedPage/FeedPage";
 import FriendProfilePage from "@/features/home/FriendProfilePage/FriendProfilePage";
 import FriendsPage from "@/features/home/FriendsPage/FriendsPage";
 import HomePage from "@/features/home/HomePage/HomePage";
+import SearchAllPage from "@/features/search/SearchAllPage/SearchAllPage";
 import LandingPage from "@/features/landing/LandingPage/LandingPage";
 import CreatePostPage from "@/features/posts/CreatePostPage/CreatePostPage";
 import PostDetailPage from "@/features/feed/PostDetailPage/PostDetailPage";
@@ -56,11 +57,6 @@ import AdminPermissionsPage from "@/features/admin/permissions/AdminPermissionsP
 import AdminActivityLogPage from "@/features/admin/activity/AdminActivityLogPage";
 import AddPracticeExamPage from "@/features/moderator/practiceExams/AddPracticeExamPage/AddPracticeExamPage";
 import ModeratorPracticeSubmissionsPage from "@/features/moderator/practiceExams/ModeratorPracticeSubmissionsPage";
-import ModeratorReportsPage from "@/features/moderator/reports/ModeratorReportsPage";
-import ModeratorContentPage from "@/features/moderator/content/ModeratorContentPage";
-import ModeratorFeaturedPage from "@/features/moderator/featured/ModeratorFeaturedPage";
-import ModeratorViolationsPage from "@/features/moderator/violations/ModeratorViolationsPage";
-import AddFinalExamPage from "@/features/moderator/finalExams/AddFinalExamPage";
 import NotFound from "@/features/errors/NotFound/NotFound";
 import AddFinalExamWizard from "@/features/moderator/finalExams/AddFinalExamWizard";
 import FinalExamInfoStep from "@/features/moderator/finalExams/steps/FinalExamInfoStep";
@@ -68,6 +64,7 @@ import FinalExamQuestionsStep from "@/features/moderator/finalExams/steps/FinalE
 import FinalExamReviewStep from "@/features/moderator/finalExams/steps/FinalExamReviewStep";
 import ViolatingAccountsPage from "@/features/moderator/violations/ViolatingAccountsPage/ViolatingAccountsPage";
 import ContentModerationPage from "@/features/moderator/content/ContentModerationPage/ContentModerationPage";
+import ContentModerationHistoryPage from "@/features/moderator/content/ContentModerationHistoryPage/ContentModerationHistoryPage";
 import FeaturedPostsPage from "@/features/moderator/featured/FeaturedPostsPage/FeaturedPostsPage";
 import ReportsPage from "@/features/moderator/reports/ReportsPage/ReportsPage";
 
@@ -89,6 +86,7 @@ function App() {
             <Route element={<PrivateRoute />}>
               <Route element={<MainLayout />}>
                 <Route path="/home" element={<HomePage />} />
+                <Route path="/home/search" element={<SearchAllPage />} />
                 <Route path="/home/create-post" element={<CreatePostPage />} />
                 <Route path="/home/posts/:postId" element={<PostDetailPage />} />
                 <Route path="/home/feedback" element={<FeedbackPage />} />
@@ -207,17 +205,13 @@ function App() {
             <Route element={<ModeratorRoute />}>
               <Route path="/moderator" element={<ModeratorLayout />}>
                 <Route index element={<Navigate to="/moderator/reports" replace />} />
-                <Route path="reports" element={<ModeratorReportsPage />} />
-                <Route path="content" element={<ModeratorContentPage />} />
-                <Route path="featured" element={<ModeratorFeaturedPage />} />
-                <Route path="violations" element={<ModeratorViolationsPage />} />
-                <Route path="final-exams/add" element={<AddFinalExamPage />} />
+                <Route path="reports" element={<ReportsPage />} />
+                <Route path="content" element={<ContentModerationPage />} />
+                <Route path="content/history" element={<ContentModerationHistoryPage />} />
+                <Route path="featured" element={<FeaturedPostsPage />} />
+                <Route path="violations" element={<ViolatingAccountsPage />} />
                 <Route path="practice-submissions" element={<ModeratorPracticeSubmissionsPage />} />
                 <Route path="practice-exams/add" element={<AddPracticeExamPage />} />
-                <Route path="violations" element={<ViolatingAccountsPage />} />
-                <Route path="content" element={<ContentModerationPage />} />
-                <Route path="featured" element={<FeaturedPostsPage />} />
-                <Route path="reports" element={<ReportsPage />} />
                 <Route path="final-exams/add" element={<AddFinalExamWizard />}>
                   <Route index element={<FinalExamInfoStep />} />
                   <Route path="questions" element={<FinalExamQuestionsStep />} />

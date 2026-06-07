@@ -35,9 +35,9 @@ import styles from "./ExamDetailPage.module.css";
 function ExamDetailPage({ page }) {
   const { courseCode, examId } = useParams();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { isPremium, isAuthenticated } = useAuth();
   const { requirePremium } = useRequirePremium();
-  const { pathname } = useLocation();
   const scope = pathname.startsWith("/home/") ? "home" : "community";
   const config = getSubjectDetailConfig(page, scope);
   const decodedExamId = decodeURIComponent(examId ?? "");

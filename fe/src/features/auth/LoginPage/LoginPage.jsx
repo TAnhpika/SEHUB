@@ -64,6 +64,10 @@ function LoginPage() {
 
   const redirectTo = location.state?.from || "/home";
 
+  function navigateAfterLogin(loggedInUser) {
+    navigate(resolvePostLoginPath(loggedInUser, redirectTo), { replace: true });
+  }
+
   function persistRememberMe() {
     try {
       if (rememberMe) {
@@ -74,10 +78,6 @@ function LoginPage() {
     } catch {
       /* ignore storage errors */
     }
-  }
-
-  function navigateAfterLogin(loggedInUser) {
-    navigate(resolvePostLoginPath(loggedInUser, redirectTo), { replace: true });
   }
 
   async function handleSubmit(event) {
@@ -141,11 +141,15 @@ function LoginPage() {
       <section className={styles.formSection} aria-labelledby="login-title">
         <div className={styles.formMain}>
           <div className={styles.formWrap}>
+          <div className={styles.formCard}>
           <header className={styles.header}>
+            <span className={styles.eyebrow}>Đăng nhập</span>
             <h1 id="login-title" className={styles.title}>
-              Đăng nhập
+              Chào mừng bạn quay trở lại!
             </h1>
-            <p className={styles.subtitle}>Chào mừng bạn quay trở lại!</p>
+            <p className={styles.subtitle}>
+              Nhập thông tin tài khoản để tiếp tục học tập trên SEHub.
+            </p>
           </header>
 
           <form className={styles.form} onSubmit={handleSubmit}>
@@ -232,7 +236,10 @@ function LoginPage() {
                 Đăng ký ngay
               </Link>
             </p>
+
+            <p className={styles.tagline}>EMPOWERING STUDENTS GLOBALLY</p>
           </form>
+          </div>
 
           {import.meta.env.DEV && (
             <details className={styles.devAccounts}>
@@ -256,8 +263,6 @@ function LoginPage() {
           )}
           </div>
         </div>
-
-        <p className={styles.tagline}>EMPOWERING STUDENTS GLOBALLY</p>
       </section>
     </div>
   );
