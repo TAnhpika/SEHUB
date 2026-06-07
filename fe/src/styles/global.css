@@ -17,6 +17,17 @@ body {
   min-height: 100vh;
 }
 
+html.exam-focus-mode,
+html.exam-focus-mode body {
+  overflow: hidden;
+  height: 100%;
+}
+
+html.exam-focus-mode #root {
+  height: 100%;
+  min-height: 0;
+}
+
 /* Tên user Premium — gradient tím sau thanh toán thành công */
 .username-premium {
   font-weight: 700;
