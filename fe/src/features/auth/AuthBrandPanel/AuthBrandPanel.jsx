@@ -66,7 +66,7 @@ const PANEL_COPY = {
         quay trở lại!
       </>
     ),
-    desc: "Tạo tài khoản để khám phá kho đề thi khổng lồ và kết nối với cộng đồng sinh viên FPT thông minh.",
+    desc: "Đăng nhập để tiếp tục khám phá kho đề thi, tài liệu và kết nối với cộng đồng sinh viên FPT.",
     features: FEATURES,
     showDivider: true,
   },
