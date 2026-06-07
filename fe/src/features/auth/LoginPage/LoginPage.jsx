@@ -5,7 +5,7 @@ import { faEnvelope, faEye, faEyeSlash, faLock } from "@fortawesome/free-solid-s
 import { useAuth } from "@/context";
 import googleGSrc from "@/img/google-g.png";
 import { getRoleHomePath } from "@/utils/roleHelpers";
-import { MODERATOR_TEST_ACCOUNTS } from "@/features/moderator/moderatorMockData";
+import { MODERATOR_TEST_ACCOUNTS, STUDENT_TEST_ACCOUNTS } from "@/features/moderator/moderatorMockData";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import styles from "./LoginPage.module.css";
 
@@ -78,7 +78,13 @@ function LoginPage() {
 
   function handleGoogleLogin() {
     setIsSubmitting(true);
-    const nextUser = login({ username: "google_user", password: "" });
+    const nextUser = login({
+      provider: "google",
+      username: "google_user",
+      email: "google.user@gmail.com",
+      displayName: "Google User",
+      password: "",
+    });
     navigateAfterLogin(nextUser);
   }
 
@@ -186,6 +192,18 @@ function LoginPage() {
             <details className={styles.devAccounts}>
               <summary className={styles.devSummary}>Tài khoản test (dev)</summary>
               <ul className={styles.devList}>
+                {STUDENT_TEST_ACCOUNTS.map((account) => (
+                  <li key={account.username}>
+                    <button
+                      type="button"
+                      className={styles.devBtn}
+                      onClick={() => fillTestAccount(account)}
+                    >
+                      SV {account.plan}: <code>{account.username}</code> /{" "}
+                      <code>{account.password}</code>
+                    </button>
+                  </li>
+                ))}
                 {MODERATOR_TEST_ACCOUNTS.map((account) => (
                   <li key={account.username}>
                     <button
