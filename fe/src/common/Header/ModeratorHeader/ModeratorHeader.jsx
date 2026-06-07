@@ -1,64 +1,173 @@
+import { useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBars,
   faBell,
+  faChevronDown,
   faGear,
+  faHouse,
   faMagnifyingGlass,
+  faRightFromBracket,
+  faShieldHalved,
+  faUser,
 } from "@fortawesome/free-solid-svg-icons";
-import ModeratorBreadcrumb from "@/common/Breadcrumb/ModeratorBreadcrumb/ModeratorBreadcrumb";
 import { useAuth } from "@/context";
 import { useModeratorPage } from "@/features/moderator/context/ModeratorPageContext";
+import {
+  MODERATOR_HOME_PATH,
+  resolveModeratorPageTitle,
+} from "@/features/moderator/moderatorNavData";
 import styles from "./ModeratorHeader.module.css";
 
-const TOP_LINKS = [
-  { label: "Trang chủ", to: "/home" },
-  { label: "Báo cáo", to: "/moderator/reports" },
-  { label: "Thêm đề TH", to: "/moderator/practice-exams/add" },
-];
-
 function ModeratorHeader() {
-  const { user } = useAuth();
-  const { pageMeta, setSidebarOpen } = useModeratorPage();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout, isAdmin } = useAuth();
+  const { setSidebarOpen } = useModeratorPage();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const pageTitle = useMemo(
+    () => resolveModeratorPageTitle(location.pathname),
+    [location.pathname],
+  );
+
   const displayName = user?.displayName ?? "Moderator";
+  const initial = user?.initial ?? displayName.charAt(0).toUpperCase();
   const unread = user?.unreadNotifications ?? 0;
+
+  function handleLogout() {
+    setMenuOpen(false);
+    logout();
+    navigate("/login");
+  }
 
   return (
     <header className={styles.header}>
-      <div className={styles.leading}>
-        <button
-          type="button"
-          className={styles.menuBtn}
-          aria-label="Mở menu"
-          onClick={() => setSidebarOpen(true)}
-        >
-          <FontAwesomeIcon icon={faBars} />
-        </button>
+      <div className={styles.inner}>
+        <div className={styles.lead}>
+          <button
+            type="button"
+            className={styles.menuBtn}
+            aria-label="Mở menu"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <FontAwesomeIcon icon={faBars} />
+          </button>
 
-        <div className={styles.search}>
-          <FontAwesomeIcon icon={faMagnifyingGlass} className={styles.searchIcon} />
-          <input
-            type="search"
-            className={styles.searchInput}
-            placeholder="Tìm kiếm nội dung..."
-            aria-label="Tìm kiếm"
-          />
+          <nav className={styles.breadcrumb} aria-label="Breadcrumb">
+            <Link to={MODERATOR_HOME_PATH} className={styles.breadcrumbLink}>
+              <FontAwesomeIcon icon={faHouse} className={styles.breadcrumbIcon} />
+              Moderator
+            </Link>
+            <span className={styles.breadcrumbSep} aria-hidden>
+              /
+            </span>
+            <span className={styles.breadcrumbCurrent}>{pageTitle}</span>
+          </nav>
+          <h1 className={styles.pageTitle}>{pageTitle}</h1>
         </div>
-      </div>
 
-      <div className={styles.center}>
-        <ModeratorBreadcrumb crumbs={pageMeta.crumbs} />
-      </div>
+        <div className={styles.searchWrap}>
+          <label className={styles.search} htmlFor="moderator-global-search">
+            <span className={styles.searchIconWrap} aria-hidden>
+              <FontAwesomeIcon icon={faMagnifyingGlass} />
+            </span>
+            <input
+              id="moderator-global-search"
+              type="search"
+              className={styles.searchInput}
+              placeholder="Tìm báo cáo, bài viết, tài khoản..."
+            />
+          </label>
+        </div>
 
-      <div className={styles.actions}>
-        <button type="button" className={styles.iconBtn} aria-label="Thông báo">
-          <FontAwesomeIcon icon={faBell} />
-          {unread > 0 ? <span className={styles.badge} aria-hidden /> : null}
-        </button>
-        <button type="button" className={styles.iconBtn} aria-label="Cài đặt">
-          <FontAwesomeIcon icon={faGear} />
-        </button>
-        <div className={styles.avatar} title={displayName} aria-hidden>
-          {user?.initial ?? "M"}
+        <div className={styles.actions}>
+          <div className={styles.toolGroup} role="group" aria-label="Hành động nhanh">
+            <button type="button" className={styles.toolBtn} aria-label="Cài đặt">
+              <FontAwesomeIcon icon={faGear} />
+            </button>
+            <button type="button" className={styles.toolBtn} aria-label="Thông báo">
+              <FontAwesomeIcon icon={faBell} />
+              {unread > 0 ? <span className={styles.notifDot} aria-hidden /> : null}
+            </button>
+          </div>
+
+          <div className={`${styles.profile} ${menuOpen ? styles.profileOpen : ""}`}>
+            <button
+              type="button"
+              className={styles.profileTrigger}
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+              onClick={() => setMenuOpen((open) => !open)}
+              onBlur={(e) => {
+                if (!e.currentTarget.parentElement?.contains(e.relatedTarget)) {
+                  setMenuOpen(false);
+                }
+              }}
+            >
+              <span className={styles.avatar}>{initial}</span>
+              <span className={styles.profileMeta}>
+                <span className={styles.profileName}>{displayName}</span>
+                <span className={styles.profileRole}>Kiểm duyệt viên</span>
+              </span>
+              <FontAwesomeIcon
+                icon={faChevronDown}
+                className={`${styles.chevron} ${menuOpen ? styles.chevronOpen : ""}`}
+              />
+            </button>
+
+            {menuOpen ? (
+              <div className={styles.menu} role="menu">
+                <p className={styles.menuHeading}>Tài khoản</p>
+                <Link
+                  to={MODERATOR_HOME_PATH}
+                  className={styles.menuItem}
+                  role="menuitem"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <span className={styles.menuIcon}>
+                    <FontAwesomeIcon icon={faUser} />
+                  </span>
+                  Xử lý báo cáo
+                </Link>
+                {isAdmin ? (
+                  <Link
+                    to="/admin"
+                    className={styles.menuItem}
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <span className={styles.menuIcon}>
+                      <FontAwesomeIcon icon={faShieldHalved} />
+                    </span>
+                    Khu vực Admin
+                  </Link>
+                ) : null}
+                <Link
+                  to="/home"
+                  className={styles.menuItem}
+                  role="menuitem"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <span className={styles.menuIcon}>↗</span>
+                  Trang sinh viên
+                </Link>
+                <div className={styles.menuDivider} />
+                <button
+                  type="button"
+                  className={`${styles.menuItem} ${styles.menuItemDanger}`}
+                  role="menuitem"
+                  onClick={handleLogout}
+                >
+                  <span className={`${styles.menuIcon} ${styles.menuIconDanger}`}>
+                    <FontAwesomeIcon icon={faRightFromBracket} />
+                  </span>
+                  Đăng xuất
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </header>
