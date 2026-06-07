@@ -14,6 +14,7 @@ import FeedPage from "@/features/feed/FeedPage/FeedPage";
 import FriendProfilePage from "@/features/home/FriendProfilePage/FriendProfilePage";
 import FriendsPage from "@/features/home/FriendsPage/FriendsPage";
 import HomePage from "@/features/home/HomePage/HomePage";
+import SearchAllPage from "@/features/search/SearchAllPage/SearchAllPage";
 import LandingPage from "@/features/landing/LandingPage/LandingPage";
 import CreatePostPage from "@/features/posts/CreatePostPage/CreatePostPage";
 import PostDetailPage from "@/features/feed/PostDetailPage/PostDetailPage";
@@ -85,6 +86,7 @@ function App() {
             <Route element={<PrivateRoute />}>
               <Route element={<MainLayout />}>
                 <Route path="/home" element={<HomePage />} />
+                <Route path="/home/search" element={<SearchAllPage />} />
                 <Route path="/home/create-post" element={<CreatePostPage />} />
                 <Route path="/home/posts/:postId" element={<PostDetailPage />} />
                 <Route path="/home/feedback" element={<FeedbackPage />} />
