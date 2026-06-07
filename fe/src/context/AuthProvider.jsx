@@ -36,15 +36,14 @@ function normalizeUser(stored) {
     initial: stored.initial ?? base.initial,
     role: stored.role ?? "student",
     plan: stored.plan ?? base.plan,
-    isPremium: Boolean(stored.isPremium),
     roleLabel:
       stored.roleLabel ??
-      (role === "admin"
+      (stored.role === "admin"
         ? "Quản trị viên"
-        : role === "moderator"
+        : stored.role === "moderator"
           ? "Kiểm duyệt viên"
           : undefined),
-    isPremium: Boolean(stored.isPremium),
+    isPremium: Boolean(stored.isPremium ?? isStaff),
   };
 }
 
