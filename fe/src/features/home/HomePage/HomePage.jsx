@@ -22,18 +22,18 @@ function HomePage() {
   const [editOnOpen, setEditOnOpen] = useState(false);
   const [semesterFilter, setSemesterFilter] = useState("all");
   const [majorFilter, setMajorFilter] = useState("all");
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isPremium } = useAuth();
   const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
-
-  if (isAdmin) {
-    return <Navigate to="/admin" replace />;
-  }
 
   useEffect(() => {
     const linkedPostId = parsePostId(searchParams.get("post"));
     if (!linkedPostId) return;
     navigate(`/home/posts/${linkedPostId}`, { replace: true });
   }, [searchParams, navigate]);
+
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
 
   const filteredPosts = useMemo(
     () => filterPosts(posts, semesterFilter, majorFilter),
