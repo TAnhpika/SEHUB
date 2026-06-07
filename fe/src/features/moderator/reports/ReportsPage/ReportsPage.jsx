@@ -1,35 +1,47 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faEllipsisVertical,
+  faCheck,
+  faFlag,
+  faInbox,
+  faMousePointer,
   faTrash,
+  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
-import ModeratorBadge from "@/features/moderator/components/ModeratorBadge/ModeratorBadge";
-import ModeratorEmptyState from "@/features/moderator/components/ModeratorEmptyState/ModeratorEmptyState";
-import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import {
   filterReports,
   REASON_META,
-  REPORT_STATUS_TABS,
   REPORTS_MOCK,
 } from "@/features/moderator/reports/reportsData";
 import styles from "./ReportsPage.module.css";
 
-const REPORT_CRUMBS = [
-  { label: "Trang chủ", to: "/home" },
-  { label: "Kiểm duyệt", to: "/moderator/reports" },
-  { label: "Xử lý báo cáo" },
+const TAB_OPTIONS = [
+  { id: "pending", label: "Chờ xử lý" },
+  { id: "resolved", label: "Đã xử lý" },
+  { id: "all", label: "Tất cả" },
 ];
 
-function ReasonBadge({ reason, size = "sm" }) {
+const STATUS_LABELS = {
+  pending: "Chờ xử lý",
+  resolved: "Đã xử lý",
+};
+
+function ReasonTag({ reason }) {
   const meta = REASON_META[reason] ?? { label: reason, tone: "muted" };
-  return <ModeratorBadge label={meta.label} tone={meta.tone} size={size} />;
+  return (
+    <span className={`${styles.tag} ${meta.tone === "danger" ? styles.tagDanger : styles.tagMuted}`}>
+      {meta.label}
+    </span>
+  );
 }
 
 function TrustScore({ score }) {
   const clamped = Math.max(0, Math.min(100, score));
-  const tone = clamped < 40 ? styles.trustLow : clamped < 70 ? styles.trustMid : styles.trustHigh;
+  const tone =
+    clamped < 40 ? styles.trustLow : clamped < 70 ? styles.trustMid : styles.trustHigh;
 
   return (
     <div className={styles.trust}>
@@ -44,122 +56,66 @@ function TrustScore({ score }) {
   );
 }
 
-function ReportListItem({ report, selected, onSelect }) {
-  return (
-    <button
-      type="button"
-      className={`${styles.listItem} ${selected ? styles.listItemActive : ""}`}
-      onClick={() => onSelect(report.id)}
-    >
-      <div className={styles.listItemTop}>
-        <div className={styles.listReporter}>
-          <span className={styles.listAvatar} aria-hidden>
-            {report.reporterInitial}
-          </span>
-          <div>
-            <p className={styles.listUsername}>{report.reporterUsername}</p>
-            <p className={styles.listTime}>{report.timeLabel}</p>
-          </div>
-        </div>
-        <ReasonBadge reason={report.reason} />
-      </div>
-      <p className={styles.listSnippet}>{report.snippet}</p>
-    </button>
-  );
-}
-
-function ReportDetail({ report, onDismiss, onDelete }) {
-  if (!report) {
-    return (
-      <ModeratorEmptyState message="Chọn một báo cáo trong danh sách để xem chi tiết." />
-    );
-  }
-
-  const isPending = report.status === "pending";
-
-  return (
-    <>
-      <div className={styles.detailBody}>
-        <header className={styles.detailHeader}>
-          <div>
-            <h2 className={styles.detailTitle}>Chi tiết báo cáo #{report.code}</h2>
-            <div className={styles.detailMeta}>
-              <ReasonBadge reason={report.reason} size="md" />
-              <span>Đã báo cáo lúc {report.reportedAt}</span>
-              {report.status === "resolved" && (
-                <span className={styles.resolvedTag}>
-                  {report.resolution === "deleted" ? "Đã xóa nội dung" : "Đã bỏ qua"}
-                </span>
-              )}
-            </div>
-          </div>
-          <button type="button" className={styles.menuBtn} aria-label="Tùy chọn báo cáo">
-            <FontAwesomeIcon icon={faEllipsisVertical} />
-          </button>
-        </header>
-
-        <section className={styles.sectionCard}>
-          <h3 className={styles.sectionLabel}>Thông tin người bị báo cáo</h3>
-          <div className={styles.reportedUser}>
-            <div className={styles.reportedIdentity}>
-              <span className={styles.reportedAvatar} aria-hidden>
-                {report.reportedUser.initial}
-              </span>
-              <div>
-                <p className={styles.reportedUsername}>{report.reportedUser.username}</p>
-                <p className={styles.reportedJoined}>
-                  Tham gia: {report.reportedUser.joinedAt}
-                </p>
-              </div>
-            </div>
-            <TrustScore score={report.reportedUser.trustScore} />
-          </div>
-        </section>
-
-        <section className={styles.violationSection}>
-          <h3 className={styles.sectionLabel}>Nội dung vi phạm</h3>
-          <div className={styles.violationBox}>
-            <div className={styles.violationAccent} aria-hidden />
-            <blockquote className={styles.violationQuote}>
-              &ldquo;{report.violatingContent}&rdquo;
-            </blockquote>
-            <div className={styles.reporterReason}>
-              <p className={styles.reporterReasonLabel}>
-                Lý do từ người báo cáo ({report.reporterUsername}):
-              </p>
-              <p>{report.reporterReason}</p>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      {isPending && (
-        <footer className={styles.detailFooter}>
-          <button type="button" className={styles.dismissBtn} onClick={() => onDismiss(report.id)}>
-            Bỏ qua báo cáo
-          </button>
-          <button type="button" className={styles.deleteBtn} onClick={() => onDelete(report.id)}>
-            <FontAwesomeIcon icon={faTrash} />
-            Xóa nội dung
-          </button>
-        </footer>
-      )}
-    </>
-  );
-}
-
 function ReportsPage() {
   const { showToast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [reports, setReports] = useState(REPORTS_MOCK);
-  const [statusTab, setStatusTab] = useState("all");
-  const [selectedId, setSelectedId] = useState("rp-4921");
+  const [tab, setTab] = useState("pending");
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState(null);
+  const [lastResolved, setLastResolved] = useState(null);
 
-  const filtered = useMemo(() => filterReports(reports, statusTab), [reports, statusTab]);
+  const pendingCount = reports.filter((r) => r.status === "pending").length;
+  const resolvedCount = reports.filter((r) => r.status === "resolved").length;
 
-  const selectedReport = useMemo(
-    () => reports.find((report) => report.id === selectedId) ?? filtered[0] ?? null,
-    [reports, selectedId, filtered],
-  );
+  const filtered = useMemo(() => {
+    const statusFiltered = filterReports(reports, tab === "all" ? "all" : tab);
+    const q = query.trim().toLowerCase();
+    if (!q) return statusFiltered;
+
+    return statusFiltered.filter(
+      (report) =>
+        report.code.toLowerCase().includes(q) ||
+        report.reporterUsername.toLowerCase().includes(q) ||
+        report.reportedUser.username.toLowerCase().includes(q) ||
+        (REASON_META[report.reason]?.label ?? report.reason).toLowerCase().includes(q) ||
+        report.snippet.toLowerCase().includes(q),
+    );
+  }, [reports, tab, query]);
+
+  useEffect(() => {
+    const fromUrl = searchParams.get("id");
+    if (fromUrl && reports.some((r) => r.id === fromUrl)) {
+      setSelectedId(fromUrl);
+      const item = reports.find((r) => r.id === fromUrl);
+      if (item?.status === "resolved") setTab("resolved");
+      else if (item?.status === "pending") setTab("pending");
+    }
+  }, [searchParams, reports]);
+
+  useEffect(() => {
+    if (filtered.length === 0) {
+      setSelectedId(null);
+      return;
+    }
+    if (!selectedId || !filtered.some((r) => r.id === selectedId)) {
+      setSelectedId(filtered[0].id);
+    }
+  }, [filtered, selectedId]);
+
+  const selected = reports.find((r) => r.id === selectedId) ?? null;
+
+  function selectReport(id) {
+    setSelectedId(id);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("id", id);
+        return next;
+      },
+      { replace: true },
+    );
+  }
 
   function resolveReport(id, resolution) {
     setReports((prev) =>
@@ -167,70 +123,299 @@ function ReportsPage() {
         report.id === id ? { ...report, status: "resolved", resolution } : report,
       ),
     );
+    const updated = reports.find((r) => r.id === id);
+    if (updated) {
+      setLastResolved({ ...updated, status: "resolved", resolution });
+    }
   }
 
   function handleDismiss(id) {
     resolveReport(id, "ignored");
-    showToast("Đã bỏ qua báo cáo (mock).");
+    showToast("Đã bỏ qua báo cáo — giữ nguyên nội dung (mock).");
+    const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
+    setSelectedId(nextPending[0]?.id ?? null);
   }
 
   function handleDelete(id) {
     resolveReport(id, "deleted");
     showToast("Đã xóa nội dung vi phạm (mock).");
+    const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
+    setSelectedId(nextPending[0]?.id ?? null);
   }
 
   return (
-    <ModeratorPageShell
-      title="Xử lý báo cáo"
-      description="Xem xét và xử lý các báo cáo vi phạm từ cộng đồng."
-      crumbs={REPORT_CRUMBS}
-      variant="full"
-    >
+    <div className={styles.page}>
+      <p className={styles.intro}>
+        Xem xét báo cáo từ cộng đồng — chấp thuận xóa nội dung hoặc từ chối giữ nguyên.
+      </p>
+
+      <div className={styles.metrics}>
+        <div className={styles.metric}>
+          <span className={`${styles.metricIcon} ${styles.metricIconPending}`}>
+            <FontAwesomeIcon icon={faFlag} />
+          </span>
+          <div>
+            <p className={styles.metricValue}>{pendingCount}</p>
+            <p className={styles.metricLabel}>Chờ xử lý</p>
+          </div>
+        </div>
+        <div className={styles.metric}>
+          <span className={`${styles.metricIcon} ${styles.metricIconResolved}`}>
+            <FontAwesomeIcon icon={faCheck} />
+          </span>
+          <div>
+            <p className={styles.metricValue}>{resolvedCount}</p>
+            <p className={styles.metricLabel}>Đã xử lý</p>
+          </div>
+        </div>
+        <div className={styles.metric}>
+          <span className={`${styles.metricIcon} ${styles.metricIconTotal}`}>
+            <FontAwesomeIcon icon={faInbox} />
+          </span>
+          <div>
+            <p className={styles.metricValue}>{reports.length}</p>
+            <p className={styles.metricLabel}>Tổng báo cáo</p>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.stepper}>
+        <div className={styles.step}>
+          <span className={styles.stepNum}>1</span>
+          <span className={styles.stepText}>
+            <strong>Chọn báo cáo</strong>
+            Xem nội dung vi phạm
+          </span>
+        </div>
+        <span className={styles.stepDivider} aria-hidden />
+        <div className={styles.step}>
+          <span className={styles.stepNum}>2</span>
+          <span className={styles.stepText}>
+            <strong>Quyết định</strong>
+            Bỏ qua hoặc xóa nội dung
+          </span>
+        </div>
+        <span className={styles.stepDivider} aria-hidden />
+        <div className={styles.step}>
+          <span className={`${styles.stepNum} ${styles.stepNumMuted}`}>3</span>
+          <span className={styles.stepText}>
+            <strong>Lưu vết</strong>
+            Ghi nhận xử lý
+          </span>
+        </div>
+      </div>
+
+      {lastResolved ? (
+        <div className={styles.banner} role="status">
+          <FontAwesomeIcon icon={faCheck} className={styles.bannerIcon} />
+          <div className={styles.bannerBody}>
+            <p className={styles.bannerTitle}>Đã xử lý báo cáo #{lastResolved.code}</p>
+            <p className={styles.bannerMeta}>
+              {lastResolved.resolution === "deleted" ? "Đã xóa nội dung" : "Đã bỏ qua báo cáo"}
+            </p>
+          </div>
+          <button
+            type="button"
+            className={styles.bannerClose}
+            aria-label="Đóng"
+            onClick={() => setLastResolved(null)}
+          >
+            <FontAwesomeIcon icon={faXmark} />
+          </button>
+        </div>
+      ) : null}
+
       <div className={styles.workspace}>
-        <aside className={styles.listPanel} aria-label="Danh sách báo cáo">
-          <div className={styles.listHeader}>
-            <h2 className={styles.listTitle}>Danh sách báo cáo</h2>
-            <div className={styles.tabs} role="tablist">
-              {REPORT_STATUS_TABS.map((tab) => (
+        <div className={styles.queueCol}>
+          <div className={styles.queueToolbar}>
+            <div className={styles.queueToolbarHead}>
+              <h2 className={styles.queueHeading}>Hàng chờ</h2>
+              <span className={styles.queueCount}>{filtered.length}</span>
+            </div>
+            <input
+              type="search"
+              className={styles.searchInput}
+              placeholder="Tìm mã, @user, lý do..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Tìm báo cáo"
+            />
+            <div className={styles.filterTrack} role="group" aria-label="Lọc trạng thái">
+              {TAB_OPTIONS.map((opt) => (
                 <button
-                  key={tab.value}
+                  key={opt.id}
                   type="button"
-                  role="tab"
-                  aria-selected={statusTab === tab.value}
-                  className={`${styles.tab} ${statusTab === tab.value ? styles.tabActive : ""}`}
-                  onClick={() => setStatusTab(tab.value)}
+                  className={`${styles.filterBtn} ${tab === opt.id ? styles.filterBtnActive : ""}`}
+                  onClick={() => setTab(opt.id)}
                 >
-                  {tab.label}
+                  {opt.label}
+                  {opt.id === "pending" ? ` (${pendingCount})` : ""}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className={styles.listScroll}>
+          <div className={styles.queueScroll}>
             {filtered.length === 0 ? (
-              <p className={styles.listEmpty}>Không có báo cáo trong mục này.</p>
+              <div className={styles.emptyQueue}>
+                <FontAwesomeIcon icon={faInbox} className={styles.emptyIcon} />
+                <p className={styles.emptyTitle}>Không có báo cáo</p>
+                <p className={styles.emptyDesc}>Thử đổi tab hoặc từ khóa tìm kiếm.</p>
+              </div>
             ) : (
-              filtered.map((report) => (
-                <ReportListItem
-                  key={report.id}
-                  report={report}
-                  selected={selectedReport?.id === report.id}
-                  onSelect={setSelectedId}
-                />
-              ))
+              <ul className={styles.queueList}>
+                {filtered.map((report) => {
+                  const isActive = selectedId === report.id;
+                  return (
+                    <li key={report.id}>
+                      <button
+                        type="button"
+                        className={`${styles.queueCard} ${isActive ? styles.queueCardActive : ""}`}
+                        onClick={() => selectReport(report.id)}
+                      >
+                        <div className={styles.queueCardInner}>
+                          <span className={styles.queueAvatar} aria-hidden>
+                            {report.reporterInitial}
+                          </span>
+                          <div className={styles.queueCardBody}>
+                            <p className={styles.queueTitle}>{report.code}</p>
+                            <p className={styles.queueReason}>{report.snippet}</p>
+                            <div className={styles.tagRow}>
+                              <ReasonTag reason={report.reason} />
+                              <span
+                                className={`${styles.tag} ${
+                                  report.status === "pending"
+                                    ? styles.tagPending
+                                    : styles.tagResolved
+                                }`}
+                              >
+                                {STATUS_LABELS[report.status]}
+                              </span>
+                            </div>
+                            <p className={styles.queueFooter}>
+                              {report.reporterUsername} → {report.reportedUser.username} ·{" "}
+                              {report.timeLabel}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </div>
-        </aside>
+        </div>
 
-        <section className={styles.detailPanel} aria-label="Chi tiết báo cáo">
-          <ReportDetail
-            report={selectedReport}
-            onDismiss={handleDismiss}
-            onDelete={handleDelete}
-          />
-        </section>
+        <div className={styles.detailCol}>
+          {!selected ? (
+            <div className={styles.detailEmpty}>
+              <FontAwesomeIcon icon={faMousePointer} className={styles.emptyIcon} />
+              <p className={styles.emptyTitle}>Chọn một báo cáo</p>
+              <p className={styles.emptyDesc}>Chi tiết và thao tác xử lý hiển thị tại đây.</p>
+            </div>
+          ) : (
+            <>
+              <header className={styles.detailHead}>
+                <h3 className={styles.detailTitle}>Chi tiết báo cáo #{selected.code}</h3>
+                <p className={styles.detailSub}>
+                  Báo cáo lúc {selected.reportedAt} ·{" "}
+                  <span
+                    className={`${styles.tag} ${
+                      selected.status === "pending" ? styles.tagPending : styles.tagResolved
+                    }`}
+                  >
+                    {STATUS_LABELS[selected.status]}
+                  </span>
+                </p>
+              </header>
+
+              <div className={styles.detailScroll}>
+                {selected.status === "resolved" ? (
+                  <div className={styles.resolutionBox}>
+                    <p className={styles.resolutionTitle}>Đã xử lý</p>
+                    <p className={styles.resolutionText}>
+                      {selected.resolution === "deleted"
+                        ? "Nội dung vi phạm đã được xóa."
+                        : "Báo cáo đã bỏ qua — nội dung được giữ nguyên."}
+                    </p>
+                  </div>
+                ) : null}
+
+                <div className={styles.userCard}>
+                  <div className={styles.userIdentity}>
+                    <span className={styles.userAvatar} aria-hidden>
+                      {selected.reportedUser.initial}
+                    </span>
+                    <div>
+                      <p className={styles.userName}>{selected.reportedUser.username}</p>
+                      <p className={styles.userMeta}>
+                        Tham gia: {selected.reportedUser.joinedAt}
+                      </p>
+                    </div>
+                  </div>
+                  <TrustScore score={selected.reportedUser.trustScore} />
+                </div>
+
+                <div className={styles.violationBox}>
+                  <p className={styles.violationLabel}>Nội dung vi phạm</p>
+                  <blockquote className={styles.violationQuote}>
+                    &ldquo;{selected.violatingContent}&rdquo;
+                  </blockquote>
+                  <div className={styles.reporterReason}>
+                    <p className={styles.reporterReasonLabel}>
+                      Lý do từ {selected.reporterUsername}:
+                    </p>
+                    <p>{selected.reporterReason}</p>
+                  </div>
+                </div>
+
+                <dl className={styles.metaGrid}>
+                  <div className={styles.metaItem}>
+                    <dt>Người báo cáo</dt>
+                    <dd>{selected.reporterUsername}</dd>
+                  </div>
+                  <div className={styles.metaItem}>
+                    <dt>Tài khoản bị báo cáo</dt>
+                    <dd>
+                      <Link to="/moderator/violations" className={styles.linkUser}>
+                        {selected.reportedUser.username}
+                      </Link>
+                    </dd>
+                  </div>
+                  <div className={styles.metaItem}>
+                    <dt>Mã báo cáo</dt>
+                    <dd>{selected.code}</dd>
+                  </div>
+                  <div className={styles.metaItem}>
+                    <dt>Lý do</dt>
+                    <dd>{REASON_META[selected.reason]?.label ?? selected.reason}</dd>
+                  </div>
+                </dl>
+              </div>
+
+              <footer className={styles.detailActions}>
+                {selected.status === "pending" ? (
+                  <>
+                    <Button look="outline" onClick={() => handleDismiss(selected.id)}>
+                      Bỏ qua báo cáo
+                    </Button>
+                    <Button onClick={() => handleDelete(selected.id)}>
+                      <FontAwesomeIcon icon={faTrash} />
+                      Xóa nội dung
+                    </Button>
+                  </>
+                ) : (
+                  <p className={styles.detailActionsMuted}>
+                    Báo cáo đã đóng. Chọn báo cáo khác trong hàng chờ.
+                  </p>
+                )}
+              </footer>
+            </>
+          )}
+        </div>
       </div>
-    </ModeratorPageShell>
+    </div>
   );
 }
 

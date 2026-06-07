@@ -19,6 +19,15 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Lọc lỗi promise từ extension/onboarding (chrome-extension://) — không phải lỗi SEHUB.
+      window.addEventListener("unhandledrejection", (event) => {
+        const detail = String(event.reason?.stack ?? event.reason ?? "");
+        if (/onboarding\.js|chrome-extension:/i.test(detail)) {
+          event.preventDefault();
+        }
+      });
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
