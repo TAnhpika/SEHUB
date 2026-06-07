@@ -1,59 +1,43 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheck,
-  faChevronLeft,
-  faChevronRight,
+  faClockRotateLeft,
+  faFilePdf,
+  faImage,
   faRotateRight,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import FilterDropdown from "@/common/FilterDropdown/FilterDropdown";
+import Pagination from "@/common/Pagination/Pagination";
 import { useToast } from "@/common/Toast/ToastProvider";
-import ModeratorBadge from "@/features/moderator/components/ModeratorBadge/ModeratorBadge";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import ModeratorToolbar from "@/features/moderator/components/ModeratorToolbar/ModeratorToolbar";
+import ContentPostDetailPanel from "@/features/moderator/content/components/ContentPostDetailPanel/ContentPostDetailPanel";
 import {
-  CATEGORY_OPTIONS,
-  CONTENT_QUEUE_MOCK,
   CONTENT_QUEUE_PAGE_SIZE,
   filterContentQueue,
   SORT_OPTIONS,
-  STATUS_META,
-  TYPE_META,
-  TYPE_TABS,
 } from "@/features/moderator/content/contentModerationData";
+import { useContentModerationItems } from "@/features/moderator/content/contentModerationStore";
 import styles from "./ContentModerationPage.module.css";
 
 const CONTENT_CRUMBS = [
   { label: "Trang chủ", to: "/home" },
   { label: "Kiểm duyệt", to: "/moderator/content" },
-  { label: "Duyệt nội dung" },
+  { label: "Duyệt bài viết" },
 ];
-
-function TypeBadge({ type }) {
-  const meta = TYPE_META[type];
-  return <ModeratorBadge label={meta.label} tone={meta.tone} />;
-}
-
-function StatusBadge() {
-  const meta = STATUS_META.pending;
-  return <ModeratorBadge label={meta.label} tone={meta.tone} dot />;
-}
 
 function ContentModerationPage() {
   const { showToast } = useToast();
-  const [items, setItems] = useState(CONTENT_QUEUE_MOCK);
-  const [preModeration, setPreModeration] = useState(true);
-  const [typeTab, setTypeTab] = useState("all");
-  const [category, setCategory] = useState("all");
+  const { items, approveItems, rejectItems, resetItems } = useContentModerationItems();
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(1);
-  const [selectedIds, setSelectedIds] = useState(() => new Set(["cq-1", "cq-2", "cq-3"]));
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [focusedId, setFocusedId] = useState(null);
 
-  const filtered = useMemo(
-    () => filterContentQueue(items, { query: "", typeTab, category, sort }),
-    [items, typeTab, category, sort],
-  );
+  const filtered = useMemo(() => filterContentQueue(items, { sort }), [items, sort]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / CONTENT_QUEUE_PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -63,29 +47,28 @@ function ContentModerationPage() {
     return filtered.slice(start, start + CONTENT_QUEUE_PAGE_SIZE);
   }, [filtered, safePage]);
 
+  const focusedItem = useMemo(
+    () => filtered.find((item) => item.id === focusedId) ?? null,
+    [filtered, focusedId],
+  );
+
   const pageIds = pageItems.map((item) => item.id);
   const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
   const somePageSelected = pageIds.some((id) => selectedIds.has(id));
   const selectedCount = selectedIds.size;
-  const showBulkBar = selectedCount > 0;
 
   const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * CONTENT_QUEUE_PAGE_SIZE + 1;
   const rangeEnd = Math.min(safePage * CONTENT_QUEUE_PAGE_SIZE, filtered.length);
 
-  const preModToggle = (
-    <label className={styles.preMod}>
-      <span className={styles.preModLabel}>Tiền kiểm duyệt (Pre-moderation)</span>
-      <input
-        type="checkbox"
-        className={styles.preModInput}
-        checked={preModeration}
-        onChange={(event) => setPreModeration(event.target.checked)}
-      />
-      <span className={styles.preModTrack} aria-hidden>
-        <span className={styles.preModThumb} />
-      </span>
-    </label>
-  );
+  useEffect(() => {
+    if (filtered.length === 0) {
+      setFocusedId(null);
+      return;
+    }
+    if (focusedId && !filtered.some((item) => item.id === focusedId)) {
+      setFocusedId(filtered[0]?.id ?? null);
+    }
+  }, [filtered, focusedId]);
 
   function handleFilterChange(setter) {
     return (value) => {
@@ -94,7 +77,8 @@ function ContentModerationPage() {
     };
   }
 
-  function toggleRow(id) {
+  function toggleRow(id, event) {
+    event.stopPropagation();
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -103,7 +87,8 @@ function ContentModerationPage() {
     });
   }
 
-  function togglePageRows() {
+  function togglePageRows(event) {
+    event.stopPropagation();
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (allPageSelected) {
@@ -115,85 +100,85 @@ function ContentModerationPage() {
     });
   }
 
-  function removeItems(ids) {
-    const idSet = new Set(ids);
-    setItems((prev) => prev.filter((item) => !idSet.has(item.id)));
+  function clearSelection(ids) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       ids.forEach((id) => next.delete(id));
       return next;
     });
+    if (focusedId && ids.includes(focusedId)) {
+      setFocusedId(null);
+    }
   }
 
   function handleApprove(ids) {
-    removeItems(ids);
-    showToast(`Đã duyệt ${ids.length} mục (mock).`);
+    approveItems(ids);
+    clearSelection(ids);
+    showToast(`Đã duyệt ${ids.length} bài viết. Xem tại Lịch sử duyệt bài.`);
   }
 
   function handleReject(ids) {
-    removeItems(ids);
-    showToast(`Đã từ chối ${ids.length} mục (mock).`);
+    rejectItems(ids);
+    clearSelection(ids);
+    showToast(`Đã từ chối ${ids.length} bài viết. Sinh viên có thể chỉnh sửa và gửi lại.`);
   }
 
   function handleRefresh() {
-    setItems(CONTENT_QUEUE_MOCK);
-    setSelectedIds(new Set(["cq-1", "cq-2", "cq-3"]));
+    resetItems();
+    setSelectedIds(new Set());
+    setFocusedId(null);
     setPage(1);
-    showToast("Đã làm mới hàng đợi duyệt.");
+    showToast("Đã làm mới dữ liệu duyệt bài viết.");
+  }
+
+  function focusItem(id) {
+    setFocusedId(id);
   }
 
   return (
     <ModeratorPageShell
-      title="Hàng đợi duyệt nội dung"
-      description="Quản lý và xét duyệt các bài viết, bình luận chờ xuất bản."
+      title="Hàng đợi duyệt bài viết"
+      description="Duyệt bài viết sinh viên gửi trước khi hiển thị trên cộng đồng. Bài Rejected có thể được gửi duyệt lại."
       crumbs={CONTENT_CRUMBS}
-      actions={preModToggle}
     >
       <section className={styles.card}>
-        <ModeratorToolbar
-          end={
-            <button type="button" className={styles.refreshBtn} onClick={handleRefresh}>
-              <FontAwesomeIcon icon={faRotateRight} />
-              Làm mới
-            </button>
-          }
-        >
-          <div className={styles.tabs} role="tablist" aria-label="Loại nội dung">
-            {TYPE_TABS.map((tab) => (
-              <button
-                key={tab.value}
-                type="button"
-                role="tab"
-                aria-selected={typeTab === tab.value}
-                className={`${styles.tab} ${typeTab === tab.value ? styles.tabActive : ""}`}
-                onClick={() => {
-                  setTypeTab(tab.value);
-                  setPage(1);
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          <span className={styles.divider} aria-hidden />
-          <FilterDropdown
-            options={CATEGORY_OPTIONS}
-            value={category}
-            onChange={handleFilterChange(setCategory)}
-            ariaLabel="Lọc chuyên mục"
-          />
-          <FilterDropdown
-            options={SORT_OPTIONS}
-            value={sort}
-            onChange={handleFilterChange(setSort)}
-            ariaLabel="Sắp xếp"
-          />
-        </ModeratorToolbar>
+        <div className={styles.toolbarBlock}>
+          <ModeratorToolbar
+            end={
+              <>
+                <Link to="/moderator/content/history" className={styles.historyLink}>
+                  <FontAwesomeIcon icon={faClockRotateLeft} />
+                  Lịch sử duyệt
+                </Link>
+                <button type="button" className={styles.refreshBtn} onClick={handleRefresh}>
+                  <FontAwesomeIcon icon={faRotateRight} />
+                  Làm mới
+                </button>
+              </>
+            }
+          >
+            <FilterDropdown
+              options={SORT_OPTIONS}
+              value={sort}
+              onChange={handleFilterChange(setSort)}
+              ariaLabel="Sắp xếp"
+            />
+          </ModeratorToolbar>
+        </div>
 
-        {showBulkBar && (
+        {selectedCount > 0 ? (
           <div className={styles.bulkBar}>
-            <p className={styles.bulkText}>Đã chọn {selectedCount} mục</p>
+            <p className={styles.bulkText}>
+              Đã chọn <strong>{selectedCount}</strong> bài viết
+            </p>
             <div className={styles.bulkActions}>
+              <button
+                type="button"
+                className={styles.bulkClear}
+                onClick={() => setSelectedIds(new Set())}
+              >
+                Bỏ chọn
+              </button>
               <button
                 type="button"
                 className={styles.bulkReject}
@@ -212,168 +197,140 @@ function ContentModerationPage() {
               </button>
             </div>
           </div>
-        )}
+        ) : null}
 
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th className={styles.colCheck}>
-                  <input
-                    type="checkbox"
-                    className={styles.checkbox}
-                    checked={allPageSelected}
-                    ref={(input) => {
-                      if (input) input.indeterminate = somePageSelected && !allPageSelected;
-                    }}
-                    onChange={togglePageRows}
-                    aria-label="Chọn tất cả trên trang"
-                  />
-                </th>
-                <th>Loại</th>
-                <th>Nội dung</th>
-                <th>Tác giả</th>
-                <th>Thời gian</th>
-                <th>Trạng thái</th>
-                <th>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageItems.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className={styles.empty}>
-                    Không có nội dung chờ duyệt phù hợp.
-                  </td>
-                </tr>
-              ) : (
-                pageItems.map((item) => {
-                  const isSelected = selectedIds.has(item.id);
-
-                  return (
-                    <tr key={item.id} className={isSelected ? styles.rowSelected : undefined}>
-                      <td className={styles.colCheck}>
-                        <input
-                          type="checkbox"
-                          className={styles.checkbox}
-                          checked={isSelected}
-                          onChange={() => toggleRow(item.id)}
-                          aria-label={`Chọn ${item.type === "post" ? "bài viết" : "bình luận"}`}
-                        />
-                      </td>
-                      <td>
-                        <TypeBadge type={item.type} />
-                      </td>
-                      <td>
-                        <div className={styles.contentCell}>
-                          {item.type === "post" && item.title ? (
-                            <p className={styles.contentTitle}>{item.title}</p>
-                          ) : null}
-                          <p
-                            className={
-                              item.type === "comment" ? styles.contentQuote : styles.contentExcerpt
-                            }
-                          >
-                            {item.type === "comment" ? `"${item.excerpt}"` : item.excerpt}
-                          </p>
-                          {item.parentLabel ? (
-                            <p className={styles.contentParent}>{item.parentLabel}</p>
-                          ) : null}
-                          {item.tags?.length ? (
-                            <div className={styles.tags}>
-                              {item.tags.map((tag) => (
-                                <span key={tag} className={styles.tag}>
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td>
-                        <div className={styles.author}>
-                          <div className={styles.avatar} aria-hidden>
-                            {item.authorInitial}
-                          </div>
-                          <div>
-                            <p className={styles.authorName}>{item.authorName}</p>
-                            <p className={styles.authorId}>{item.studentId}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={styles.time}>{item.timeLabel}</span>
-                      </td>
-                      <td>
-                        <StatusBadge />
-                      </td>
-                      <td>
-                        <div className={styles.rowActions}>
-                          <button
-                            type="button"
-                            className={styles.actionReject}
-                            aria-label="Từ chối"
-                            onClick={() => handleReject([item.id])}
-                          >
-                            <FontAwesomeIcon icon={faXmark} />
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.actionApprove}
-                            aria-label="Duyệt"
-                            onClick={() => handleApprove([item.id])}
-                          >
-                            <FontAwesomeIcon icon={faCheck} />
-                          </button>
-                        </div>
+        <div className={styles.workspace}>
+          <div className={styles.listCol}>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th className={styles.colCheck}>
+                      <input
+                        type="checkbox"
+                        className={styles.checkbox}
+                        checked={allPageSelected}
+                        ref={(input) => {
+                          if (input) input.indeterminate = somePageSelected && !allPageSelected;
+                        }}
+                        onChange={togglePageRows}
+                        aria-label="Chọn tất cả bài viết trên trang"
+                      />
+                    </th>
+                    <th>Tiêu đề / Nội dung</th>
+                    <th>Tác giả</th>
+                    <th>Thời gian</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className={styles.empty}>
+                        Không có bài viết chờ duyệt.{" "}
+                        <Link to="/moderator/content/history">Xem lịch sử duyệt</Link>
                       </td>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                  ) : (
+                    pageItems.map((item) => {
+                      const isSelected = selectedIds.has(item.id);
+                      const isFocused = focusedId === item.id;
 
-        <footer className={styles.footer}>
-          <p className={styles.summary}>
-            Hiển thị {rangeStart}-{rangeEnd} trên tổng số {filtered.length} mục
-          </p>
-          <div className={styles.pager}>
-            <button
-              type="button"
-              className={styles.pageArrow}
-              disabled={safePage <= 1}
-              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-              aria-label="Trang trước"
-            >
-              <FontAwesomeIcon icon={faChevronLeft} />
-            </button>
-            {Array.from({ length: Math.min(totalPages, 3) }, (_, index) => index + 1).map(
-              (pageNumber) => (
-                <button
-                  key={pageNumber}
-                  type="button"
-                  className={`${styles.pageNum} ${
-                    pageNumber === safePage ? styles.pageNumActive : ""
-                  }`}
-                  onClick={() => setPage(pageNumber)}
-                  aria-current={pageNumber === safePage ? "page" : undefined}
-                >
-                  {pageNumber}
-                </button>
-              ),
-            )}
-            <button
-              type="button"
-              className={styles.pageArrow}
-              disabled={safePage >= totalPages}
-              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-              aria-label="Trang sau"
-            >
-              <FontAwesomeIcon icon={faChevronRight} />
-            </button>
+                      return (
+                        <tr
+                          key={item.id}
+                          className={[
+                            isFocused ? styles.rowFocused : "",
+                            isSelected ? styles.rowSelected : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                          onClick={() => focusItem(item.id)}
+                        >
+                          <td className={styles.colCheck}>
+                            <input
+                              type="checkbox"
+                              className={styles.checkbox}
+                              checked={isSelected}
+                              onChange={(event) => toggleRow(item.id, event)}
+                              onClick={(event) => event.stopPropagation()}
+                              aria-label={`Chọn bài viết: ${item.title}`}
+                            />
+                          </td>
+                          <td>
+                            <div className={styles.contentCell}>
+                              <p className={styles.contentTitle}>{item.title}</p>
+                              <p className={styles.contentExcerpt}>{item.excerpt}</p>
+                              <div className={styles.contentHints}>
+                                {item.resubmission ? (
+                                  <span className={styles.contentHintResubmit}>Gửi lại</span>
+                                ) : null}
+                                {item.coverImage?.url ? (
+                                  <span className={styles.contentHint}>
+                                    <FontAwesomeIcon icon={faImage} />
+                                    Ảnh bìa
+                                  </span>
+                                ) : null}
+                                {item.inlineImages?.length ? (
+                                  <span className={styles.contentHint}>
+                                    <FontAwesomeIcon icon={faImage} />
+                                    {item.inlineImages.length} ảnh
+                                  </span>
+                                ) : null}
+                                {item.attachments?.length ? (
+                                  <span className={styles.contentHint}>
+                                    <FontAwesomeIcon icon={faFilePdf} />
+                                    {item.attachments.length} file
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <div className={styles.author}>
+                              <div className={styles.avatar} aria-hidden>
+                                {item.authorInitial}
+                              </div>
+                              <div>
+                                <p className={styles.authorName}>{item.authorName}</p>
+                                <p className={styles.authorId}>{item.studentId}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <span className={styles.time}>{item.timeLabel}</span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <footer className={styles.tableFooter}>
+              <p className={styles.summary}>
+                Hiển thị <strong>{rangeStart}–{rangeEnd}</strong> / {filtered.length} bài viết
+              </p>
+              <Pagination
+                currentPage={safePage}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                ariaLabel="Phân trang hàng đợi duyệt bài viết"
+                alwaysShow
+                flush
+              />
+            </footer>
           </div>
-        </footer>
+
+          <aside className={styles.detailCol} aria-label="Chi tiết bài viết">
+            <ContentPostDetailPanel
+              item={focusedItem}
+              mode="queue"
+              onApprove={(id) => handleApprove([id])}
+              onReject={(id) => handleReject([id])}
+            />
+          </aside>
+        </div>
       </section>
     </ModeratorPageShell>
   );
