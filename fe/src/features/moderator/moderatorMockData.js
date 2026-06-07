@@ -3,6 +3,8 @@
  * Đăng nhập bằng username hoặc email + mật khẩu bên dưới.
  */
 
+import { resolveIsPremium } from "@/utils/studentPlan";
+
 export const MODERATOR_TEST_ACCOUNTS = [
   {
     username: "mod_sehub",
@@ -191,13 +193,17 @@ export function findTestAccount(identifier, password) {
 
 export function toAuthUser(account) {
   const { password: _password, plan, ...user } = account;
-  return {
+  const normalized = {
     ...user,
     level: user.level ?? "Gold",
     points: user.points ?? 1280,
     streak: user.streak ?? 12,
     levelProgress: user.levelProgress ?? 82,
     pointsToNext: user.pointsToNext ?? 120,
-    isPremium: plan === "Premium" || user.role === "admin" || user.role === "moderator",
+    plan: plan ?? user.plan,
+  };
+  return {
+    ...normalized,
+    isPremium: resolveIsPremium(normalized),
   };
 }
