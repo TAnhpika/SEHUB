@@ -73,9 +73,9 @@ const PANEL_COPY = {
   register: {
     headline: (
       <>
-        Bắt đầu hành trình
+        Bắt đầu
         <br />
-        của bạn!
+        hành trình của bạn!
       </>
     ),
     desc: "Tạo tài khoản để khám phá kho đề thi khổng lồ và kết nối với cộng đồng sinh viên FPT thông minh.",
@@ -98,8 +98,13 @@ const PANEL_COPY = {
  */
 function AuthBrandPanel({ variant = "login" }) {
   const copy = PANEL_COPY[variant] ?? PANEL_COPY.login;
-  const panelClassName =
-    variant === "forgot-password" ? `${styles.panel} ${styles["panel-spread"]}` : styles.panel;
+  const panelClassName = [
+    styles.panel,
+    variant === "forgot-password" && styles["panel-spread"],
+    variant === "register" && styles["panel-compact"],
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <aside className={panelClassName} aria-label="Giới thiệu SEHub">
