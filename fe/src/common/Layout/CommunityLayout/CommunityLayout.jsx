@@ -1,17 +1,21 @@
 import { Outlet, useMatch } from "react-router-dom";
 import GuestHeader from "@/common/Header/GuestHeader/GuestHeader";
+import MainHeader from "@/common/Header/MainHeader/MainHeader";
 import FeedSidebar from "@/common/Sidebar/FeedSidebar/FeedSidebar";
+import MainSidebar from "@/common/Sidebar/MainSidebar/MainSidebar";
 import CommunitySidebar from "@/common/Sidebar/CommunitySidebar/CommunitySidebar";
 import Footer from "@/common/Footer/Footer";
+import ChatFab from "@/features/chat/ChatFab/ChatFab";
+import { useAuth } from "@/context";
 import styles from "./CommunityLayout.module.css";
 
 function CommunityLayout() {
+  const { isAuthenticated } = useAuth();
   const isFeedHome = useMatch({ path: "/community", end: true });
   const showStudentShell = isAuthenticated && !isFeedHome;
 
   const workspaceClass = [
     styles.workspace,
-    isFeedHome && styles["workspace-feed"],
     showStudentShell && styles["workspace-auth"],
     !showStudentShell && isFeedHome && styles["workspace-feed"],
   ]
@@ -20,11 +24,6 @@ function CommunityLayout() {
 
   return (
     <div className={styles.layout}>
-      <GuestHeader />
-
-      <div className={workspaceClass}>
-        <div className={styles["col-left"]}>
-          <FeedSidebar />
       {showStudentShell ? <MainHeader /> : <GuestHeader />}
 
       <div className={workspaceClass}>

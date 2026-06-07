@@ -16,7 +16,7 @@ import styles from "./MainHeader.module.css";
 
 function MainHeader() {
   const navigate = useNavigate();
-  const { user, logout, isAdmin, isModerator } = useAuth();
+  const { user, logout, isAdmin, isModerator, isPremium } = useAuth();
   const brandTo = isAdmin ? "/admin" : "/home";
 
   const displayName = user?.displayName ?? "Anhpika";
