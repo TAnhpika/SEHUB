@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faEnvelope,
@@ -12,12 +12,13 @@ import {
 import { useToast } from "@/common/Toast/ToastProvider";
 import googleGSrc from "@/img/google-g.png";
 import { useAuth } from "@/context";
+import { getGoogleClientId, requestGoogleIdToken } from "@/utils/googleAuth";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import styles from "./RegisterPage.module.css";
 
 function RegisterPage() {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register, googleLogin, isAuthenticated } = useAuth();
   const { showToast } = useToast();
 
   const [fullName, setFullName] = useState("");
@@ -27,7 +28,11 @@ function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event) {
+  if (isAuthenticated) {
+    return <Navigate to="/home" replace />;
+  }
+
+  async function handleSubmit(event) {
     event.preventDefault();
 
     if (password !== confirmPassword) {
@@ -35,19 +40,41 @@ function RegisterPage() {
       return;
     }
 
-    if (password.length < 6) {
-      showToast("Mật khẩu phải có ít nhất 6 ký tự.");
+    if (password.length < 8) {
+      showToast("Mật khẩu phải có ít nhất 8 ký tự.");
+      return;
+    }
+
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+      showToast("Mật khẩu cần có chữ hoa, chữ thường, số và ký tự đặc biệt.");
       return;
     }
 
     setIsSubmitting(true);
-    register({ fullName: fullName.trim(), email: email.trim(), password });
-    navigate("/home", { replace: true });
+
+    try {
+      await register({ fullName: fullName.trim(), email: email.trim(), password });
+      navigate("/home", { replace: true });
+    } catch (error) {
+      showToast(error?.message ?? "Đăng ký thất bại.");
+      setIsSubmitting(false);
+    }
   }
 
-  function handleGoogleSignup() {
-    register({ fullName: "Google User", email: "google_user@sehub.ai", password: "" });
-    navigate("/home", { replace: true });
+  async function handleGoogleSignup() {
+    if (!getGoogleClientId()) {
+      showToast("Chưa cấu hình Google Client ID (VITE_GOOGLE_CLIENT_ID).");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await googleLogin(await requestGoogleIdToken());
+      navigate("/home", { replace: true });
+    } catch (error) {
+      showToast(error?.message ?? "Đăng ký Google thất bại.");
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -112,7 +139,7 @@ function RegisterPage() {
                     placeholder="••••••••"
                     autoComplete="new-password"
                     required
-                    minLength={6}
+                    minLength={8}
                   />
                   <button
                     type="button"
@@ -137,7 +164,7 @@ function RegisterPage() {
                     placeholder="••••••••"
                     autoComplete="new-password"
                     required
-                    minLength={6}
+                    minLength={8}
                   />
                 </span>
               </label>
