@@ -159,3 +159,23 @@ export function toAuthUser(account) {
     isPremium: false,
   };
 }
+
+export const FINAL_EXAM_INFO_MOCK = {
+  subjectCode: "PRF192",
+  subjectName: "Lập trình Front-end",
+  semesterLabel: "Học kỳ 5",
+  examCode: "FE-2024-01",
+  durationMinutes: 60,
+  totalQuestions: 30,
+};
+
+export function buildFinalExamQuestionsMock() {
+  return Array.from({ length: FINAL_EXAM_INFO_MOCK.totalQuestions }, (_, index) => ({
+    id: index + 1,
+    content: "",
+    answers: { A: "", B: "", C: "", D: "" },
+    correctAnswer: "A",
+    explanation: "",
+    showExplanation: false,
+  }));
+}

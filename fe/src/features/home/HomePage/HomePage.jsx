@@ -22,7 +22,7 @@ function HomePage() {
   const [editOnOpen, setEditOnOpen] = useState(false);
   const [semesterFilter, setSemesterFilter] = useState("all");
   const [majorFilter, setMajorFilter] = useState("all");
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isPremium } = useAuth();
   const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
 
   if (isAdmin) {
