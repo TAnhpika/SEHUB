@@ -1,4 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChevronDown,
@@ -16,8 +17,20 @@ import styles from "./MainHeader.module.css";
 
 function MainHeader() {
   const navigate = useNavigate();
-  const { user, logout, isAdmin, isModerator } = useAuth();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const { user, logout, isAdmin, isModerator, isPremium } = useAuth();
   const brandTo = isAdmin ? "/admin" : "/home";
+  const isSearchPage = location.pathname === "/home/search";
+  const [searchQuery, setSearchQuery] = useState(() =>
+    isSearchPage ? (searchParams.get("q") ?? "") : "",
+  );
+
+  useEffect(() => {
+    if (isSearchPage) {
+      setSearchQuery(searchParams.get("q") ?? "");
+    }
+  }, [isSearchPage, searchParams]);
 
   const displayName = user?.displayName ?? "Anhpika";
   const initial = user?.initial ?? displayName.charAt(0).toUpperCase();
@@ -27,6 +40,14 @@ function MainHeader() {
   function handleLogout() {
     logout();
     navigate("/");
+  }
+
+  function handleSearchSubmit(event) {
+    event.preventDefault();
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return;
+
+    navigate(`/home/search?q=${encodeURIComponent(trimmed)}`);
   }
 
   return (
@@ -43,7 +64,7 @@ function MainHeader() {
           <span className={styles["brand-text"]}>SEHub</span>
         </Link>
 
-        <div className={styles["search-wrap"]}>
+        <form className={styles["search-wrap"]} onSubmit={handleSearchSubmit}>
           <div className={styles.search}>
             <FontAwesomeIcon icon={faMagnifyingGlass} className={styles["search-icon"]} />
             <input
@@ -51,9 +72,11 @@ function MainHeader() {
               className={styles["search-input"]}
               placeholder="Tìm kiếm..."
               aria-label="Tìm kiếm"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
             />
           </div>
-        </div>
+        </form>
 
         <div className={styles.actions}>
           <NotificationDropdown unreadCount={unreadCount} />
