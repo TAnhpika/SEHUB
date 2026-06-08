@@ -9,9 +9,9 @@ import {
   faHouse,
   faMagnifyingGlass,
   faRightFromBracket,
-  faShieldHalved,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
+import WorkspaceSwitcher from "@/common/WorkspaceSwitcher/WorkspaceSwitcher";
 import { useAuth } from "@/context";
 import { useModeratorPage } from "@/features/moderator/context/ModeratorPageContext";
 import {
@@ -23,7 +23,7 @@ import styles from "./ModeratorHeader.module.css";
 function ModeratorHeader() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout } = useAuth();
   const { setSidebarOpen } = useModeratorPage();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -131,28 +131,12 @@ function ModeratorHeader() {
                   </span>
                   Xử lý báo cáo
                 </Link>
-                {isAdmin ? (
-                  <Link
-                    to="/admin"
-                    className={styles.menuItem}
-                    role="menuitem"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    <span className={styles.menuIcon}>
-                      <FontAwesomeIcon icon={faShieldHalved} />
-                    </span>
-                    Khu vực Admin
-                  </Link>
-                ) : null}
-                <Link
-                  to="/home"
-                  className={styles.menuItem}
-                  role="menuitem"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <span className={styles.menuIcon}>↗</span>
-                  Trang sinh viên
-                </Link>
+                <div className={styles.menuWorkspace}>
+                  <WorkspaceSwitcher
+                    variant="menu-compact"
+                    onNavigate={() => setMenuOpen(false)}
+                  />
+                </div>
                 <div className={styles.menuDivider} />
                 <button
                   type="button"
