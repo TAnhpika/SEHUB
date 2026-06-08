@@ -56,7 +56,7 @@
   --layout-gutter: 1.25rem;
   --header-height: 72px;
   /* Sidebar trái cố định, nội dung chiếm phần còn lại */
-  --feed-sidebar-fixed: 220px;
+  --feed-sidebar-fixed: 200px;
   --feed-sidebar-width: var(--feed-sidebar-fixed);
   --feed-main-width: minmax(0, 1fr);
   --color-feed-bg: #eef2f7;
