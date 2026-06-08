@@ -9,6 +9,11 @@ export const REASON_META = {
   harmful: { label: "Nội dung độc hại", tone: "muted" },
   harassment: { label: "Quấy rối", tone: "danger" },
   misinformation: { label: "Thông tin sai", tone: "muted" },
+  wrong_answer: { label: "Đáp án sai", tone: "danger" },
+  wrong_question: { label: "Câu hỏi sai", tone: "danger" },
+  typo: { label: "Lỗi format", tone: "muted" },
+  duplicate: { label: "Trùng câu", tone: "muted" },
+  other: { label: "Khác", tone: "muted" },
 };
 
 export const REPORTS_MOCK = [

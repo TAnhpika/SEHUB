@@ -1,25 +1,68 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHeart, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
-import { MOCK_EXAM_COMMENTS } from "@/features/exams/examCommentsData";
+import { useAuth } from "@/context";
+import { useToast } from "@/common/Toast/ToastProvider";
+import {
+  addExamComment,
+  getExamComments,
+  toggleExamCommentLike,
+} from "@/features/exams/examCommentsStore";
 import styles from "./ExamCommentsPanel.module.css";
 
-function ExamCommentsPanel({ locked = false }) {
+function ExamCommentsPanel({ locked = false, reason = "premium", examId, questionId }) {
+  const { user } = useAuth();
+  const { showToast } = useToast();
   const [draft, setDraft] = useState("");
+  const [comments, setComments] = useState([]);
+
+  useEffect(() => {
+    if (locked || !examId || questionId == null) return;
+    setComments(getExamComments(examId, questionId));
+  }, [locked, examId, questionId]);
 
   if (locked) {
     return (
       <aside className={styles.locked} aria-label="Bình luận — Premium">
         <h3 className={styles.title}>Bình luận</h3>
         <p className={styles["locked-text"]}>
-          Đăng nhập và nâng cấp Premium để thảo luận trực tiếp dưới từng câu hỏi.
+          {reason === "guest"
+            ? "Đăng nhập và nâng cấp Premium để thảo luận trực tiếp dưới từng câu hỏi (§3.3)."
+            : "Bình luận câu hỏi chỉ dành cho tài khoản Premium (§2.3)."}
         </p>
-        <Link to="/home/premium" className={styles.cta}>
-          Xem gói Premium
+        <Link to={reason === "guest" ? "/login" : "/home/premium"} className={styles.cta}>
+          {reason === "guest" ? "Đăng nhập" : "Xem gói Premium"}
         </Link>
       </aside>
     );
+  }
+
+  function handleSend() {
+    const trimmed = draft.trim();
+    if (!trimmed) {
+      showToast("Vui lòng nhập nội dung bình luận.");
+      return;
+    }
+
+    const comment = addExamComment(examId, questionId, user, trimmed);
+    if (!comment) return;
+
+    setComments(getExamComments(examId, questionId));
+    setDraft("");
+    showToast("Đã đăng bình luận.");
+  }
+
+  function handleLike(commentId) {
+    toggleExamCommentLike(examId, questionId, commentId, user?.username);
+    setComments(getExamComments(examId, questionId));
+  }
+
+  function handleKeyDown(event) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      handleSend();
+    }
   }
 
   return (
@@ -27,15 +70,12 @@ function ExamCommentsPanel({ locked = false }) {
       <header className={styles.header}>
         <div className={styles["title-row"]}>
           <h3 className={styles.title}>Bình luận</h3>
-          <span className={styles.count}>{MOCK_EXAM_COMMENTS.length}</span>
+          <span className={styles.count}>{comments.length}</span>
         </div>
-        <button type="button" className={styles["view-all"]}>
-          Xem tất cả
-        </button>
       </header>
 
       <ul className={styles.list}>
-        {MOCK_EXAM_COMMENTS.map((comment) => (
+        {comments.map((comment) => (
           <li
             key={comment.id}
             className={`${styles.item} ${comment.highlighted ? styles["item-highlight"] : ""}`}
@@ -55,12 +95,13 @@ function ExamCommentsPanel({ locked = false }) {
             </div>
             <p className={styles.content}>{comment.content}</p>
             <div className={styles.actions}>
-              <button type="button" className={styles.like}>
+              <button
+                type="button"
+                className={`${styles.like} ${comment.likedByMe ? styles["like-active"] : ""}`}
+                onClick={() => handleLike(comment.id)}
+              >
                 <FontAwesomeIcon icon={faHeart} />
                 {comment.likes}
-              </button>
-              <button type="button" className={styles.reply}>
-                Trả lời
               </button>
             </div>
           </li>
@@ -74,8 +115,15 @@ function ExamCommentsPanel({ locked = false }) {
           placeholder="Viết bình luận của bạn..."
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={handleKeyDown}
         />
-        <button type="button" className={styles.send} aria-label="Gửi bình luận">
+        <button
+          type="button"
+          className={styles.send}
+          onClick={handleSend}
+          disabled={!draft.trim()}
+          aria-label="Gửi bình luận"
+        >
           <FontAwesomeIcon icon={faPaperPlane} />
         </button>
       </div>
