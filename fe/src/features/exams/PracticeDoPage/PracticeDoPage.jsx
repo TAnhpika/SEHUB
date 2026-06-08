@@ -6,6 +6,7 @@ import {
   faClock,
   faCloudArrowUp,
   faFile,
+  faLaptopCode,
   faPaperPlane,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
@@ -20,7 +21,6 @@ import {
   formatFileSize,
   getOrCreatePracticeSession,
   getPracticeSession,
-  getPracticeTimeRemaining,
   isValidGithubUrl,
   PRACTICE_DURATION_MS,
   savePracticeSubmission,
@@ -32,8 +32,7 @@ import {
 } from "@/features/subjects/SubjectDetailPage/subjectDetailData";
 import {
   getExamDetailPath,
-  getPracticeFocusResultPath,
-  isExamFocusPath,
+  getPracticeResultPath,
   resolveExamScope,
 } from "@/utils/examFocusPaths";
 import styles from "./PracticeDoPage.module.css";
@@ -48,12 +47,7 @@ function PracticeDoPage() {
   const { pathname, state: locationState } = useLocation();
   const { showToast } = useToast();
   const fileInputRef = useRef(null);
-  const isFocusMode = isExamFocusPath(pathname);
-  const scope = isFocusMode
-    ? resolveExamScope(pathname, locationState)
-    : pathname.startsWith("/home/")
-      ? "home"
-      : "community";
+  const scope = resolveExamScope(pathname, locationState);
   const config = getSubjectDetailConfig("practice", scope);
   const decodedExamId = decodeURIComponent(examId ?? "");
   const questionNumber = Math.max(1, Number(questionIndex) || 1);
@@ -86,16 +80,19 @@ function PracticeDoPage() {
   const detailPath = exam
     ? getExamDetailPath(exam.courseCode, exam.id, scope, "practice")
     : config.detailBase;
-  const resultPath = isFocusMode
-    ? getPracticeFocusResultPath(exam?.courseCode ?? courseCode ?? "", exam?.id ?? decodedExamId, questionNumber)
-    : `${detailPath}/result/${questionNumber}`;
+  const resultPath = getPracticeResultPath(
+    exam?.courseCode ?? courseCode ?? "",
+    exam?.id ?? decodedExamId,
+    questionNumber,
+    scope,
+  );
 
   useEffect(() => {
     if (!exam || !question) return;
 
     const existing = getPracticeSession(exam.id, question.id);
     if (existing?.submitted) {
-      navigate(resultPath, { replace: true, state: isFocusMode ? { scope } : undefined });
+      navigate(resultPath, { replace: true });
       return;
     }
 
@@ -113,7 +110,7 @@ function PracticeDoPage() {
         sizeLabel: session.submission.fileSizeLabel,
       });
     }
-  }, [exam, question, resultPath, navigate, isFocusMode, scope]);
+  }, [exam, question, resultPath, navigate]);
 
   useEffect(() => {
     if (!sessionReady) return;
@@ -125,18 +122,6 @@ function PracticeDoPage() {
       document.title = "SEHUB";
     };
   }, [sessionReady, exam, questionNumber]);
-
-  useEffect(() => {
-    if (!sessionReady || !isFocusMode) return;
-
-    function handleBeforeUnload(event) {
-      event.preventDefault();
-      event.returnValue = "";
-    }
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [sessionReady, isFocusMode]);
 
   useEffect(() => {
     if (!sessionReady) return;
@@ -238,46 +223,8 @@ function PracticeDoPage() {
 
     submitPracticeSession(exam.id, question.id, question, submission);
     showToast("Đã nộp bài thành công.");
-    navigate(resultPath, isFocusMode ? { state: { scope } } : undefined);
+    navigate(resultPath);
   }
-
-  function handleExitFocus() {
-    const hasProgress = hasValidFile || hasValidGithub;
-    const message = hasProgress
-      ? "Tiến độ đã lưu tạm. Thoát màn làm bài và quay lại xem đề?"
-      : "Thoát màn làm bài và quay lại xem đề?";
-    if (!window.confirm(message)) return;
-    navigate(detailPath);
-  }
-
-  const exitControl = isFocusMode ? (
-    <button type="button" className={styles.back} onClick={handleExitFocus}>
-      <FontAwesomeIcon icon={faArrowLeft} />
-      Thoát bài thi
-    </button>
-  ) : (
-    <Link to={detailPath} className={styles.back}>
-      <FontAwesomeIcon icon={faArrowLeft} />
-      Quay lại đề thi
-    </Link>
-  );
-
-  const submitButton = isFocusMode ? (
-    <button
-      type="button"
-      className={styles["submit-btn"]}
-      onClick={handleSubmit}
-      disabled={!canSubmit}
-    >
-      <FontAwesomeIcon icon={faPaperPlane} />
-      Nộp bài
-    </button>
-  ) : (
-    <Button size="sm" onClick={handleSubmit} disabled={!canSubmit}>
-      <FontAwesomeIcon icon={faPaperPlane} />
-      Nộp bài
-    </Button>
-  );
 
   const timerClassName = [
     styles.timer,
@@ -288,49 +235,39 @@ function PracticeDoPage() {
     .join(" ");
 
   return (
-    <div className={`${styles.page} ${isFocusMode ? styles.pageFocus : ""}`}>
-      {!isFocusMode && exitControl}
+    <div className={styles.page}>
+      <Link to={detailPath} className={styles.back}>
+        <FontAwesomeIcon icon={faArrowLeft} />
+        Quay lại đề thi
+      </Link>
 
-      <section
-        className={`${styles.panel} ${isFocusMode ? styles["panel-focus"] : ""}`}
-        aria-label="Làm bài thực hành"
-      >
-        {isFocusMode ? (
-          <header className={styles["focus-toolbar"]}>
-            {exitControl}
-            <div className={styles["focus-meta"]}>
-              <span>
-                <strong>{exam.id}</strong>
-              </span>
-              <span>
-                Bài {questionNumber}/{exam.questionCount}
-              </span>
-              <span className={timerClassName} aria-live="polite">
-                <FontAwesomeIcon icon={faClock} />
-                {displayTime}
-              </span>
-            </div>
-            {submitButton}
-          </header>
-        ) : (
-          <header className={styles.header}>
-            <div className={styles["header-main"]}>
-              <h1 className={styles["exam-code"]}>{exam.id}</h1>
-              <p className={styles.meta}>
-                Bài thực hành {questionNumber} / {exam.questionCount} · Thời gian mỗi bài:{" "}
-                {PRACTICE_DURATION_MINUTES} phút
-              </p>
-            </div>
+      <p className={styles["external-notice"]}>
+        <FontAwesomeIcon icon={faLaptopCode} className={styles["external-notice-icon"]} />
+        Làm bài trên IDE/editor bên ngoài (VS Code, IntelliJ…). Bạn có thể rời SEHUB và quay lại
+        trang này để nộp file hoặc link GitHub.
+      </p>
 
-            <div className={styles["header-actions"]}>
-              <span className={timerClassName} aria-live="polite">
-                <FontAwesomeIcon icon={faClock} />
-                {isExpired ? "Hết giờ" : formatDuration(getPracticeTimeRemaining({ startedAt }))}
-              </span>
-              {submitButton}
-            </div>
-          </header>
-        )}
+      <section className={styles.panel} aria-label="Làm bài thực hành">
+        <header className={styles.header}>
+          <div className={styles["header-main"]}>
+            <h1 className={styles["exam-code"]}>{exam.id}</h1>
+            <p className={styles.meta}>
+              Bài thực hành {questionNumber} / {exam.questionCount} · Thời gian mỗi bài:{" "}
+              {PRACTICE_DURATION_MINUTES} phút
+            </p>
+          </div>
+
+          <div className={styles["header-actions"]}>
+            <span className={timerClassName} aria-live="polite">
+              <FontAwesomeIcon icon={faClock} />
+              {isExpired ? "Hết giờ" : displayTime}
+            </span>
+            <Button size="sm" onClick={handleSubmit} disabled={!canSubmit}>
+              <FontAwesomeIcon icon={faPaperPlane} />
+              Nộp bài
+            </Button>
+          </div>
+        </header>
 
         <div className={styles.body}>
           <article className={styles.question}>
@@ -338,12 +275,13 @@ function PracticeDoPage() {
             <p className={styles["question-text"]}>{question.text}</p>
 
             {practiceBrief ? (
-              <PracticeBriefPanel brief={practiceBrief} canDownload enlarged={isFocusMode} />
+              <PracticeBriefPanel brief={practiceBrief} canDownload />
             ) : null}
 
             <p className={styles.hint}>
-              Tải đề PDF/ảnh/file ở trên về máy để làm offline. Nộp bài hoàn thành bằng file hoặc
-              link GitHub public repo trong vòng {PRACTICE_DURATION_MINUTES} phút.
+              Tải đề PDF/ảnh/file ở trên về máy, triển khai trên môi trường local hoặc IDE của
+              bạn. Nộp bài hoàn thành bằng file hoặc link GitHub public repo trong vòng{" "}
+              {PRACTICE_DURATION_MINUTES} phút.
             </p>
           </article>
 
