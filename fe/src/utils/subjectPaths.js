@@ -18,6 +18,15 @@ export function getSubjectScopeFromPath(pathname) {
   return pathname.startsWith("/home/") ? "home" : "community";
 }
 
+const HOME_SUBJECT_PREFIXES = ["/home/final-exam", "/home/pratical-exam", "/home/documents"];
+
+/** @param {string} pathname */
+export function isHomeSubjectArea(pathname) {
+  return HOME_SUBJECT_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
 /**
  * @param {"community" | "home"} [scope="community"]
  */

@@ -1,12 +1,15 @@
-import { Outlet, useMatch } from "react-router-dom";
+import { Outlet, useMatch, useLocation } from "react-router-dom";
 import MainHeader from "@/common/Header/MainHeader/MainHeader";
 import MainSidebar from "@/common/Sidebar/MainSidebar/MainSidebar";
 import HomeSidebar from "@/common/Sidebar/HomeSidebar/HomeSidebar";
 import Footer from "@/common/Footer/Footer";
 import ChatFab from "@/features/chat/ChatFab/ChatFab";
+import { isHomeSubjectArea } from "@/utils/subjectPaths";
 import styles from "./MainLayout.module.css";
 
 function MainLayout() {
+  const { pathname } = useLocation();
+  const isSubjectArea = isHomeSubjectArea(pathname);
   const isFriendsArea = useMatch({ path: "/home/friends", end: false });
   const isFriendProfilePage = useMatch("/home/friends/:username");
   const isProfilePage = useMatch({ path: "/profile/:username", end: true });
@@ -20,6 +23,7 @@ function MainLayout() {
   const isPostDetailPage = useMatch("/home/posts/:postId");
   const isSearchPage = useMatch("/home/search");
   const hideRightSidebar =
+    isSubjectArea ||
     isSearchPage ||
     isFriendsArea ||
     isProfilePage ||
@@ -29,8 +33,7 @@ function MainLayout() {
     isMessagesPage ||
     isPremiumPage ||
     isCheckoutPage ||
-    isPaymentSuccessPage ||
-    isPostDetailPage;
+    isPaymentSuccessPage;
 
   return (
     <div className={styles.layout}>

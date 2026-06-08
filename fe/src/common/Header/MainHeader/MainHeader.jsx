@@ -34,8 +34,6 @@ function MainHeader() {
 
   const displayName = user?.displayName ?? "Anhpika";
   const initial = user?.initial ?? displayName.charAt(0).toUpperCase();
-  const unreadCount = user?.unreadNotifications ?? 7;
-  const streakCount = user?.streak ?? 7;
 
   function handleLogout() {
     logout();
@@ -79,9 +77,9 @@ function MainHeader() {
         </form>
 
         <div className={styles.actions}>
-          <NotificationDropdown unreadCount={unreadCount} />
+          <NotificationDropdown />
 
-          <StreakDropdown streakCount={streakCount} />
+          <StreakDropdown />
 
           <div className={styles.profile}>
             <button type="button" className={styles["profile-trigger"]} aria-haspopup="menu">

@@ -9,6 +9,8 @@ import {
   setAccessToken,
   setRefreshToken,
 } from "@/api/httpClient";
+import { resolveIsPremium, STUDENT_PLAN } from "@/utils/studentPlan";
+import { consumeAiExplainTokens, getAiTokenSnapshot } from "@/utils/aiTokens";
 import { AuthContext } from "./authContextValue";
 
 const STORAGE_KEY = "sehubs_user";
@@ -43,12 +45,41 @@ function purgeLegacyMockSession() {
 
 purgeLegacyMockSession();
 
-function readStoredUser() {
+function enrichUser(stored) {
+  if (!stored) return null;
+
+  const plan =
+    stored.plan ??
+    (stored.isPremium ? STUDENT_PLAN.PREMIUM : STUDENT_PLAN.FREE);
+  const merged = { ...stored, plan };
+
+  return {
+    ...merged,
+    isPremium: resolveIsPremium(merged) || Boolean(stored.isPremium),
+  };
+}
+
+function mapAndEnrichUser(dto) {
+  return enrichUser(mapApiUser(dto));
+}
+
+export function readStoredUser() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    return raw ? enrichUser(JSON.parse(raw)) : null;
   } catch {
     return null;
+  }
+}
+
+export function hasStoredSession() {
+  try {
+    const token = getAccessToken();
+    return Boolean(
+      token && token !== "mock-jwt-token" && localStorage.getItem(STORAGE_KEY),
+    );
+  } catch {
+    return false;
   }
 }
 
@@ -61,7 +92,7 @@ function persistUser(user) {
 }
 
 function applyAuthSession(setUser, setIsBootstrapping, loginResponse) {
-  const nextUser = mapApiUser(loginResponse.user);
+  const nextUser = mapAndEnrichUser(loginResponse.user);
   setAccessToken(loginResponse.accessToken);
   setRefreshToken(loginResponse.refreshToken ?? null);
   persistUser(nextUser);
@@ -75,6 +106,7 @@ function clearAuthSession(setUser) {
   persistUser(null);
   setUser(null);
 }
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     if (!getAccessToken()) {
@@ -84,6 +116,7 @@ export function AuthProvider({ children }) {
     return readStoredUser();
   });
   const [isBootstrapping, setIsBootstrapping] = useState(() => Boolean(getAccessToken()));
+  const [aiTokenVersion, setAiTokenVersion] = useState(0);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -100,7 +133,7 @@ export function AuthProvider({ children }) {
       try {
         const me = await authApi.getMe();
         if (cancelled) return;
-        const nextUser = mapApiUser(me);
+        const nextUser = mapAndEnrichUser(me);
         persistUser(nextUser);
         setUser(nextUser);
       } catch {
@@ -110,7 +143,7 @@ export function AuthProvider({ children }) {
             const refreshed = await refreshSession();
             if (cancelled) return;
             const me = await authApi.getMe();
-            const nextUser = mapApiUser(me ?? refreshed.user);
+            const nextUser = mapAndEnrichUser(me ?? refreshed.user);
             persistUser(nextUser);
             setUser(nextUser);
             return;
@@ -175,30 +208,55 @@ export function AuthProvider({ children }) {
 
   const activatePremium = useCallback(() => {
     setUser((prev) => {
-      if (!prev || prev.isPremium) {
+      if (!prev || resolveIsPremium(prev)) {
         return prev;
       }
-      const next = { ...prev, isPremium: true };
+      const next = enrichUser({
+        ...prev,
+        plan: STUDENT_PLAN.PREMIUM,
+        isPremium: true,
+      });
       persistUser(next);
       return next;
     });
   }, []);
+
+  const spendAiExplainTokens = useCallback(() => {
+    if (!user) return { ok: false, snapshot: getAiTokenSnapshot(null) };
+    const result = consumeAiExplainTokens(user);
+    if (result.ok) {
+      setAiTokenVersion((version) => version + 1);
+    }
+    return result;
+  }, [user]);
 
   const value = useMemo(
     () => ({
       user,
       isAuthenticated: Boolean(user),
       isBootstrapping,
-      isPremium: Boolean(user?.isPremium),
+      isPremium: resolveIsPremium(user),
       isAdmin: user?.role === "admin",
       isModerator: user?.role === "moderator" || user?.role === "admin",
+      aiTokens: getAiTokenSnapshot(user),
+      spendAiExplainTokens,
       login,
       register,
       googleLogin,
       logout,
       activatePremium,
     }),
-    [user, isBootstrapping, login, register, googleLogin, logout, activatePremium],
+    [
+      user,
+      isBootstrapping,
+      aiTokenVersion,
+      spendAiExplainTokens,
+      login,
+      register,
+      googleLogin,
+      logout,
+      activatePremium,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -13,8 +13,11 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import PricingModal from "@/features/landing/PricingModal/PricingModal";
+import { getPlanById } from "@/features/landing/PricingModal/pricingData";
 import logoSrc from "@/img/logo.png";
 import styles from "./LandingPage.module.css";
+
+const SEMESTER_PLAN = getPlanById("semester");
 
 const FEATURES = [
   {
@@ -192,7 +195,9 @@ function LandingPage() {
             <div className={styles["premium-side"]}>
               <div className={styles["premium-tags"]}>
                 <span className={styles["tag-outline"]}>Từ 49K/tháng</span>
-                <span className={styles["tag-filled"]}>Tiết kiệm 20% gói 6 tháng</span>
+                <span className={styles["tag-filled"]}>
+                  {SEMESTER_PLAN.savings} — {SEMESTER_PLAN.name}
+                </span>
               </div>
               <Button className={styles["premium-btn"]} onClick={() => setPricingOpen(true)}>
                 Xem gói ngay

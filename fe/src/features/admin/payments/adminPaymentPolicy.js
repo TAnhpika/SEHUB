@@ -31,7 +31,7 @@ export const PREMIUM_PLANS = [
   },
   {
     id: "semester",
-    label: "8 tháng (1 học kỳ)",
+    label: "2 học kỳ (8 tháng)",
     durationLabel: "240 ngày",
     days: 240,
     amount: 280000,

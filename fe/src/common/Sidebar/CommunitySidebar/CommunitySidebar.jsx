@@ -3,16 +3,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRocket } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { FEATURED_POSTS } from "@/features/feed/feedData";
-import { useRequireAuth } from "@/hooks/useRequireAuth";
 import styles from "./CommunitySidebar.module.css";
 
 function CommunitySidebar() {
   const navigate = useNavigate();
-  const { requireAuth } = useRequireAuth();
-
-  function handleFeaturedPostClick() {
-    requireAuth("Vui lòng đăng nhập để xem bài viết.");
-  }
 
   return (
     <aside className={styles.sidebar} aria-label="Cộng đồng">
@@ -40,11 +34,16 @@ function CommunitySidebar() {
       <div className={`${styles.panel} ${styles.featured}`}>
         <h2 className={styles.title}>Bài viết nổi bật</h2>
         <ul className={styles.posts}>
-          {FEATURED_POSTS.map((title, index) => (
-            <li key={title} className={index < FEATURED_POSTS.length - 1 ? styles.item : undefined}>
-              <button type="button" className={styles["post-link"]} onClick={handleFeaturedPostClick}>
-                {title}
-              </button>
+          {FEATURED_POSTS.map((post, index) => (
+            <li key={post.url} className={index < FEATURED_POSTS.length - 1 ? styles.item : undefined}>
+              <a
+                href={post.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles["post-link"]}
+              >
+                {post.title}
+              </a>
             </li>
           ))}
         </ul>

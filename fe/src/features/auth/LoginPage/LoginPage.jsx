@@ -6,7 +6,7 @@ import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import { getGoogleClientId, requestGoogleIdToken } from "@/utils/googleAuth";
 import googleGSrc from "@/img/google-g.png";
-import { MODERATOR_HOME_PATH } from "@/features/moderator/moderatorNavData";
+import { getRoleHomePath } from "@/utils/roleHelpers";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import styles from "./LoginPage.module.css";
 
@@ -24,26 +24,6 @@ const DEMO_ACCOUNTS = [
 ];
 
 const REMEMBER_KEY = "sehubs_remember_login";
-const STUDENT_HOME_PATH = "/home";
-
-function resolvePostLoginPath(user, from) {
-  if (user?.role === "admin") {
-    return "/admin";
-  }
-  if (user?.role === "moderator") {
-    return MODERATOR_HOME_PATH;
-  }
-  const returnToProtected =
-    from &&
-    from !== "/login" &&
-    !from.startsWith("/moderator") &&
-    (from.startsWith("/home") || from.startsWith("/profile"));
-
-  if (returnToProtected) {
-    return from;
-  }
-  return STUDENT_HOME_PATH;
-}
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -64,8 +44,24 @@ function LoginPage() {
 
   const redirectTo = location.state?.from || "/home";
 
+  function isGuestOnlyPath(path) {
+    if (!path || path === "/") return true;
+    if (path === "/login" || path === "/register" || path.startsWith("/forgot-password")) {
+      return true;
+    }
+    if (path === "/support") return true;
+    if (path === "/community" || path.startsWith("/community/")) return true;
+    return false;
+  }
+
   function navigateAfterLogin(loggedInUser) {
-    navigate(resolvePostLoginPath(loggedInUser, redirectTo), { replace: true });
+    const isStaff =
+      loggedInUser?.role === "moderator" || loggedInUser?.role === "admin";
+    const studentFallback = isGuestOnlyPath(redirectTo) ? "/home" : redirectTo;
+    const destination = isStaff
+      ? getRoleHomePath(loggedInUser)
+      : getRoleHomePath(loggedInUser, studentFallback);
+    navigate(destination, { replace: true });
   }
 
   function persistRememberMe() {

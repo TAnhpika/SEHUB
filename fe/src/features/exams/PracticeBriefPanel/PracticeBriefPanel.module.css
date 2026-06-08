@@ -1,0 +1,245 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: #f7f9fb;
+  border: 1px solid #c3c6d7;
+  border-radius: var(--radius-lg);
+}
+
+.compact {
+  padding: 1rem;
+}
+
+.enlarged .title {
+  font-size: 1.0625rem;
+}
+
+.enlarged .summary,
+.enlarged .pageLine,
+.enlarged .fileHint p {
+  font-size: 0.9375rem;
+}
+
+.enlarged .fileName {
+  font-size: 0.9375rem;
+}
+
+.enlarged .downloadBtn {
+  font-size: 0.875rem;
+  padding: 0.625rem 1rem;
+}
+
+.enlarged .image {
+  max-height: 32rem;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #004ac6;
+}
+
+.summary {
+  margin: 0.375rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #434655;
+}
+
+.viewOnly {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #737686;
+  background: #eceef0;
+  border-radius: var(--radius-full);
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.page {
+  padding: 1rem 1.125rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.pageLabel {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #737686;
+}
+
+.pageLine {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: #191c1e;
+}
+
+.pageLine:last-child {
+  margin-bottom: 0;
+}
+
+.figure {
+  margin: 0;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  max-height: 28rem;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+}
+
+.caption {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #737686;
+  text-align: center;
+}
+
+.fileHint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #fff;
+  border: 1px dashed rgba(0, 74, 198, 0.25);
+  border-radius: var(--radius-md);
+}
+
+.fileHintIcon {
+  margin-top: 0.125rem;
+  font-size: 1.25rem;
+  color: #004ac6;
+}
+
+.fileHint p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #434655;
+}
+
+.attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attachment {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+}
+
+.fileIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  font-size: 1rem;
+  color: #004ac6;
+  background: rgba(0, 74, 198, 0.08);
+  border-radius: var(--radius-md);
+}
+
+.fileMeta {
+  flex: 1;
+  min-width: 0;
+}
+
+.fileName {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #191c1e;
+  word-break: break-word;
+}
+
+.fileSize {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: #737686;
+}
+
+.downloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+  padding: 0.5rem 0.875rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #004ac6;
+  background: rgba(0, 74, 198, 0.08);
+  border: 1px solid rgba(0, 74, 198, 0.2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.downloadBtn:hover {
+  background: rgba(0, 74, 198, 0.12);
+  border-color: rgba(0, 74, 198, 0.35);
+}
+
+.downloadBtnLocked {
+  color: #737686;
+  background: #eceef0;
+  border-color: #c3c6d7;
+}
+
+.downloadBtnLocked:hover {
+  background: #eceef0;
+  border-color: #c3c6d7;
+}
+
+@media (max-width: 640px) {
+  .attachment {
+    flex-wrap: wrap;
+  }
+
+  .downloadBtn {
+    width: 100%;
+    justify-content: center;
+  }
+}

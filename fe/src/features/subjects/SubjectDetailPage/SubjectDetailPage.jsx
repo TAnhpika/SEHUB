@@ -77,10 +77,9 @@ function SubjectDetailPage({ page }) {
   }
 
   function handleExamClick(exam) {
-    const loginMessage = isDocumentsPage
-      ? "Vui lòng đăng nhập để xem tài liệu."
-      : "Vui lòng đăng nhập để xem đề thi.";
-    if (!requireAuth(loginMessage)) return;
+    if (isDocumentsPage) {
+      if (!requireAuth("Vui lòng đăng nhập để xem tài liệu.")) return;
+    }
     navigate(`${config.detailBase}/${code}/${encodeURIComponent(exam.id)}`);
   }
 

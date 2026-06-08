@@ -75,6 +75,13 @@
   color: var(--color-text);
 }
 
+.streakMeta {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-subtle);
+}
+
 .summary {
   flex-shrink: 0;
   padding: 0.25rem 0.625rem;

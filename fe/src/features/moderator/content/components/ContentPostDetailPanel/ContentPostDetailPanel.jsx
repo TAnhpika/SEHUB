@@ -8,9 +8,11 @@ import {
   faFile,
   faFileArchive,
   faFilePdf,
+  faHeart,
   faImage,
   faMousePointer,
   faRotateRight,
+  faThumbtack,
   faUserSecret,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
@@ -84,20 +86,38 @@ function ModerationRecord({ item }) {
 /**
  * @param {{
  *   item: object | null,
- *   mode?: 'queue' | 'history',
+ *   mode?: 'queue' | 'history' | 'featured',
+ *   isPinned?: boolean,
+ *   canPin?: boolean,
  *   onApprove?: (id: string) => void,
  *   onReject?: (id: string) => void,
+ *   onPin?: (id: string) => void,
+ *   onUnpin?: (id: string) => void,
  * }} props
  */
-function ContentPostDetailPanel({ item, mode = "queue", onApprove, onReject }) {
+function ContentPostDetailPanel({
+  item,
+  mode = "queue",
+  isPinned = false,
+  canPin = true,
+  onApprove,
+  onReject,
+  onPin,
+  onUnpin,
+}) {
   if (!item) {
+    const emptyTitle =
+      mode === "featured" ? "Chọn một bài viết để xem chi tiết" : "Chọn một bài viết để xem trước";
+    const emptyDesc =
+      mode === "featured"
+        ? "Nhấp bài đang ghim hoặc kết quả tìm kiếm để xem nội dung trước khi ghim lên sidebar."
+        : "Xem đầy đủ tiêu đề, nội dung, ảnh bìa, ảnh trong bài và file đính kèm.";
+
     return (
       <div className={styles.detailEmpty}>
         <FontAwesomeIcon icon={faMousePointer} className={styles.detailEmptyIcon} />
-        <p className={styles.detailEmptyTitle}>Chọn một bài viết để xem trước</p>
-        <p className={styles.detailEmptyDesc}>
-          Xem đầy đủ tiêu đề, nội dung, ảnh bìa, ảnh trong bài và file đính kèm.
-        </p>
+        <p className={styles.detailEmptyTitle}>{emptyTitle}</p>
+        <p className={styles.detailEmptyDesc}>{emptyDesc}</p>
       </div>
     );
   }
@@ -105,15 +125,26 @@ function ContentPostDetailPanel({ item, mode = "queue", onApprove, onReject }) {
   const bodyText = item.content ?? item.excerpt;
   const hasAttachments = item.attachments?.length > 0;
   const hasInlineImages = item.inlineImages?.length > 0;
-  const showActions = mode === "queue" && item.status === "pending";
+  const showModerationActions = mode === "queue" && item.status === "pending";
+  const isFeaturedMode = mode === "featured";
 
   return (
     <>
       <header className={styles.detailHead}>
         <div className={styles.detailHeadTop}>
           <ModeratorBadge label={TYPE_META.post.label} tone={TYPE_META.post.tone} />
-          <StatusBadge status={item.status} />
-          {item.resubmission ? (
+          {isFeaturedMode ? (
+            <>
+              <ModeratorBadge label="Đã đăng" tone="success" dot />
+              {isPinned ? <ModeratorBadge label="Đang ghim" tone="primary" /> : null}
+              {item.categoryLabel ? (
+                <ModeratorBadge label={item.categoryLabel} tone="muted" />
+              ) : null}
+            </>
+          ) : (
+            <StatusBadge status={item.status} />
+          )}
+          {!isFeaturedMode && item.resubmission ? (
             <span className={styles.detailFlagResubmit}>
               <FontAwesomeIcon icon={faRotateRight} />
               Gửi lại
@@ -128,14 +159,14 @@ function ContentPostDetailPanel({ item, mode = "queue", onApprove, onReject }) {
         </div>
         <h2 className={styles.detailTitle}>{item.title}</h2>
         <p className={styles.detailMeta}>
-          Gửi {item.submittedAtLabel ?? item.timeLabel}
+          {isFeaturedMode ? "Đăng" : "Gửi"} {item.submittedAtLabel ?? item.timeLabel}
           {item.semester ? ` · ${item.semester}` : ""}
-          {item.major ? ` · ${item.major}` : ""}
+          {item.major && item.major !== "—" ? ` · ${item.major}` : ""}
         </p>
       </header>
 
       <div className={styles.detailBody}>
-        <ModerationRecord item={item} />
+        {!isFeaturedMode ? <ModerationRecord item={item} /> : null}
 
         {item.coverImage?.url ? (
           <figure className={styles.coverFigure}>
@@ -223,17 +254,33 @@ function ContentPostDetailPanel({ item, mode = "queue", onApprove, onReject }) {
             <dt>Chuyên ngành</dt>
             <dd>{item.major ?? "—"}</dd>
           </div>
-          <div className={styles.detailGridItem}>
-            <dt>Bình luận</dt>
-            <dd className={styles.detailSetting}>
-              <FontAwesomeIcon icon={item.allowComments ? faComment : faCommentSlash} />
-              {item.allowComments ? "Cho phép" : "Tắt"}
-            </dd>
-          </div>
+          {isFeaturedMode ? (
+            <>
+              <div className={styles.detailGridItem}>
+                <dt>Lượt thích</dt>
+                <dd className={styles.detailSetting}>
+                  <FontAwesomeIcon icon={faHeart} />
+                  {item.likes ?? 0}
+                </dd>
+              </div>
+              <div className={styles.detailGridItem}>
+                <dt>Số bình luận</dt>
+                <dd>{item.comments ?? 0}</dd>
+              </div>
+            </>
+          ) : (
+            <div className={styles.detailGridItem}>
+              <dt>Bình luận</dt>
+              <dd className={styles.detailSetting}>
+                <FontAwesomeIcon icon={item.allowComments ? faComment : faCommentSlash} />
+                {item.allowComments ? "Cho phép" : "Tắt"}
+              </dd>
+            </div>
+          )}
         </dl>
       </div>
 
-      {showActions ? (
+      {showModerationActions ? (
         <footer className={styles.detailActions}>
           <button type="button" className={styles.detailReject} onClick={() => onReject?.(item.id)}>
             <FontAwesomeIcon icon={faXmark} />
@@ -243,6 +290,24 @@ function ContentPostDetailPanel({ item, mode = "queue", onApprove, onReject }) {
             <FontAwesomeIcon icon={faCheck} />
             Duyệt
           </button>
+        </footer>
+      ) : isFeaturedMode ? (
+        <footer className={styles.detailActions}>
+          {isPinned ? (
+            <button type="button" className={styles.detailReject} onClick={() => onUnpin?.(item.id)}>
+              Bỏ ghim
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={styles.detailApprove}
+              disabled={!canPin}
+              onClick={() => onPin?.(item.id)}
+            >
+              <FontAwesomeIcon icon={faThumbtack} />
+              Ghim bài
+            </button>
+          )}
         </footer>
       ) : mode === "history" && item.status === "pending" ? (
         <footer className={styles.detailActions}>

@@ -15,7 +15,7 @@ function HomeSidebar() {
             <FontAwesomeIcon icon={faFire} />
           </span>
           <div>
-            <p className={styles["streak-title"]}>Streak {user?.streak ?? 5} ngày</p>
+            <p className={styles["streak-title"]}>Streak {user?.streak ?? 0} ngày</p>
             <p className={styles["streak-desc"]}>+20 điểm nếu duy trì 7 ngày</p>
           </div>
         </div>
@@ -48,14 +48,19 @@ function HomeSidebar() {
       <div className={`${styles.panel} ${styles.featured}`}>
         <h2 className={styles.title}>Bài viết nổi bật</h2>
         <ul className={styles.posts}>
-          {FEATURED_POSTS.map((title, index) => (
+          {FEATURED_POSTS.map((post, index) => (
             <li
-              key={title}
+              key={post.url}
               className={`${styles["post-item"]} ${index < FEATURED_POSTS.length - 1 ? styles.item : ""}`}
             >
-              <button type="button" className={styles["post-link"]}>
-                {title}
-              </button>
+              <a
+                href={post.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles["post-link"]}
+              >
+                {post.title}
+              </a>
             </li>
           ))}
         </ul>
