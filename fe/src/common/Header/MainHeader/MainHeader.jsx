@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/context";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import NotificationDropdown from "./NotificationDropdown";
+import { NOTIFICATIONS } from "./notificationData";
 import StreakDropdown from "./StreakDropdown";
 import logoSrc from "@/img/logo.png";
 import styles from "./MainHeader.module.css";
@@ -34,7 +35,10 @@ function MainHeader() {
 
   const displayName = user?.displayName ?? "Anhpika";
   const initial = user?.initial ?? displayName.charAt(0).toUpperCase();
-  const unreadCount = user?.unreadNotifications ?? 7;
+  const unreadCount =
+    NOTIFICATIONS.length > 0
+      ? NOTIFICATIONS.filter((item) => !item.read).length
+      : (user?.unreadNotifications ?? 0);
   const streakCount = user?.streak ?? 7;
 
   function handleLogout() {
