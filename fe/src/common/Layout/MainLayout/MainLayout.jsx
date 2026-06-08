@@ -33,8 +33,7 @@ function MainLayout() {
     isMessagesPage ||
     isPremiumPage ||
     isCheckoutPage ||
-    isPaymentSuccessPage ||
-    isPostDetailPage;
+    isPaymentSuccessPage;
 
   return (
     <div className={styles.layout}>
