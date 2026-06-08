@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import logoSrc from "@/img/logo.png";
-import { ADMIN_NAV_SECTIONS } from "@/features/admin/adminNavData";
+import { getAdminNavSections } from "@/features/admin/adminNavData";
 import styles from "./AdminSidebar.module.css";
 
 function isNavGroup(item) {
@@ -17,12 +17,10 @@ function matchNavPath(pathname, to, end = false) {
 
 function isNavItemActive(item, pathname, searchParams) {
   if (item.id === "banned") {
-    return pathname === "/admin/users" && searchParams.get("status") === "banned";
+    return pathname === "/admin/moderation/banned";
   }
   if (item.id === "users") {
-    if (pathname.startsWith("/admin/users/")) return true;
-    if (pathname === "/admin/users") return searchParams.get("status") !== "banned";
-    return false;
+    return pathname === "/admin/users" || pathname.startsWith("/admin/users/");
   }
   if (item.id === "exams") {
     if (pathname === "/admin/exams") return true;
@@ -135,6 +133,7 @@ function NavGroup({ group, pathname, searchParams }) {
 function AdminSidebar() {
   const { pathname, search } = useLocation();
   const searchParams = new URLSearchParams(search);
+  const navSections = getAdminNavSections();
 
   return (
     <aside className={styles.sidebar}>
@@ -150,7 +149,7 @@ function AdminSidebar() {
         </Link>
 
         <nav className={styles.nav} aria-label="Điều hướng quản trị">
-          {ADMIN_NAV_SECTIONS.map((section, index) => (
+          {navSections.map((section, index) => (
             <div key={section.title} className={styles.section}>
               {index > 0 ? <div className={styles.divider} aria-hidden /> : null}
               <p className={styles.sectionTitle}>{section.title}</p>
