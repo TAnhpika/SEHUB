@@ -84,7 +84,7 @@ function LoginPage() {
     } catch {
       /* ignore storage errors */
     }
-    navigate(getRoleHomePath(nextUser), { replace: true });
+    navigateAfterLogin(nextUser);
   }
 
   function handleGoogleLogin() {
