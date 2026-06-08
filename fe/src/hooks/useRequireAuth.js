@@ -16,18 +16,19 @@ export function useRequireAuth() {
   const needsLoginPrompt = !isAuthenticated || isCommunityRoute;
 
   const requireAuth = useCallback(
-    (message = "Vui lòng đăng nhập để tiếp tục.") => {
+    (message = "Vui lòng đăng nhập để tiếp tục.", redirectTo) => {
       if (!needsLoginPrompt) return true;
       if (pendingRef.current) return false;
 
       pendingRef.current = true;
+      const returnPath = redirectTo ?? `${location.pathname}${location.search}`;
 
       showCountdownToast(
         message,
         () => {
           pendingRef.current = false;
           navigate(LOGIN_PATH, {
-            state: { from: `${location.pathname}${location.search}` },
+            state: { from: returnPath },
           });
         },
         () => {

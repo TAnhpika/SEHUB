@@ -5,7 +5,9 @@ import {
   faStar,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { useNavigate } from "react-router-dom";
 import Button from "@/common/Button/Button";
+import { useToast } from "@/common/Toast/ToastProvider";
 import { FEATURE_COMPARISON, PRICING_PLANS } from "@/features/landing/PricingModal/pricingData";
 import styles from "./PricingContent.module.css";
 
@@ -35,7 +37,24 @@ function ComparisonCell({ value }) {
   );
 }
 
-function PricingContent() {
+function PricingContent({ requireLogin = false, onGuestRedirect }) {
+  const navigate = useNavigate();
+  const { showCountdownToast } = useToast();
+
+  function handleGuestPlanSelect(planId) {
+    const checkoutPath = `/home/premium/checkout/${planId}`;
+
+    // Landing = luôn yêu cầu đăng nhập, không nhảy checkout dù còn session cũ trong localStorage
+    showCountdownToast(
+      "Vui lòng đăng nhập để chọn gói Premium.",
+      () => {
+        onGuestRedirect?.();
+        navigate("/login", { state: { from: checkoutPath } });
+      },
+      () => {},
+    );
+  }
+
   return (
     <>
       <div className={styles.header}>
@@ -85,20 +104,38 @@ function PricingContent() {
               ))}
             </ul>
 
-            <Button
-              look={plan.ctaLook}
-              fullWidth
-              to={`/home/premium/checkout/${plan.id}`}
-              className={
-                plan.id === "full"
-                  ? styles["plan-btn-outline"]
-                  : plan.popular
-                    ? styles["plan-btn-primary"]
-                    : styles["plan-btn-muted"]
-              }
-            >
-              {plan.cta}
-            </Button>
+            {requireLogin ? (
+              <Button
+                look={plan.ctaLook}
+                fullWidth
+                type="button"
+                onClick={() => handleGuestPlanSelect(plan.id)}
+                className={
+                  plan.id === "full"
+                    ? styles["plan-btn-outline"]
+                    : plan.popular
+                      ? styles["plan-btn-primary"]
+                      : styles["plan-btn-muted"]
+                }
+              >
+                {plan.cta}
+              </Button>
+            ) : (
+              <Button
+                look={plan.ctaLook}
+                fullWidth
+                to={`/home/premium/checkout/${plan.id}`}
+                className={
+                  plan.id === "full"
+                    ? styles["plan-btn-outline"]
+                    : plan.popular
+                      ? styles["plan-btn-primary"]
+                      : styles["plan-btn-muted"]
+                }
+              >
+                {plan.cta}
+              </Button>
+            )}
           </article>
         ))}
       </div>
