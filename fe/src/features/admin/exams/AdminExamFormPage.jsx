@@ -193,7 +193,7 @@ function AdminExamFormPage() {
       return;
     }
     persist("draft");
-    showToast("Đã lưu nháp (mock).");
+    showToast("Đã lưu nháp.");
     navigate(isEdit ? `/admin/exams/${id}` : "/admin/exams");
   }
 
@@ -219,7 +219,7 @@ function AdminExamFormPage() {
     }
 
     persist("published");
-    showToast(isEdit ? "Đã cập nhật và xuất bản (mock)." : "Đã tạo và xuất bản đề (mock).");
+    showToast(isEdit ? "Đã cập nhật và xuất bản." : "Đã tạo và xuất bản đề.");
     navigate(isEdit ? `/admin/exams/${id}` : "/admin/exams");
   }
 
