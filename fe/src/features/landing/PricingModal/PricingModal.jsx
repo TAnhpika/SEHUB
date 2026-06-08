@@ -69,7 +69,7 @@ function PricingModal({ open, onClose }) {
           <FontAwesomeIcon icon={faXmark} />
         </button>
 
-        <PricingContent />
+        <PricingContent requireLogin onGuestRedirect={onClose} />
       </div>
     </div>
   );

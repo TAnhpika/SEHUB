@@ -115,10 +115,13 @@ function CheckoutPage() {
                 <dt>Giá gốc</dt>
                 <dd>{formatVnd(checkout.originalPrice)}</dd>
               </div>
-              {checkout.savingsLabel && (
+              {checkout.savingsAmount > 0 && (
                 <div className={styles.row}>
                   <dt>Ưu đãi SEHub</dt>
-                  <dd className={styles.discount}>- {checkout.savingsLabel}</dd>
+                  <dd className={styles.discount}>
+                    - {formatVnd(checkout.savingsAmount)}
+                    {checkout.savingsLabel ? ` (${checkout.savingsLabel})` : ""}
+                  </dd>
                 </div>
               )}
               <div className={styles.row}>

@@ -1,10 +1,72 @@
+/** Giá gốc tham chiếu — gói Trải nghiệm 1 tháng (SEHUB §3.8: 1m / 8m / 4y) */
+export const BASE_MONTHLY_PRICE = 49000;
+
+function buildCheckout({ months, days, monthlyPrice, packageTitle, tagline }) {
+  const originalPrice = BASE_MONTHLY_PRICE * months;
+  const totalPrice = monthlyPrice * months;
+  const savingsAmount = originalPrice - totalPrice;
+  const savingsPercent =
+    savingsAmount > 0 ? Math.round((savingsAmount / originalPrice) * 100) : 0;
+
+  return {
+    packageTitle,
+    tagline,
+    days,
+    originalPrice,
+    monthlyPrice,
+    months,
+    totalPrice,
+    savingsAmount,
+    savingsLabel: savingsPercent > 0 ? `Tiết kiệm ${savingsPercent}%` : null,
+  };
+}
+
+function createPlan({
+  id,
+  name,
+  duration,
+  monthlyPrice,
+  months,
+  days,
+  packageTitle,
+  tagline,
+  popular,
+  features,
+  cta,
+  ctaLook,
+}) {
+  const checkout = buildCheckout({
+    months,
+    days,
+    monthlyPrice,
+    packageTitle,
+    tagline,
+  });
+
+  return {
+    id,
+    name,
+    duration,
+    price: `${monthlyPrice.toLocaleString("vi-VN")} đ/tháng`,
+    savings: checkout.savingsLabel,
+    popular,
+    features,
+    cta,
+    ctaLook,
+    checkout,
+  };
+}
+
 export const PRICING_PLANS = [
-  {
+  createPlan({
     id: "trial",
     name: "Trải nghiệm",
     duration: "1 tháng",
-    price: "49.000 đ/tháng",
-    savings: null,
+    monthlyPrice: 49000,
+    months: 1,
+    days: 30,
+    packageTitle: "Gói Trải nghiệm (1 tháng)",
+    tagline: "Học tập không giới hạn trong 30 ngày",
     popular: false,
     features: [
       "Xem full đáp án đề thi",
@@ -14,67 +76,43 @@ export const PRICING_PLANS = [
     ],
     cta: "Chọn gói này",
     ctaLook: "outline",
-    checkout: {
-      packageTitle: "Gói Trải nghiệm (1 tháng)",
-      tagline: "Học tập không giới hạn trong 30 ngày",
-      days: 30,
-      originalPrice: 49000,
-      monthlyPrice: 49000,
-      months: 1,
-      totalPrice: 49000,
-      savingsLabel: null,
-    },
-  },
-  {
+  }),
+  createPlan({
     id: "semester",
-    name: "1 Học kỳ",
+    name: "2 Học kỳ",
     duration: "8 tháng",
-    price: "35.000 đ/tháng",
-    savings: "Tiết kiệm 28%",
+    monthlyPrice: 35000,
+    months: 8,
+    days: 240,
+    packageTitle: "Gói 2 Học kỳ (8 tháng)",
+    tagline: "Học tập không giới hạn trong 240 ngày",
     popular: true,
     features: [
       "Tất cả tính năng gói 1 tháng",
       "AI token không giới hạn",
-      "+20% voucher",
+      "Voucher FTES 20%",
     ],
     cta: "Bắt đầu ngay",
     ctaLook: "solid",
-    checkout: {
-      packageTitle: "Gói 1 Học kỳ (8 tháng)",
-      tagline: "Học tập không giới hạn trong 240 ngày",
-      days: 240,
-      originalPrice: 395000,
-      monthlyPrice: 35000,
-      months: 8,
-      totalPrice: 280000,
-      savingsLabel: "Tiết kiệm 28%",
-    },
-  },
-  {
+  }),
+  createPlan({
     id: "full",
     name: "Toàn khóa học",
     duration: "4 năm",
-    price: "20.000 đ/tháng",
-    savings: "Tiết kiệm 58%",
+    monthlyPrice: 20000,
+    months: 48,
+    days: 1460,
+    packageTitle: "Gói Toàn khóa học (4 năm)",
+    tagline: "Học tập không giới hạn trong 1.460 ngày (48 tháng)",
     popular: false,
     features: [
-      "Tất cả tính năng trọn đời",
+      "Tất cả tính năng Premium trong 4 năm",
       "Ưu tiên hỗ trợ 24/7",
-      "+100% voucher",
+      "Voucher FTES 100%",
     ],
     cta: "Chọn gói này",
     ctaLook: "outline",
-    checkout: {
-      packageTitle: "Gói Toàn khóa học (4 năm)",
-      tagline: "Học tập không giới hạn trong 1.460 ngày",
-      days: 1460,
-      originalPrice: 2280000,
-      monthlyPrice: 20000,
-      months: 48,
-      totalPrice: 960000,
-      savingsLabel: "Tiết kiệm 58%",
-    },
-  },
+  }),
 ];
 
 export const FEATURE_COMPARISON = [
