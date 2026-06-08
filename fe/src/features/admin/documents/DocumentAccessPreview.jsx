@@ -73,10 +73,53 @@ function AccessColumn({ title, badge, state, docName }) {
   );
 }
 
-function DocumentAccessPreview({ documents }) {
-  const demoDocs = documents.filter((doc) => doc.pages > 0);
+export function DocumentAccessCompare({ doc, showMeta = true }) {
+  const basicState = getDocumentAccessState(doc, { isPremium: false });
+  const premiumState = getDocumentAccessState(doc, { isPremium: true });
 
-  if (demoDocs.length === 0) return null;
+  return (
+    <>
+      {showMeta ? (
+        <div className={docStyles.previewDocHead}>
+          <span className={docStyles.previewDocName}>{doc.name}</span>
+          <span
+            className={`${docStyles.previewAccessPill} ${
+              doc.access?.includes("Premium")
+                ? docStyles.previewAccessPremium
+                : docStyles.previewAccessFree
+            }`}
+          >
+            {doc.access}
+          </span>
+          <span className={docStyles.previewDocMeta}>{doc.pages} trang</span>
+        </div>
+      ) : null}
+      {doc.description ? (
+        <p className={docStyles.previewDocDesc}>{doc.description}</p>
+      ) : null}
+      <div className={docStyles.previewGrid}>
+        <AccessColumn
+          title="Student (Basic)"
+          badge="Free"
+          state={basicState}
+          docName={doc.name}
+        />
+        <AccessColumn
+          title="Student (Premium)"
+          badge="Premium"
+          state={premiumState}
+          docName={doc.name}
+        />
+      </div>
+    </>
+  );
+}
+
+function DocumentAccessPreview({ documents }) {
+  if (documents.length === 0) return null;
+
+  const previewableDocs = documents.filter((doc) => doc.pages > 0);
+  const missingPageDocs = documents.filter((doc) => !doc.pages || doc.pages <= 0);
 
   return (
     <section className={docStyles.previewPanel}>
@@ -84,49 +127,30 @@ function DocumentAccessPreview({ documents }) {
         <h3 className={docStyles.previewTitle}>Xem trước phân quyền SV</h3>
         <p className={docStyles.previewSubtitle}>
           So sánh trải nghiệm <strong>Student (Basic)</strong> và{" "}
-          <strong>Student (Premium)</strong> theo quyền Admin đã gán.
+          <strong>Student (Premium)</strong> theo quyền Admin đã gán. Kiểm tra thực tế: đăng
+          nhập <code>student_basic</code> / <code>basic123</code> hoặc{" "}
+          <code>student_premium</code> / <code>premium123</code> → Tài liệu → môn học.
         </p>
       </header>
 
-      {demoDocs.map((doc) => {
-        const basicState = getDocumentAccessState(doc, { isPremium: false });
-        const premiumState = getDocumentAccessState(doc, { isPremium: true });
+      {missingPageDocs.length > 0 ? (
+        <p className={docStyles.previewMissingPages}>
+          {missingPageDocs.length} tài liệu chưa có số trang — không mô phỏng được Basic/Premium.
+          Upload lại với số trang hoặc chỉ xem các file bên dưới.
+        </p>
+      ) : null}
 
-        return (
-          <article key={doc.id} className={docStyles.previewDoc}>
-            <div className={docStyles.previewDocHead}>
-              <span className={docStyles.previewDocName}>{doc.name}</span>
-              <span
-                className={`${docStyles.previewAccessPill} ${
-                  doc.access.includes("Premium")
-                    ? docStyles.previewAccessPremium
-                    : docStyles.previewAccessFree
-                }`}
-              >
-                {doc.access}
-              </span>
-              <span className={docStyles.previewDocMeta}>{doc.pages} trang</span>
-            </div>
-            {doc.description ? (
-              <p className={docStyles.previewDocDesc}>{doc.description}</p>
-            ) : null}
-            <div className={docStyles.previewGrid}>
-              <AccessColumn
-                title="Student (Basic)"
-                badge="Free"
-                state={basicState}
-                docName={doc.name}
-              />
-              <AccessColumn
-                title="Student (Premium)"
-                badge="Premium"
-                state={premiumState}
-                docName={doc.name}
-              />
-            </div>
-          </article>
-        );
-      })}
+      {previewableDocs.length === 0 ? (
+        <p className={docStyles.previewMissingPages}>
+          Chưa có tài liệu nào có số trang. Khi upload, nhập số trang để xem preview ngay.
+        </p>
+      ) : null}
+
+      {previewableDocs.map((doc) => (
+        <article key={doc.id} className={docStyles.previewDoc}>
+          <DocumentAccessCompare doc={doc} />
+        </article>
+      ))}
     </section>
   );
 }
