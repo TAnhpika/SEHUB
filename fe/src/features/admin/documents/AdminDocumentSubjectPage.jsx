@@ -11,16 +11,20 @@ import {
   addAdminDocument,
   getAdminDocumentsBySubject,
   removeAdminDocument,
+  updateAdminDocument,
 } from "@/features/admin/documents/adminDocumentData";
+import DocumentEditModal from "@/features/admin/documents/DocumentEditModal";
 import { getAdminDocumentsCatalogUrl } from "@/features/admin/documents/adminDocumentPaths";
-import DocumentAccessPreview from "@/features/admin/documents/DocumentAccessPreview";
+import DocumentAccessPreview, {
+  DocumentAccessCompare,
+} from "@/features/admin/documents/DocumentAccessPreview";
 import docStyles from "@/features/admin/documents/AdminDocuments.module.css";
 import AdminTableFooter from "@/features/admin/shared/AdminTableFooter";
 import { ADMIN_PAGE_SIZES } from "@/features/admin/shared/adminPaginationConstants";
 import { useAdminPagination } from "@/features/admin/shared/useAdminPagination";
 import styles from "@/features/admin/shared/adminPage.module.css";
 
-const DEMO_SUBJECTS = new Set(["PRF192"]);
+const DEFAULT_UPLOAD_PAGES = 12;
 
 function AdminDocumentSubjectPage() {
   const { courseCode } = useParams();
@@ -30,6 +34,10 @@ function AdminDocumentSubjectPage() {
   const { showToast } = useToast();
   const [showUpload, setShowUpload] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [uploadAccess, setUploadAccess] = useState("free");
+  const [uploadPages, setUploadPages] = useState(String(DEFAULT_UPLOAD_PAGES));
+  const [uploadFileName, setUploadFileName] = useState("");
+  const [editingDoc, setEditingDoc] = useState(null);
 
   const documents = useMemo(
     () => getAdminDocumentsBySubject(code, semester),
@@ -51,9 +59,13 @@ function AdminDocumentSubjectPage() {
     const form = event.currentTarget;
     const fileInput = form.elements.namedItem("file");
     const accessSelect = form.elements.namedItem("access");
+    const pagesInput = form.elements.namedItem("pages");
     const file = fileInput instanceof HTMLInputElement ? fileInput.files?.[0] : null;
     const access =
       accessSelect instanceof HTMLSelectElement ? accessSelect.value : "premium";
+    const pagesRaw =
+      pagesInput instanceof HTMLInputElement ? Number(pagesInput.value) : DEFAULT_UPLOAD_PAGES;
+    const pages = Number.isFinite(pagesRaw) && pagesRaw > 0 ? pagesRaw : DEFAULT_UPLOAD_PAGES;
 
     if (!file) return;
 
@@ -62,19 +74,44 @@ function AdminDocumentSubjectPage() {
       subject: code,
       semester: semester !== "all" ? semester : "1",
       access: access === "free" ? "Free (3 trang)" : "Premium",
-      pages: 0,
+      pages,
     });
     setRefreshKey((k) => k + 1);
-    showToast("Đã upload tài liệu (mock).");
+    showToast("Đã upload tài liệu.");
     setShowUpload(false);
+    setUploadAccess("free");
+    setUploadPages(String(DEFAULT_UPLOAD_PAGES));
+    setUploadFileName("");
     form.reset();
   }
 
+  const uploadPreviewDoc = useMemo(
+    () => ({
+      name: uploadFileName || "Tài liệu đang upload",
+      access: uploadAccess === "free" ? "Free (3 trang)" : "Premium",
+      pages: Math.max(1, Number(uploadPages) || DEFAULT_UPLOAD_PAGES),
+    }),
+    [uploadAccess, uploadPages, uploadFileName],
+  );
+
   function handleDelete(id) {
     if (removeAdminDocument(id)) {
+      if (editingDoc?.id === id) setEditingDoc(null);
       setRefreshKey((k) => k + 1);
-      showToast("Đã xóa tài liệu (mock).");
+      showToast("Đã xóa tài liệu.");
     }
+  }
+
+  function handleEditSave(payload) {
+    if (!editingDoc) return;
+    const result = updateAdminDocument(editingDoc.id, payload);
+    if (!result.ok) {
+      showToast(result.message ?? "Không thể cập nhật tài liệu.");
+      return;
+    }
+    setRefreshKey((k) => k + 1);
+    setEditingDoc(null);
+    showToast("Đã cập nhật tài liệu.");
   }
 
   const semesterLabel =
@@ -83,7 +120,6 @@ function AdminDocumentSubjectPage() {
   return (
     <AdminPageLayout
       title={`Tài liệu — ${code}`}
-      subtitle="Upload PDF/DOCX/PPTX, phân quyền Free (3 trang) hoặc Premium (full + tải)."
       breadcrumbs={[
         { label: "Dashboard", to: "/admin" },
         { label: "Quản lý tài liệu", to: catalogBack },
@@ -114,16 +150,6 @@ function AdminDocumentSubjectPage() {
         </div>
       </div>
 
-      {DEMO_SUBJECTS.has(code) && documents.length > 0 ? (
-        <div className={docStyles.demoBanner}>
-          <strong>Môn demo phân quyền</strong>
-          <span>
-            Đăng nhập SV: <code>student_basic</code> / <code>basic123</code> (Basic) hoặc{" "}
-            <code>student_premium</code> / <code>premium123</code> (Premium) → Tài liệu → PRF192.
-          </span>
-        </div>
-      ) : null}
-
       {documents.length > 0 ? <DocumentAccessPreview documents={documents} /> : null}
 
       {showUpload ? (
@@ -137,20 +163,82 @@ function AdminDocumentSubjectPage() {
             </label>
             <label className={styles.field}>
               <span className={styles.label}>Quyền truy cập</span>
-              <select className={styles.select} name="access" defaultValue="premium">
-                <option value="free">Free (3 trang)</option>
-                <option value="premium">Premium (full)</option>
+              <select
+                className={styles.select}
+                name="access"
+                value={uploadAccess}
+                onChange={(event) => setUploadAccess(event.target.value)}
+              >
+                <option value="free">Free (3 trang) — Basic xem tối đa 3 trang, không tải</option>
+                <option value="premium">Premium — chỉ Premium xem & tải full</option>
               </select>
             </label>
+          </div>
+          <div className={styles.formRow2}>
+            <label className={styles.field}>
+              <span className={styles.label}>Số trang (ước lượng)</span>
+              <input
+                className={styles.input}
+                name="pages"
+                type="number"
+                min={1}
+                max={999}
+                required
+                value={uploadPages}
+                onChange={(event) => setUploadPages(event.target.value)}
+              />
+            </label>
+            <div className={styles.field}>
+              <span className={styles.label}>Quy tắc nhanh</span>
+              <p className={docStyles.uploadAccessHint}>
+                {uploadAccess === "free"
+                  ? "SV Basic: xem tối đa 3 trang đầu, không tải. SV Premium: xem & tải toàn bộ."
+                  : "SV Basic: khóa hoàn toàn, gợi ý nâng cấp. SV Premium: xem & tải toàn bộ."}
+              </p>
+            </div>
           </div>
           <label className={`${styles.field} ${docStyles.uploadField}`}>
             <span className={styles.label}>File</span>
             <div className={styles.uploadZone}>
               <FontAwesomeIcon icon={faCloudArrowUp} className={styles.uploadIcon} />
               <span className={styles.uploadText}>PDF, DOCX, PPTX</span>
-              <input name="file" type="file" accept=".pdf,.docx,.pptx" required />
+              <input
+                name="file"
+                type="file"
+                accept=".pdf,.docx,.pptx"
+                required
+                onChange={(event) =>
+                  setUploadFileName(event.target.files?.[0]?.name ?? "")
+                }
+              />
             </div>
           </label>
+          <section className={docStyles.uploadPreviewPanel}>
+            <h3 className={docStyles.previewTitle}>Xem trước khi upload</h3>
+            <p className={docStyles.previewSubtitle}>
+              Thay đổi quyền hoặc số trang để xem SV Basic / Premium sẽ thấy gì.
+            </p>
+            <p
+              className={`${docStyles.uploadPreviewMode} ${
+                uploadAccess === "free"
+                  ? docStyles.uploadPreviewModeFree
+                  : docStyles.uploadPreviewModePremium
+              }`}
+            >
+              {uploadAccess === "free" ? (
+                <>
+                  <strong>Free (3 trang):</strong> SV Basic xem tối đa 3 trang đầu, không tải. SV
+                  Premium xem & tải full.
+                </>
+              ) : (
+                <>
+                  <strong>Premium only:</strong> SV Basic bị khóa hoàn toàn. Chọn &quot;Free (3
+                  trang)&quot; nếu muốn Basic được xem thử 3 trang.
+                </>
+              )}
+            </p>
+            <DocumentAccessCompare doc={uploadPreviewDoc} showMeta={false} />
+          </section>
           <div className={docStyles.formSubmit}>
             <Button type="submit">Tải lên</Button>
           </div>
@@ -194,14 +282,22 @@ function AdminDocumentSubjectPage() {
                     <td>{doc.source === "exam" ? "Duyệt đề Mod" : "Upload Admin"}</td>
                     <td>{doc.uploadedAt}</td>
                     <td>
-                      <button
-                        type="button"
-                        className={styles.link}
-                        style={{ background: "none", border: "none", cursor: "pointer" }}
-                        onClick={() => handleDelete(doc.id)}
-                      >
-                        Xóa
-                      </button>
+                      <div className={docStyles.tableActions}>
+                        <button
+                          type="button"
+                          className={docStyles.tableActionBtn}
+                          onClick={() => setEditingDoc(doc)}
+                        >
+                          Sửa
+                        </button>
+                        <button
+                          type="button"
+                          className={`${docStyles.tableActionBtn} ${docStyles.tableActionDanger}`}
+                          onClick={() => handleDelete(doc.id)}
+                        >
+                          Xóa
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -226,6 +322,13 @@ function AdminDocumentSubjectPage() {
           ariaLabel="Phân trang tài liệu môn học"
         />
       </section>
+
+      <DocumentEditModal
+        open={Boolean(editingDoc)}
+        document={editingDoc}
+        onClose={() => setEditingDoc(null)}
+        onSubmit={handleEditSave}
+      />
     </AdminPageLayout>
   );
 }
