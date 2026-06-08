@@ -6,6 +6,8 @@ import {
   faArrowLeft,
   faBold,
   faCode,
+  faComment,
+  faEye,
   faHeart,
   faHighlighter,
   faImage,
@@ -25,7 +27,7 @@ import { useToast } from "@/common/Toast/ToastProvider";
 import { getPostById } from "@/features/feed/feedData";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
-import { copyPostLink, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
+import { copyPostLink, formatDisplayTitle, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./PostDetailPage.module.css";
 
@@ -77,6 +79,7 @@ function PostDetailPage() {
   const isOwner = isOwnPost(post, user);
   const hasDraft = draft.trim().length > 0;
   const shortDate = formatShortDate(post.publishedAt);
+  const displayTitle = formatDisplayTitle(post.title);
 
   function handleLike() {
     setLiked((prev) => {
@@ -154,43 +157,72 @@ function PostDetailPage() {
       </button>
 
       <article className={styles.card}>
-        <div className={styles["card-head"]}>
-          <p className={styles.summary}>
-            <span className={styles.hash}>#</span> <strong>{post.title}</strong> {post.excerpt}
-          </p>
-
-          <div className={styles["meta-row"]}>
-            <div className={styles.meta}>
-              <span
-                className={withPremiumUsernameClass("", isOwner && isPremium)}
+        <header className={styles.header}>
+          <div className={styles.author}>
+            <span className={styles.avatar} aria-hidden="true">
+              {post.author.initial}
+            </span>
+            <div>
+              <p
+                className={withPremiumUsernameClass(
+                  styles.username,
+                  isOwner && isPremium,
+                )}
               >
                 {post.author.username}
-              </span>
-              <span aria-hidden="true">·</span>
-              <span>{shortDate}</span>
-              <span aria-hidden="true">·</span>
-              <span>{likes} lượt thích</span>
-              <span aria-hidden="true">·</span>
-              <span>{comments.length} bình luận</span>
-            </div>
-
-            <div className={styles.actions}>
-              {!isOwner && (
-                <PostReportButton
-                  postId={post.id}
-                  postTitle={post.title}
-                  className={`${styles.share} ${styles.report}`}
-                />
-              )}
-              <button type="button" className={styles.share} aria-label="Chia sẻ" onClick={handleShare}>
-                <FontAwesomeIcon icon={faShareNodes} />
-              </button>
+              </p>
+              <p className={styles.meta}>
+                {shortDate}
+                {!isOwner && post.author.club ? ` · ${post.author.club}` : ""}
+              </p>
             </div>
           </div>
-        </div>
 
-        <h1 className={styles.title}>{post.title}</h1>
+          <div className={styles["header-actions"]}>
+            {!isOwner && (
+              <PostReportButton
+                postId={post.id}
+                postTitle={displayTitle}
+                className={`${styles.share} ${styles.report}`}
+              />
+            )}
+            <button type="button" className={styles.share} aria-label="Chia sẻ" onClick={handleShare}>
+              <FontAwesomeIcon icon={faShareNodes} />
+            </button>
+          </div>
+        </header>
+
+        <h1 className={styles.title}>
+          <span className={styles.hash}>#</span> {displayTitle}
+        </h1>
         <p className={styles.body}>{post.body ?? post.excerpt}</p>
+
+        {post.tags?.length > 0 && (
+          <ul className={styles.tags} aria-label="Thẻ bài viết">
+            {post.tags.map((tag) => (
+              <li key={tag} className={styles.tag}>
+                {tag}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <footer className={styles.footer}>
+          <div className={styles.stats}>
+            <span className={styles.stat}>
+              <FontAwesomeIcon icon={faHeart} />
+              {likes}
+            </span>
+            <span className={styles.stat}>
+              <FontAwesomeIcon icon={faComment} />
+              {comments.length}
+            </span>
+            <span className={styles.stat}>
+              <FontAwesomeIcon icon={faEye} />
+              {post.views}
+            </span>
+          </div>
+        </footer>
 
         <div className={styles.helpful}>
           <span>Bài viết này có hữu ích không?</span>

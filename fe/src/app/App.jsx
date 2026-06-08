@@ -70,6 +70,7 @@ import ContentModerationPage from "@/features/moderator/content/ContentModeratio
 import ContentModerationHistoryPage from "@/features/moderator/content/ContentModerationHistoryPage/ContentModerationHistoryPage";
 import FeaturedPostsPage from "@/features/moderator/featured/FeaturedPostsPage/FeaturedPostsPage";
 import ReportsPage from "@/features/moderator/reports/ReportsPage/ReportsPage";
+import PracticeFocusRedirect from "@/common/routes/PracticeFocusRedirect";
 
 function App() {
   return (
@@ -117,6 +118,16 @@ function App() {
                   path="/home/pratical-exam/:courseCode/:examId"
                   element={<ExamDetailPage page="practice" />}
                 />
+                <Route element={<PremiumRoute />}>
+                  <Route
+                    path="/home/pratical-exam/:courseCode/:examId/do/:questionIndex"
+                    element={<PracticeDoPage />}
+                  />
+                  <Route
+                    path="/home/pratical-exam/:courseCode/:examId/result/:questionIndex"
+                    element={<ExamResultPage page="practice" />}
+                  />
+                </Route>
                 <Route path="/home/documents" element={<DocumentsPage scope="home" />} />
                 <Route
                   path="/home/documents/:courseCode"
@@ -139,15 +150,17 @@ function App() {
                     path="/exam/focus/final-exam/:courseCode/:examId/result"
                     element={<ExamResultPage page="review" />}
                   />
-                  <Route
-                    path="/exam/focus/pratical-exam/:courseCode/:examId/do/:questionIndex"
-                    element={<PracticeDoPage />}
-                  />
-                  <Route
-                    path="/exam/focus/pratical-exam/:courseCode/:examId/result/:questionIndex"
-                    element={<ExamResultPage page="practice" />}
-                  />
                 </Route>
+              </Route>
+              <Route element={<PremiumRoute />}>
+                <Route
+                  path="/exam/focus/pratical-exam/:courseCode/:examId/do/:questionIndex"
+                  element={<PracticeFocusRedirect />}
+                />
+                <Route
+                  path="/exam/focus/pratical-exam/:courseCode/:examId/result/:questionIndex"
+                  element={<PracticeFocusRedirect result />}
+                />
               </Route>
             </Route>
             <Route path="/community" element={<CommunityLayout />}>
@@ -170,6 +183,16 @@ function App() {
                 path="pratical-exam/:courseCode/:examId"
                 element={<ExamDetailPage page="practice" />}
               />
+              <Route element={<PremiumRoute />}>
+                <Route
+                  path="pratical-exam/:courseCode/:examId/do/:questionIndex"
+                  element={<PracticeDoPage />}
+                />
+                <Route
+                  path="pratical-exam/:courseCode/:examId/result/:questionIndex"
+                  element={<ExamResultPage page="practice" />}
+                />
+              </Route>
               <Route path="documents" element={<DocumentsPage />} />
               <Route
                 path="documents/:courseCode"

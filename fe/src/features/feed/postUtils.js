@@ -1,3 +1,11 @@
+export function formatDisplayTitle(title = "") {
+  return title
+    .replace(/^#+\s*/, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .trim();
+}
+
 export function isOwnPost(post, user) {
   return Boolean(user?.username && post?.author?.username === user.username);
 }
