@@ -5,6 +5,11 @@ import {
   PREMIUM_DAILY_TOKEN_QUOTA,
   validateManualTokenGrant,
 } from "@/features/admin/payments/adminPaymentPolicy";
+import {
+  activatePremiumFromPayment,
+  revokePremiumFromPayment,
+} from "@/features/admin/users/adminUserStore";
+import { grantVoucherFromPayment } from "@/features/admin/vouchers/adminVoucherData";
 
 /** @typedef {'pending_payment' | 'webhook_ok' | 'activated' | 'failed' | 'refunded'} PaymentStatus */
 /** @typedef {'payos_confirm' | 'manual_token' | 'manual_premium' | 'payos_refund'} AuditActionType */
@@ -248,9 +253,28 @@ export function confirmPayOsPayment(paymentId, adminUsername = "admin_sehub") {
   };
   auditStore = [entry, ...auditStore];
 
+  const premiumResult = activatePremiumFromPayment(payment.username, {
+    planId: payment.planId,
+    adminUsername,
+    payosOrderId: payment.payosOrderId,
+  });
+
+  const voucherResult = grantVoucherFromPayment({
+    username: payment.username,
+    planId: payment.planId,
+    payosOrderId: payment.payosOrderId,
+  });
+
+  let message = premiumResult.ok
+    ? premiumResult.message
+    : `Đã xác nhận PayOS — lưu ý: ${premiumResult.message}`;
+  if (voucherResult.ok) {
+    message += ` · ${voucherResult.message}`;
+  }
+
   return {
     ok: true,
-    message: `Đã kích hoạt Premium (${plan.label}) cho @${payment.username}.`,
+    message,
     audit: entry,
   };
 }
@@ -352,9 +376,13 @@ export function processPayOsRefund({
   };
   auditStore = [entry, ...auditStore];
 
+  const revokeResult = revokePremiumFromPayment(payment.username);
+
   return {
     ok: true,
-    message: `Đã hoàn ${formatVnd(payment.amount)} cho @${payment.username} (${payment.payosOrderId}). Premium đã thu hồi.`,
+    message: revokeResult.ok
+      ? `Đã hoàn ${formatVnd(payment.amount)} cho @${payment.username} (${payment.payosOrderId}). ${revokeResult.message}`
+      : `Đã hoàn ${formatVnd(payment.amount)} cho @${payment.username} (${payment.payosOrderId}). Lưu ý: ${revokeResult.message}`,
     audit: entry,
   };
 }
