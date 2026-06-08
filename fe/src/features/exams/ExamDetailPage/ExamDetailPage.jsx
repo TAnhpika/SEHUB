@@ -39,7 +39,12 @@ import {
   canViewExamAnswers,
 } from "@/utils/examAccess";
 import ExamQuestionReportButton from "@/features/exams/ExamQuestionReportButton/ExamQuestionReportButton";
-import { getExamFocusDoPath, getExamFocusResultPath, getPracticeFocusDoPath, getPracticeFocusResultPath } from "@/utils/examFocusPaths";
+import {
+  getExamFocusDoPath,
+  getExamFocusResultPath,
+  getPracticeDoPath,
+  getPracticeResultPath,
+} from "@/utils/examFocusPaths";
 import styles from "./ExamDetailPage.module.css";
 
 function ExamDetailPage({ page }) {
@@ -118,14 +123,12 @@ function ExamDetailPage({ page }) {
       return;
     }
 
-    navigate(getPracticeFocusDoPath(exam.courseCode, exam.id, currentIndex + 1), { state: { scope } });
+    navigate(getPracticeDoPath(exam.courseCode, exam.id, currentIndex + 1, scope));
   }
 
   function handleViewResult() {
     if (isPracticeExam) {
-      navigate(getPracticeFocusResultPath(exam.courseCode, exam.id, currentIndex + 1), {
-        state: { scope },
-      });
+      navigate(getPracticeResultPath(exam.courseCode, exam.id, currentIndex + 1, scope));
       return;
     }
     navigate(getExamFocusResultPath(exam.courseCode, exam.id), { state: { scope } });
@@ -175,7 +178,9 @@ function ExamDetailPage({ page }) {
             <h2 className={styles["exam-code"]}>{exam.id}</h2>
             {isReviewExam && <p className={styles.subtitle}>Luyện tập câu hỏi lẻ</p>}
             {isPracticeExam && (
-              <p className={styles.subtitle}>Mỗi bài 85 phút · Nộp file hoặc GitHub</p>
+              <p className={styles.subtitle}>
+                Mỗi bài 85 phút · Làm trên IDE ngoài · Nộp file hoặc GitHub
+              </p>
             )}
           </div>
           <div className={styles["panel-actions"]}>
