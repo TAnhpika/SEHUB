@@ -21,7 +21,7 @@
   align-items: center;
   gap: 0.625rem;
   width: 100%;
-  padding: 0.625rem 0.75rem;
+  padding: 0.625rem 0.75rem 0.625rem 0;
   font-family: inherit;
   font-size: 0.875rem;
   font-weight: 500;
@@ -58,7 +58,7 @@
 
 .divider {
   height: 1px;
-  margin: 0.875rem 0.5rem;
+  margin: 0.875rem 0;
   background: var(--color-border);
 }
 
@@ -73,7 +73,7 @@
   letter-spacing: 0.06em;
   color: var(--color-text-subtle);
   margin-bottom: 0.5rem;
-  padding: 0 0.75rem;
+  padding: 0;
 }
 
 .list {
@@ -87,7 +87,7 @@
   align-items: center;
   gap: 0.625rem;
   width: 100%;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 0.75rem 0.5rem 0;
   font-family: inherit;
   font-size: 0.8125rem;
   font-weight: 500;
