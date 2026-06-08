@@ -14,6 +14,7 @@ import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import StatusBadge from "@/features/admin/shared/StatusBadge";
+import { getAdminUserDetailUrl } from "@/features/admin/adminMockData";
 import {
   REPORT_STATUS_LABELS,
   banReportedUser,
@@ -84,6 +85,9 @@ function AdminModerationPage() {
   }, [filtered, selectedId]);
 
   const selected = reports.find((r) => r.id === selectedId) ?? null;
+  const reportedUserDetailUrl = selected
+    ? getAdminUserDetailUrl(selected.reportedUser)
+    : null;
 
   function refresh() {
     setReports(getAdminReports());
@@ -117,10 +121,9 @@ function AdminModerationPage() {
   return (
     <AdminPageLayout
       title="Hàng chờ báo cáo"
-      subtitle="Xem bài bị báo cáo, quyết định xóa nội dung, giữ nguyên hoặc khóa tài khoản vi phạm."
       breadcrumbs={[{ label: "Dashboard", to: "/admin" }, { label: "Báo cáo" }]}
       actions={
-        <Button look="outline" to="/admin/users?status=banned">
+        <Button look="outline" to="/admin/moderation/banned">
           Tài khoản bị khóa
         </Button>
       }
@@ -352,12 +355,13 @@ function AdminModerationPage() {
                     <div className={modStyles.metaItem}>
                       <dt>Tài khoản bị báo cáo</dt>
                       <dd>
-                        <Link
-                          to={`/admin/users`}
-                          className={modStyles.linkUser}
-                        >
-                          @{selected.reportedUser}
-                        </Link>
+                        {reportedUserDetailUrl ? (
+                          <Link to={reportedUserDetailUrl} className={modStyles.linkUser}>
+                            @{selected.reportedUser}
+                          </Link>
+                        ) : (
+                          <span>@{selected.reportedUser}</span>
+                        )}
                       </dd>
                     </div>
                     <div className={modStyles.metaItem}>
@@ -376,7 +380,7 @@ function AdminModerationPage() {
                     <>
                       <Button
                         onClick={() =>
-                          handleResolve(deleteReportedPost, "Đã xóa bài viết (mock).")
+                          handleResolve(deleteReportedPost, "Đã xóa bài viết.")
                         }
                       >
                         Xóa bài viết
@@ -384,7 +388,7 @@ function AdminModerationPage() {
                       <Button
                         look="outline"
                         onClick={() =>
-                          handleResolve(dismissReport, "Đã từ chối báo cáo — giữ bài (mock).")
+                          handleResolve(dismissReport, "Đã từ chối báo cáo — giữ bài.")
                         }
                       >
                         Giữ nguyên bài
@@ -394,7 +398,7 @@ function AdminModerationPage() {
                         onClick={() =>
                           handleResolve(
                             (id) => banReportedUser(id, "7 ngày"),
-                            "Đã khóa tài khoản 7 ngày (mock).",
+                            "Đã khóa tài khoản 7 ngày.",
                           )
                         }
                       >
@@ -406,7 +410,7 @@ function AdminModerationPage() {
                         onClick={() =>
                           handleResolve(
                             (id) => banReportedUser(id, "vĩnh viễn"),
-                            "Đã khóa vĩnh viễn (mock).",
+                            "Đã khóa vĩnh viễn.",
                           )
                         }
                       >
