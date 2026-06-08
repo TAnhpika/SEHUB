@@ -1,14 +1,28 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell } from "@fortawesome/free-solid-svg-icons";
+import { useAuth } from "@/context";
 import { NOTIFICATIONS } from "./notificationData";
 import styles from "./NotificationDropdown.module.css";
 
 function NotificationDropdown({ unreadCount = 0 }) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const panelId = useId();
-  const hasNotifications = NOTIFICATIONS.length > 0;
+  const notifications = useMemo(
+    () =>
+      NOTIFICATIONS.map((item) =>
+        item.id === "notif-3"
+          ? {
+              ...item,
+              title: `Bạn đã duy trì streak ${user?.streak ?? 0} ngày — tiếp tục phát huy nhé!`,
+            }
+          : item,
+      ),
+    [user?.streak],
+  );
+  const hasNotifications = notifications.length > 0;
 
   useEffect(() => {
     if (!open) return undefined;
@@ -57,7 +71,7 @@ function NotificationDropdown({ unreadCount = 0 }) {
 
           {hasNotifications ? (
             <ul className={styles.list}>
-              {NOTIFICATIONS.map((item) => (
+              {notifications.map((item) => (
                 <li key={item.id} className={styles.item}>
                   <p className={styles["item-title"]}>{item.title}</p>
                   <p className={styles["item-time"]}>{item.time}</p>

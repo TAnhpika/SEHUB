@@ -128,12 +128,7 @@ export function AuthProvider({ children }) {
 
       const testAccount = findTestAccount(identifier, password);
       if (testAccount) {
-        const { password: _password, ...accountSafe } = testAccount;
-        return commitSession(
-          normalizeUser(
-            testAccount.role === "student" ? accountSafe : toAuthUser(testAccount),
-          ),
-        );
+        return commitSession(normalizeUser(toAuthUser(testAccount)));
       }
 
       const email = identifier.includes("@") ? identifier : `${identifier}@gmail.com`;
