@@ -15,7 +15,7 @@ function HomeSidebar() {
             <FontAwesomeIcon icon={faFire} />
           </span>
           <div>
-            <p className={styles["streak-title"]}>Streak {user?.streak ?? 5} ngày</p>
+            <p className={styles["streak-title"]}>Streak {user?.streak ?? 0} ngày</p>
             <p className={styles["streak-desc"]}>+20 điểm nếu duy trì 7 ngày</p>
           </div>
         </div>
