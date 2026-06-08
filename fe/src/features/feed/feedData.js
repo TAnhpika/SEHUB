@@ -51,11 +51,26 @@ const TIMES = [
 ];
 
 export const FEATURED_POSTS = [
-  "TOP 5 CÔNG CỤ AI NÊN DÙNG: BÍ QUYẾT BỨT PHÁ CHO DÂN IT 2025",
-  "Hành Trình Học Tập Ấn Tượng Của Kim Khoa",
-  "Từ Mông Lung Đến Bứt Phá Cùng AI: Hành Trình Của Hồng Phúc",
-  "Vượt Qua Nỗi \"Hoang Mang Đại Học\" Cùng FTES",
-  "Hành Trình Chạm Đến Top 5 Sinh Viên Xuất Sắc Của Chi Thông",
+  {
+    title: "TOP 5 CÔNG CỤ AI NÊN DÙNG: BÍ QUYẾT BỨT PHÁ CHO DÂN IT 2025",
+    url: "https://ftes.vn/vi/blogs/top-5-cong-cu-ai-nen-dung-bi-quyet-but-pha-cho-dan-it-2025",
+  },
+  {
+    title: "Hành Trình Học Tập Ấn Tượng Của Kim Khoa",
+    url: "https://ftes.vn/vi/blogs/hanh-trinh-hoc-tap-an-tuong-cua-kim-khoa",
+  },
+  {
+    title: "Từ Mông Lung Đến Bứt Phá Cùng AI: Hành Trình Của Hồng Phúc",
+    url: "https://ftes.vn/vi/blogs/tu-mong-lung-den-but-pha-cung-ai-hanh-trinh-cua-hong-phuc",
+  },
+  {
+    title: "Vượt Qua Nỗi \"Hoang Mang Đại Học\" Cùng FTES",
+    url: "https://ftes.vn/vi/blogs/vuot-qua-noi-hoang-mang-dai-hoc-cung-ftes",
+  },
+  {
+    title: "Hành Trình Chạm Đến Top 5 Sinh Viên Xuất Sắc Của Chi Thông",
+    url: "https://ftes.vn/vi/blogs/hanh-trinh-cham-den-top-5-sinh-vien-xuat-sac-cua-chi-thong",
+  },
 ];
 
 function buildExcerpt(title) {
