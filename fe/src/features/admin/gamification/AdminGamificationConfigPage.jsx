@@ -194,7 +194,6 @@ function AdminGamificationConfigPage() {
   return (
     <AdminPageLayout
       title="Gamification config"
-      subtitle="CRUD cấp hạng, danh hiệu & quy tắc cộng điểm — §3.6. Engine quét event khi SV có hành động."
       breadcrumbs={[
         { label: "Dashboard", to: "/admin" },
         { label: "Gamification config" },
@@ -224,7 +223,7 @@ function AdminGamificationConfigPage() {
           <p className={gStyles.statValue}>
             {stats.totalUnlocks.toLocaleString("vi-VN")}
           </p>
-          <p className={gStyles.statHint}>tổng danh hiệu (mock)</p>
+          <p className={gStyles.statHint}>tổng lượt mở khóa danh hiệu</p>
         </div>
         <div className={gStyles.statCard}>
           <p className={gStyles.statLabel}>Mục tiêu §3.6</p>
