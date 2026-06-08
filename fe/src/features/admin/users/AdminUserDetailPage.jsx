@@ -3,11 +3,18 @@ import { Link, useParams } from "react-router-dom";
 import Button from "@/common/Button/Button";
 import Pagination from "@/common/Pagination/Pagination";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { useAuth } from "@/context";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import StatusBadge from "@/features/admin/shared/StatusBadge";
 import DashboardBadge from "@/features/admin/dashboard/DashboardBadge";
 import { ACTIVITY_BADGE_VARIANT } from "@/features/admin/dashboard/dashboardConstants";
 import dash from "@/features/admin/dashboard/AdminDashboardPage.module.css";
+import AdminUserActionModal from "@/features/admin/users/AdminUserActionModal";
+import {
+  banUserPermanently,
+  requestPasswordReset,
+  unbanUserAccount,
+} from "@/features/admin/users/adminUserStore";
 import {
   ADMIN_USER_ACTIVITY_PAGE_SIZE,
   getAdminUserActivities,
@@ -27,9 +34,13 @@ const ACTIVITY_TYPE_LABEL = {
 function AdminUserDetailPage() {
   const { id } = useParams();
   const { showToast } = useToast();
+  const { user: authUser } = useAuth();
   const [activityPage, setActivityPage] = useState(1);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [actionModal, setActionModal] = useState({ open: false, mode: "ban" });
+  const [actionError, setActionError] = useState("");
 
-  const user = useMemo(() => getAdminUserDetail(id), [id]);
+  const user = useMemo(() => getAdminUserDetail(id), [id, refreshKey]);
   const activities = useMemo(() => getAdminUserActivities(id), [id]);
 
   const activityTotalPages = Math.max(
@@ -72,6 +83,46 @@ function AdminUserDetailPage() {
   const initial = user.displayName.charAt(0).toUpperCase();
   const isPremium = user.plan === "Premium";
   const gamification = user.gamification;
+  const canBan = user.role !== "admin" && user.status !== "banned";
+  const canUnban = user.status === "banned";
+
+  function openAction(mode) {
+    setActionError("");
+    setActionModal({ open: true, mode });
+  }
+
+  function closeAction() {
+    setActionModal({ open: false, mode: "ban" });
+    setActionError("");
+  }
+
+  function handleActionSubmit(payload) {
+    const admin = authUser?.username ?? "admin_sehub";
+    let result;
+
+    switch (actionModal.mode) {
+      case "ban":
+        result = banUserPermanently(id, { reason: payload.reason, adminUsername: admin });
+        break;
+      case "unban":
+        result = unbanUserAccount(id, { reason: payload.reason, adminUsername: admin });
+        break;
+      case "resetPassword":
+        result = requestPasswordReset(id, { adminUsername: admin });
+        break;
+      default:
+        return;
+    }
+
+    if (!result.ok) {
+      setActionError(result.message);
+      return;
+    }
+
+    showToast(result.message);
+    closeAction();
+    setRefreshKey((k) => k + 1);
+  }
 
   return (
     <AdminPageLayout
@@ -84,12 +135,14 @@ function AdminUserDetailPage() {
       ]}
       actions={
         <>
-          <Button look="outline" onClick={() => showToast("Email reset MK đã gửi (mock).")}>
+          <Button look="outline" onClick={() => openAction("resetPassword")}>
             Reset mật khẩu
           </Button>
-          <Button onClick={() => showToast("Đã cập nhật trạng thái (mock).")}>
-            {user.status === "banned" ? "Mở khóa vĩnh viễn" : "Khóa vĩnh viễn"}
-          </Button>
+          {canUnban ? (
+            <Button onClick={() => openAction("unban")}>Mở khóa vĩnh viễn</Button>
+          ) : canBan ? (
+            <Button onClick={() => openAction("ban")}>Khóa vĩnh viễn</Button>
+          ) : null}
         </>
       }
     >
@@ -353,37 +406,39 @@ function AdminUserDetailPage() {
         </div>
 
         <aside className={styles.panel}>
-          <h2 className={styles.panelTitle}>Thao tác quản trị</h2>
+          <h2 className={styles.panelTitle}>Thao tác tài khoản</h2>
           <div className={styles.divider} />
           <div className={styles.actionStack}>
-            {user.role === "student" && !isPremium ? (
-              <Button fullWidth onClick={() => showToast("Đã kích hoạt Premium (mock).")}>
-                Cấp Premium
-              </Button>
-            ) : null}
-            {user.role === "student" ? (
-              <Button look="outline" fullWidth onClick={() => showToast("Đã cộng 500 token (mock).")}>
-                Cộng token AI
-              </Button>
-            ) : null}
-            {user.role === "student" ? (
-              <Button look="outline" fullWidth onClick={() => showToast("Đã gán Moderator (mock).")}>
-                Gán Moderator
-              </Button>
-            ) : null}
-            <Button
-              look="outline"
-              fullWidth
-              onClick={() => showToast("Email reset MK đã gửi (mock).")}
-            >
-              Gửi lại email reset MK
+            <Button look="outline" fullWidth onClick={() => openAction("resetPassword")}>
+              Gửi email reset mật khẩu
             </Button>
+            {canUnban ? (
+              <Button fullWidth onClick={() => openAction("unban")}>
+                Mở khóa vĩnh viễn
+              </Button>
+            ) : canBan ? (
+              <Button fullWidth onClick={() => openAction("ban")}>
+                Khóa vĩnh viễn
+              </Button>
+            ) : null}
           </div>
           <p className={styles.hint} style={{ marginTop: "1rem" }}>
-            Mọi thao tác được ghi audit log (backend GĐ2).
+            Khóa tạm (1/7/30 ngày) do <Link to="/admin/moderation/banned">Moderator</Link> xử
+            lý. Kích hoạt Premium & cộng token →{" "}
+            <Link to="/admin/payments">Thanh toán PayOS</Link>. Gán Mod →{" "}
+            <Link to="/admin/permissions">Phân quyền Mod</Link>.
           </p>
         </aside>
       </div>
+
+      <AdminUserActionModal
+        open={actionModal.open}
+        mode={actionModal.mode}
+        user={user}
+        onClose={closeAction}
+        onSubmit={handleActionSubmit}
+        error={actionError}
+      />
     </AdminPageLayout>
   );
 }
