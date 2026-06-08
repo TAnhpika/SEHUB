@@ -13,7 +13,7 @@ export const NOTIFICATIONS = [
   },
   {
     id: "notif-3",
-    title: "Bạn đã duy trì streak 7 ngày — tiếp tục phát huy nhé!",
+    title: "Bạn đã duy trì streak — tiếp tục phát huy nhé!",
     time: "Hôm qua",
     read: false,
   },

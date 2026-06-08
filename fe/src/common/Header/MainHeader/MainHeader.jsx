@@ -39,7 +39,6 @@ function MainHeader() {
     NOTIFICATIONS.length > 0
       ? NOTIFICATIONS.filter((item) => !item.read).length
       : (user?.unreadNotifications ?? 0);
-  const streakCount = user?.streak ?? 7;
 
   function handleLogout() {
     logout();
@@ -85,7 +84,7 @@ function MainHeader() {
         <div className={styles.actions}>
           <NotificationDropdown unreadCount={unreadCount} />
 
-          <StreakDropdown streakCount={streakCount} />
+          <StreakDropdown />
 
           <div className={styles.profile}>
             <button type="button" className={styles["profile-trigger"]} aria-haspopup="menu">
