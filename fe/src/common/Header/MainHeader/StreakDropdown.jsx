@@ -1,17 +1,21 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFire } from "@fortawesome/free-solid-svg-icons";
+import { useAuth } from "@/context";
 import {
-  DAILY_TASKS,
+  buildDailyTasks,
   getCompletedTaskCount,
 } from "./streakData";
 import styles from "./StreakDropdown.module.css";
 
-function StreakDropdown({ streakCount = 7 }) {
+function StreakDropdown() {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const panelId = useId();
-  const completedCount = getCompletedTaskCount(DAILY_TASKS);
+  const streakDays = user?.streak ?? 0;
+  const dailyTasks = useMemo(() => buildDailyTasks(streakDays), [streakDays]);
+  const completedCount = getCompletedTaskCount(dailyTasks);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -43,26 +47,29 @@ function StreakDropdown({ streakCount = 7 }) {
         type="button"
         className={`${styles.trigger} ${open ? styles["trigger-open"] : ""}`}
         onClick={() => setOpen((prev) => !prev)}
-        aria-label={`Streak ${streakCount} ngày`}
+        aria-label={`Streak ${streakDays} ngày, ${completedCount}/${dailyTasks.length} nhiệm vụ hoàn thành`}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={panelId}
       >
         <FontAwesomeIcon icon={faFire} className={styles["fire-icon"]} />
-        <span className={styles.badge}>{streakCount}</span>
+        {streakDays > 0 && <span className={styles.badge}>{streakDays}</span>}
       </button>
 
       {open && (
         <div id={panelId} className={styles.dropdown} role="dialog" aria-label="Nhiệm vụ hàng ngày">
           <header className={styles.header}>
-            <h2 className={styles.title}>Nhiệm vụ hàng ngày</h2>
+            <div>
+              <h2 className={styles.title}>Nhiệm vụ hàng ngày</h2>
+              <p className={styles.streakMeta}>Streak {streakDays} ngày liên tiếp</p>
+            </div>
             <span className={styles.summary}>
-              {completedCount}/{DAILY_TASKS.length}
+              {completedCount}/{dailyTasks.length}
             </span>
           </header>
 
           <ul className={styles.list}>
-            {DAILY_TASKS.map((task) => {
+            {dailyTasks.map((task) => {
               const isDone = task.current >= task.target;
 
               return (
