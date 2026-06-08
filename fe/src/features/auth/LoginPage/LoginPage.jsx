@@ -29,12 +29,23 @@ function LoginPage() {
 
   const redirectTo = location.state?.from || "/home";
 
+  function isGuestOnlyPath(path) {
+    if (!path || path === "/") return true;
+    if (path === "/login" || path === "/register" || path.startsWith("/forgot-password")) {
+      return true;
+    }
+    if (path === "/support") return true;
+    if (path === "/community" || path.startsWith("/community/")) return true;
+    return false;
+  }
+
   function navigateAfterLogin(loggedInUser) {
     const isStaff =
       loggedInUser?.role === "moderator" || loggedInUser?.role === "admin";
+    const studentFallback = isGuestOnlyPath(redirectTo) ? "/home" : redirectTo;
     const destination = isStaff
       ? getRoleHomePath(loggedInUser)
-      : getRoleHomePath(loggedInUser, redirectTo);
+      : getRoleHomePath(loggedInUser, studentFallback);
     navigate(destination, { replace: true });
   }
 
@@ -73,7 +84,7 @@ function LoginPage() {
     } catch {
       /* ignore storage errors */
     }
-    navigateAfterLogin(nextUser);
+    navigate(getRoleHomePath(nextUser), { replace: true });
   }
 
   function handleGoogleLogin() {
