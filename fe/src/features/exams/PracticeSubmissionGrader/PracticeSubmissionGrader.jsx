@@ -48,12 +48,14 @@ function PracticeSubmissionGrader({ submission, gradedBy, onGraded, compact = fa
 
   return (
     <div className={compact ? styles.compact : styles.grader}>
-      <div className={styles.meta}>
-        <span className={styles.badge}>{getSubmissionStatusLabel(submission.status)}</span>
-        {submission.gradedBy ? (
-          <span className={styles.gradedBy}>Chấm bởi @{submission.gradedBy}</span>
-        ) : null}
-      </div>
+      {!compact ? (
+        <div className={styles.meta}>
+          <span className={styles.badge}>{getSubmissionStatusLabel(submission.status)}</span>
+          {submission.gradedBy ? (
+            <span className={styles.gradedBy}>Chấm bởi @{submission.gradedBy}</span>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className={styles.fields}>
         <label className={styles.field}>
@@ -63,7 +65,6 @@ function PracticeSubmissionGrader({ submission, gradedBy, onGraded, compact = fa
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >
-            <option value="pending">Chờ chấm</option>
             {STATUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}

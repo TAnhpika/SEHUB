@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import Button from "@/common/Button/Button";
 import Pagination from "@/common/Pagination/Pagination";
 import { useAuth } from "@/context";
 import PracticeSubmissionGrader from "@/features/exams/PracticeSubmissionGrader/PracticeSubmissionGrader";
@@ -55,9 +57,10 @@ function ModeratorPracticeSubmissionsPage() {
             {pendingCount > 0 ? ` · ${pendingCount} bài chờ chấm` : null}
           </p>
         </div>
-        <Link to="/moderator/practice-exams/add" className={pageStyles.secondaryLink}>
+        <Button to="/moderator/practice-exams/add" className={pageStyles.addExamBtn}>
+          <FontAwesomeIcon icon={faPlus} aria-hidden />
           Thêm đề thực hành
-        </Link>
+        </Button>
       </header>
 
       <section className={styles.panel}>
@@ -157,6 +160,7 @@ function ModeratorPracticeSubmissionsPage() {
                       {sub.gradedAt
                         ? ` · Chấm: ${new Date(sub.gradedAt).toLocaleString("vi-VN")}`
                         : null}
+                      {sub.gradedBy ? ` · Chấm bởi @${sub.gradedBy}` : null}
                     </p>
                     <a
                       href={sub.githubUrl}
