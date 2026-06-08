@@ -1,10 +1,30 @@
 import {
-  ADMIN_CHART_CONTENT,
-  ADMIN_CHART_REPORT_STATUS,
-  ADMIN_DASHBOARD_PENDING,
   ADMIN_QUICK_LINKS,
-  ADMIN_RECENT_ACTIVITY,
+  getDashboardPending,
+  getMergedActivityLog,
 } from "@/features/admin/adminMockData";
+import { getAdminDocuments } from "@/features/admin/documents/adminDocumentData";
+import { getAdminExams } from "@/features/admin/exams/adminExamData";
+import { getAdminReports } from "@/features/admin/moderation/adminReportData";
+import { getAdminPayments, getPaymentStats } from "@/features/admin/payments/adminPaymentData";
+import { getAdminUsers } from "@/features/admin/users/adminUserStore";
+
+const CHART_MONTH_KEYS = ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"];
+
+const SAMPLE_TRAFFIC = {
+  data: [
+    { label: "6h", value: 120 },
+    { label: "9h", value: 340 },
+    { label: "12h", value: 520 },
+    { label: "15h", value: 480 },
+    { label: "18h", value: 610 },
+    { label: "21h", value: 390 },
+  ],
+  peak: 610,
+  seriesName: "Phiên hoạt động",
+  period: "Hôm nay theo giờ",
+  dataSource: "sample",
+};
 
 export const DASHBOARD_PERIOD_OPTIONS = [
   { id: "month", label: "Tháng" },
@@ -20,16 +40,140 @@ function delay(ms) {
   });
 }
 
+function buildLiveKpis() {
+  const users = getAdminUsers();
+  const students = users.filter((u) => u.role === "student" && u.status === "active");
+  const premiumStudents = students.filter((u) => u.plan === "Premium");
+  const premiumPct = students.length
+    ? Math.round((premiumStudents.length / students.length) * 1000) / 10
+    : 0;
+  const pendingReports = getAdminReports().filter((r) => r.status === "pending");
+  const urgentReports = pendingReports.filter((r) => r.urgent).length;
+  const paymentStats = getPaymentStats();
+  const revenueM = Math.round(paymentStats.monthRevenue / 1_000_000 * 10) / 10;
+
+  return {
+    usersTotal: users.length,
+    studentsActive: students.length,
+    studentsFree: students.length - premiumStudents.length,
+    premiumCount: premiumStudents.length,
+    premiumPct,
+    pendingReports: pendingReports.length,
+    urgentReports,
+    revenueLabel: revenueM > 0 ? `${revenueM.toLocaleString("vi-VN")} tr` : "0 tr",
+    paymentStats,
+  };
+}
+
+/** Biểu đồ — ưu tiên store; ghi rõ nguồn dữ liệu mẫu */
+function buildLiveCharts(live) {
+  const users = getAdminUsers();
+  const payments = getAdminPayments();
+  const reports = getAdminReports();
+  const exams = getAdminExams();
+  const documents = getAdminDocuments();
+
+  const regByMonth = {};
+  for (const user of users) {
+    if (!user.joinedAt) continue;
+    const key = user.joinedAt.slice(0, 7);
+    regByMonth[key] = (regByMonth[key] ?? 0) + 1;
+  }
+
+  const userGrowthData = CHART_MONTH_KEYS.map((monthKey, index) => ({
+    label: `T${index + 1}`,
+    value: regByMonth[monthKey] ?? 0,
+  }));
+  const newRegistrations = userGrowthData.reduce((sum, row) => sum + row.value, 0);
+
+  const revenueByMonth = {};
+  for (const payment of payments) {
+    if (payment.status !== "activated") continue;
+    const key = payment.createdAt.slice(0, 7);
+    revenueByMonth[key] = (revenueByMonth[key] ?? 0) + payment.amount;
+  }
+
+  const revenueData = CHART_MONTH_KEYS.map((monthKey, index) => ({
+    label: `T${index + 1}`,
+    value: Math.round((revenueByMonth[monthKey] ?? 0) / 1_000_000 * 10) / 10,
+  }));
+
+  const premiumRatioData = CHART_MONTH_KEYS.map((_, index) => {
+    if (index === CHART_MONTH_KEYS.length - 1) {
+      return { label: `T${index + 1}`, value: live.premiumPct };
+    }
+    const factor = 0.82 + index * 0.03;
+    return {
+      label: `T${index + 1}`,
+      value: Math.round(live.premiumPct * factor * 10) / 10,
+    };
+  });
+
+  const pendingReports = reports.filter((r) => r.status === "pending").length;
+  const resolvedReports = reports.filter((r) => r.status === "resolved").length;
+
+  const content = [
+    { name: "Đề thi", value: exams.length, fill: "#2563eb" },
+    { name: "Tài liệu", value: documents.length, fill: "#7c3aed" },
+    { name: "Báo cáo chờ", value: pendingReports, fill: "#f59e0b" },
+    { name: "Báo cáo đã xử lý", value: resolvedReports, fill: "#22c55e" },
+  ].filter((item) => item.value > 0);
+
+  const reportStatus = [
+    { label: "Chờ xử lý", value: pendingReports, color: "#ef4444" },
+    { label: "Đã xử lý", value: resolvedReports, color: "#22c55e" },
+  ].filter((item) => item.value > 0);
+
+  return {
+    userGrowth: {
+      data: userGrowthData,
+      seriesName: "Đăng ký mới",
+      summary: {
+        total: live.usersTotal,
+        delta: `${newRegistrations} đăng ký`,
+        period: "6 tháng gần nhất",
+      },
+      dataSource: "live",
+    },
+    revenue: {
+      data: revenueData,
+      summary: {
+        total: live.revenueLabel,
+        delta: `${live.paymentStats.activated} đơn kích hoạt`,
+        period: "tháng 6/2026",
+      },
+      valueSuffix: " tr",
+      dataSource: "live",
+    },
+    premiumRatio: {
+      data: premiumRatioData,
+      seriesName: "Tỉ lệ Premium (%)",
+      dataSource: "sample",
+      sampleNote: "Xu hướng ước lượng — điểm cuối lấy từ store",
+    },
+    content,
+    contentDataSource: "live",
+    reportStatus,
+    reportStatusDataSource: "live",
+    traffic: SAMPLE_TRAFFIC,
+  };
+}
+
 function buildMonthPayload() {
+  const live = buildLiveKpis();
+  const charts = buildLiveCharts(live);
+  const examCount = getAdminExams().length;
+  const documentCount = getAdminDocuments().length;
+
   return {
     periodLabel: "Tháng hiện tại · 6/2026",
     stats: [
       {
         id: "users",
         label: "Người dùng",
-        value: "2.148",
-        change: "+12,4%",
-        changeDetail: "so với tháng trước",
+        value: live.usersTotal.toLocaleString("vi-VN"),
+        change: `${live.studentsActive} SV active`,
+        changeDetail: "tổng tài khoản trong hệ thống",
         trend: "up",
         urgent: false,
         tier: "primary",
@@ -37,9 +181,9 @@ function buildMonthPayload() {
       {
         id: "revenue",
         label: "Doanh thu tháng",
-        value: "48,2 tr",
-        change: "+18,2%",
-        changeDetail: "PayOS · VNĐ",
+        value: live.revenueLabel,
+        change: `${live.paymentStats.activated} đơn`,
+        changeDetail: "PayOS đã kích hoạt · tháng 6/2026",
         trend: "up",
         urgent: false,
         tier: "primary",
@@ -47,9 +191,9 @@ function buildMonthPayload() {
       {
         id: "premium",
         label: "Student Premium",
-        value: "8,7%",
-        change: "+0,6 pp",
-        changeDetail: "186 tài khoản · tỉ lệ gói",
+        value: `${live.premiumPct}%`,
+        change: `${live.premiumCount} tài khoản`,
+        changeDetail: "tỉ lệ trên SV active",
         trend: "up",
         urgent: false,
         tier: "primary",
@@ -57,19 +201,19 @@ function buildMonthPayload() {
       {
         id: "reports",
         label: "Báo cáo chờ",
-        value: "7",
-        change: "3 khẩn",
-        changeDetail: "cần xử lý gấp",
-        trend: "down",
-        urgent: true,
+        value: String(live.pendingReports),
+        change: live.urgentReports > 0 ? `${live.urgentReports} khẩn` : "ổn định",
+        changeDetail: live.pendingReports > 0 ? "cần xử lý gấp" : "không có báo cáo chờ",
+        trend: live.pendingReports > 0 ? "down" : "up",
+        urgent: live.pendingReports > 0,
         tier: "primary",
       },
       {
         id: "exams",
         label: "Đề thi",
-        value: "524",
-        change: "+8",
-        changeDetail: "đề mới trong tháng",
+        value: String(examCount),
+        change: `${examCount} đề`,
+        changeDetail: "trong catalog Admin",
         trend: "up",
         urgent: false,
         tier: "secondary",
@@ -77,9 +221,9 @@ function buildMonthPayload() {
       {
         id: "documents",
         label: "Tài liệu",
-        value: "312",
-        change: "+6",
-        changeDetail: "upload trong tháng",
+        value: String(documentCount),
+        change: `${documentCount} file`,
+        changeDetail: "đã upload theo môn",
         trend: "up",
         urgent: false,
         tier: "secondary",
@@ -87,95 +231,54 @@ function buildMonthPayload() {
       {
         id: "posts",
         label: "Bài viết",
-        value: "2.063",
-        change: "+45",
-        changeDetail: "bài mới trong kỳ",
+        value: "—",
+        change: "GĐ2",
+        changeDetail: "chưa có store bài viết Admin",
         trend: "up",
         urgent: false,
         tier: "secondary",
       },
     ],
     studentPlan: {
-      totalStudents: 2148,
+      totalStudents: live.studentsActive,
       period: "Sinh viên active · không tính Mod/Admin",
       basic: {
         label: "Student Basic",
         sublabel: "Gói Free",
-        count: 1962,
-        percent: 91.3,
+        count: live.studentsFree,
+        percent: live.studentsActive
+          ? Math.round((live.studentsFree / live.studentsActive) * 1000) / 10
+          : 0,
         color: "#64748b",
       },
       premium: {
         label: "Student Premium",
         sublabel: "Gói trả phí",
-        count: 186,
-        percent: 8.7,
+        count: live.premiumCount,
+        percent: live.premiumPct,
         color: "#2563eb",
       },
-      deltaPremiumPct: "+0,6 pp",
-      deltaPremiumCount: "+12",
-      deltaPeriod: "so với tháng trước",
+      deltaPremiumPct: "—",
+      deltaPremiumCount: "—",
+      deltaPeriod: "so với snapshot seed",
       targetPremiumPct: 12,
     },
-    userGrowth: {
-      labels: ["T1", "T2", "T3", "T4", "T5", "T6"],
-      data: [
-        { label: "T1", value: 186 },
-        { label: "T2", value: 204 },
-        { label: "T3", value: 198 },
-        { label: "T4", value: 241 },
-        { label: "T5", value: 268 },
-        { label: "T6", value: 312 },
-      ],
-      summary: { total: 2148, delta: "+12,4%", period: "6 tháng gần nhất" },
-      seriesName: "Đăng ký mới",
-    },
-    revenue: {
-      labels: ["T1", "T2", "T3", "T4", "T5", "T6"],
-      data: [
-        { label: "T1", value: 32.1 },
-        { label: "T2", value: 35.8 },
-        { label: "T3", value: 38.4 },
-        { label: "T4", value: 41.2 },
-        { label: "T5", value: 45.6 },
-        { label: "T6", value: 48.2 },
-      ],
-      summary: { total: "48,2 tr", delta: "+18,2%", period: "tháng 6/2026" },
-      valueSuffix: " tr",
-    },
-    premiumRatio: {
-      data: [
-        { label: "T1", value: 7.2 },
-        { label: "T2", value: 7.5 },
-        { label: "T3", value: 7.9 },
-        { label: "T4", value: 8.1 },
-        { label: "T5", value: 8.3 },
-        { label: "T6", value: 8.7 },
-      ],
-      seriesName: "Tỉ lệ Premium (%)",
-    },
-    content: ADMIN_CHART_CONTENT.map((item) => ({
-      name: item.label,
-      value: item.value,
-      fill: item.color,
-    })),
-    reportStatus: ADMIN_CHART_REPORT_STATUS,
-    traffic: {
-      data: [
-        { label: "6h", value: 120 },
-        { label: "9h", value: 340 },
-        { label: "12h", value: 520 },
-        { label: "15h", value: 480 },
-        { label: "18h", value: 610 },
-        { label: "21h", value: 390 },
-      ],
-      peak: 610,
-      seriesName: "Phiên hoạt động",
-      period: "Hôm nay theo giờ",
-    },
-    pending: ADMIN_DASHBOARD_PENDING,
+    userGrowth: charts.userGrowth,
+    revenue: charts.revenue,
+    premiumRatio: charts.premiumRatio,
+    content: charts.content,
+    contentDataSource: charts.contentDataSource,
+    reportStatus: charts.reportStatus,
+    reportStatusDataSource: charts.reportStatusDataSource,
+    traffic: charts.traffic,
+    pending: getDashboardPending(),
     quickLinks: ADMIN_QUICK_LINKS,
-    activity: ADMIN_RECENT_ACTIVITY,
+    activity: getMergedActivityLog().slice(0, 4).map(({ id, time, text, type }) => ({
+      id,
+      time,
+      text,
+      type,
+    })),
   };
 }
 
@@ -185,86 +288,21 @@ function buildQuarterPayload() {
     ...month,
     periodLabel: "Quý hiện tại · Q2/2026",
     stats: month.stats.map((s) => {
-      if (s.id === "users") {
-        return { ...s, value: "2.412", change: "+15,1%", changeDetail: "so với quý trước" };
-      }
       if (s.id === "revenue") {
-        return {
-          ...s,
-          label: "Doanh thu quý",
-          value: "132,8 tr",
-          change: "+22,4%",
-          changeDetail: "tổng PayOS quý",
-        };
-      }
-      if (s.id === "premium") {
-        return {
-          ...s,
-          value: "9,1%",
-          change: "+0,9 pp",
-          changeDetail: "198 tài khoản · tỉ lệ gói",
-        };
-      }
-      if (s.id === "reports") {
-        return { ...s, value: "5", change: "1 khẩn", changeDetail: "còn lại trong quý", urgent: true };
-      }
-      if (s.id === "posts") {
-        return { ...s, value: "2.312", change: "+52", changeDetail: "bài mới trong quý" };
+        return { ...s, label: "Doanh thu quý", changeDetail: "tổng PayOS · snapshot store" };
       }
       return {
         ...s,
-        changeDetail: s.changeDetail.replace("tháng", "quý").replace("tuần", "quý").replace("kỳ", "quý"),
+        changeDetail: s.changeDetail
+          .replace("tháng", "quý")
+          .replace("tuần", "quý")
+          .replace("kỳ", "quý"),
       };
     }),
     studentPlan: {
       ...month.studentPlan,
-      totalStudents: 2412,
-      basic: { ...month.studentPlan.basic, count: 2193, percent: 90.9 },
-      premium: { ...month.studentPlan.premium, count: 198, percent: 9.1 },
-      deltaPremiumPct: "+0,9 pp",
-      deltaPremiumCount: "+18",
-      deltaPeriod: "so với quý trước",
+      deltaPeriod: "snapshot store · chưa có lịch sử quý",
     },
-    userGrowth: {
-      labels: ["Q3/25", "Q4/25", "Q1/26", "Q2/26"],
-      data: [
-        { label: "Q3/25", value: 1680 },
-        { label: "Q4/25", value: 1890 },
-        { label: "Q1/26", value: 2055 },
-        { label: "Q2/26", value: 2412 },
-      ],
-      summary: { total: 2412, delta: "+15,1%", period: "4 quý gần nhất" },
-      seriesName: "Tổng user (cuối quý)",
-    },
-    revenue: {
-      labels: ["Q3/25", "Q4/25", "Q1/26", "Q2/26"],
-      data: [
-        { label: "Q3/25", value: 98.4 },
-        { label: "Q4/25", value: 108.2 },
-        { label: "Q1/26", value: 118.6 },
-        { label: "Q2/26", value: 132.8 },
-      ],
-      summary: { total: "132,8 tr", delta: "+22,4%", period: "quý 2/2026" },
-      valueSuffix: " tr",
-    },
-    premiumRatio: {
-      data: [
-        { label: "Q3/25", value: 7.8 },
-        { label: "Q4/25", value: 8.2 },
-        { label: "Q1/26", value: 8.6 },
-        { label: "Q2/26", value: 9.1 },
-      ],
-      seriesName: "Tỉ lệ Premium (%)",
-    },
-    content: ADMIN_CHART_CONTENT.map((item) => ({
-      name: item.label,
-      value: Math.round(item.value * 1.12),
-      fill: item.color,
-    })),
-    reportStatus: ADMIN_CHART_REPORT_STATUS.map((r) => ({
-      ...r,
-      value: Math.round(r.value * 1.08),
-    })),
     traffic: {
       data: [
         { label: "T2", value: 4200 },
@@ -277,6 +315,7 @@ function buildQuarterPayload() {
       peak: 5340,
       seriesName: "Phiên / ngày",
       period: "Trung bình theo ngày trong quý",
+      dataSource: "sample",
     },
   };
 }
@@ -287,31 +326,8 @@ function buildYearPayload() {
     ...quarter,
     periodLabel: "Năm hiện tại · 2026",
     stats: quarter.stats.map((s) => {
-      if (s.id === "users") {
-        return { ...s, value: "2.648", change: "+18,2%", changeDetail: "so với năm trước" };
-      }
       if (s.id === "revenue") {
-        return {
-          ...s,
-          label: "Doanh thu năm",
-          value: "458,2 tr",
-          change: "+28,6%",
-          changeDetail: "tổng PayOS năm",
-        };
-      }
-      if (s.id === "premium") {
-        return {
-          ...s,
-          value: "10,2%",
-          change: "+1,4 pp",
-          changeDetail: "268 tài khoản · tỉ lệ gói",
-        };
-      }
-      if (s.id === "reports") {
-        return { ...s, value: "8", change: "2 khẩn", changeDetail: "còn lại trong năm", urgent: true };
-      }
-      if (s.id === "posts") {
-        return { ...s, value: "2.812", change: "+186", changeDetail: "bài mới trong năm" };
+        return { ...s, label: "Doanh thu năm", changeDetail: "tổng PayOS · snapshot store" };
       }
       return {
         ...s,
@@ -324,47 +340,11 @@ function buildYearPayload() {
     }),
     studentPlan: {
       ...quarter.studentPlan,
-      totalStudents: 2648,
-      basic: { ...quarter.studentPlan.basic, count: 2378, percent: 89.8 },
-      premium: { ...quarter.studentPlan.premium, count: 268, percent: 10.2 },
-      deltaPremiumPct: "+1,4 pp",
-      deltaPremiumCount: "+42",
-      deltaPeriod: "so với năm trước",
-    },
-    userGrowth: {
-      labels: ["2023", "2024", "2025", "2026"],
-      data: [
-        { label: "2023", value: 1420 },
-        { label: "2024", value: 1785 },
-        { label: "2025", value: 2190 },
-        { label: "2026", value: 2648 },
-      ],
-      summary: { total: 2648, delta: "+18,2%", period: "4 năm gần nhất" },
-      seriesName: "Tổng user (cuối năm)",
-    },
-    revenue: {
-      labels: ["2023", "2024", "2025", "2026"],
-      data: [
-        { label: "2023", value: 285.4 },
-        { label: "2024", value: 332.8 },
-        { label: "2025", value: 396.2 },
-        { label: "2026", value: 458.2 },
-      ],
-      summary: { total: "458,2 tr", delta: "+28,6%", period: "năm 2026" },
-      valueSuffix: " tr",
-    },
-    premiumRatio: {
-      data: [
-        { label: "2023", value: 6.8 },
-        { label: "2024", value: 7.6 },
-        { label: "2025", value: 8.9 },
-        { label: "2026", value: 10.2 },
-      ],
-      seriesName: "Tỉ lệ Premium (%)",
+      deltaPeriod: "snapshot store · chưa có lịch sử năm",
     },
     traffic: {
       ...quarter.traffic,
-      period: "Trung bình theo tháng trong năm",
+      period: "Trung bình theo tháng trong năm (mẫu)",
       peak: 6120,
       data: [
         { label: "T1", value: 4820 },
@@ -374,6 +354,7 @@ function buildYearPayload() {
         { label: "T5", value: 5680 },
         { label: "T6", value: 6120 },
       ],
+      dataSource: "sample",
     },
   };
 }
