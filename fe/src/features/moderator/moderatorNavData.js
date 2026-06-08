@@ -8,6 +8,7 @@ import {
   faUserSlash,
 } from "@fortawesome/free-solid-svg-icons";
 import { getPendingContentCount } from "@/features/moderator/content/contentModerationStore";
+import { getPendingExamQuestionReportCount } from "@/features/exams/examQuestionReportStore";
 import { REPORTS_MOCK } from "@/features/moderator/reports/reportsData";
 
 /** Sau đăng nhập — hàng đợi báo cáo ưu tiên nghiệp vụ */
@@ -128,8 +129,10 @@ export function isModeratorNavActive(item, pathname) {
 }
 
 export function getModeratorNavBadgeCounts() {
+  const communityPending = REPORTS_MOCK.filter((report) => report.status === "pending").length;
+  const examPending = getPendingExamQuestionReportCount();
   return {
-    reports: REPORTS_MOCK.filter((report) => report.status === "pending").length,
+    reports: communityPending + examPending,
     content: getPendingContentCount(),
   };
 }

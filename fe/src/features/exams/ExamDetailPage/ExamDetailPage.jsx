@@ -26,17 +26,27 @@ import {
 } from "@/features/exams/examDetailData";
 import StudentDocumentViewer from "@/features/documents/StudentDocumentViewer/StudentDocumentViewer";
 import PracticeExamSubmitPanel from "@/features/exams/PracticeExamSubmitPanel/PracticeExamSubmitPanel";
+import PracticeBriefPanel from "@/features/exams/PracticeBriefPanel/PracticeBriefPanel";
+import { getPracticeBrief } from "@/features/exams/practiceBriefData";
 import {
   getExamById,
   getSubjectDetailConfig,
 } from "@/features/subjects/SubjectDetailPage/subjectDetailData";
+import {
+  canCommentOnExamQuestion,
+  canSubmitPracticeExam,
+  canTakeReviewExam,
+  canViewExamAnswers,
+} from "@/utils/examAccess";
+import ExamQuestionReportButton from "@/features/exams/ExamQuestionReportButton/ExamQuestionReportButton";
+import { getExamFocusDoPath, getExamFocusResultPath, getPracticeFocusDoPath, getPracticeFocusResultPath } from "@/utils/examFocusPaths";
 import styles from "./ExamDetailPage.module.css";
 
 function ExamDetailPage({ page }) {
   const { courseCode, examId } = useParams();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { isPremium, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { requirePremium } = useRequirePremium();
   const scope = pathname.startsWith("/home/") ? "home" : "community";
   const config = getSubjectDetailConfig(page, scope);
@@ -68,14 +78,16 @@ function ExamDetailPage({ page }) {
   const isReviewExam = page === "review";
   const isPracticeExam = page === "practice";
   const isDocumentPage = page === "documents" && exam.document;
-  const canUsePremiumFeatures = (isReviewExam || isPracticeExam) && isPremium;
+  const showCorrectAnswer = isReviewExam && canViewExamAnswers(user);
+  const canTakeExam = isReviewExam
+    ? canTakeReviewExam(user)
+    : isPracticeExam
+      ? canSubmitPracticeExam(user)
+      : false;
+  const commentsLocked = !canCommentOnExamQuestion(user);
   const typeLabel = EXAM_TYPE_LABELS[page] ?? exam.type;
   const previewLabel = EXAM_PREVIEW_LABELS[page] ?? "Mục";
   const listPath = `${config.detailBase}/${exam.courseCode}`;
-  const doPath = `${config.detailBase}/${exam.courseCode}/${encodeURIComponent(exam.id)}/do`;
-  const resultPath = `${config.detailBase}/${exam.courseCode}/${encodeURIComponent(exam.id)}/result`;
-  const practiceDoPath = `${doPath}/${currentIndex + 1}`;
-  const practiceResultPath = `${resultPath}/${currentIndex + 1}`;
   const submittedSession = getExamSession(exam.id);
   const practiceSession = isPracticeExam
     ? getPracticeSession(exam.id, currentQuestion.id)
@@ -83,6 +95,9 @@ function ExamDetailPage({ page }) {
   const hasSubmittedResult = isPracticeExam
     ? Boolean(practiceSession?.submitted)
     : Boolean(submittedSession?.submitted);
+  const practiceBrief = isPracticeExam
+    ? getPracticeBrief(exam.id, currentIndex + 1, exam.courseCode, currentQuestion.text)
+    : null;
 
   function goToPreviousQuestion() {
     if (isFirstQuestion) return;
@@ -97,11 +112,23 @@ function ExamDetailPage({ page }) {
   function handleStartExam() {
     if (!isReviewExam && !isPracticeExam) return;
     if (!requirePremium()) return;
-    navigate(isPracticeExam ? practiceDoPath : doPath);
+
+    if (isReviewExam) {
+      navigate(getExamFocusDoPath(exam.courseCode, exam.id), { state: { scope } });
+      return;
+    }
+
+    navigate(getPracticeFocusDoPath(exam.courseCode, exam.id, currentIndex + 1), { state: { scope } });
   }
 
   function handleViewResult() {
-    navigate(isPracticeExam ? practiceResultPath : resultPath);
+    if (isPracticeExam) {
+      navigate(getPracticeFocusResultPath(exam.courseCode, exam.id, currentIndex + 1), {
+        state: { scope },
+      });
+      return;
+    }
+    navigate(getExamFocusResultPath(exam.courseCode, exam.id), { state: { scope } });
   }
 
   return (
@@ -148,11 +175,11 @@ function ExamDetailPage({ page }) {
             <h2 className={styles["exam-code"]}>{exam.id}</h2>
             {isReviewExam && <p className={styles.subtitle}>Luyện tập câu hỏi lẻ</p>}
             {isPracticeExam && (
-              <p className={styles.subtitle}>Mỗi bài 30 phút · Nộp file hoặc GitHub</p>
+              <p className={styles.subtitle}>Mỗi bài 85 phút · Nộp file hoặc GitHub</p>
             )}
           </div>
           <div className={styles["panel-actions"]}>
-            {hasSubmittedResult && canUsePremiumFeatures && (
+            {hasSubmittedResult && canTakeExam && (
               <button type="button" className={styles["result-btn"]} onClick={handleViewResult}>
                 Xem kết quả
               </button>
@@ -160,14 +187,14 @@ function ExamDetailPage({ page }) {
             {isReviewExam || isPracticeExam ? (
               <button
                 type="button"
-                className={`${styles["start-btn"]} ${canUsePremiumFeatures && !hasSubmittedResult ? styles["start-btn-active"] : ""}`}
+                className={`${styles["start-btn"]} ${canTakeExam && !hasSubmittedResult ? styles["start-btn-active"] : ""}`}
                 onClick={handleStartExam}
                 disabled={isPracticeExam && hasSubmittedResult}
               >
-                <FontAwesomeIcon icon={canUsePremiumFeatures ? faPlay : faLock} />
+                <FontAwesomeIcon icon={canTakeExam ? faPlay : faLock} />
                 {hasSubmittedResult && isPracticeExam
                   ? "Đã nộp bài này"
-                  : canUsePremiumFeatures
+                  : canTakeExam
                     ? "Bắt đầu làm bài"
                     : "Premium để làm bài"}
               </button>
@@ -181,11 +208,7 @@ function ExamDetailPage({ page }) {
 
         <div className={styles.workspace}>
           <div className={styles["main-column"]}>
-            <article
-              className={`${styles["question-card"]} ${
-                !canUsePremiumFeatures && isReviewExam ? styles["question-card-locked"] : ""
-              }`}
-            >
+            <article className={styles["question-card"]}>
               {!isReviewExam && (
                 <p className={styles["preview-label"]}>
                   {previewLabel} {currentIndex + 1}
@@ -193,11 +216,20 @@ function ExamDetailPage({ page }) {
               )}
               <h3 className={styles["question-text"]}>{currentQuestion.text}</h3>
 
+              {isPracticeExam && practiceBrief ? (
+                <PracticeBriefPanel
+                  brief={practiceBrief}
+                  canDownload={canTakeExam}
+                  compact
+                  onDownloadBlocked={() => requirePremium()}
+                />
+              ) : null}
+
               {isReviewExam && currentQuestion.options && (
                 <ul className={styles.options}>
                   {currentQuestion.options.map((option) => {
                     const isCorrect =
-                      canUsePremiumFeatures && option.key === currentQuestion.correctAnswer;
+                      showCorrectAnswer && option.key === currentQuestion.correctAnswer;
 
                     return (
                       <li key={option.key}>
@@ -216,27 +248,35 @@ function ExamDetailPage({ page }) {
                 </ul>
               )}
 
-              {!canUsePremiumFeatures && isReviewExam && (
-                <div className={styles["premium-overlay"]}>
-                  <p>Nâng cấp Premium để xem đáp án, AI giải thích và làm bài trực tuyến.</p>
-                  <Link to="/home/premium" className={styles["premium-cta"]}>
-                    Xem gói Premium
-                  </Link>
-                </div>
+              {isReviewExam && !showCorrectAnswer && (
+                <p className={styles["answer-hint"]}>
+                  <FontAwesomeIcon icon={faLock} className={styles["answer-hint-icon"]} />
+                  {!isAuthenticated
+                    ? "Khách và tài khoản Basic xem câu hỏi — không hiển thị đáp án đúng."
+                    : "Tài khoản Basic xem câu hỏi và lựa chọn — đáp án đúng chỉ dành cho Premium."}
+                  {" "}
+                  Bạn vẫn có thể dùng AI giải thích (10 token/ngày) bên dưới khi đã đăng nhập.
+                </p>
               )}
 
               <footer className={styles["question-toolbar"]}>
-                <div
-                  className={`${styles["toolbar-left"]} ${
-                    !canUsePremiumFeatures ? styles["toolbar-muted"] : ""
-                  }`}
-                >
+                <div className={styles["toolbar-left"]}>
                   <button type="button" className={styles["tool-btn"]} disabled aria-label="Xáo câu hỏi">
                     <FontAwesomeIcon icon={faShuffle} />
                   </button>
-                  <button type="button" className={styles["tool-btn"]} disabled aria-label="Bình luận câu hỏi">
-                    <FontAwesomeIcon icon={faComment} />
-                  </button>
+                  {isReviewExam ? (
+                    <ExamQuestionReportButton
+                      className={`${styles["tool-btn"]} ${styles["tool-btn-active"]}`}
+                      examId={exam.id}
+                      courseCode={exam.courseCode}
+                      questionIndex={currentIndex + 1}
+                      question={currentQuestion}
+                    />
+                  ) : (
+                    <button type="button" className={styles["tool-btn"]} disabled aria-label="Bình luận câu hỏi">
+                      <FontAwesomeIcon icon={faComment} />
+                    </button>
+                  )}
                   <button type="button" className={styles["tool-btn"]} disabled aria-label="Ẩn câu hỏi">
                     <FontAwesomeIcon icon={faEyeSlash} />
                   </button>
@@ -278,12 +318,17 @@ function ExamDetailPage({ page }) {
             </article>
 
             {isReviewExam && (
-              <ExamAiExplanation question={currentQuestion} locked={!canUsePremiumFeatures} />
+              <ExamAiExplanation examId={exam.id} question={currentQuestion} />
             )}
           </div>
 
           {isReviewExam && (
-            <ExamCommentsPanel locked={!isAuthenticated || !isPremium} />
+            <ExamCommentsPanel
+              locked={commentsLocked}
+              reason={!isAuthenticated ? "guest" : "premium"}
+              examId={exam.id}
+              questionId={currentQuestion.id}
+            />
           )}
         </div>
       </section>

@@ -394,6 +394,15 @@
   background: #003da3;
 }
 
+.detailApprove:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.detailApprove:disabled:hover {
+  background: var(--moderator-primary, #004ac6);
+}
+
 .detailQueueLink {
   color: var(--moderator-primary, #004ac6);
   background: #fff;

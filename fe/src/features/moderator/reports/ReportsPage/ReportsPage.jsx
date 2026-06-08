@@ -16,6 +16,11 @@ import {
   REASON_META,
   REPORTS_MOCK,
 } from "@/features/moderator/reports/reportsData";
+import {
+  getExamQuestionReports,
+  resolveExamQuestionReport,
+} from "@/features/exams/examQuestionReportStore";
+import { EXAM_REPORT_ROUTING } from "@/features/exams/examQuestionReportData";
 import styles from "./ReportsPage.module.css";
 
 const TAB_OPTIONS = [
@@ -23,6 +28,17 @@ const TAB_OPTIONS = [
   { id: "resolved", label: "Đã xử lý" },
   { id: "all", label: "Tất cả" },
 ];
+
+const CATEGORY_OPTIONS = [
+  { id: "all", label: "Tất cả loại" },
+  { id: "community", label: "Cộng đồng" },
+  { id: "exam_question", label: "Câu hỏi đề" },
+];
+
+const CATEGORY_LABELS = {
+  community: "Cộng đồng",
+  exam_question: "Câu hỏi đề",
+};
 
 const STATUS_LABELS = {
   pending: "Chờ xử lý",
@@ -59,29 +75,57 @@ function TrustScore({ score }) {
 function ReportsPage() {
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [reports, setReports] = useState(REPORTS_MOCK);
+  const [communityReports, setCommunityReports] = useState(() =>
+    REPORTS_MOCK.map((report) => ({ ...report, category: "community" })),
+  );
+  const [examReports, setExamReports] = useState(getExamQuestionReports);
   const [tab, setTab] = useState("pending");
+  const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [lastResolved, setLastResolved] = useState(null);
+
+  useEffect(() => {
+    function refreshExamReports() {
+      setExamReports(getExamQuestionReports());
+    }
+
+    refreshExamReports();
+    window.addEventListener("sehubs-exam-reports-changed", refreshExamReports);
+    window.addEventListener("storage", refreshExamReports);
+    return () => {
+      window.removeEventListener("sehubs-exam-reports-changed", refreshExamReports);
+      window.removeEventListener("storage", refreshExamReports);
+    };
+  }, []);
+
+  const reports = useMemo(
+    () => [...examReports, ...communityReports],
+    [examReports, communityReports],
+  );
 
   const pendingCount = reports.filter((r) => r.status === "pending").length;
   const resolvedCount = reports.filter((r) => r.status === "resolved").length;
 
   const filtered = useMemo(() => {
     const statusFiltered = filterReports(reports, tab === "all" ? "all" : tab);
+    const categoryFiltered =
+      category === "all"
+        ? statusFiltered
+        : statusFiltered.filter((report) => report.category === category);
     const q = query.trim().toLowerCase();
-    if (!q) return statusFiltered;
+    if (!q) return categoryFiltered;
 
-    return statusFiltered.filter(
+    return categoryFiltered.filter(
       (report) =>
         report.code.toLowerCase().includes(q) ||
         report.reporterUsername.toLowerCase().includes(q) ||
-        report.reportedUser.username.toLowerCase().includes(q) ||
+        (report.reportedUser?.username ?? "").toLowerCase().includes(q) ||
+        (report.examId ?? "").toLowerCase().includes(q) ||
         (REASON_META[report.reason]?.label ?? report.reason).toLowerCase().includes(q) ||
         report.snippet.toLowerCase().includes(q),
     );
-  }, [reports, tab, query]);
+  }, [reports, tab, category, query]);
 
   useEffect(() => {
     const fromUrl = searchParams.get("id");
@@ -118,20 +162,31 @@ function ReportsPage() {
   }
 
   function resolveReport(id, resolution) {
-    setReports((prev) =>
-      prev.map((report) =>
-        report.id === id ? { ...report, status: "resolved", resolution } : report,
-      ),
-    );
-    const updated = reports.find((r) => r.id === id);
-    if (updated) {
-      setLastResolved({ ...updated, status: "resolved", resolution });
+    const target = reports.find((report) => report.id === id);
+    if (target?.category === "exam_question") {
+      resolveExamQuestionReport(id, resolution);
+      setExamReports(getExamQuestionReports());
+    } else {
+      setCommunityReports((prev) =>
+        prev.map((report) =>
+          report.id === id ? { ...report, status: "resolved", resolution } : report,
+        ),
+      );
+    }
+
+    if (target) {
+      setLastResolved({ ...target, status: "resolved", resolution });
     }
   }
 
   function handleDismiss(id) {
+    const target = reports.find((report) => report.id === id);
     resolveReport(id, "ignored");
-    showToast("Đã bỏ qua báo cáo — giữ nguyên nội dung (mock).");
+    showToast(
+      target?.category === "exam_question"
+        ? "Đã bỏ qua — giữ nguyên câu hỏi trong ngân hàng đề."
+        : "Đã bỏ qua báo cáo — giữ nguyên nội dung (mock).",
+    );
     const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
     setSelectedId(nextPending[0]?.id ?? null);
   }
@@ -143,10 +198,18 @@ function ReportsPage() {
     setSelectedId(nextPending[0]?.id ?? null);
   }
 
+  function handleForwardExamReport(id) {
+    resolveReport(id, "forwarded_admin");
+    showToast("Đã ghi nhận — chuyển Admin duyệt chỉnh sửa đề thi.");
+    const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
+    setSelectedId(nextPending[0]?.id ?? null);
+  }
+
   return (
     <div className={styles.page}>
       <p className={styles.intro}>
-        Xem xét báo cáo từ cộng đồng — chấp thuận xóa nội dung hoặc từ chối giữ nguyên.
+        Xử lý báo cáo cộng đồng và câu hỏi đề thi ôn tập. Báo cáo đề được Moderator rà soát,
+        Admin duyệt trước khi cập nhật ngân hàng câu hỏi.
       </p>
 
       <div className={styles.metrics}>
@@ -211,7 +274,11 @@ function ReportsPage() {
           <div className={styles.bannerBody}>
             <p className={styles.bannerTitle}>Đã xử lý báo cáo #{lastResolved.code}</p>
             <p className={styles.bannerMeta}>
-              {lastResolved.resolution === "deleted" ? "Đã xóa nội dung" : "Đã bỏ qua báo cáo"}
+              {lastResolved.resolution === "deleted"
+                ? "Đã xóa nội dung"
+                : lastResolved.resolution === "forwarded_admin"
+                  ? "Đã chuyển Admin duyệt sửa đề"
+                  : "Đã bỏ qua báo cáo"}
             </p>
           </div>
           <button
@@ -253,6 +320,18 @@ function ReportsPage() {
                 </button>
               ))}
             </div>
+            <div className={styles.filterTrack} role="group" aria-label="Lọc loại báo cáo">
+              {CATEGORY_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  className={`${styles.filterBtn} ${category === opt.id ? styles.filterBtnActive : ""}`}
+                  onClick={() => setCategory(opt.id)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className={styles.queueScroll}>
@@ -281,6 +360,9 @@ function ReportsPage() {
                             <p className={styles.queueTitle}>{report.code}</p>
                             <p className={styles.queueReason}>{report.snippet}</p>
                             <div className={styles.tagRow}>
+                              <span className={`${styles.tag} ${styles.tagMuted}`}>
+                                {CATEGORY_LABELS[report.category] ?? report.category}
+                              </span>
                               <ReasonTag reason={report.reason} />
                               <span
                                 className={`${styles.tag} ${
@@ -293,8 +375,11 @@ function ReportsPage() {
                               </span>
                             </div>
                             <p className={styles.queueFooter}>
-                              {report.reporterUsername} → {report.reportedUser.username} ·{" "}
-                              {report.timeLabel}
+                              {report.reporterUsername}
+                              {report.category === "exam_question"
+                                ? ` · ${report.examId} · Câu ${report.questionIndex}`
+                                : ` → ${report.reportedUser.username}`}{" "}
+                              · {report.timeLabel}
                             </p>
                           </div>
                         </div>
@@ -337,11 +422,62 @@ function ReportsPage() {
                     <p className={styles.resolutionText}>
                       {selected.resolution === "deleted"
                         ? "Nội dung vi phạm đã được xóa."
-                        : "Báo cáo đã bỏ qua — nội dung được giữ nguyên."}
+                        : selected.resolution === "forwarded_admin"
+                          ? "Moderator đã ghi nhận và chuyển Admin duyệt chỉnh sửa đề."
+                          : "Báo cáo đã bỏ qua — nội dung được giữ nguyên."}
                     </p>
                   </div>
                 ) : null}
 
+                {selected.category === "exam_question" ? (
+                  <>
+                    <div className={styles.violationBox}>
+                      <p className={styles.violationLabel}>Câu hỏi được báo cáo</p>
+                      <blockquote className={styles.violationQuote}>
+                        {selected.violatingContent}
+                      </blockquote>
+                      {selected.markedAnswer ? (
+                        <p className={styles.reporterReasonLabel}>
+                          Đáp án hệ thống đang ghi: <strong>{selected.markedAnswer}</strong>
+                        </p>
+                      ) : null}
+                      <div className={styles.reporterReason}>
+                        <p className={styles.reporterReasonLabel}>
+                          Lý do từ {selected.reporterUsername}:
+                        </p>
+                        <p>{selected.reporterReason}</p>
+                      </div>
+                    </div>
+
+                    <dl className={styles.metaGrid}>
+                      <div className={styles.metaItem}>
+                        <dt>Mã đề</dt>
+                        <dd>{selected.examId}</dd>
+                      </div>
+                      <div className={styles.metaItem}>
+                        <dt>Môn học</dt>
+                        <dd>{selected.courseCode}</dd>
+                      </div>
+                      <div className={styles.metaItem}>
+                        <dt>Câu hỏi</dt>
+                        <dd>Câu {selected.questionIndex}</dd>
+                      </div>
+                      <div className={styles.metaItem}>
+                        <dt>Người xử lý</dt>
+                        <dd>{EXAM_REPORT_ROUTING.assigneeLabel}</dd>
+                      </div>
+                      <div className={styles.metaItem}>
+                        <dt>Escalate</dt>
+                        <dd>{EXAM_REPORT_ROUTING.escalationLabel}</dd>
+                      </div>
+                      <div className={styles.metaItem}>
+                        <dt>Lý do</dt>
+                        <dd>{REASON_META[selected.reason]?.label ?? selected.reason}</dd>
+                      </div>
+                    </dl>
+                  </>
+                ) : (
+                  <>
                 <div className={styles.userCard}>
                   <div className={styles.userIdentity}>
                     <span className={styles.userAvatar} aria-hidden>
@@ -392,11 +528,23 @@ function ReportsPage() {
                     <dd>{REASON_META[selected.reason]?.label ?? selected.reason}</dd>
                   </div>
                 </dl>
+                  </>
+                )}
               </div>
 
               <footer className={styles.detailActions}>
                 {selected.status === "pending" ? (
-                  <>
+                  selected.category === "exam_question" ? (
+                    <>
+                      <Button look="outline" onClick={() => handleDismiss(selected.id)}>
+                        Bỏ qua — giữ câu hỏi
+                      </Button>
+                      <Button onClick={() => handleForwardExamReport(selected.id)}>
+                        Ghi nhận — chuyển Admin sửa đề
+                      </Button>
+                    </>
+                  ) : (
+                    <>
                     <Button look="outline" onClick={() => handleDismiss(selected.id)}>
                       Bỏ qua báo cáo
                     </Button>
@@ -404,7 +552,8 @@ function ReportsPage() {
                       <FontAwesomeIcon icon={faTrash} />
                       Xóa nội dung
                     </Button>
-                  </>
+                    </>
+                  )
                 ) : (
                   <p className={styles.detailActionsMuted}>
                     Báo cáo đã đóng. Chọn báo cáo khác trong hàng chờ.

@@ -1,11 +1,159 @@
 export const MAX_PINNED_POSTS = 5;
 
-export const FEATURE_TAG_FILTERS = [
-  { value: "all", label: "Tất cả" },
-  { value: "hk231", label: "Học kỳ 231" },
-  { value: "document", label: "Tài liệu" },
-  { value: "announcement", label: "Thông báo" },
+export const FEATURE_SEARCH_SORT_OPTIONS = [
+  { value: "newest", label: "Mới nhất" },
+  { value: "oldest", label: "Cũ nhất" },
+  { value: "mostInteractions", label: "Nhiều tương tác nhất" },
 ];
+
+/** @deprecated — dùng FEATURE_SEARCH_SORT_OPTIONS */
+export const FEATURE_TAG_FILTERS = FEATURE_SEARCH_SORT_OPTIONS;
+
+export function tagToCategoryLabel(tag) {
+  if (tag === "document") return "Tài liệu";
+  if (tag === "hk231") return "Học kỳ 231";
+  if (tag === "announcement") return "Thông báo";
+  return "Cộng đồng";
+}
+
+/** Nội dung đầy đủ theo id — dùng cho panel xem chi tiết (mock) */
+export const FEATURED_POST_DETAILS = {
+  "fp-1": {
+    content: `Bộ tài liệu bao gồm đề thi tự luận, trắc nghiệm và đáp án chi tiết do các anh chị khóa trên tổng hợp.
+
+Mình chia theo 3 phần:
+- Lý thuyết hay gặp FE
+- Đề mẫu 2022–2024
+- Gợi ý ôn tập 2 tuần cuối
+
+File PDF đính kèm bên dưới, mọi người tải về ôn nhé!`,
+    semester: "HK231",
+    major: "SE",
+    studentId: "SE160221",
+    tags: ["CO2013", "FE"],
+    coverImage: {
+      url: "https://picsum.photos/seed/sehub-co2013/960/480",
+      alt: "Ảnh bìa — đề CO2013",
+    },
+    attachments: [{ id: "fp-att-1", name: "CO2013_FE_HK231.pdf", sizeLabel: "5.1 MB", type: "pdf" }],
+    allowComments: true,
+    anonymous: false,
+  },
+  "fp-2": {
+    content: `Sinh viên lưu ý quy định mới về việc sử dụng máy tính cá nhân trong phòng thi thực hành áp dụng từ kỳ Fall 2025.
+
+Điểm chính:
+- Không cài phần mềm lạ trước giờ thi
+- Phải login tài khoản FPT cấp
+- Vi phạm sẽ bị hủy kết quả thi
+
+Chi tiết xem file đính kèm hoặc hỏi bên dưới.`,
+    semester: "Fall 2025",
+    major: "SE",
+    studentId: "—",
+    tags: ["MAN201", "Thông báo"],
+    coverImage: null,
+    attachments: [{ id: "fp-att-2", name: "MAN201_lab_rules.pdf", sizeLabel: "820 KB", type: "pdf" }],
+    allowComments: true,
+    anonymous: false,
+  },
+  "fp-3": {
+    content: `Tổng hợp slide tuần 1–8 kèm bài tập thực hành và link repo GitHub tham khảo.
+
+Phần khó nhất theo mình là Collections và Exception handling — nên ôn thêm lab 4–6.
+
+Chúc mọi người thi tốt!`,
+    semester: "Summer 2025",
+    major: "SE",
+    studentId: "SE160088",
+    tags: ["PRF192"],
+    coverImage: {
+      url: "https://picsum.photos/seed/sehub-prf-slide/960/480",
+      alt: "Slide PRF192",
+    },
+    inlineImages: [
+      { url: "https://picsum.photos/seed/sehub-prf-lab/720/405", caption: "Screenshot lab ArrayList" },
+    ],
+    attachments: [{ id: "fp-att-3", name: "PRF192_midterm_slides.zip", sizeLabel: "3.4 MB", type: "zip" }],
+    allowComments: true,
+    anonymous: false,
+  },
+  "sp-1": {
+    content: `Mình tổng hợp review các công ty thực tập đợt vừa rồi — môi trường, mentor, và cơ hội được học gì.
+
+Công ty A: backend nhiều, mentor support tốt.
+Công ty B: product thực tế, hơi áp lực deadline.
+
+Ai cần thêm info inbox mình nhé!`,
+    semester: "HK231",
+    major: "SE",
+    studentId: "SE150077",
+    tags: ["Thực tập"],
+    coverImage: null,
+    attachments: [],
+    allowComments: true,
+    anonymous: false,
+  },
+  "sp-2": {
+    content: `Slide bài giảng tuần 5–7: Stack, Queue, Linked List và bài tập về nhà kèm đáp án tham khảo.
+
+Lưu ý phần implement Queue bằng mảng vòng hay gặp ở FE.`,
+    semester: "Fall 2025",
+    major: "SE",
+    studentId: "SE160000",
+    tags: ["CSD"],
+    coverImage: {
+      url: "https://picsum.photos/seed/sehub-csd-slide/960/480",
+      alt: "Slide CSD tuần 5–7",
+    },
+    attachments: [{ id: "sp-att-2", name: "CSD_week5-7.pdf", sizeLabel: "2.8 MB", type: "pdf" }],
+    allowComments: true,
+    anonymous: false,
+  },
+  "sp-3": {
+    content: `Chia sẻ kinh nghiệm thi FE MAD Summer 2025 — pattern hay gặp và cách phân biệt Singleton vs Factory nhanh.
+
+Mình attach mindmap pattern mình tự vẽ khi ôn.`,
+    semester: "Summer 2025",
+    major: "SE",
+    studentId: "SE140556",
+    tags: ["MAD", "FE"],
+    coverImage: null,
+    inlineImages: [
+      { url: "https://picsum.photos/seed/sehub-mad-map/720/405", caption: "Mindmap design pattern" },
+    ],
+    attachments: [],
+    allowComments: true,
+    anonymous: false,
+  },
+  "sp-4": {
+    content: `Lịch đăng ký môn học học kỳ Fall 2025 đã được Ban Công tác sinh viên cập nhật.
+
+Thời gian mở đăng ký: 15/08 – 22/08
+Hướng dẫn đăng ký trên FAP: xem file PDF đính kèm.`,
+    semester: "Fall 2025",
+    major: "—",
+    studentId: "—",
+    tags: ["Thông báo", "ĐKMH"],
+    coverImage: null,
+    attachments: [{ id: "sp-att-4", name: "Fall2025_registration.pdf", sizeLabel: "640 KB", type: "pdf" }],
+    allowComments: false,
+    anonymous: false,
+  },
+  "sp-5": {
+    content: `Tài liệu ôn SWR302 tập trung Use case diagram và Sequence diagram — kèm template SRS team mình dùng đạt 8.5.
+
+Phần mô tả luồng ngoại lệ nên viết rõ, đừng gộp chung happy path.`,
+    semester: "Fall 2025",
+    major: "SE",
+    studentId: "SE160033",
+    tags: ["SWR302"],
+    coverImage: null,
+    attachments: [{ id: "sp-att-5", name: "SWR302_diagram_notes.docx", sizeLabel: "710 KB", type: "file" }],
+    allowComments: true,
+    anonymous: false,
+  },
+};
 
 export const PINNED_POSTS_INITIAL = [
   {
@@ -20,6 +168,7 @@ export const PINNED_POSTS_INITIAL = [
       "Bộ tài liệu bao gồm đề thi tự luận, trắc nghiệm và đáp án chi tiết do các anh chị khóa trên…",
     likes: 124,
     comments: 32,
+    status: "approved",
   },
   {
     id: "fp-2",
@@ -33,6 +182,7 @@ export const PINNED_POSTS_INITIAL = [
       "Sinh viên lưu ý quy định mới về việc sử dụng máy tính cá nhân trong phòng thi thực hành áp…",
     likes: 45,
     comments: 18,
+    status: "approved",
   },
   {
     id: "fp-3",
@@ -46,6 +196,7 @@ export const PINNED_POSTS_INITIAL = [
       "Tổng hợp slide tuần 1–8 kèm bài tập thực hành và link repo GitHub tham khảo…",
     likes: 78,
     comments: 14,
+    status: "approved",
   },
 ];
 
@@ -57,7 +208,11 @@ export const SEARCH_POSTS_INITIAL = [
     timeLabel: "3 giờ trước",
     tag: "hk231",
     title: "Review chi tiết các công ty thực tập đợt",
+    excerpt: "Mình tổng hợp review các công ty thực tập đợt vừa rồi — môi trường, mentor…",
     likes: 89,
+    comments: 12,
+    status: "approved",
+    sortOrder: 1,
   },
   {
     id: "sp-2",
@@ -66,7 +221,11 @@ export const SEARCH_POSTS_INITIAL = [
     timeLabel: "Hôm qua",
     tag: "document",
     title: "Slide bài giảng Cấu trúc dữ liệu và giải thuật (tuần 5–7)",
+    excerpt: "Slide bài giảng tuần 5–7: Stack, Queue, Linked List…",
     likes: 210,
+    comments: 28,
+    status: "approved",
+    sortOrder: 3,
   },
   {
     id: "sp-3",
@@ -75,7 +234,11 @@ export const SEARCH_POSTS_INITIAL = [
     timeLabel: "5 giờ trước",
     tag: "hk231",
     title: "Kinh nghiệm thi FE môn MAD — kỳ Summer 2025",
+    excerpt: "Chia sẻ kinh nghiệm thi FE MAD Summer 2025 — pattern hay gặp…",
     likes: 56,
+    comments: 9,
+    status: "approved",
+    sortOrder: 2,
   },
   {
     id: "sp-4",
@@ -84,7 +247,11 @@ export const SEARCH_POSTS_INITIAL = [
     timeLabel: "2 ngày trước",
     tag: "announcement",
     title: "Lịch đăng ký môn học học kỳ Fall 2025",
+    excerpt: "Lịch đăng ký môn học học kỳ Fall 2025 đã được cập nhật…",
     likes: 132,
+    comments: 41,
+    status: "approved",
+    sortOrder: 4,
   },
   {
     id: "sp-5",
@@ -93,20 +260,55 @@ export const SEARCH_POSTS_INITIAL = [
     timeLabel: "1 tuần trước",
     tag: "document",
     title: "Tài liệu ôn SWR302 — Use case & Sequence diagram",
+    excerpt: "Tài liệu ôn SWR302 tập trung Use case diagram và Sequence diagram…",
     likes: 41,
+    comments: 6,
+    status: "approved",
+    sortOrder: 5,
   },
 ];
 
-export function filterSearchPosts(posts, { query, tagFilter, pinnedIds }) {
+export function getFeaturedInteractionCount(post) {
+  return (post.likes ?? 0) + (post.comments ?? 0);
+}
+
+export function enrichFeaturedPost(post) {
+  const extra = FEATURED_POST_DETAILS[post.id] ?? {};
+  return {
+    type: "post",
+    categoryLabel: post.categoryLabel ?? tagToCategoryLabel(post.tag),
+    comments: post.comments ?? 0,
+    ...extra,
+    ...post,
+  };
+}
+
+export function findFeaturedPost(id, pinned, searchPool) {
+  const raw = pinned.find((item) => item.id === id) ?? searchPool.find((item) => item.id === id);
+  return raw ? enrichFeaturedPost(raw) : null;
+}
+
+export function filterSearchPosts(posts, { query, sort = "newest", pinnedIds }) {
   const normalizedQuery = query.trim().toLowerCase();
 
-  return posts.filter((post) => {
+  let result = posts.filter((post) => {
     if (pinnedIds.has(post.id)) return false;
-    if (tagFilter !== "all" && post.tag !== tagFilter) return false;
 
     if (!normalizedQuery) return true;
 
-    const haystack = [post.title, post.authorName].join(" ").toLowerCase();
+    const haystack = [post.title, post.authorName, post.excerpt].filter(Boolean).join(" ").toLowerCase();
     return haystack.includes(normalizedQuery);
   });
+
+  result = [...result].sort((a, b) => {
+    if (sort === "mostInteractions") {
+      return getFeaturedInteractionCount(b) - getFeaturedInteractionCount(a);
+    }
+    if (sort === "oldest") {
+      return (b.sortOrder ?? 0) - (a.sortOrder ?? 0);
+    }
+    return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+  });
+
+  return result;
 }

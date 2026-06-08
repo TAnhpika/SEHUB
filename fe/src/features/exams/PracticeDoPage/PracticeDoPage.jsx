@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -13,6 +13,9 @@ import { faGithub } from "@fortawesome/free-brands-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { buildExamQuestions } from "@/features/exams/examDetailData";
+import PracticeBriefPanel from "@/features/exams/PracticeBriefPanel/PracticeBriefPanel";
+import { getPracticeBrief } from "@/features/exams/practiceBriefData";
+import { formatDuration } from "@/features/exams/examSession";
 import {
   formatFileSize,
   getOrCreatePracticeSession,
@@ -23,28 +26,41 @@ import {
   savePracticeSubmission,
   submitPracticeSession,
 } from "@/features/exams/practiceSession";
-import { formatDuration } from "@/features/exams/examSession";
 import {
   getExamById,
-  SUBJECT_DETAIL_CONFIG,
+  getSubjectDetailConfig,
 } from "@/features/subjects/SubjectDetailPage/subjectDetailData";
+import {
+  getExamDetailPath,
+  getPracticeFocusResultPath,
+  isExamFocusPath,
+  resolveExamScope,
+} from "@/utils/examFocusPaths";
 import styles from "./PracticeDoPage.module.css";
 
 const ACCEPTED_TYPES = ".zip,.rar,.pdf,.doc,.docx,.c,.cpp,.java,.py,.js,.ts";
 const MAX_FILE_MB = 25;
+const PRACTICE_DURATION_MINUTES = PRACTICE_DURATION_MS / (60 * 1000);
 
 function PracticeDoPage() {
   const { courseCode, examId, questionIndex } = useParams();
   const navigate = useNavigate();
+  const { pathname, state: locationState } = useLocation();
   const { showToast } = useToast();
   const fileInputRef = useRef(null);
-  const config = SUBJECT_DETAIL_CONFIG.practice;
+  const isFocusMode = isExamFocusPath(pathname);
+  const scope = isFocusMode
+    ? resolveExamScope(pathname, locationState)
+    : pathname.startsWith("/home/")
+      ? "home"
+      : "community";
+  const config = getSubjectDetailConfig("practice", scope);
   const decodedExamId = decodeURIComponent(examId ?? "");
   const questionNumber = Math.max(1, Number(questionIndex) || 1);
 
   const exam = useMemo(
-    () => getExamById(courseCode, decodedExamId, "practice"),
-    [courseCode, decodedExamId],
+    () => getExamById(courseCode, decodedExamId, "practice", scope),
+    [courseCode, decodedExamId, scope],
   );
 
   const questions = useMemo(
@@ -54,27 +70,38 @@ function PracticeDoPage() {
 
   const question = questions[questionNumber - 1];
 
+  const practiceBrief = useMemo(() => {
+    if (!exam || !question) return null;
+    return getPracticeBrief(exam.id, question.id, exam.courseCode, question.text);
+  }, [exam, question]);
+
   const [submitMode, setSubmitMode] = useState("file");
   const [githubUrl, setGithubUrl] = useState("");
   const [uploadedFile, setUploadedFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [timeRemainingMs, setTimeRemainingMs] = useState(PRACTICE_DURATION_MS);
   const [startedAt, setStartedAt] = useState(Date.now());
+  const [sessionReady, setSessionReady] = useState(false);
+
+  const detailPath = exam
+    ? getExamDetailPath(exam.courseCode, exam.id, scope, "practice")
+    : config.detailBase;
+  const resultPath = isFocusMode
+    ? getPracticeFocusResultPath(exam?.courseCode ?? courseCode ?? "", exam?.id ?? decodedExamId, questionNumber)
+    : `${detailPath}/result/${questionNumber}`;
 
   useEffect(() => {
     if (!exam || !question) return;
 
     const existing = getPracticeSession(exam.id, question.id);
     if (existing?.submitted) {
-      navigate(
-        `${config.detailBase}/${exam.courseCode}/${encodeURIComponent(exam.id)}/result/${questionNumber}`,
-        { replace: true },
-      );
+      navigate(resultPath, { replace: true, state: isFocusMode ? { scope } : undefined });
       return;
     }
 
     const session = existing ?? getOrCreatePracticeSession(exam.id, question.id);
     setStartedAt(session.startedAt ?? Date.now());
+    setSessionReady(true);
 
     if (session.submission?.type === "github") {
       setSubmitMode("github");
@@ -86,35 +113,58 @@ function PracticeDoPage() {
         sizeLabel: session.submission.fileSizeLabel,
       });
     }
-  }, [exam, question, questionNumber, config.detailBase, navigate]);
+  }, [exam, question, resultPath, navigate, isFocusMode, scope]);
 
   useEffect(() => {
+    if (!sessionReady) return;
+
+    document.title = exam
+      ? `Bài TH ${questionNumber} — ${exam.id} | SEHUB`
+      : "Làm bài thực hành | SEHUB";
+    return () => {
+      document.title = "SEHUB";
+    };
+  }, [sessionReady, exam, questionNumber]);
+
+  useEffect(() => {
+    if (!sessionReady || !isFocusMode) return;
+
+    function handleBeforeUnload(event) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [sessionReady, isFocusMode]);
+
+  useEffect(() => {
+    if (!sessionReady) return;
+
     const timer = window.setInterval(() => {
       setTimeRemainingMs(Math.max(0, PRACTICE_DURATION_MS - (Date.now() - startedAt)));
     }, 1000);
+
     return () => window.clearInterval(timer);
-  }, [startedAt]);
+  }, [sessionReady, startedAt]);
 
   if (!exam) {
     return <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />;
   }
 
-  if (!question) {
-    return (
-      <Navigate
-        to={`${config.detailBase}/${exam.courseCode}/${encodeURIComponent(exam.id)}`}
-        replace
-      />
-    );
+  if (!question || !sessionReady) {
+    if (!question) {
+      return <Navigate to={detailPath} replace />;
+    }
+    return null;
   }
 
-  const detailPath = `${config.detailBase}/${exam.courseCode}/${encodeURIComponent(exam.id)}`;
-  const resultPath = `${detailPath}/result/${questionNumber}`;
   const isExpired = timeRemainingMs <= 0;
+  const isTimeCritical = !isExpired && timeRemainingMs <= 10 * 60 * 1000;
   const hasValidFile = Boolean(uploadedFile?.name);
   const hasValidGithub = isValidGithubUrl(githubUrl);
-  const canSubmit =
-    !isExpired && (submitMode === "file" ? hasValidFile : hasValidGithub);
+  const canSubmit = !isExpired && (submitMode === "file" ? hasValidFile : hasValidGithub);
+  const displayTime = isExpired ? "Hết giờ" : formatDuration(timeRemainingMs);
 
   function persistSubmission(nextSubmission) {
     savePracticeSubmission(exam.id, question.id, nextSubmission);
@@ -156,7 +206,7 @@ function PracticeDoPage() {
 
   function handleSubmit() {
     if (isExpired) {
-      showToast("Đã hết thời gian làm bài (30 phút).");
+      showToast(`Đã hết thời gian làm bài (${PRACTICE_DURATION_MINUTES} phút).`);
       return;
     }
 
@@ -188,46 +238,112 @@ function PracticeDoPage() {
 
     submitPracticeSession(exam.id, question.id, question, submission);
     showToast("Đã nộp bài thành công.");
-    navigate(resultPath);
+    navigate(resultPath, isFocusMode ? { state: { scope } } : undefined);
   }
 
+  function handleExitFocus() {
+    const hasProgress = hasValidFile || hasValidGithub;
+    const message = hasProgress
+      ? "Tiến độ đã lưu tạm. Thoát màn làm bài và quay lại xem đề?"
+      : "Thoát màn làm bài và quay lại xem đề?";
+    if (!window.confirm(message)) return;
+    navigate(detailPath);
+  }
+
+  const exitControl = isFocusMode ? (
+    <button type="button" className={styles.back} onClick={handleExitFocus}>
+      <FontAwesomeIcon icon={faArrowLeft} />
+      Thoát bài thi
+    </button>
+  ) : (
+    <Link to={detailPath} className={styles.back}>
+      <FontAwesomeIcon icon={faArrowLeft} />
+      Quay lại đề thi
+    </Link>
+  );
+
+  const submitButton = isFocusMode ? (
+    <button
+      type="button"
+      className={styles["submit-btn"]}
+      onClick={handleSubmit}
+      disabled={!canSubmit}
+    >
+      <FontAwesomeIcon icon={faPaperPlane} />
+      Nộp bài
+    </button>
+  ) : (
+    <Button size="sm" onClick={handleSubmit} disabled={!canSubmit}>
+      <FontAwesomeIcon icon={faPaperPlane} />
+      Nộp bài
+    </Button>
+  );
+
+  const timerClassName = [
+    styles.timer,
+    isExpired && styles["timer-expired"],
+    isTimeCritical && styles["timer-critical"],
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <div className={styles.page}>
-      <Link to={detailPath} className={styles.back}>
-        <FontAwesomeIcon icon={faArrowLeft} />
-        Quay lại đề thi
-      </Link>
+    <div className={`${styles.page} ${isFocusMode ? styles.pageFocus : ""}`}>
+      {!isFocusMode && exitControl}
 
-      <section className={styles.panel} aria-label="Làm bài thực hành">
-        <header className={styles.header}>
-          <div className={styles["header-main"]}>
-            <h1 className={styles["exam-code"]}>{exam.id}</h1>
-            <p className={styles.meta}>
-              Bài thực hành {questionNumber} / {exam.questionCount} · Thời gian mỗi bài: 30 phút
-            </p>
-          </div>
+      <section
+        className={`${styles.panel} ${isFocusMode ? styles["panel-focus"] : ""}`}
+        aria-label="Làm bài thực hành"
+      >
+        {isFocusMode ? (
+          <header className={styles["focus-toolbar"]}>
+            {exitControl}
+            <div className={styles["focus-meta"]}>
+              <span>
+                <strong>{exam.id}</strong>
+              </span>
+              <span>
+                Bài {questionNumber}/{exam.questionCount}
+              </span>
+              <span className={timerClassName} aria-live="polite">
+                <FontAwesomeIcon icon={faClock} />
+                {displayTime}
+              </span>
+            </div>
+            {submitButton}
+          </header>
+        ) : (
+          <header className={styles.header}>
+            <div className={styles["header-main"]}>
+              <h1 className={styles["exam-code"]}>{exam.id}</h1>
+              <p className={styles.meta}>
+                Bài thực hành {questionNumber} / {exam.questionCount} · Thời gian mỗi bài:{" "}
+                {PRACTICE_DURATION_MINUTES} phút
+              </p>
+            </div>
 
-          <div className={styles["header-actions"]}>
-            <span
-              className={`${styles.timer} ${isExpired ? styles["timer-expired"] : ""}`}
-              aria-live="polite"
-            >
-              <FontAwesomeIcon icon={faClock} />
-              {isExpired ? "Hết giờ" : formatDuration(getPracticeTimeRemaining({ startedAt }))}
-            </span>
-            <Button size="sm" onClick={handleSubmit} disabled={!canSubmit}>
-              <FontAwesomeIcon icon={faPaperPlane} />
-              Nộp bài
-            </Button>
-          </div>
-        </header>
+            <div className={styles["header-actions"]}>
+              <span className={timerClassName} aria-live="polite">
+                <FontAwesomeIcon icon={faClock} />
+                {isExpired ? "Hết giờ" : formatDuration(getPracticeTimeRemaining({ startedAt }))}
+              </span>
+              {submitButton}
+            </div>
+          </header>
+        )}
 
         <div className={styles.body}>
           <article className={styles.question}>
             <p className={styles["question-label"]}>Bài thực hành {questionNumber}</p>
             <p className={styles["question-text"]}>{question.text}</p>
+
+            {practiceBrief ? (
+              <PracticeBriefPanel brief={practiceBrief} canDownload enlarged={isFocusMode} />
+            ) : null}
+
             <p className={styles.hint}>
-              Hoàn thành bài và nộp bằng file hoặc link GitHub public repo trong vòng 30 phút.
+              Tải đề PDF/ảnh/file ở trên về máy để làm offline. Nộp bài hoàn thành bằng file hoặc
+              link GitHub public repo trong vòng {PRACTICE_DURATION_MINUTES} phút.
             </p>
           </article>
 
@@ -273,7 +389,9 @@ function PracticeDoPage() {
                       duyệt file từ máy tính
                     </button>
                   </p>
-                  <p className={styles.formats}>ZIP, RAR, PDF, DOCX, source code · Tối đa {MAX_FILE_MB}MB</p>
+                  <p className={styles.formats}>
+                    ZIP, RAR, PDF, DOCX, source code · Tối đa {MAX_FILE_MB}MB
+                  </p>
                   <input
                     ref={fileInputRef}
                     type="file"

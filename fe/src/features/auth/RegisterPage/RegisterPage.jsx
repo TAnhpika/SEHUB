@@ -46,7 +46,11 @@ function RegisterPage() {
   }
 
   function handleGoogleSignup() {
-    register({ fullName: "Google User", email: "google_user@sehub.ai", password: "" });
+    register({
+      provider: "google",
+      fullName: "Google User",
+      email: "google.user@gmail.com",
+    });
     navigate("/home", { replace: true });
   }
 

@@ -97,6 +97,70 @@
   border-radius: var(--radius-sm);
 }
 
+.prompt {
+  padding: 1.25rem 1.5rem;
+  background: var(--color-surface-elevated);
+  border: 1px solid rgba(0, 74, 198, 0.15);
+  border-radius: var(--radius-lg);
+}
+
+.prompt-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.prompt-icon {
+  font-size: 1.5rem;
+  color: #004ac6;
+}
+
+.prompt-title {
+  margin: 0 0 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.prompt-desc {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-subtle);
+}
+
+.prompt-btn {
+  margin-left: auto;
+  padding: 0.5rem 1rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #fff;
+  background: #004ac6;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.token-meta {
+  margin: 0.125rem 0 0;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--color-text-subtle);
+}
+
+.cta {
+  display: inline-flex;
+  margin-top: 0.25rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+  background: #004ac6;
+  border-radius: var(--radius-sm);
+}
+
 .locked {
   padding: 1.5rem;
   background: var(--color-surface-elevated);
@@ -128,4 +192,22 @@
   margin: 0;
   font-size: 0.8125rem;
   color: var(--color-text-subtle);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 1.25rem 1.5rem;
+  background: var(--color-surface-elevated);
+  border: 1px solid rgba(0, 74, 198, 0.15);
+  border-radius: var(--radius-lg);
+}
+
+.stack .locked,
+.stack .prompt {
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
