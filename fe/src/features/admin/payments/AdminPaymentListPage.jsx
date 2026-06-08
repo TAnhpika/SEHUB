@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import Button from "@/common/Button/Button";
 
@@ -285,7 +286,6 @@ function AdminPaymentListPage() {
 
       title="Thanh toán & PayOS"
 
-      subtitle="Luồng PayOS 5 bước — Admin xác nhận kích hoạt Premium; cộng token thủ công có giới hạn & audit bất biến."
 
       breadcrumbs={[{ label: "Dashboard", to: "/admin" }, { label: "Quản lý thanh toán" }]}
 
@@ -530,7 +530,9 @@ function AdminPaymentListPage() {
 
                       <td className={styles.cellMain}>
 
-                        {payment.payosOrderId}
+                        <Link to={`/admin/payments/${payment.id}`} className={styles.link}>
+                          {payment.payosOrderId}
+                        </Link>
 
                         {payment.note ? (
 

@@ -9,6 +9,7 @@ import dash from "./AdminDashboardPage.module.css";
  *   minimal?: boolean;
  *   viewAllTo?: string;
  *   viewAllLabel?: string;
+ *   dataSource?: "live" | "sample";
  *   children: import('react').ReactNode;
  *   className?: string;
  * }} props
@@ -20,15 +21,25 @@ function ChartCard({
   minimal = false,
   viewAllTo,
   viewAllLabel = "Xem tất cả",
+  dataSource,
   children,
   className = "",
 }) {
+  const sourceBadge =
+    dataSource === "sample" ? (
+      <span className={dash.dataBadgeSample}>Dữ liệu mẫu</span>
+    ) : dataSource === "live" ? (
+      <span className={dash.dataBadgeLive}>Từ store</span>
+    ) : null;
   return (
     <article className={`${dash.card} ${className}`.trim()}>
       <header className={minimal ? dash.cardHeadMinimal : dash.cardHead}>
         {minimal ? (
           <>
-            <h2 className={dash.cardTitle}>{title}</h2>
+            <div className={dash.cardHeadMinimalTitle}>
+              <h2 className={dash.cardTitle}>{title}</h2>
+              {sourceBadge}
+            </div>
             {viewAllTo ? (
               <Link to={viewAllTo} className={dash.cardViewAll}>
                 {viewAllLabel}
@@ -38,7 +49,10 @@ function ChartCard({
         ) : (
           <>
             <div className={dash.cardHeadText}>
-              <h2 className={dash.cardTitle}>{title}</h2>
+              <div className={dash.cardHeadMinimalTitle}>
+                <h2 className={dash.cardTitle}>{title}</h2>
+                {sourceBadge}
+              </div>
               {desc ? <p className={dash.cardDesc}>{desc}</p> : null}
             </div>
             {stats?.length ? (

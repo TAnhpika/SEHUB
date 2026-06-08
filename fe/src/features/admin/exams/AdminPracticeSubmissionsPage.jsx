@@ -133,8 +133,8 @@ function AdminPracticeSubmissionsPage() {
 
         <p className={styles.hint} style={{ marginTop: 0 }}>
           Mặc định sắp xếp <strong>Nộp mới nhất</strong>. Cũng xem theo đề tại{" "}
-          <Link to="/admin/exams/ex1" className={styles.link}>
-            PRF192 (ex1)
+          <Link to={resolveAdminExamLink("PRF192")} className={styles.link}>
+            PRF192
           </Link>
           .
         </p>

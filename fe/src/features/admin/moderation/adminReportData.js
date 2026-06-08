@@ -1,6 +1,7 @@
 /** Mock store — hàng chờ báo cáo Admin */
 
 import { addBannedUserFromReport } from "@/features/admin/moderation/adminBannedData";
+import { syncUserBanStatus } from "@/features/admin/users/adminUserStore";
 
 export const REPORT_REASON_LABELS = {
   spam: "Spam hoặc quảng cáo",
@@ -186,11 +187,16 @@ export function banReportedUser(id, durationLabel) {
     `Tài khoản @${item?.reportedUser ?? ""} bị khóa.`,
   );
   if (resolved && item) {
-    addBannedUserFromReport(item.reportedUser, durationLabel, {
+    const user = addBannedUserFromReport(item.reportedUser, durationLabel, {
       reason: item.reason,
       reportId: item.id,
       postId: item.postId,
+      displayName: item.post.author,
     });
+    if (durationLabel.includes("vĩnh")) {
+      syncUserBanStatus(item.reportedUser, "banned");
+    }
+    return { ...resolved, bannedEntry: user };
   }
   return resolved;
 }

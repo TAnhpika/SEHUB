@@ -49,7 +49,7 @@ function AdminExamDetailPage() {
 
   function handleDelete() {
     removeAdminExam(exam.id);
-    showToast(`Đã xóa ${exam.code} (mock).`);
+    showToast(`Đã xóa ${exam.code}.`);
     navigate("/admin/exams");
   }
 

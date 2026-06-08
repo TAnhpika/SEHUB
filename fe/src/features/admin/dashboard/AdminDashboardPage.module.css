@@ -283,6 +283,34 @@
   color: #9ca3af;
 }
 
+.cardHeadMinimalTitle {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 0.5rem;
+  align-items: center;
+}
+
+.dataBadgeLive,
+.dataBadgeSample {
+  display: inline-flex;
+  padding: 0.125rem 0.5rem;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: 9999px;
+  letter-spacing: 0.01em;
+}
+
+.dataBadgeLive {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.dataBadgeSample {
+  color: #92400e;
+  background: #fef3c7;
+}
+
 .cardStats {
   display: flex;
   flex-wrap: wrap;
@@ -577,6 +605,13 @@
   justify-content: space-between;
   padding: 0 1.25rem;
   border-bottom: 1px solid var(--dash-border);
+}
+
+.tabBarMeta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .tabBar {

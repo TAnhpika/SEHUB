@@ -1,10 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
-import {
-  getSubmissionStatusLabel,
-  gradePracticeSubmission,
-} from "@/features/exams/practiceExamSubmissions";
+import { gradePracticeSubmission } from "@/features/exams/practiceExamSubmissions";
 import styles from "./PracticeSubmissionGrader.module.css";
 
 const STATUS_OPTIONS = [
@@ -21,11 +18,27 @@ const STATUS_OPTIONS = [
  *   compact?: boolean;
  * }} props
  */
+function resolveFormStatus(submissionStatus) {
+  return submissionStatus === "pending" ? "reviewed" : submissionStatus;
+}
+
 function PracticeSubmissionGrader({ submission, gradedBy, onGraded, compact = false }) {
   const { showToast } = useToast();
-  const [status, setStatus] = useState(submission.status === "pending" ? "reviewed" : submission.status);
+  const [status, setStatus] = useState(() => resolveFormStatus(submission.status));
   const [grade, setGrade] = useState(submission.grade ?? "");
   const [feedback, setFeedback] = useState(submission.feedback ?? "");
+
+  useEffect(() => {
+    setStatus(resolveFormStatus(submission.status));
+    setGrade(submission.grade ?? "");
+    setFeedback(submission.feedback ?? "");
+  }, [submission.id, submission.status, submission.grade, submission.feedback, submission.gradedAt]);
+
+  const savedStatus = resolveFormStatus(submission.status);
+  const hasUnsavedChanges =
+    status !== savedStatus ||
+    grade !== (submission.grade ?? "") ||
+    feedback !== (submission.feedback ?? "");
 
   function handleSave() {
     if ((status === "pass" || status === "fail") && !grade.trim()) {

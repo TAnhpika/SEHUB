@@ -55,7 +55,6 @@ function AdminDocumentCatalogPage() {
   return (
     <AdminPageLayout
       title="Quản lý tài liệu"
-      subtitle="Bài giảng, sách giáo khoa và tài liệu tham khảo — chọn kỳ và môn để upload hoặc quản lý file."
       breadcrumbs={[{ label: "Dashboard", to: "/admin" }, { label: "Quản lý tài liệu" }]}
     >
       <div className={docStyles.catalogWrap}>

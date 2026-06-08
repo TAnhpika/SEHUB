@@ -1,20 +1,33 @@
 import {
   faBook,
   faChartLine,
+  faClipboardList,
   faCreditCard,
   faFileLines,
   faFlag,
+  faTicket,
   faTrophy,
   faUserShield,
   faUsers,
   faUserSlash,
 } from "@fortawesome/free-solid-svg-icons";
+import { getAdminNavBadgeCounts } from "@/features/admin/adminNavBadges";
 
-export const ADMIN_NAV_SECTIONS = [
+/**
+ * Cấu trúc sidebar Admin — bám §2.5 SEHUB_PhanTichNghiepVu.md (Giai đoạn 1).
+ * Không gồm: Chatbot (P2), Sub-Admin (ngoài phạm vi dự án).
+ */
+const ADMIN_NAV_TEMPLATE = [
   {
     title: "Tổng quan",
     items: [
       { id: "dashboard", label: "Dashboard", to: "/admin", icon: faChartLine, end: true },
+      {
+        id: "activity",
+        label: "Nhật ký hoạt động",
+        to: "/admin/activity",
+        icon: faClipboardList,
+      },
     ],
   },
   {
@@ -24,10 +37,8 @@ export const ADMIN_NAV_SECTIONS = [
       {
         id: "banned",
         label: "Tài khoản bị khóa",
-        to: "/admin/users",
-        search: "?status=banned",
+        to: "/admin/moderation/banned",
         icon: faUserSlash,
-        end: false,
       },
       {
         id: "permissions",
@@ -46,24 +57,19 @@ export const ADMIN_NAV_SECTIONS = [
         label: "Đề thi & thực hành",
         icon: faFileLines,
         items: [
-          {
-            id: "exams",
-            label: "Quản lý đề thi",
-            to: "/admin/exams",
-            end: false,
-          },
+          { id: "exams", label: "Quản lý đề thi", to: "/admin/exams", end: false },
           {
             id: "exam-pending",
             label: "Duyệt đề Mod",
             to: "/admin/exams/pending",
-            badge: 2,
+            badgeKey: "exam-pending",
             badgeTone: "amber",
           },
           {
             id: "practice-submissions",
             label: "Bài nộp thực hành",
             to: "/admin/exams/submissions",
-            badge: 5,
+            badgeKey: "practice-submissions",
             badgeTone: "amber",
           },
         ],
@@ -74,7 +80,7 @@ export const ADMIN_NAV_SECTIONS = [
         label: "Hàng chờ báo cáo",
         to: "/admin/moderation",
         icon: faFlag,
-        badge: 7,
+        badgeKey: "moderation",
         badgeTone: "urgent",
       },
     ],
@@ -82,22 +88,58 @@ export const ADMIN_NAV_SECTIONS = [
   {
     title: "Hệ thống",
     items: [
-      { id: "payments", label: "Quản lý thanh toán", to: "/admin/payments", icon: faCreditCard },
+      { id: "payments", label: "Thanh toán PayOS", to: "/admin/payments", icon: faCreditCard },
       {
         id: "gamification",
-        label: "Gamification config",
+        label: "Gamification",
         to: "/admin/gamification",
         icon: faTrophy,
       },
+      { id: "vouchers", label: "Quản lý voucher", to: "/admin/vouchers", icon: faTicket },
     ],
   },
 ];
 
+function injectBadges(items, counts) {
+  return items.map((item) => {
+    if (item.type === "group" && Array.isArray(item.items)) {
+      return {
+        ...item,
+        items: item.items.map((child) => {
+          if (!child.badgeKey) return child;
+          const count = counts[child.badgeKey] ?? 0;
+          const { badgeKey, ...rest } = child;
+          return count > 0 ? { ...rest, badge: count } : rest;
+        }),
+      };
+    }
+    if (item.badgeKey) {
+      const count = counts[item.badgeKey] ?? 0;
+      const { badgeKey, ...rest } = item;
+      return count > 0 ? { ...rest, badge: count } : rest;
+    }
+    return item;
+  });
+}
+
+/** Nav sections với badge động từ store */
+export function getAdminNavSections() {
+  const counts = getAdminNavBadgeCounts();
+  return ADMIN_NAV_TEMPLATE.map((section) => ({
+    ...section,
+    items: injectBadges(section.items, counts),
+  }));
+}
+
+/** @deprecated — dùng getAdminNavSections() trong sidebar */
+export const ADMIN_NAV_SECTIONS = getAdminNavSections();
+
 /** Dùng breadcrumb / header — gồm cả mục trong nhóm collapse */
 export function flattenAdminNavItems() {
+  const sections = getAdminNavSections();
   /** @type {Array<{ id: string, label: string, to: string, end?: boolean }>} */
   const flat = [];
-  for (const section of ADMIN_NAV_SECTIONS) {
+  for (const section of sections) {
     for (const item of section.items) {
       if (item.type === "group" && Array.isArray(item.items)) {
         flat.push(...item.items);

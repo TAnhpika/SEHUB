@@ -37,14 +37,16 @@ function AdminTableFooter({
       <p className={styles.tableFooterMeta}>
         Hiển thị {rangeStart}–{rangeEnd} / {total} {unit}
       </p>
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={onPageChange}
-        ariaLabel={ariaLabel}
-        alwaysShow={alwaysShow}
-        flush
-      />
+      <div className={styles.tableFooterPagination}>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+          ariaLabel={ariaLabel}
+          alwaysShow={alwaysShow}
+          flush
+        />
+      </div>
     </footer>
   );
 }

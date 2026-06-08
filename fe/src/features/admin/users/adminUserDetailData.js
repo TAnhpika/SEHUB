@@ -1,4 +1,9 @@
-import { findAdminUser } from "@/features/admin/adminMockData";
+import { getUserBonusTokens } from "@/features/admin/payments/adminPaymentData";
+import {
+  FREE_DAILY_TOKEN_QUOTA,
+  PREMIUM_DAILY_TOKEN_QUOTA,
+} from "@/features/admin/payments/adminPaymentPolicy";
+import { getAdminUserById } from "@/features/admin/users/adminUserStore";
 import { getUserGamification } from "@/features/admin/users/adminUserGamification";
 
 export const ADMIN_USER_ACTIVITY_PAGE_SIZE = 5;
@@ -13,7 +18,7 @@ export const USER_ROLE_LABEL = {
  * @param {string | undefined} id
  */
 export function getAdminUserDetail(id) {
-  const user = findAdminUser(id);
+  const user = getAdminUserById(id);
   if (!user) return null;
 
   const n = parseInt(String(user.id).replace(/\D/g, ""), 10) || 1;
@@ -30,7 +35,14 @@ export function getAdminUserDetail(id) {
     major: "Công nghệ thông tin",
     campus: n % 2 === 0 ? "FPT Hà Nội" : "FPT HCM",
     semester: `Kỳ ${Math.min(8, (n % 8) + 1)} · 2026`,
-    aiTokens: user.role === "student" ? 120 + n * 35 : null,
+    dailyTokenQuota:
+      user.role === "student"
+        ? user.plan === "Premium"
+          ? PREMIUM_DAILY_TOKEN_QUOTA
+          : FREE_DAILY_TOKEN_QUOTA
+        : null,
+    bonusTokens: user.role === "student" ? getUserBonusTokens(user.username) : null,
+    aiTokens: user.role === "student" ? getUserBonusTokens(user.username) : null,
     postsCount: 4 + n * 3,
     examsCompleted: 2 + n * 2,
     documentsCount: 8 + n * 5,
@@ -55,7 +67,7 @@ export function getAdminUserDetail(id) {
  * @param {string | undefined} userId
  */
 export function getAdminUserActivities(userId) {
-  const user = findAdminUser(userId);
+  const user = getAdminUserById(userId);
   if (!user) return [];
 
   const name = user.displayName;

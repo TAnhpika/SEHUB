@@ -11,6 +11,7 @@
 
 SEHUB là nền tảng học tập trực tuyến tích hợp cộng đồng, được xây dựng riêng cho sinh viên Đại học FPT. Hệ thống kết hợp bốn nhóm tính năng lớn:
 
+
 | Nhóm tính năng                   | Tương đương nền tảng  | Ghi chú                                  |
 | -------------------------------- | --------------------- | ---------------------------------------- |
 | Mạng xã hội – bài viết cộng đồng | Facebook / Reddit     | Feed, like, comment, follow, chat        |
@@ -18,11 +19,13 @@ SEHUB là nền tảng học tập trực tuyến tích hợp cộng đồng, đ
 | Thư viện tài liệu học tập        | Google Drive / Scribd | PDF, DOCX, PPTX; phân quyền Free/Premium |
 | Thanh toán & Trợ lý AI           | PayOS + ChatGPT       | Nạp token, giải thích đáp án bằng AI     |
 
+
 > ⚠️ **Lưu ý từ Mentor:** Do phạm vi quá rộng, Giai đoạn 1 cần cắt giảm tối đa tính năng phụ và tập trung vào 4 phân hệ cốt lõi: **Auth · Feed bài viết · Làm bài trắc nghiệm · Quản lý tài liệu.**
 
 ## 1.2 Kiến trúc Vai trò (Actor)
 
 Hệ thống có 4 actor chính, phân quyền theo tầng:
+
 
 | Actor             | Mô tả                      | Yêu cầu tài khoản    | Số lượng dự kiến           |
 | ----------------- | -------------------------- | -------------------- | -------------------------- |
@@ -31,6 +34,7 @@ Hệ thống có 4 actor chính, phân quyền theo tầng:
 | Student (Premium) | Sinh viên trả phí          | Nâng cấp từ Free     | Thiểu số – nguồn doanh thu |
 | Moderator         | Kiểm duyệt viên            | Do Admin cấp quyền   | Số ít – quản lý nội dung   |
 | Admin             | Quản trị viên hệ thống     | Tạo sẵn              | 1–3 người                  |
+
 
 ---
 
@@ -45,15 +49,17 @@ Hệ thống có 4 actor chính, phân quyền theo tầng:
 
 ### Quyền truy cập
 
+
 | Tính năng                                | Được phép | Ghi chú                          |
 | ---------------------------------------- | --------- | -------------------------------- |
-| Xem danh sách đề thi cuối kỳ & thực hành | ✅        | Chỉ xem metadata – không làm bài |
-| Xem bài viết cộng đồng                   | ✅        | Chỉ đọc – không like/comment     |
-| Xem bài viết nổi bật (sidebar)           | ✅        |                                  |
-| Xem gói Premium                          | ✅        | Trang giới thiệu pricing         |
-| Like, comment, follow, nhắn tin          | ❌        | Yêu cầu đăng nhập                |
-| Làm bài trắc nghiệm                      | ❌        | Yêu cầu Premium                  |
-| Xem tài liệu                             | ❌        | Yêu cầu đăng nhập                |
+| Xem danh sách đề thi cuối kỳ & thực hành | ✅         | Chỉ xem metadata – không làm bài |
+| Xem bài viết cộng đồng                   | ✅         | Chỉ đọc – không like/comment     |
+| Xem bài viết nổi bật (sidebar)           | ✅         |                                  |
+| Xem gói Premium                          | ✅         | Trang giới thiệu pricing         |
+| Like, comment, follow, nhắn tin          | ❌         | Yêu cầu đăng nhập                |
+| Làm bài trắc nghiệm                      | ❌         | Yêu cầu Premium                  |
+| Xem tài liệu                             | ❌         | Yêu cầu đăng nhập                |
+
 
 > 📌 **Luồng chính của Guest:** Vào trang → Xem feed/đề thi → Thấy nội dung bị khóa → CTA đăng ký tài khoản.
 
@@ -69,6 +75,7 @@ Hệ thống có 4 actor chính, phân quyền theo tầng:
 
 ### Tính năng cốt lõi
 
+
 | Nhóm         | Tính năng                                    | Giới hạn Free                       |
 | ------------ | -------------------------------------------- | ----------------------------------- |
 | Nội dung     | Xem câu hỏi trong đề thi                     | Xem câu hỏi – không xem đáp án      |
@@ -80,6 +87,7 @@ Hệ thống có 4 actor chính, phân quyền theo tầng:
 | Gamification | Streak tuần, điểm, danh hiệu (26 loại)       | Tự động tích lũy                    |
 | AI           | Giải thích đáp án bằng AI                    | 10 token / ngày (reset 00:00)       |
 | Premium      | Mua gói nâng cấp (1m / 8m / 4y)              | Cần thanh toán qua PayOS            |
+
 
 ### Luồng Gamification
 
@@ -95,23 +103,27 @@ Hệ thống có 4 actor chính, phân quyền theo tầng:
 
 ### Giá trị gia tăng so với Free
 
-| Tính năng                                      | Free          | Premium            |
-| ---------------------------------------------- | ------------- | ------------------ |
-| Xem đáp án đề thi                              | ❌            | ✅                 |
-| AI giải thích đáp án                           | 10 token/ngày | 1.000 token/ngày   |
-| Làm bài thi trực tuyến & xem kết quả           | ❌            | ✅                 |
-| Nộp bài thực hành qua GitHub URL               | ❌            | ✅                 |
-| Bình luận câu hỏi trong đề thi                 | ❌            | ✅                 |
-| Trợ lý tư vấn thủ tục trường (chatbot)         | ❌            | ✅                 |
+
+| Tính năng                                      | Free          | Premium           |
+| ---------------------------------------------- | ------------- | ----------------- |
+| Xem đáp án đề thi                              | ❌             | ✅                 |
+| AI giải thích đáp án                           | 10 token/ngày | 1.000 token/ngày  |
+| Làm bài thi trực tuyến & xem kết quả           | ❌             | ✅                 |
+| Nộp bài thực hành qua GitHub URL               | ❌             | ✅                 |
+| Bình luận câu hỏi trong đề thi                 | ❌             | ✅                 |
+| Trợ lý tư vấn thủ tục trường (chatbot)         | ❌             | ✅                 |
 | Xem & tải full tài liệu (không giới hạn trang) | 3 trang       | ✅ Full + Download |
 
+
 ### Gói Premium
+
 
 | Gói     | Thời hạn             | Voucher kèm       |
 | ------- | -------------------- | ----------------- |
 | 1 tháng | Trải nghiệm ngắn hạn | Không có          |
 | 8 tháng | 1 học kỳ             | Voucher FTES 20%  |
 | 4 năm   | Toàn khóa học        | Voucher FTES 100% |
+
 
 ---
 
@@ -120,6 +132,7 @@ Hệ thống có 4 actor chính, phân quyền theo tầng:
 ### Vai trò và trách nhiệm
 
 Moderator là sinh viên hoặc cộng tác viên được Admin tin tưởng giao quyền quản lý nội dung. Họ không có quyền can thiệp vào cấu hình hệ thống hay tài khoản người dùng ngoài phạm vi kiểm duyệt.
+
 
 | Nhóm quyền | Tính năng                             | Phạm vi                             |
 | ---------- | ------------------------------------- | ----------------------------------- |
@@ -130,29 +143,27 @@ Moderator là sinh viên hoặc cộng tác viên được Admin tin tưởng gi
 | Tài khoản  | Cảnh báo / khóa tạm tài khoản vi phạm | 1 ngày / 7 ngày / 30 ngày           |
 | Đề thi     | Thêm đề thi cuối kỳ & thực hành       | Chờ Admin duyệt trước khi public    |
 
+
 ---
 
 ## 2.5 Admin — Quản trị viên hệ thống
 
 ### Toàn quyền hệ thống
 
-| Phân hệ      | Quyền Admin                                                            |
-| ------------ | ---------------------------------------------------------------------- |
-| Đề thi       | CRUD đề thi (OCR ảnh + kiểm tra trùng SHA-256) + Duyệt đề từ Moderator |
-| Tài liệu     | Upload/phân loại/xóa tài liệu; phân quyền Free/Premium                 |
-| Tài khoản    | Tìm kiếm, xem, khóa vĩnh viễn, mở khóa, reset mật khẩu                 |
-| Phân quyền   | Nâng/thu hồi quyền Moderator; cấp sub-Admin                            |
-| Gamification | Cấu hình danh hiệu, ngưỡng cấp, điểm thưởng, voucher                   |
-| Chatbot      | Cập nhật knowledge base, cấu hình prompt, xem lịch sử hội thoại        |
-| Thanh toán   | Xác nhận giao dịch PayOS, cộng token thủ công (audit trail bất biến)   |
-| Thống kê     | Dashboard: người dùng, đề thi, tài liệu, doanh thu, kiểm duyệt         |
-| Dữ liệu      | Xuất CSV/Excel, backup, restore, hard delete có xác nhận               |
 
----
+| Phân hệ      | Quyền Admin                                                                       |
+| ------------ | --------------------------------------------------------------------------------- |
+| Đề thi       | CRUD đề thi (OCR ảnh + kiểm tra trùng SHA-256) + Duyệt đề từ Moderator            |
+| Tài liệu     | Upload/phân loại/xóa tài liệu; phân quyền Free/Premium                            |
+| Tài khoản    | Tìm kiếm, xem, khóa vĩnh viễn, mở khóa, reset mật khẩu                            |
+| Phân quyền   | Nâng/thu hồi quyền Moderator;                                                     |
+| Gamification | Cấu hình danh hiệu, ngưỡng cấp, điểm thưởng, voucher                              |
+| Chatbot      | Cập nhật knowledge base, cấu hình prompt, xem lịch sử hội thoại                   |
+| Thanh toán   | Xác nhận giao dịch PayOS, cộng token thủ công (audit trail bất biến), refund tiền |
+| Thống kê     | Dashboard: người dùng, đề thi, tài liệu, doanh thu, kiểm duyệt                    |
+|              |                                                                                   |
 
-# 3. PHÂN TÍCH FEATURE CHI TIẾT
 
-## 3.1 Phân hệ Xác thực (Authentication)
 
 | Use Case      | Actor         | Luồng chính                                                                        | Lưu ý kỹ thuật                             |
 | ------------- | ------------- | ---------------------------------------------------------------------------------- | ------------------------------------------ |
@@ -161,9 +172,11 @@ Moderator là sinh viên hoặc cộng tác viên được Admin tin tưởng gi
 | Quên mật khẩu | Student       | Chọn Email/SMS → Gửi OTP → Xác minh OTP → Đặt lại mật khẩu                         | OTP có thời hạn; giới hạn số lần gửi       |
 | Đăng xuất     | Student/Admin | Xóa session/token → Về trạng thái Guest                                            | Clear local storage/cookie                 |
 
+
 ---
 
 ## 3.2 Phân hệ Cộng đồng & Bài viết
+
 
 | Feature            | Mô tả                                         | Actor    | Điều kiện |
 | ------------------ | --------------------------------------------- | -------- | --------- |
@@ -175,22 +188,26 @@ Moderator là sinh viên hoặc cộng tác viên được Admin tin tưởng gi
 | Bài viết nổi bật   | Sidebar hiển thị đề xuất từ Moderator         | Tất cả   |           |
 | Streak & Thống kê  | Streak tuần, số ngày/bài học/phút học         | Student+ | Đăng nhập |
 
+
 ---
 
 ## 3.3 Phân hệ Đề thi cuối kỳ
 
+
 | Feature              | Free                   | Premium                     | Mô tả                                   |
 | -------------------- | ---------------------- | --------------------------- | --------------------------------------- |
-| Danh sách đề thi     | ✅                     | ✅                          | Lọc theo kỳ học và chuyên ngành (AI/SE) |
-| Chi tiết bộ đề       | ✅                     | ✅                          | Mã đề, loại đề, ngày tạo, số câu hỏi    |
-| Xem câu hỏi          | ✅ (không có đáp án)   | ✅ (có đáp án)              | Điều hướng qua lại từng câu             |
-| Làm bài trực tuyến   | ❌                     | ✅                          | 50 câu, nộp bài, ghi nhận kết quả       |
+| Danh sách đề thi     | ✅                      | ✅                           | Lọc theo kỳ học và chuyên ngành (AI/SE) |
+| Chi tiết bộ đề       | ✅                      | ✅                           | Mã đề, loại đề, ngày tạo, số câu hỏi    |
+| Xem câu hỏi          | ✅ (không có đáp án)    | ✅ (có đáp án)               | Điều hướng qua lại từng câu             |
+| Làm bài trực tuyến   | ❌                      | ✅                           | 50 câu, nộp bài, ghi nhận kết quả       |
 | AI giải thích đáp án | 1 lượt/ngày (10 token) | 100 lượt/ngày (1.000 token) | Token reset 00:00 hàng ngày             |
-| Bình luận câu hỏi    | ❌                     | ✅                          | Thảo luận trực tiếp dưới từng câu       |
+| Bình luận câu hỏi    | ❌                      | ✅                           | Thảo luận trực tiếp dưới từng câu       |
+
 
 ---
 
 ## 3.4 Phân hệ Đề thi thực hành
+
 
 | Feature                | Mô tả                                      | Actor           |
 | ---------------------- | ------------------------------------------ | --------------- |
@@ -200,21 +217,25 @@ Moderator là sinh viên hoặc cộng tác viên được Admin tin tưởng gi
 | Đề liên quan           | Gợi ý đề cùng môn học                      | Tất cả          |
 | Xem danh sách nộp bài  | Danh sách sinh viên đã nộp (GitHub URL)    | Moderator/Admin |
 
+
 ---
 
 ## 3.5 Phân hệ Tài liệu học tập
 
+
 | Feature                    | Free                           | Premium                      |
 | -------------------------- | ------------------------------ | ---------------------------- |
 | Xem tài liệu               | 3 trang / tài liệu             | Full access – không giới hạn |
-| Tải tài liệu               | ❌                             | ✅ Download đầy đủ           |
+| Tải tài liệu               | ❌                              | ✅ Download đầy đủ            |
 | Phân loại tài liệu         | Theo kỳ & chuyên ngành (AI/SE) | Như Free                     |
 | Câu hỏi ôn tập lý thuyết   | Xem (không làm bài)            | Xem + làm bài                |
 | Bài tập thực hành tài liệu | Xem đề bài                     | Làm bài + gợi ý hướng dẫn    |
 
+
 ---
 
 ## 3.6 Phân hệ Hồ sơ & Gamification
+
 
 | Feature             | Mô tả                                                         | Kỹ thuật                       |
 | ------------------- | ------------------------------------------------------------- | ------------------------------ |
@@ -225,9 +246,11 @@ Moderator là sinh viên hoặc cộng tác viên được Admin tin tưởng gi
 | Cấp độ & Tiến trình | Bronze→Silver→Gold→Platinum; thanh tiến trình                 | Ngưỡng do Admin cấu hình       |
 | Bài viết gần đây    | Danh sách bài của người dùng kèm like/comment                 | Phân trang                     |
 
+
 ---
 
 ## 3.7 Phân hệ Tìm kiếm & Nhắn tin
+
 
 | Feature             | Mô tả                                                             | Actor    |
 | ------------------- | ----------------------------------------------------------------- | -------- |
@@ -236,9 +259,11 @@ Moderator là sinh viên hoặc cộng tác viên được Admin tin tưởng gi
 | Chat real-time      | WebSocket; lưu lịch sử; trạng thái đã đọc/chưa đọc                | Student+ |
 | Thông báo           | Badge số lượng; các loại: like, comment, follow, token, danh hiệu | Student+ |
 
+
 ---
 
 ## 3.8 Phân hệ Premium & Thanh toán
+
 
 | Bước          | Mô tả                                                    | Kỹ thuật                   |
 | ------------- | -------------------------------------------------------- | -------------------------- |
@@ -247,6 +272,7 @@ Moderator là sinh viên hoặc cộng tác viên được Admin tin tưởng gi
 | 3. Thanh toán | Student chuyển khoản ngân hàng với mã đơn trong nội dung | Ngân hàng                  |
 | 4. Webhook    | PayOS gửi webhook xác nhận về hệ thống                   | Webhook + signature verify |
 | 5. Kích hoạt  | Admin xác nhận → Hệ thống cộng token / kích hoạt Premium | Audit trail bất biến       |
+
 
 ---
 
@@ -258,11 +284,13 @@ Moderator là sinh viên hoặc cộng tác viên được Admin tin tưởng gi
 
 > 🔴 **Bất ổn:** Sinh viên nộp GitHub URL xong không nhận được trạng thái Đạt/Chưa đạt, điểm số, hay nhận xét. Luồng nghiệp vụ bị đứt gãy tại giai đoạn phản hồi.
 
+
 | Tùy chọn giải pháp                                                             | Ưu điểm                       | Nhược điểm                           |
 | ------------------------------------------------------------------------------ | ----------------------------- | ------------------------------------ |
 | Moderator nhận xét thủ công qua form                                           | Đơn giản, không cần dev nhiều | Không mở rộng được khi lượng bài lớn |
 | Tích hợp auto-grade (test runner)                                              | Chính xác, nhanh              | Chi phí dev cao, phức tạp            |
 | Tạm thời: thêm cột trạng thái (Đã xem / Đạt / Chưa đạt) cho Moderator cập nhật | MVP, đủ dùng Giai đoạn 1      | Vẫn cần người xét thủ công           |
+
 
 **→ Đề xuất Giai đoạn 1:** Thêm cột trạng thái và ô nhận xét ngắn cho Moderator. Hiển thị kết quả cho sinh viên ngay trên giao diện nộp bài.
 
@@ -270,12 +298,14 @@ Moderator là sinh viên hoặc cộng tác viên được Admin tin tưởng gi
 
 > 🔴 **Bất ổn:** Không có chức năng Block người dùng hoặc Report hội thoại. Môi trường cộng đồng sinh viên dễ bị spam quảng cáo, quấy rối học thuật.
 
+
 | Cần bổ sung                                  | Mức độ ưu tiên     |
 | -------------------------------------------- | ------------------ |
 | Block người dùng (chặn nhắn tin)             | Cao                |
 | Report hội thoại vi phạm gửi về Moderator    | Cao                |
 | Rate limit tin nhắn (vd: tối đa 30 tin/phút) | Trung bình         |
 | Lọc từ ngữ nhạy cảm tự động (keyword filter) | Thấp – Giai đoạn 2 |
+
 
 ### C. Pre-moderation thiếu quy trình chỉnh sửa & gửi lại
 
@@ -291,15 +321,18 @@ Moderator là sinh viên hoặc cộng tác viên được Admin tin tưởng gi
 
 > 🔴 **Bất ổn:** OCR không chính xác 100%. Sai 1 ký tự (O → 0) → hash SHA-256 thay đổi hoàn toàn → hệ thống nhận nhầm là đề mới → lưu trùng.
 
+
 | Giải pháp bổ sung                  | Mô tả                                                                                          |
 | ---------------------------------- | ---------------------------------------------------------------------------------------------- |
 | Normalize text trước khi hash      | Lowercase, trim, chuẩn hóa unicode, loại bỏ ký tự đặc biệt trước khi hash                      |
 | Similarity matching (fuzzy search) | Dùng Levenshtein distance hoặc MinHash để phát hiện nội dung gần giống (>90% giống → cảnh báo) |
 | Admin review trước khi lưu         | OCR xong → Admin xem kết quả trước → Xác nhận lưu                                              |
 
+
 ### B. Cron Job reset token – nguy cơ nghẽn Database
 
 > 🔴 **Bất ổn:** Cập nhật đồng loạt hàng ngàn record vào đúng 00:00 → Table Lock → sập API khác đang chạy.
+
 
 | Giải pháp                      | Mô tả                                                                                                                                                           |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -307,11 +340,13 @@ Moderator là sinh viên hoặc cộng tác viên được Admin tin tưởng gi
 | Partition Cron Job theo batch  | Thay vì update tất cả lúc 00:00, chia thành nhiều batch nhỏ (vd: 100 records/giây) từ 00:00–00:05.                                                              |
 | Sử dụng Redis TTL              | Lưu token count vào Redis với TTL = thời gian đến 00:00 ngày sau. Hết TTL = tự reset. Không tốn DB.                                                             |
 
+
 **→ Đề xuất tốt nhất cho Giai đoạn 1:** Lazy reset – không cần Cron Job, không tốn tài nguyên, logic đơn giản.
 
 ### C. Gamification – gánh nặng tính toán trang cá nhân
 
 > 🔴 **Bất ổn:** Mỗi lần tải trang cá nhân → backend phải tính lại heatmap 6 tháng + quét điều kiện 26 danh hiệu → high latency.
+
 
 | Giải pháp                             | Mô tả                                                                                                  |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -319,11 +354,13 @@ Moderator là sinh viên hoặc cộng tác viên được Admin tin tưởng gi
 | Event-driven badge check              | Thay vì quét điều kiện khi tải trang, chỉ kiểm tra điều kiện danh hiệu liên quan khi có event phù hợp. |
 | Materialized View / Precomputed Stats | Duy trì bảng thống kê precomputed, cập nhật tăng dần khi có event. Trang cá nhân chỉ đọc bảng này.     |
 
+
 ---
 
 # 5. ROADMAP & ƯU TIÊN GIAI ĐOẠN 1
 
 > 🎯 **Mục tiêu Giai đoạn 1:** Hoàn thành tài liệu thiết kế và MVP của 4 phân hệ cốt lõi. Cắt tối đa tính năng phụ.
+
 
 | Mức độ             | Phân hệ              | Feature cần hoàn thành                                                                                      | Cắt bỏ / Lùi Giai đoạn 2                              |
 | ------------------ | -------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
@@ -336,7 +373,9 @@ Moderator là sinh viên hoặc cộng tác viên được Admin tin tưởng gi
 | 🟢 P2 (Có thể lùi) | Chat & Follow        | Follow cơ bản, Thông báo cơ bản                                                                             | Chat real-time WebSocket, Block/Report chat           |
 | 🟢 P2 (Có thể lùi) | Chatbot AI tư vấn    | —                                                                                                           | Toàn bộ chatbot, Knowledge base cấu hình              |
 
+
 ## 5.1 Tóm tắt quyết định cắt giảm
+
 
 | Feature bị cắt / lùi                   | Lý do                                                                         |
 | -------------------------------------- | ----------------------------------------------------------------------------- |
@@ -347,38 +386,41 @@ Moderator là sinh viên hoặc cộng tác viên được Admin tin tưởng gi
 | Đề thực hành nộp GitHub (đầy đủ)       | Thiếu luồng đánh giá – cần thiết kế lại trước khi build                       |
 | Pre-moderation bật/tắt theo chuyên mục | Phức tạp; Giai đoạn 1 dùng post-moderation đơn giản hơn                       |
 
+
 ---
 
 # 6. PHỤ LỤC – BẢNG TỔNG HỢP FEATURE THEO ACTOR
 
-| Feature                      | Guest | Free          | Premium         | Mod             | Admin             |
-| ---------------------------- | ----- | ------------- | --------------- | --------------- | ----------------- |
-| Đăng ký / Đăng nhập          | ✅    | ✅            | ✅              | ✅              | ✅                |
-| Xem danh sách đề thi         | ✅    | ✅            | ✅              | ✅              | ✅                |
-| Xem câu hỏi (không đáp án)   | ✅    | ✅            | ✅              | ✅              | ✅                |
-| Xem đáp án                   | ❌    | ❌            | ✅              | ✅              | ✅                |
-| Làm bài trắc nghiệm online   | ❌    | ❌            | ✅              | ✅              | ✅                |
-| AI giải thích đáp án         | ❌    | 10 token/ngày | 1000 token/ngày | 1000 token/ngày | ✅                |
-| Nộp bài thực hành (GitHub)   | ❌    | ❌            | ✅              | ✅              | ✅                |
-| Bình luận câu hỏi đề thi     | ❌    | ❌            | ✅              | ✅              | ✅                |
-| Xem tài liệu                 | ❌    | 3 trang       | Full            | Full            | Full              |
-| Tải tài liệu                 | ❌    | ❌            | ✅              | ✅              | ✅                |
-| Xem bài viết                 | ✅    | ✅            | ✅              | ✅              | ✅                |
-| Tạo/sửa/xóa bài viết         | ❌    | ✅            | ✅              | ✅              | ✅                |
-| Like, comment, reply         | ❌    | ✅            | ✅              | ✅              | ✅                |
-| Báo cáo bài viết             | ❌    | ✅            | ✅              | ✅              | ✅                |
-| Follow / nhắn tin            | ❌    | ✅            | ✅              | ✅              | ✅                |
-| Tích điểm, streak, danh hiệu | ❌    | ✅            | ✅              | ✅              | ❌                |
-| Xóa nội dung vi phạm         | ❌    | ❌            | ❌              | ✅              | ✅                |
-| Xử lý báo cáo                | ❌    | ❌            | ❌              | ✅              | ✅                |
-| Ghim bài nổi bật             | ❌    | ❌            | ❌              | ✅              | ✅                |
-| Cảnh báo / khóa tài khoản    | ❌    | ❌            | ❌              | ✅ (tạm)        | ✅ (vĩnh viễn)    |
-| Thêm / duyệt đề thi          | ❌    | ❌            | ❌              | ✅ (thêm)       | ✅ (CRUD + duyệt) |
-| Phân quyền hệ thống          | ❌    | ❌            | ❌              | ❌              | ✅                |
-| Cấu hình Gamification        | ❌    | ❌            | ❌              | ❌              | ✅                |
-| Dashboard thống kê           | ❌    | ❌            | ❌              | ❌              | ✅                |
-| Cộng token / xác nhận PayOS  | ❌    | ❌            | ❌              | ❌              | ✅                |
+
+| Feature                      | Guest | Free          | Premium         | Mod             | Admin            |
+| ---------------------------- | ----- | ------------- | --------------- | --------------- | ---------------- |
+| Đăng ký / Đăng nhập          | ✅     | ✅             | ✅               | ✅               | ✅                |
+| Xem danh sách đề thi         | ✅     | ✅             | ✅               | ✅               | ✅                |
+| Xem câu hỏi (không đáp án)   | ✅     | ✅             | ✅               | ✅               | ✅                |
+| Xem đáp án                   | ❌     | ❌             | ✅               | ✅               | ✅                |
+| Làm bài trắc nghiệm online   | ❌     | ❌             | ✅               | ✅               | ✅                |
+| AI giải thích đáp án         | ❌     | 10 token/ngày | 1000 token/ngày | 1000 token/ngày | ✅                |
+| Nộp bài thực hành (GitHub)   | ❌     | ❌             | ✅               | ✅               | ✅                |
+| Bình luận câu hỏi đề thi     | ❌     | ❌             | ✅               | ✅               | ✅                |
+| Xem tài liệu                 | ❌     | 3 trang       | Full            | Full            | Full             |
+| Tải tài liệu                 | ❌     | ❌             | ✅               | ✅               | ✅                |
+| Xem bài viết                 | ✅     | ✅             | ✅               | ✅               | ✅                |
+| Tạo/sửa/xóa bài viết         | ❌     | ✅             | ✅               | ✅               | ✅                |
+| Like, comment, reply         | ❌     | ✅             | ✅               | ✅               | ✅                |
+| Báo cáo bài viết             | ❌     | ✅             | ✅               | ✅               | ✅                |
+| Follow / nhắn tin            | ❌     | ✅             | ✅               | ✅               | ✅                |
+| Tích điểm, streak, danh hiệu | ❌     | ✅             | ✅               | ✅               | ❌                |
+| Xóa nội dung vi phạm         | ❌     | ❌             | ❌               | ✅               | ✅                |
+| Xử lý báo cáo                | ❌     | ❌             | ❌               | ✅               | ✅                |
+| Ghim bài nổi bật             | ❌     | ❌             | ❌               | ✅               | ✅                |
+| Cảnh báo / khóa tài khoản    | ❌     | ❌             | ❌               | ✅ (tạm)         | ✅ (vĩnh viễn)    |
+| Thêm / duyệt đề thi          | ❌     | ❌             | ❌               | ✅ (thêm)        | ✅ (CRUD + duyệt) |
+| Phân quyền hệ thống          | ❌     | ❌             | ❌               | ❌               | ✅                |
+| Cấu hình Gamification        | ❌     | ❌             | ❌               | ❌               | ✅                |
+| Dashboard thống kê           | ❌     | ❌             | ❌               | ❌               | ✅                |
+| Cộng token / xác nhận PayOS  | ❌     | ❌             | ❌               | ❌               | ✅                |
+
 
 ---
 
-_— Hết tài liệu — Phiên bản 1.0 · Giai đoạn 1_
+*— Hết tài liệu — Phiên bản 1.0 · Giai đoạn 1*

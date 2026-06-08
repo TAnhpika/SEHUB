@@ -53,6 +53,8 @@ import AdminModerationPage from "@/features/admin/moderation/AdminModerationPage
 import AdminReportDetailPage from "@/features/admin/moderation/AdminReportDetailPage";
 import AdminBannedPage from "@/features/admin/moderation/AdminBannedPage";
 import AdminPaymentListPage from "@/features/admin/payments/AdminPaymentListPage";
+import AdminPaymentDetailPage from "@/features/admin/payments/AdminPaymentDetailPage";
+import AdminVoucherPage from "@/features/admin/vouchers/AdminVoucherPage";
 import AdminGamificationConfigPage from "@/features/admin/gamification/AdminGamificationConfigPage";
 import AdminPermissionsPage from "@/features/admin/permissions/AdminPermissionsPage";
 import AdminActivityLogPage from "@/features/admin/activity/AdminActivityLogPage";
@@ -215,12 +217,11 @@ function App() {
                 <Route path="documents" element={<AdminDocumentCatalogPage />} />
                 <Route path="documents/:courseCode" element={<AdminDocumentSubjectPage />} />
                 <Route path="moderation" element={<AdminModerationPage />} />
-                <Route
-                  path="moderation/banned"
-                  element={<Navigate to="/admin/users?status=banned" replace />}
-                />
+                <Route path="moderation/banned" element={<AdminBannedPage />} />
                 <Route path="moderation/:id" element={<AdminReportDetailPage />} />
                 <Route path="payments" element={<AdminPaymentListPage />} />
+                <Route path="payments/:id" element={<AdminPaymentDetailPage />} />
+                <Route path="vouchers" element={<AdminVoucherPage />} />
                 <Route path="gamification" element={<AdminGamificationConfigPage />} />
                 <Route path="permissions" element={<AdminPermissionsPage />} />
                 <Route path="activity" element={<AdminActivityLogPage />} />
