@@ -1,5 +1,117 @@
 export const VIOLATIONS_PAGE_SIZE = 10;
 
+/** Moderator: khóa tạm 1 / 7 / 30 ngày — mức nghiêm trọng tăng dần (§2.4) */
+export const LOCK_DURATION_OPTIONS = [
+  {
+    value: 1,
+    label: "1 ngày",
+    severity: "mild",
+    severityLabel: "Mức nhẹ",
+    description: "Vi phạm lần đầu hoặc mức thấp",
+  },
+  {
+    value: 7,
+    label: "7 ngày",
+    severity: "moderate",
+    severityLabel: "Mức vừa",
+    description: "Tái phạm hoặc vi phạm rõ ràng",
+  },
+  {
+    value: 30,
+    label: "30 ngày",
+    severity: "severe",
+    severityLabel: "Nghiêm trọng",
+    description: "Vi phạm nặng, cần tách khỏi cộng đồng",
+  },
+];
+
+export function getLockSeverityMeta(days) {
+  return LOCK_DURATION_OPTIONS.find((option) => option.value === days) ?? LOCK_DURATION_OPTIONS[0];
+}
+
+/** Map mức khóa → tone ModeratorBadge (đồng bộ panel) */
+export function getLockSeverityTone(severity) {
+  const tones = {
+    mild: "warning",
+    moderate: "bronze",
+    severe: "danger",
+  };
+  return tones[severity] ?? "warning";
+}
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function addDays(fromDate, days) {
+  return new Date(fromDate.getTime() + days * MS_PER_DAY).toISOString();
+}
+
+function formatRemainingDuration(remainingMs) {
+  if (remainingMs <= 0) return "0 giờ";
+
+  const totalHours = Math.ceil(remainingMs / (60 * 60 * 1000));
+  if (totalHours < 24) {
+    return `${totalHours} giờ`;
+  }
+
+  const days = Math.ceil(totalHours / 24);
+  return `${days} ngày`;
+}
+
+export function getAccountLockInfo(account, now = Date.now()) {
+  if (account.status !== "locked" || !account.lockedUntil) {
+    return { isActive: false, statusLabel: null, detailLabel: null };
+  }
+
+  const untilMs = new Date(account.lockedUntil).getTime();
+  const remainingMs = untilMs - now;
+
+  if (remainingMs <= 0) {
+    return {
+      isActive: false,
+      expired: true,
+      statusLabel: "Hết hạn khóa",
+      detailLabel: account.lockDurationDays
+        ? `Đã hết thời hạn khóa ${account.lockDurationDays} ngày`
+        : "Đã hết thời hạn khóa",
+    };
+  }
+
+  const durationLabel = account.lockDurationDays
+    ? `${account.lockDurationDays} ngày`
+    : "tạm thời";
+  const severity = getLockSeverityMeta(account.lockDurationDays);
+
+  return {
+    isActive: true,
+    statusLabel: `Bị khóa · ${durationLabel}`,
+    detailLabel: `Còn ${formatRemainingDuration(remainingMs)} (đến ${new Date(untilMs).toLocaleString("vi-VN")}) · ${severity.severityLabel}`,
+    remainingMs,
+    lockDurationDays: account.lockDurationDays,
+    severity: severity.severity,
+    severityLabel: severity.severityLabel,
+  };
+}
+
+export function buildLockUpdate(days, fromDate = new Date()) {
+  return {
+    status: "locked",
+    lockDurationDays: days,
+    lockedUntil: addDays(fromDate, days),
+    lastAction: "lock",
+    lastActionAt: fromDate.toISOString(),
+  };
+}
+
+export function buildWarningUpdate(fromDate = new Date()) {
+  return {
+    status: "warning",
+    lockDurationDays: null,
+    lockedUntil: null,
+    lastAction: "warning",
+    lastActionAt: fromDate.toISOString(),
+  };
+}
+
 export const STATUS_OPTIONS = [
   { value: "all", label: "Trạng thái (Tất cả)" },
   { value: "locked", label: "Bị khóa" },
@@ -47,6 +159,9 @@ const SEED_ACCOUNTS = [
     rank: "silver",
     violations: 4,
     status: "locked",
+    lockDurationDays: 7,
+    lockedUntil: addDays(new Date(), 5),
+    lastAction: "lock",
     initial: "A",
   },
   {
@@ -59,6 +174,7 @@ const SEED_ACCOUNTS = [
     rank: "gold",
     violations: 2,
     status: "warning",
+    lastAction: "warning",
     initial: "B",
   },
   {
@@ -81,6 +197,8 @@ function buildMockAccounts() {
   for (let index = 4; index <= 45; index += 1) {
     const status = STATUSES[index % STATUSES.length];
     const rank = RANKS[index % RANKS.length];
+    const lockDurationDays =
+      status === "locked" ? LOCK_DURATION_OPTIONS[index % LOCK_DURATION_OPTIONS.length].value : null;
     list.push({
       id: `u-${index}`,
       username: `user.${index}`,
@@ -91,6 +209,12 @@ function buildMockAccounts() {
       rank,
       violations: Math.max(0, 5 - (index % 6)),
       status,
+      lockDurationDays,
+      lockedUntil:
+        status === "locked" && lockDurationDays
+          ? addDays(new Date(), lockDurationDays - (index % lockDurationDays))
+          : null,
+      lastAction: status === "locked" ? "lock" : status === "warning" ? "warning" : null,
       initial: String.fromCharCode(65 + (index % 26)),
     });
   }
