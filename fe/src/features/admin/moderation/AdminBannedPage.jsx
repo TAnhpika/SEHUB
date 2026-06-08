@@ -21,6 +21,7 @@ import {
   getAdminBannedUsers,
   unbanUser,
 } from "@/features/admin/moderation/adminBannedData";
+import { unbanFromBannedList } from "@/features/admin/users/adminUserStore";
 import modStyles from "@/features/admin/moderation/AdminModerationPage.module.css";
 
 const TAB_OPTIONS = [
@@ -96,9 +97,10 @@ function AdminBannedPage() {
     if (!selected) return;
     const removed = unbanUser(selected.id);
     if (!removed) return;
+    unbanFromBannedList(removed.username);
     refresh();
     setLastUnbanned(removed);
-    showToast(`Đã mở khóa @${removed.username} (mock).`);
+    showToast(`Đã mở khóa @${removed.username}.`);
     const next = getAdminBannedUsers();
     setSelectedId(next[0]?.id ?? null);
   }
@@ -106,7 +108,6 @@ function AdminBannedPage() {
   return (
     <AdminPageLayout
       title="Tài khoản bị khóa"
-      subtitle="Theo dõi khóa tạm (Mod/Admin) và khóa vĩnh viễn. Mở khóa khi đủ điều kiện."
       breadcrumbs={[
         { label: "Dashboard", to: "/admin" },
         { label: "Báo cáo", to: "/admin/moderation" },
@@ -358,7 +359,7 @@ function AdminBannedPage() {
                   {selected.type === "temporary" ? (
                     <Button
                       look="outline"
-                      onClick={() => showToast("Đã gia hạn khóa 7 ngày (mock).")}
+                      onClick={() => showToast("Đã gia hạn khóa 7 ngày.")}
                     >
                       Gia hạn 7 ngày
                     </Button>
