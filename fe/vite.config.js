@@ -15,7 +15,7 @@ export default defineConfig({
   },
   server: {
     // Mở trình duyệt hệ thống (Chrome/Edge) thay vì Simple Browser của IDE — tránh lỗi onboarding extension.
-    open: "/login",
+    open: "/",
     host: true,
     port: 5173,
     strictPort: false,
