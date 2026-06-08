@@ -60,7 +60,7 @@
   align-self: stretch;
   height: calc(100vh - var(--header-height));
   min-height: calc(100vh - var(--header-height));
-  padding: 0.625rem 0;
+  padding: 0.625rem var(--layout-gutter) 0.625rem 0;
   overflow: hidden;
 }
 
