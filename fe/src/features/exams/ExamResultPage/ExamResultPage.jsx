@@ -38,7 +38,7 @@ import {
 import {
   getExamDetailPath,
   getExamFocusDoPath,
-  getPracticeFocusDoPath,
+  getPracticeDoPath,
   isExamFocusPath,
   resolveExamScope,
 } from "@/utils/examFocusPaths";
@@ -80,12 +80,8 @@ function ExamResultPage({ page = "review" }) {
   const navigate = useNavigate();
   const { pathname, state: locationState } = useLocation();
   const [showDetail, setShowDetail] = useState(false);
-  const isFocusMode = isExamFocusPath(pathname);
-  const scope = isFocusMode
-    ? resolveExamScope(pathname, locationState)
-    : pathname.startsWith("/home/")
-      ? "home"
-      : "community";
+  const isReviewFocusMode = page === "review" && isExamFocusPath(pathname);
+  const scope = resolveExamScope(pathname, locationState);
   const config = getSubjectDetailConfig(page, scope);
   const isPracticeExam = page === "practice";
   const decodedExamId = decodeURIComponent(examId ?? "");
@@ -112,12 +108,12 @@ function ExamResultPage({ page = "review" }) {
   }, [exam, isPracticeExam, question]);
 
   useEffect(() => {
-    if (!isFocusMode || !exam) return;
+    if (!isReviewFocusMode || !exam) return;
     document.title = `Kết quả — ${exam.id} | SEHUB`;
     return () => {
       document.title = "SEHUB";
     };
-  }, [isFocusMode, exam]);
+  }, [isReviewFocusMode, exam]);
 
   if (page !== "review" && page !== "practice") {
     return <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />;
@@ -137,14 +133,18 @@ function ExamResultPage({ page = "review" }) {
   }
 
   if (!session?.submitted || !session.result) {
-    const fallbackPath = isFocusMode
-      ? isPracticeExam
-        ? getPracticeFocusDoPath(exam.courseCode, exam.id, questionNumber)
-        : getExamFocusDoPath(exam.courseCode, exam.id)
-      : isPracticeExam
-        ? getPracticeFocusDoPath(exam.courseCode, exam.id, questionNumber)
+    const fallbackPath = isPracticeExam
+      ? getPracticeDoPath(exam.courseCode, exam.id, questionNumber, scope)
+      : isReviewFocusMode
+        ? getExamFocusDoPath(exam.courseCode, exam.id)
         : getExamDetailPath(exam.courseCode, exam.id, scope);
-    return <Navigate to={fallbackPath} replace state={isFocusMode ? { scope } : undefined} />;
+    return (
+      <Navigate
+        to={fallbackPath}
+        replace
+        state={isReviewFocusMode ? { scope } : undefined}
+      />
+    );
   }
 
   const { result, startedAt, submittedAt, submission } = session;
@@ -154,12 +154,10 @@ function ExamResultPage({ page = "review" }) {
     scope,
     isPracticeExam ? "practice" : "review",
   );
-  const doPath = isFocusMode
-    ? isPracticeExam
-      ? getPracticeFocusDoPath(exam.courseCode, exam.id, questionNumber)
-      : getExamFocusDoPath(exam.courseCode, exam.id)
-    : isPracticeExam
-      ? getPracticeFocusDoPath(exam.courseCode, exam.id, questionNumber)
+  const doPath = isPracticeExam
+    ? getPracticeDoPath(exam.courseCode, exam.id, questionNumber, scope)
+    : isReviewFocusMode
+      ? getExamFocusDoPath(exam.courseCode, exam.id)
       : `${getExamDetailPath(exam.courseCode, exam.id, scope, "review")}/do`;
   const durationMs = submittedAt - startedAt;
   const feedback = getScoreFeedback(result.scorePercent);
@@ -182,7 +180,7 @@ function ExamResultPage({ page = "review" }) {
       clearExamSession(exam.id);
       createExamSession(exam.id);
     }
-    navigate(doPath, isFocusMode ? { state: { scope } } : undefined);
+    navigate(doPath, isReviewFocusMode ? { state: { scope } } : undefined);
   }
 
   function getQuestionStatus(item) {
@@ -199,7 +197,7 @@ function ExamResultPage({ page = "review" }) {
     : `${scope === "home" ? "/home" : "/community"}/final-exam`;
 
   return (
-    <div className={`${styles.page} ${isFocusMode ? styles.pageFocus : ""}`}>
+    <div className={`${styles.page} ${isReviewFocusMode ? styles.pageFocus : ""}`}>
       <Link to={detailPath} className={styles.back}>
         <FontAwesomeIcon icon={faArrowLeft} />
         {isPracticeExam ? "Quay lại bài thực hành" : "Quay lại đề thi"}
