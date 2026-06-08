@@ -18,12 +18,22 @@ export function getExamFocusResultPath(courseCode, examId) {
   return `${FOCUS_FINAL_BASE}/${courseCode}/${encodeURIComponent(examId)}/result`;
 }
 
-export function getPracticeFocusDoPath(courseCode, examId, questionIndex) {
-  return `${FOCUS_PRACTICE_BASE}/${courseCode}/${encodeURIComponent(examId)}/do/${questionIndex}`;
+export function getPracticeDoPath(courseCode, examId, questionIndex, scope = "home") {
+  return `${getExamDetailPath(courseCode, examId, scope, "practice")}/do/${questionIndex}`;
 }
 
-export function getPracticeFocusResultPath(courseCode, examId, questionIndex) {
-  return `${FOCUS_PRACTICE_BASE}/${courseCode}/${encodeURIComponent(examId)}/result/${questionIndex}`;
+export function getPracticeResultPath(courseCode, examId, questionIndex, scope = "home") {
+  return `${getExamDetailPath(courseCode, examId, scope, "practice")}/result/${questionIndex}`;
+}
+
+/** @deprecated Dùng getPracticeDoPath — giữ redirect tương thích URL cũ */
+export function getPracticeFocusDoPath(courseCode, examId, questionIndex, scope = "home") {
+  return getPracticeDoPath(courseCode, examId, questionIndex, scope);
+}
+
+/** @deprecated Dùng getPracticeResultPath */
+export function getPracticeFocusResultPath(courseCode, examId, questionIndex, scope = "home") {
+  return getPracticeResultPath(courseCode, examId, questionIndex, scope);
 }
 
 export function getExamDetailPath(courseCode, examId, scope = "home", examPage = "review") {
