@@ -11,7 +11,7 @@
   width: min(var(--layout-max-width), calc(100vw - 2 * var(--layout-gutter)));
   margin: 0 auto;
   height: 100%;
-  padding: 0 1.25rem;
+  padding: 0 var(--layout-gutter);
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
