@@ -1,3 +1,5 @@
+import { patchUserRole } from "@/features/admin/users/adminUserStore";
+
 /** Mock store phân quyền Moderator — Admin gán/thu hồi */
 
 export const MOD_PERMISSIONS = [
@@ -89,6 +91,46 @@ export function getPermissionsAudit() {
   return [...auditStore].sort((a, b) => (a.at < b.at ? 1 : -1));
 }
 
+export function addModeratorDirect(
+  { username, email, displayName },
+  adminUsername = "admin_sehub",
+  detail = "Gán trực tiếp từ chi tiết tài khoản",
+) {
+  if (moderatorsStore.some((m) => m.username === username)) {
+    return { ok: false, message: "Tài khoản đã có quyền Mod." };
+  }
+
+  const initial = displayName?.charAt(0)?.toUpperCase() ?? username.charAt(0).toUpperCase();
+  const entry = {
+    username,
+    email,
+    displayName,
+    initial,
+    grantedAt: new Date().toISOString().slice(0, 10),
+    grantedBy: adminUsername,
+    reportsHandled: 0,
+    postsReviewed: 0,
+  };
+  moderatorsStore = [...moderatorsStore, entry];
+  candidatesStore = candidatesStore.filter((c) => c.username !== username);
+
+  auditStore = [
+    {
+      id: `perm-aud-${Date.now()}`,
+      at: new Date().toISOString(),
+      action: "grant",
+      username,
+      admin: adminUsername,
+      detail,
+    },
+    ...auditStore,
+  ];
+
+  patchUserRole(username, "moderator");
+
+  return { ok: true, moderator: entry, message: `Đã gán Mod cho @${username}.` };
+}
+
 export function grantModerator(username, adminUsername = "admin_sehub") {
   const candidate = candidatesStore.find((c) => c.username === username);
   if (!candidate) {
@@ -121,6 +163,8 @@ export function grantModerator(username, adminUsername = "admin_sehub") {
   };
   auditStore = [audit, ...auditStore];
 
+  patchUserRole(username, "moderator");
+
   return { ok: true, moderator: entry, message: `Đã gán Mod cho @${username}.` };
 }
 
@@ -152,6 +196,8 @@ export function revokeModerator(username, adminUsername = "admin_sehub") {
     detail: `Thu hồi quyền Moderator @${username}`,
   };
   auditStore = [audit, ...auditStore];
+
+  patchUserRole(username, "student");
 
   return { ok: true, message: `Đã thu hồi quyền Mod của @${username}.` };
 }
