@@ -118,13 +118,49 @@ export function unbanUser(id) {
   return item;
 }
 
-export function addBannedUserFromReport(username, durationLabel, reportMeta) {
-  const days = durationLabel.includes("vĩnh") ? null : 7;
+export function removeBannedByUsername(username) {
+  const normalized = username?.trim().toLowerCase() ?? "";
+  if (!normalized) return 0;
+  const before = bannedStore.length;
+  bannedStore = bannedStore.filter((b) => b.username.toLowerCase() !== normalized);
+  return before - bannedStore.length;
+}
+
+export function registerPermanentBan({
+  username,
+  displayName,
+  email,
+  reason,
+  bannedBy = "Admin SEHub",
+  relatedReportId,
+  relatedPostId,
+}) {
+  removeBannedByUsername(username);
   const entry = {
     id: `ban-${Date.now()}`,
     username,
-    displayName: username,
-    email: `${username}@unknown`,
+    displayName: displayName ?? username,
+    email: email ?? `${username}@unknown`,
+    reason,
+    bannedBy,
+    bannedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
+    until: null,
+    type: "permanent",
+    relatedReportId,
+    relatedPostId,
+  };
+  bannedStore = [entry, ...bannedStore];
+  return entry;
+}
+
+export function addBannedUserFromReport(username, durationLabel, reportMeta) {
+  const days = durationLabel.includes("vĩnh") ? null : 7;
+  removeBannedByUsername(username);
+  const entry = {
+    id: `ban-${Date.now()}`,
+    username,
+    displayName: reportMeta?.displayName ?? username,
+    email: reportMeta?.email ?? `${username}@unknown`,
     reason: reportMeta?.reason ?? "Vi phạm từ báo cáo cộng đồng",
     bannedBy: "Admin SEHub",
     bannedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
