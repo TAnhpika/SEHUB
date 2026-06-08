@@ -7,9 +7,9 @@
 
 .workspace {
   flex: 1;
-  width: min(var(--layout-max-width), calc(100vw - 2 * var(--layout-gutter)));
-  margin: 0 auto;
-  padding: 0 var(--layout-gutter);
+  width: 100%;
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
   display: grid;
   grid-template-columns: var(--feed-sidebar-fixed) minmax(0, 1fr) minmax(240px, 280px);
@@ -33,7 +33,7 @@
   height: calc(100vh - var(--header-height));
   min-height: calc(100vh - var(--header-height));
   max-height: calc(100vh - var(--header-height));
-  padding: 0.625rem 0 0;
+  padding: 0.625rem 0 0 0.625rem;
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
   overflow: hidden;
@@ -51,7 +51,7 @@
 .col-center {
   min-width: 0;
   width: 100%;
-  padding: 1rem 0 1.5rem;
+  padding: 1rem var(--layout-gutter) 1.5rem 0;
 }
 
 .col-right {

@@ -9,10 +9,10 @@
 }
 
 .inner {
-  width: min(var(--layout-max-width), calc(100vw - 2 * var(--layout-gutter)));
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   height: 100%;
-  padding: 0 1.25rem;
+  padding: 0 var(--layout-gutter) 0 0.625rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
