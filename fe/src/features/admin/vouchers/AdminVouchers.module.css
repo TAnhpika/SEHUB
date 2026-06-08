@@ -1,0 +1,237 @@
+.kpiStrip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 1100px) {
+  .kpiStrip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .kpiStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.kpiCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 1rem 1.125rem;
+  background: #fff;
+  border: 1px solid rgba(195, 198, 215, 0.45);
+  border-radius: 12px;
+}
+
+.kpiLabel {
+  font-size: 0.75rem;
+  color: #737686;
+}
+
+.kpiValue {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #191c1e;
+}
+
+.kpiHint {
+  font-size: 0.6875rem;
+  color: #9ca3af;
+}
+
+.flowNote {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #1e40af;
+  background: #eff6ff;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: 10px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 180px;
+}
+
+.filterLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #434655;
+}
+
+.codePill {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #5b21b6;
+  background: #ede9fe;
+  border-radius: 6px;
+}
+
+.partnerTag {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: #1d4ed8;
+  text-transform: uppercase;
+  background: #dbeafe;
+  border-radius: 4px;
+}
+
+.revokeBtn {
+  padding: 0;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #b91c1c;
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+.revokeBtn:hover {
+  text-decoration: underline;
+}
+
+.revokeBtn:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.grantModal {
+  max-width: 640px;
+  max-height: min(92vh, 860px);
+}
+
+.studentPicker {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 0.65rem;
+  min-height: 260px;
+}
+
+.studentPickerList {
+  flex: 1;
+  min-height: 200px;
+  max-height: 240px;
+  padding-right: 0.2rem;
+  scrollbar-gutter: stable;
+}
+
+.modalIcon {
+  color: #6d28d9;
+  background: #ede9fe;
+}
+
+.templateField,
+.previewBox {
+  flex-shrink: 0;
+}
+
+.templateField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.templateSelect {
+  padding: 0.625rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: #191c1e;
+  background: #fff;
+  border: 1px solid #c3c6d7;
+  border-radius: 8px;
+}
+
+.templateHint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #434655;
+}
+
+.previewBox {
+  padding: 0.85rem 1rem;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  border-radius: 10px;
+}
+
+.previewTitle {
+  margin: 0 0 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #6d28d9;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.previewMain {
+  margin: 0 0 0.25rem;
+  font-size: 0.9375rem;
+  color: #191c1e;
+}
+
+.previewMeta {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #434655;
+}
+
+.templateGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.templateCard {
+  padding: 0.85rem 1rem;
+  background: #fff;
+  border: 1px solid rgba(195, 198, 215, 0.45);
+  border-radius: 10px;
+}
+
+.templateCardTitle {
+  margin: 0 0 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #191c1e;
+}
+
+.templateCardMeta {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  color: #004ac6;
+}
+
+.templateCardDesc {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #434655;
+}
