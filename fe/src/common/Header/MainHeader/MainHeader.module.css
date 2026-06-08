@@ -11,7 +11,7 @@
   width: 100%;
   margin: 0;
   height: 100%;
-  padding: 0 var(--layout-gutter) 0 0.625rem;
+  padding: 0 var(--layout-gutter) 0 var(--sidebar-inline-padding);
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
