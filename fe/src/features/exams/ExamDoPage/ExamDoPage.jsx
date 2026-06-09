@@ -25,7 +25,7 @@ import {
 import { canTakeReviewExam } from "@/utils/examAccess";
 import {
   getExamDetailPath,
-  getExamFocusResultPath,
+  getExamResultPath,
   isExamFocusPath,
   resolveExamScope,
 } from "@/utils/examFocusPaths";
@@ -68,18 +68,18 @@ function ExamDoPage({ page = "review" }) {
   const detailPath = exam
     ? getExamDetailPath(exam.courseCode, exam.id, scope)
     : config?.detailBase ?? "/home/final-exam";
-  const resultPath = isFocusMode
-    ? getExamFocusResultPath(exam?.courseCode ?? courseCode ?? "", exam?.id ?? decodedExamId)
-    : `${detailPath}/result`;
+  const resultPath = exam
+    ? getExamResultPath(exam.courseCode, exam.id, scope)
+    : getExamResultPath(courseCode ?? "", decodedExamId, scope);
 
   const submitExam = useCallback(
     (auto = false) => {
       if (!exam) return;
       submitExamSession(exam.id, questions);
       showToast(auto ? "Hết giờ — hệ thống đã nộp bài tự động." : "Đã nộp bài thành công.");
-      navigate(resultPath, isFocusMode ? { state: { scope } } : undefined);
+      navigate(resultPath);
     },
-    [exam, isFocusMode, navigate, questions, resultPath, scope, showToast],
+    [exam, navigate, questions, resultPath, showToast],
   );
 
   useEffect(() => {
