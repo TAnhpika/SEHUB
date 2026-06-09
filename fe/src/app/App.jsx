@@ -53,6 +53,8 @@ import AdminModerationPage from "@/features/admin/moderation/AdminModerationPage
 import AdminReportDetailPage from "@/features/admin/moderation/AdminReportDetailPage";
 import AdminBannedPage from "@/features/admin/moderation/AdminBannedPage";
 import AdminPaymentListPage from "@/features/admin/payments/AdminPaymentListPage";
+import AdminPaymentDetailPage from "@/features/admin/payments/AdminPaymentDetailPage";
+import AdminVoucherPage from "@/features/admin/vouchers/AdminVoucherPage";
 import AdminGamificationConfigPage from "@/features/admin/gamification/AdminGamificationConfigPage";
 import AdminPermissionsPage from "@/features/admin/permissions/AdminPermissionsPage";
 import AdminActivityLogPage from "@/features/admin/activity/AdminActivityLogPage";
@@ -68,6 +70,7 @@ import ContentModerationPage from "@/features/moderator/content/ContentModeratio
 import ContentModerationHistoryPage from "@/features/moderator/content/ContentModerationHistoryPage/ContentModerationHistoryPage";
 import FeaturedPostsPage from "@/features/moderator/featured/FeaturedPostsPage/FeaturedPostsPage";
 import ReportsPage from "@/features/moderator/reports/ReportsPage/ReportsPage";
+import PracticeFocusRedirect from "@/common/routes/PracticeFocusRedirect";
 
 function App() {
   return (
@@ -115,6 +118,16 @@ function App() {
                   path="/home/pratical-exam/:courseCode/:examId"
                   element={<ExamDetailPage page="practice" />}
                 />
+                <Route element={<PremiumRoute />}>
+                  <Route
+                    path="/home/pratical-exam/:courseCode/:examId/do/:questionIndex"
+                    element={<PracticeDoPage />}
+                  />
+                  <Route
+                    path="/home/pratical-exam/:courseCode/:examId/result/:questionIndex"
+                    element={<ExamResultPage page="practice" />}
+                  />
+                </Route>
                 <Route path="/home/documents" element={<DocumentsPage scope="home" />} />
                 <Route
                   path="/home/documents/:courseCode"
@@ -137,15 +150,17 @@ function App() {
                     path="/exam/focus/final-exam/:courseCode/:examId/result"
                     element={<ExamResultPage page="review" />}
                   />
-                  <Route
-                    path="/exam/focus/pratical-exam/:courseCode/:examId/do/:questionIndex"
-                    element={<PracticeDoPage />}
-                  />
-                  <Route
-                    path="/exam/focus/pratical-exam/:courseCode/:examId/result/:questionIndex"
-                    element={<ExamResultPage page="practice" />}
-                  />
                 </Route>
+              </Route>
+              <Route element={<PremiumRoute />}>
+                <Route
+                  path="/exam/focus/pratical-exam/:courseCode/:examId/do/:questionIndex"
+                  element={<PracticeFocusRedirect />}
+                />
+                <Route
+                  path="/exam/focus/pratical-exam/:courseCode/:examId/result/:questionIndex"
+                  element={<PracticeFocusRedirect result />}
+                />
               </Route>
             </Route>
             <Route path="/community" element={<CommunityLayout />}>
@@ -168,6 +183,16 @@ function App() {
                 path="pratical-exam/:courseCode/:examId"
                 element={<ExamDetailPage page="practice" />}
               />
+              <Route element={<PremiumRoute />}>
+                <Route
+                  path="pratical-exam/:courseCode/:examId/do/:questionIndex"
+                  element={<PracticeDoPage />}
+                />
+                <Route
+                  path="pratical-exam/:courseCode/:examId/result/:questionIndex"
+                  element={<ExamResultPage page="practice" />}
+                />
+              </Route>
               <Route path="documents" element={<DocumentsPage />} />
               <Route
                 path="documents/:courseCode"
@@ -192,12 +217,11 @@ function App() {
                 <Route path="documents" element={<AdminDocumentCatalogPage />} />
                 <Route path="documents/:courseCode" element={<AdminDocumentSubjectPage />} />
                 <Route path="moderation" element={<AdminModerationPage />} />
-                <Route
-                  path="moderation/banned"
-                  element={<Navigate to="/admin/users?status=banned" replace />}
-                />
+                <Route path="moderation/banned" element={<AdminBannedPage />} />
                 <Route path="moderation/:id" element={<AdminReportDetailPage />} />
                 <Route path="payments" element={<AdminPaymentListPage />} />
+                <Route path="payments/:id" element={<AdminPaymentDetailPage />} />
+                <Route path="vouchers" element={<AdminVoucherPage />} />
                 <Route path="gamification" element={<AdminGamificationConfigPage />} />
                 <Route path="permissions" element={<AdminPermissionsPage />} />
                 <Route path="activity" element={<AdminActivityLogPage />} />

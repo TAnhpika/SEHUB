@@ -1,10 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
-import {
-  getSubmissionStatusLabel,
-  gradePracticeSubmission,
-} from "@/features/exams/practiceExamSubmissions";
+import { gradePracticeSubmission } from "@/features/exams/practiceExamSubmissions";
 import styles from "./PracticeSubmissionGrader.module.css";
 
 const STATUS_OPTIONS = [
@@ -21,11 +18,27 @@ const STATUS_OPTIONS = [
  *   compact?: boolean;
  * }} props
  */
+function resolveFormStatus(submissionStatus) {
+  return submissionStatus === "pending" ? "reviewed" : submissionStatus;
+}
+
 function PracticeSubmissionGrader({ submission, gradedBy, onGraded, compact = false }) {
   const { showToast } = useToast();
-  const [status, setStatus] = useState(submission.status === "pending" ? "reviewed" : submission.status);
+  const [status, setStatus] = useState(() => resolveFormStatus(submission.status));
   const [grade, setGrade] = useState(submission.grade ?? "");
   const [feedback, setFeedback] = useState(submission.feedback ?? "");
+
+  useEffect(() => {
+    setStatus(resolveFormStatus(submission.status));
+    setGrade(submission.grade ?? "");
+    setFeedback(submission.feedback ?? "");
+  }, [submission.id, submission.status, submission.grade, submission.feedback, submission.gradedAt]);
+
+  const savedStatus = resolveFormStatus(submission.status);
+  const hasUnsavedChanges =
+    status !== savedStatus ||
+    grade !== (submission.grade ?? "") ||
+    feedback !== (submission.feedback ?? "");
 
   function handleSave() {
     if ((status === "pass" || status === "fail") && !grade.trim()) {
@@ -48,12 +61,14 @@ function PracticeSubmissionGrader({ submission, gradedBy, onGraded, compact = fa
 
   return (
     <div className={compact ? styles.compact : styles.grader}>
-      <div className={styles.meta}>
-        <span className={styles.badge}>{getSubmissionStatusLabel(submission.status)}</span>
-        {submission.gradedBy ? (
-          <span className={styles.gradedBy}>Chấm bởi @{submission.gradedBy}</span>
-        ) : null}
-      </div>
+      {!compact ? (
+        <div className={styles.meta}>
+          <span className={styles.badge}>{getSubmissionStatusLabel(submission.status)}</span>
+          {submission.gradedBy ? (
+            <span className={styles.gradedBy}>Chấm bởi @{submission.gradedBy}</span>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className={styles.fields}>
         <label className={styles.field}>
@@ -63,7 +78,6 @@ function PracticeSubmissionGrader({ submission, gradedBy, onGraded, compact = fa
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >
-            <option value="pending">Chờ chấm</option>
             {STATUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}

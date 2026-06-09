@@ -161,7 +161,7 @@ function AdminExamListPage() {
     removeAdminExam(deleteId);
     setExams(getAdminExams());
     setDeleteId(null);
-    showToast(`Đã xóa đề ${target?.code ?? ""} (mock).`);
+    showToast(`Đã xóa đề ${target?.code ?? ""}.`);
   }
 
   const deleteTarget = deleteId ? exams.find((e) => e.id === deleteId) : null;
@@ -169,7 +169,6 @@ function AdminExamListPage() {
   return (
     <AdminPageLayout
       title="Quản lý đề thi"
-      subtitle="Kho đề Admin. Bản nháp chưa lên hệ thống cho sinh viên — chỉ thấy khi lọc hoặc sau Lưu nháp."
       breadcrumbs={[{ label: "Dashboard", to: "/admin" }, { label: "Quản lý đề thi" }]}
       actions={
         <>
@@ -421,7 +420,7 @@ function AdminExamListPage() {
             </h2>
             <p className={examStyles.modalDesc}>
               Đề <strong>[{deleteTarget.code}] {deleteTarget.title}</strong> sẽ bị gỡ khỏi hệ
-              thống. Hành động không hoàn tác (mock).
+              thống. Hành động không hoàn tác.
             </p>
             <div className={examStyles.modalActions}>
               <Button look="outline" type="button" onClick={() => setDeleteId(null)}>

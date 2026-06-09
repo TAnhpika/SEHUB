@@ -58,14 +58,22 @@ function AdminDashboardPage() {
           <DashboardStudentPlan plan={data.studentPlan} />
 
           <section className={dash.chartsRow} aria-label="Biểu đồ chính">
-            <ChartCard title="Đăng ký mới" minimal>
+            <ChartCard
+              title="Đăng ký mới"
+              minimal
+              dataSource={data.userGrowth.dataSource}
+            >
               <RechartsLineChart
                 data={data.userGrowth.data}
                 seriesName={data.userGrowth.seriesName}
                 height={200}
               />
             </ChartCard>
-            <ChartCard title="Doanh thu Premium" minimal>
+            <ChartCard
+              title="Doanh thu Premium"
+              minimal
+              dataSource={data.revenue.dataSource}
+            >
               <RechartsBarChart
                 data={data.revenue.data}
                 seriesName="Doanh thu"
@@ -78,7 +86,9 @@ function AdminDashboardPage() {
           <section className={dash.insightsRow} aria-label="Phân tích, hoạt động và việc cần xử lý">
             <DashboardAnalyticsTabs
               content={data.content}
+              contentDataSource={data.contentDataSource}
               reportStatus={data.reportStatus}
+              reportStatusDataSource={data.reportStatusDataSource}
               traffic={data.traffic}
             />
 

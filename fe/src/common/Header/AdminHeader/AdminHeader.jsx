@@ -2,17 +2,17 @@ import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faBell,
   faChevronDown,
-  faGear,
   faHouse,
   faMagnifyingGlass,
   faRightFromBracket,
-  faShieldHalved,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
+import WorkspaceSwitcher from "@/common/WorkspaceSwitcher/WorkspaceSwitcher";
 import { flattenAdminNavItems } from "@/features/admin/adminNavData";
+import AdminNotificationDropdown from "./AdminNotificationDropdown";
+import AdminSettingsMenu from "./AdminSettingsMenu";
 import styles from "./AdminHeader.module.css";
 
 function resolvePageTitle(pathname, search) {
@@ -51,7 +51,6 @@ function AdminHeader() {
 
   const displayName = user?.displayName ?? "Admin";
   const initial = user?.initial ?? displayName.charAt(0).toUpperCase();
-  const unread = user?.unreadNotifications ?? 0;
 
   function handleLogout() {
     setMenuOpen(false);
@@ -92,15 +91,8 @@ function AdminHeader() {
 
         <div className={styles.actions}>
           <div className={styles.toolGroup} role="group" aria-label="Hành động nhanh">
-            <button type="button" className={styles.toolBtn} aria-label="Cài đặt">
-              <FontAwesomeIcon icon={faGear} />
-            </button>
-            <button type="button" className={styles.toolBtn} aria-label="Thông báo">
-              <FontAwesomeIcon icon={faBell} />
-              {unread > 0 ? (
-                <span className={styles.notifDot} aria-hidden />
-              ) : null}
-            </button>
+            <AdminSettingsMenu />
+            <AdminNotificationDropdown />
           </div>
 
           <div
@@ -143,26 +135,12 @@ function AdminHeader() {
                   </span>
                   Dashboard
                 </Link>
-                <Link
-                  to="/moderator/reports"
-                  className={styles.menuItem}
-                  role="menuitem"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <span className={styles.menuIcon}>
-                    <FontAwesomeIcon icon={faShieldHalved} />
-                  </span>
-                  Khu vực Moderator
-                </Link>
-                <Link
-                  to="/home"
-                  className={styles.menuItem}
-                  role="menuitem"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <span className={styles.menuIcon}>↗</span>
-                  Trang sinh viên
-                </Link>
+                <div className={styles.menuWorkspace}>
+                  <WorkspaceSwitcher
+                    variant="menu-compact"
+                    onNavigate={() => setMenuOpen(false)}
+                  />
+                </div>
                 <div className={styles.menuDivider} />
                 <button
                   type="button"

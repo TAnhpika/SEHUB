@@ -5,9 +5,9 @@ import {
   faChevronDown,
   faMagnifyingGlass,
   faRightFromBracket,
-  faShieldHalved,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
+import WorkspaceSwitcher from "@/common/WorkspaceSwitcher/WorkspaceSwitcher";
 import { useAuth } from "@/context";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import NotificationDropdown from "./NotificationDropdown";
@@ -19,7 +19,7 @@ function MainHeader() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { user, logout, isAdmin, isModerator, isPremium } = useAuth();
+  const { user, logout, isAdmin, isPremium } = useAuth();
   const brandTo = isAdmin ? "/admin" : "/home";
   const isSearchPage = location.pathname === "/home/search";
   const [searchQuery, setSearchQuery] = useState(() =>
@@ -93,18 +93,7 @@ function MainHeader() {
             </button>
 
             <div className={styles["profile-menu"]} role="menu">
-              {isAdmin ? (
-                <Link to="/admin" className={styles["menu-item"]} role="menuitem">
-                  <FontAwesomeIcon icon={faShieldHalved} />
-                  Quản trị hệ thống
-                </Link>
-              ) : null}
-              {isModerator ? (
-                <Link to="/moderator/reports" className={styles["menu-item"]} role="menuitem">
-                  <FontAwesomeIcon icon={faShieldHalved} />
-                  Kiểm duyệt
-                </Link>
-              ) : null}
+              <WorkspaceSwitcher variant="menu-compact" showHeading />
               <Link
                 to={`/profile/${user?.username ?? "anhcoding12345"}`}
                 className={styles["menu-item"]}

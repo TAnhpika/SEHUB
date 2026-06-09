@@ -159,7 +159,6 @@ function AdminExamPendingPage() {
   return (
     <AdminPageLayout
       title="Duyệt đề từ Moderator"
-      subtitle="Xem trước nội dung, duyệt xuất bản hoặc từ chối kèm lý do để Mod chỉnh sửa."
       breadcrumbs={[
         { label: "Dashboard", to: "/admin" },
         { label: "Quản lý đề thi", to: "/admin/exams" },

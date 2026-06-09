@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import Button from "@/common/Button/Button";
 import Pagination from "@/common/Pagination/Pagination";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import StatusBadge from "@/features/admin/shared/StatusBadge";
-import { ADMIN_USERS, ADMIN_USERS_PAGE_SIZE } from "@/features/admin/adminMockData";
+import { ADMIN_USERS_PAGE_SIZE } from "@/features/admin/adminMockData";
+import { getAdminUsers } from "@/features/admin/users/adminUserStore";
 import {
   getRankBadgeClass,
   getUserGamification,
@@ -33,9 +33,11 @@ function AdminUserListPage() {
     }
   }, [searchParams]);
 
+  const allUsers = getAdminUsers();
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return ADMIN_USERS.filter((user) => {
+    return allUsers.filter((user) => {
       if (roleFilter !== "all" && user.role !== roleFilter) return false;
       if (rankFilter !== "all") {
         const rank = getUserGamification(user)?.level;
@@ -49,7 +51,7 @@ function AdminUserListPage() {
         user.displayName.toLowerCase().includes(q)
       );
     });
-  }, [query, roleFilter, rankFilter, statusFilter]);
+  }, [allUsers, query, roleFilter, rankFilter, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ADMIN_USERS_PAGE_SIZE));
   const safePage = Math.min(Math.max(1, page), totalPages);
@@ -102,10 +104,9 @@ function AdminUserListPage() {
       subtitle={
         statusFilter === "banned"
           ? "Danh sách tài khoản đã khóa — lọc từ Quản lý tài khoản."
-          : "Xem, khóa/mở khóa, reset mật khẩu và gán Premium thủ công."
+          : undefined
       }
       breadcrumbs={[{ label: "Dashboard", to: "/admin" }, { label: "Quản lý tài khoản" }]}
-      actions={<Button look="outline">Xuất CSV</Button>}
     >
       <section className={styles.panel}>
         <div className={styles.filterShell}>
@@ -255,6 +256,7 @@ function AdminUserListPage() {
           </footer>
         )}
       </section>
+
     </AdminPageLayout>
   );
 }

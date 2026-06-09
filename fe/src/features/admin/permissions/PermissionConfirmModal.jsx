@@ -29,7 +29,7 @@ function PermissionConfirmModal({ open, mode, user, onClose, onConfirm }) {
         <p className={permStyles.modalDesc}>
           {isGrant
             ? "Ứng viên sẽ truy cập khu vực /moderator: duyệt báo cáo, bài viết, chấm bài TH."
-            : "Tài khoản sẽ mất quyền truy cập Moderator ngay lập tức (mock)."}
+            : "Tài khoản sẽ mất quyền truy cập Moderator ngay lập tức."}
         </p>
         <div className={permStyles.modalUser}>
           <span className={permStyles.avatar}>{user.initial}</span>

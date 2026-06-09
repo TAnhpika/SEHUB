@@ -12,8 +12,31 @@ const TABS = [
   { id: "traffic", label: "Lưu lượng" },
 ];
 
-function DashboardAnalyticsTabs({ content, reportStatus, traffic }) {
+function sourceBadge(dataSource) {
+  if (dataSource === "sample") {
+    return <span className={dash.dataBadgeSample}>Dữ liệu mẫu</span>;
+  }
+  if (dataSource === "live") {
+    return <span className={dash.dataBadgeLive}>Từ store</span>;
+  }
+  return null;
+}
+
+function DashboardAnalyticsTabs({
+  content,
+  contentDataSource,
+  reportStatus,
+  reportStatusDataSource,
+  traffic,
+}) {
   const [active, setActive] = useState("content");
+
+  const activeSource =
+    active === "content"
+      ? contentDataSource
+      : active === "reports"
+        ? reportStatusDataSource
+        : traffic.dataSource;
 
   return (
     <article className={dash.card}>
@@ -32,10 +55,13 @@ function DashboardAnalyticsTabs({ content, reportStatus, traffic }) {
             </button>
           ))}
         </div>
-        <span className={dash.peakBadge}>
-          <FontAwesomeIcon icon={faArrowUp} className={dash.peakIcon} />
-          peak {traffic.peak.toLocaleString("vi-VN")}
-        </span>
+        <div className={dash.tabBarMeta}>
+          {sourceBadge(activeSource)}
+          <span className={dash.peakBadge}>
+            <FontAwesomeIcon icon={faArrowUp} className={dash.peakIcon} />
+            peak {traffic.peak.toLocaleString("vi-VN")}
+          </span>
+        </div>
       </div>
 
       <div className={dash.cardBody} role="tabpanel">

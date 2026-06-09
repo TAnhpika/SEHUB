@@ -3,27 +3,27 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBars,
-  faBell,
   faChevronDown,
-  faGear,
   faHouse,
   faMagnifyingGlass,
   faRightFromBracket,
-  faShieldHalved,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
+import WorkspaceSwitcher from "@/common/WorkspaceSwitcher/WorkspaceSwitcher";
 import { useAuth } from "@/context";
 import { useModeratorPage } from "@/features/moderator/context/ModeratorPageContext";
 import {
   MODERATOR_HOME_PATH,
   resolveModeratorPageTitle,
 } from "@/features/moderator/moderatorNavData";
+import ModeratorNotificationDropdown from "./ModeratorNotificationDropdown";
+import ModeratorSettingsDropdown from "./ModeratorSettingsDropdown";
 import styles from "./ModeratorHeader.module.css";
 
 function ModeratorHeader() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout } = useAuth();
   const { setSidebarOpen } = useModeratorPage();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -34,7 +34,7 @@ function ModeratorHeader() {
 
   const displayName = user?.displayName ?? "Moderator";
   const initial = user?.initial ?? displayName.charAt(0).toUpperCase();
-  const unread = user?.unreadNotifications ?? 0;
+  const [openPanel, setOpenPanel] = useState(null);
 
   function handleLogout() {
     setMenuOpen(false);
@@ -84,13 +84,20 @@ function ModeratorHeader() {
 
         <div className={styles.actions}>
           <div className={styles.toolGroup} role="group" aria-label="Hành động nhanh">
-            <button type="button" className={styles.toolBtn} aria-label="Cài đặt">
-              <FontAwesomeIcon icon={faGear} />
-            </button>
-            <button type="button" className={styles.toolBtn} aria-label="Thông báo">
-              <FontAwesomeIcon icon={faBell} />
-              {unread > 0 ? <span className={styles.notifDot} aria-hidden /> : null}
-            </button>
+            <ModeratorSettingsDropdown
+              open={openPanel === "settings"}
+              onToggle={() =>
+                setOpenPanel((current) => (current === "settings" ? null : "settings"))
+              }
+              onClose={() => setOpenPanel(null)}
+            />
+            <ModeratorNotificationDropdown
+              open={openPanel === "notifications"}
+              onToggle={() =>
+                setOpenPanel((current) => (current === "notifications" ? null : "notifications"))
+              }
+              onClose={() => setOpenPanel(null)}
+            />
           </div>
 
           <div className={`${styles.profile} ${menuOpen ? styles.profileOpen : ""}`}>
@@ -131,28 +138,12 @@ function ModeratorHeader() {
                   </span>
                   Xử lý báo cáo
                 </Link>
-                {isAdmin ? (
-                  <Link
-                    to="/admin"
-                    className={styles.menuItem}
-                    role="menuitem"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    <span className={styles.menuIcon}>
-                      <FontAwesomeIcon icon={faShieldHalved} />
-                    </span>
-                    Khu vực Admin
-                  </Link>
-                ) : null}
-                <Link
-                  to="/home"
-                  className={styles.menuItem}
-                  role="menuitem"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <span className={styles.menuIcon}>↗</span>
-                  Trang sinh viên
-                </Link>
+                <div className={styles.menuWorkspace}>
+                  <WorkspaceSwitcher
+                    variant="menu-compact"
+                    onNavigate={() => setMenuOpen(false)}
+                  />
+                </div>
                 <div className={styles.menuDivider} />
                 <button
                   type="button"

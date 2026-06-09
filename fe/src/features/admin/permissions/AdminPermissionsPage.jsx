@@ -111,7 +111,6 @@ function AdminPermissionsPage() {
   return (
     <AdminPageLayout
       title="Phân quyền Mod"
-      subtitle="Gán hoặc thu hồi quyền Kiểm duyệt viên. Chỉ Admin — audit mọi thay đổi."
       breadcrumbs={[{ label: "Dashboard", to: "/admin" }, { label: "Phân quyền Mod" }]}
     >
       <div className={permStyles.statsStrip}>

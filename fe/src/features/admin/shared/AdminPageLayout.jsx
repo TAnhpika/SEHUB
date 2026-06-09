@@ -1,3 +1,5 @@
+import { useLocation } from "react-router-dom";
+import { resolveAdminScreenMeta } from "@/features/admin/adminPageMeta";
 import AdminBackLink from "./AdminBackLink";
 import AdminBreadcrumb from "./AdminBreadcrumb";
 import { resolveAdminBackLink } from "./adminBackLinkUtils";
@@ -27,6 +29,11 @@ function AdminPageLayout({
   hidePageHeader = false,
   children,
 }) {
+  const { pathname } = useLocation();
+  const screenMeta = resolveAdminScreenMeta(pathname);
+  const resolvedTitle = title ?? screenMeta?.title ?? "Admin";
+  const resolvedSubtitle = subtitle ?? screenMeta?.subtitle;
+
   const back =
     !hideBack && !hidePageHeader
       ? resolveAdminBackLink(breadcrumbs, { backTo, backLabel })
@@ -43,8 +50,10 @@ function AdminPageLayout({
       {!hidePageHeader ? (
         <header className={styles.pageHeader}>
           <div className={styles.headerCopy}>
-            <h1 className={styles.pageTitle}>{title}</h1>
-            {subtitle ? <p className={styles.pageSubtitle}>{subtitle}</p> : null}
+            <h1 className={styles.pageTitle}>{resolvedTitle}</h1>
+            {resolvedSubtitle ? (
+              <p className={styles.pageSubtitle}>{resolvedSubtitle}</p>
+            ) : null}
           </div>
           {actions ? <div className={styles.headerActions}>{actions}</div> : null}
         </header>

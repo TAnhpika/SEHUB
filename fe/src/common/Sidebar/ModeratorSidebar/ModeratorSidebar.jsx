@@ -1,8 +1,7 @@
+import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import logoSrc from "@/img/logo.png";
-import { useAuth } from "@/context";
 import { useModeratorPage } from "@/features/moderator/context/ModeratorPageContext";
 import {
   getModeratorNavBadgeCounts,
@@ -45,7 +44,6 @@ function NavItemLink({ item, pathname, badgeCounts, onNavigate }) {
 
 function ModeratorSidebar() {
   const { pathname } = useLocation();
-  const { isAdmin } = useAuth();
   const { sidebarOpen, setSidebarOpen } = useModeratorPage();
   const badgeCounts = getModeratorNavBadgeCounts();
 
@@ -100,13 +98,6 @@ function ModeratorSidebar() {
               </div>
             ))}
           </nav>
-
-          {isAdmin ? (
-            <Link to="/admin" className={styles.adminLink} onClick={handleNavClick}>
-              <FontAwesomeIcon icon={faChevronDown} className={styles.adminLinkIcon} aria-hidden />
-              Khu vực Admin
-            </Link>
-          ) : null}
         </div>
       </aside>
     </>

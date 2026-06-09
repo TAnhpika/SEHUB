@@ -29,7 +29,7 @@ function GamificationDeleteModal({ open, title, targetLabel, onClose, onConfirm 
               {title}
             </h2>
             <p className={gStyles.modalSubtitle}>
-              Xóa <strong>{targetLabel}</strong>? Hành động không hoàn tác (mock store).
+              Xóa <strong>{targetLabel}</strong>? Hành động không hoàn tác.
             </p>
           </div>
           <button type="button" className={gStyles.modalClose} aria-label="Đóng" onClick={onClose}>

@@ -112,9 +112,52 @@ export function addAdminDocument(payload) {
     pages: payload.pages ?? 0,
     uploadedAt: new Date().toISOString().slice(0, 10),
     source: "upload",
+    description: payload.description?.trim() ?? "",
   };
   documentsStore = [entry, ...documentsStore];
   return entry;
+}
+
+export function parseDocumentAccessKey(access) {
+  return access?.includes("Premium") ? "premium" : "free";
+}
+
+export function formatDocumentAccessLabel(accessKey) {
+  return accessKey === "free" ? "Free (3 trang)" : "Premium";
+}
+
+/**
+ * @param {string} id
+ * @param {{ accessKey?: string, pages?: number, semester?: string, description?: string }} payload
+ */
+export function updateAdminDocument(id, payload) {
+  const index = documentsStore.findIndex((doc) => doc.id === id);
+  if (index === -1) {
+    return { ok: false, message: "Không tìm thấy tài liệu." };
+  }
+
+  const current = documentsStore[index];
+  const pagesRaw = Number(payload.pages);
+  const pages =
+    Number.isFinite(pagesRaw) && pagesRaw > 0 ? pagesRaw : Math.max(current.pages, 1);
+
+  const accessKey = payload.accessKey ?? parseDocumentAccessKey(current.access);
+  const next = {
+    ...current,
+    access: formatDocumentAccessLabel(accessKey),
+    pages,
+    description: payload.description?.trim() ?? "",
+  };
+
+  if (current.source !== "exam" && payload.semester) {
+    next.semester = payload.semester;
+  }
+
+  documentsStore = documentsStore.map((doc, docIndex) =>
+    docIndex === index ? next : doc,
+  );
+
+  return { ok: true, document: next };
 }
 
 export function removeAdminDocument(id) {

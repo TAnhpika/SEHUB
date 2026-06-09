@@ -16,4 +16,5 @@ export const ADMIN_PAGE_SIZES = {
   gamificationAudit: 5,
   permissionsAudit: 5,
   documents: 5,
+  vouchers: 6,
 };

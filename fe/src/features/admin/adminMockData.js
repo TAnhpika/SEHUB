@@ -1,5 +1,11 @@
+import { getAdminNavBadgeCounts } from "@/features/admin/adminNavBadges";
 import { getAdminExams, getAdminPendingExams } from "@/features/admin/exams/adminExamData";
 import { getAdminBannedUsers } from "@/features/admin/moderation/adminBannedData";
+import {
+  getPaymentAuditLog,
+  getPaymentStats,
+} from "@/features/admin/payments/adminPaymentData";
+import { getPermissionsAudit } from "@/features/admin/permissions/adminPermissionsData";
 
 export const ADMIN_DASHBOARD_STATS = [
   {
@@ -130,19 +136,60 @@ export const ADMIN_CHART_TRAFFIC = {
   values: [120, 340, 520, 480, 610, 390],
 };
 
-export const ADMIN_DASHBOARD_PENDING = [
-  { id: "p1", label: "Duyệt đề Mod", count: 2, to: "/admin/exams/pending", urgent: true },
-  { id: "p2", label: "Báo cáo chờ", count: 4, to: "/admin/moderation", urgent: true },
-  { id: "p3", label: "Thanh toán lỗi", count: 1, to: "/admin/payments", urgent: false },
-];
+/** Pending dashboard — đọc từ store thay vì hardcode */
+export function getDashboardPending() {
+  const badges = getAdminNavBadgeCounts();
+  const payments = getPaymentStats();
+
+  return [
+    {
+      id: "p1",
+      label: "Duyệt đề Mod",
+      count: badges["exam-pending"],
+      to: "/admin/exams/pending",
+      urgent: badges["exam-pending"] > 0,
+    },
+    {
+      id: "p2",
+      label: "Báo cáo chờ",
+      count: badges.moderation,
+      to: "/admin/moderation",
+      urgent: badges.moderation > 0,
+    },
+    {
+      id: "p3",
+      label: "Chờ xác nhận PayOS",
+      count: payments.awaitingConfirm,
+      to: "/admin/payments",
+      urgent: payments.awaitingConfirm > 0,
+    },
+    {
+      id: "p4",
+      label: "Bài nộp TH chờ chấm",
+      count: badges["practice-submissions"],
+      to: "/admin/exams/submissions",
+      urgent: badges["practice-submissions"] > 0,
+    },
+    {
+      id: "p5",
+      label: "Thanh toán lỗi",
+      count: payments.failed,
+      to: "/admin/payments",
+      urgent: false,
+    },
+  ].filter((item) => item.count > 0 || item.id === "p2");
+}
+
+/** @deprecated — dùng getDashboardPending() */
+export const ADMIN_DASHBOARD_PENDING = getDashboardPending();
 
 export const ADMIN_QUICK_LINKS = [
-  { to: "/admin/users", label: "Quản lý tài khoản", desc: "Khóa, reset MK, Premium" },
-  { to: "/admin/exams/pending", label: "Duyệt đề Mod", desc: "2 đề đang chờ" },
-  { to: "/admin/moderation", label: "Báo cáo", desc: "4 hàng chờ" },
-  { to: "/admin/documents", label: "Quản lý tài liệu", desc: "Upload & phân quyền" },
-  { to: "/admin/payments", label: "Quản lý thanh toán", desc: "PayOS & cộng token" },
-  { to: "/admin/permissions", label: "Phân quyền Mod", desc: "Gán kiểm duyệt viên" },
+  { to: "/admin/users", label: "Quản lý tài khoản", desc: "Khóa vĩnh viễn, reset MK" },
+  { to: "/admin/exams/pending", label: "Duyệt đề Mod", desc: "Đề chờ phê duyệt" },
+  { to: "/admin/moderation", label: "Báo cáo", desc: "Hàng chờ xử lý" },
+  { to: "/admin/documents", label: "Quản lý tài liệu", desc: "Free 3 trang / Premium full" },
+  { to: "/admin/payments", label: "Thanh toán PayOS", desc: "Xác nhận & cộng token" },
+  { to: "/admin/permissions", label: "Phân quyền Mod", desc: "Gán/thu hồi Mod" },
 ];
 
 export const ADMIN_RECENT_ACTIVITY = [
@@ -179,208 +226,12 @@ export const ADMIN_ACTIVITY_LOG = [
 
 export const ADMIN_ACTIVITY_PAGE_SIZE = 8;
 
-export const ADMIN_USERS = [
-  {
-    id: "u1",
-    username: "anhcoding12345",
-    email: "tngo28299@gmail.com",
-    displayName: "Anhpika",
-    role: "student",
-    plan: "Free",
-    status: "active",
-    joinedAt: "2025-09-12",
-  },
-  {
-    id: "u2",
-    username: "minhanh_dev",
-    email: "minhanh@fpt.edu.vn",
-    displayName: "Trần Minh Anh",
-    role: "student",
-    plan: "Premium",
-    status: "active",
-    joinedAt: "2025-11-03",
-  },
-  {
-    id: "u3",
-    username: "mod_sehub",
-    email: "moderator@sehubs.local",
-    displayName: "Nguyễn Kiểm Duyệt",
-    role: "moderator",
-    plan: "—",
-    status: "active",
-    joinedAt: "2025-08-01",
-  },
-  {
-    id: "u4",
-    username: "spam_bot_01",
-    email: "spam@fake.mail",
-    displayName: "Spam Bot",
-    role: "student",
-    plan: "Free",
-    status: "banned",
-    joinedAt: "2026-05-20",
-  },
-  {
-    id: "u5",
-    username: "lee_dev_99",
-    email: "lee.dev@fpt.edu.vn",
-    displayName: "Lê Văn Đức",
-    role: "student",
-    plan: "Free",
-    status: "active",
-    joinedAt: "2026-01-08",
-  },
-  {
-    id: "u6",
-    username: "tran_van_a",
-    email: "tranva@fpt.edu.vn",
-    displayName: "Trần Văn A",
-    role: "student",
-    plan: "Premium",
-    status: "active",
-    joinedAt: "2025-12-14",
-  },
-  {
-    id: "u7",
-    username: "pham_thi_b",
-    email: "phamtb@fpt.edu.vn",
-    displayName: "Phạm Thị B",
-    role: "student",
-    plan: "Free",
-    status: "active",
-    joinedAt: "2026-02-22",
-  },
-  {
-    id: "u8",
-    username: "mod_phuong",
-    email: "phuong.mod@sehubs.local",
-    displayName: "Hoàng Phương Mod",
-    role: "moderator",
-    plan: "—",
-    status: "active",
-    joinedAt: "2025-07-19",
-  },
-  {
-    id: "u9",
-    username: "fpt_student_22",
-    email: "fpt22@student.vn",
-    displayName: "Nguyễn FPT 22",
-    role: "student",
-    plan: "Premium",
-    status: "active",
-    joinedAt: "2026-03-05",
-  },
-  {
-    id: "u10",
-    username: "scammer_xyz",
-    email: "scam@fake.mail",
-    displayName: "Scammer XYZ",
-    role: "student",
-    plan: "Free",
-    status: "banned",
-    joinedAt: "2026-04-18",
-  },
-  {
-    id: "u11",
-    username: "helpdesk_req_88",
-    email: "help88@fpt.edu.vn",
-    displayName: "Support Test 88",
-    role: "student",
-    plan: "Free",
-    status: "active",
-    joinedAt: "2026-05-01",
-  },
-  {
-    id: "u12",
-    username: "user_4421",
-    email: "user4421@mail.com",
-    displayName: "User 4421",
-    role: "student",
-    plan: "Free",
-    status: "active",
-    joinedAt: "2025-10-30",
-  },
-  {
-    id: "u13",
-    username: "admin_backup",
-    email: "backup@sehubs.local",
-    displayName: "Admin Backup",
-    role: "admin",
-    plan: "—",
-    status: "active",
-    joinedAt: "2025-06-01",
-  },
-  {
-    id: "u14",
-    username: "coding_ninja",
-    email: "ninja@dev.vn",
-    displayName: "Coding Ninja",
-    role: "student",
-    plan: "Premium",
-    status: "active",
-    joinedAt: "2025-11-28",
-  },
-  {
-    id: "u15",
-    username: "vu_minh_c",
-    email: "vuminhc@fpt.edu.vn",
-    displayName: "Vũ Minh C",
-    role: "student",
-    plan: "Free",
-    status: "active",
-    joinedAt: "2026-04-02",
-  },
-  {
-    id: "u16",
-    username: "banned_temp_01",
-    email: "temp01@fake.mail",
-    displayName: "Banned Temp",
-    role: "student",
-    plan: "Free",
-    status: "banned",
-    joinedAt: "2026-05-10",
-  },
-  {
-    id: "u17",
-    username: "hoa_nguyen_d",
-    email: "hoand@fpt.edu.vn",
-    displayName: "Hoa Nguyễn D",
-    role: "student",
-    plan: "Premium",
-    status: "active",
-    joinedAt: "2025-09-25",
-  },
-  {
-    id: "u18",
-    username: "mod_khanh",
-    email: "khanh.mod@sehubs.local",
-    displayName: "Trần Khánh Mod",
-    role: "moderator",
-    plan: "—",
-    status: "active",
-    joinedAt: "2025-10-12",
-  },
-  {
-    id: "u19",
-    username: "study_group_7",
-    email: "sg7@fpt.edu.vn",
-    displayName: "Study Group 7",
-    role: "student",
-    plan: "Free",
-    status: "active",
-    joinedAt: "2026-02-08",
-  },
-  {
-    id: "u20",
-    username: "premium_trial",
-    email: "trial@fpt.edu.vn",
-    displayName: "Premium Trial",
-    role: "student",
-    plan: "Premium",
-    status: "active",
-    joinedAt: "2026-05-25",
-  },
-];
+export {
+  getAdminUsers,
+  getAdminUserById,
+  findAdminUserByUsername,
+  getAdminUserDetailUrl,
+} from "@/features/admin/users/adminUserStore";
 
 export const ADMIN_USERS_PAGE_SIZE = 8;
 
@@ -404,8 +255,72 @@ export const MODERATOR_CANDIDATES = [
   { username: "minhanh_dev", email: "minhanh@fpt.edu.vn", displayName: "Trần Minh Anh" },
 ];
 
+import {
+  getAdminUserById,
+  getUserActionAudit,
+} from "@/features/admin/users/adminUserStore";
+
+/** @deprecated — dùng getAdminUserById */
 export function findAdminUser(id) {
-  return ADMIN_USERS.find((user) => user.id === id) ?? null;
+  return getAdminUserById(id);
+}
+
+const USER_AUDIT_ACTION_LABEL = {
+  ban_permanent: "Khóa vĩnh viễn",
+  unban: "Mở khóa",
+  reset_password: "Reset mật khẩu",
+  payos_premium: "Kích hoạt Premium PayOS",
+  manual_premium: "Cấp Premium thủ công",
+  manual_token: "Cộng token",
+  grant_moderator: "Gán Moderator",
+};
+
+const PAYMENT_AUDIT_ACTION_LABEL = {
+  payos_confirm: "Xác nhận PayOS",
+  manual_token: "Cộng token thưởng",
+  manual_premium: "Cấp Premium thủ công",
+  payos_refund: "Hoàn tiền PayOS",
+};
+
+const PERM_AUDIT_ACTION_LABEL = {
+  grant: "Gán Moderator",
+  revoke: "Thu hồi Moderator",
+};
+
+/** Gộp nhật ký hệ thống + audit tài khoản + thanh toán + phân quyền */
+export function getMergedActivityLog() {
+  const userEvents = getUserActionAudit().map((row) => ({
+    id: row.id,
+    time: row.at.slice(0, 16).replace("T", " "),
+    text: `${USER_AUDIT_ACTION_LABEL[row.action] ?? row.action} — @${row.username}: ${row.detail}`,
+    type: "user",
+    sortKey: row.at,
+  }));
+
+  const paymentEvents = getPaymentAuditLog().map((row) => ({
+    id: row.id,
+    time: row.at.slice(0, 16).replace("T", " "),
+    text: `${PAYMENT_AUDIT_ACTION_LABEL[row.action] ?? row.action} — @${row.username}: ${row.detail}`,
+    type: "payment",
+    sortKey: row.at,
+  }));
+
+  const permEvents = getPermissionsAudit().map((row) => ({
+    id: row.id,
+    time: row.at.slice(0, 16).replace("T", " "),
+    text: `${PERM_AUDIT_ACTION_LABEL[row.action] ?? row.action} — @${row.username}: ${row.detail}`,
+    type: "user",
+    sortKey: row.at,
+  }));
+
+  const systemEvents = ADMIN_ACTIVITY_LOG.map((row) => ({
+    ...row,
+    sortKey: row.time,
+  }));
+
+  return [...userEvents, ...paymentEvents, ...permEvents, ...systemEvents].sort((a, b) =>
+    String(b.sortKey).localeCompare(String(a.sortKey)),
+  );
 }
 
 export { getAdminReportById as findAdminReport } from "@/features/admin/moderation/adminReportData";
