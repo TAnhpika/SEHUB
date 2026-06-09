@@ -101,7 +101,7 @@ export function getDocumentItemsForCourse(courseCode) {
       term: "SP",
       termLabel: "Spring",
       uploadedAt: doc.uploadedAt,
-      type: doc.access.includes("Premium") ? "Premium" : "Free (3 trang)",
+      type: doc.name?.match(/\.([^.]+)$/)?.[1]?.toUpperCase() ?? "—",
       questionCount: doc.pages,
       document: doc,
     }));

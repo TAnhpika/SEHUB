@@ -17,11 +17,15 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { useAuth } from "@/context";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
+import ExamContributionAuditList from "@/features/moderator/exams/components/ExamContributionAuditList/ExamContributionAuditList";
 import {
-  getAllPracticeSubmissions,
-  getSubmissionStatusLabel,
-} from "@/features/exams/practiceExamSubmissions";
+  getExamContributionAudit,
+  getPendingContributionCount,
+  recordExamDraft,
+  submitExamForApproval,
+} from "@/features/moderator/exams/moderatorExamContributionStore";
 import {
   DEMO_DRAFT,
   PRACTICE_SEMESTER_OPTIONS,
@@ -47,9 +51,12 @@ function FileTypeIcon({ type }) {
 
 function AddPracticeExamPage() {
   const { showToast } = useToast();
+  const { user } = useAuth();
   const fileInputRef = useRef(null);
+  const moderator = user?.username ?? "mod_sehub";
 
   const [activeTab, setActiveTab] = useState("create");
+  const [refreshKey, setRefreshKey] = useState(0);
   const [subject, setSubject] = useState(DEMO_DRAFT.subject);
   const [semester, setSemester] = useState(DEMO_DRAFT.semester);
   const [title, setTitle] = useState(DEMO_DRAFT.title);
@@ -57,10 +64,32 @@ function AddPracticeExamPage() {
   const [attachments, setAttachments] = useState(DEMO_DRAFT.attachments);
   const [allowDiscussion, setAllowDiscussion] = useState(DEMO_DRAFT.allowDiscussion);
   const [pinExam, setPinExam] = useState(DEMO_DRAFT.pinExam);
-  const submissions = getAllPracticeSubmissions();
   const [isDragging, setIsDragging] = useState(false);
 
+  const auditLog = getExamContributionAudit(moderator, { examType: "practice" });
+  const pendingApprovalCount = getPendingContributionCount(moderator, "practice");
+
+  function buildPayload() {
+    return {
+      examType: "practice",
+      moderator,
+      subjectCode: subject,
+      semester,
+      title,
+      description,
+      attachments,
+      allowDiscussion,
+      pinExam,
+    };
+  }
+
   function handleSaveDraft() {
+    if (!subject || !semester || !title.trim()) {
+      showToast("Điền môn, học kỳ và tiêu đề trước khi lưu nháp.");
+      return;
+    }
+    recordExamDraft(buildPayload());
+    setRefreshKey((k) => k + 1);
     showToast("Đã lưu nháp đề thi thực hành.");
   }
 
@@ -70,7 +99,10 @@ function AddPracticeExamPage() {
       showToast("Vui lòng điền đầy đủ các trường bắt buộc.");
       return;
     }
-    showToast("Đề thi đã được lưu và gửi chờ duyệt trước khi xuất bản.");
+    submitExamForApproval(buildPayload());
+    setRefreshKey((k) => k + 1);
+    setActiveTab("audit");
+    showToast("Đề thi đã gửi chờ Admin duyệt trước khi xuất bản.");
   }
 
   function addFiles(fileList) {
@@ -134,15 +166,17 @@ function AddPracticeExamPage() {
           <button
             type="button"
             role="tab"
-            aria-selected={activeTab === "submissions"}
-            className={`${styles.tab} ${activeTab === "submissions" ? styles["tab-active"] : ""}`}
-            onClick={() => setActiveTab("submissions")}
+            aria-selected={activeTab === "audit"}
+            className={`${styles.tab} ${activeTab === "audit" ? styles["tab-active"] : ""}`}
+            onClick={() => setActiveTab("audit")}
           >
-            Danh sách nộp bài
-            <span className={styles.badge}>{submissions.length}</span>
+            Nhật ký đóng góp
+            {pendingApprovalCount > 0 ? (
+              <span className={styles.badge}>{pendingApprovalCount}</span>
+            ) : null}
           </button>
           <Link to="/moderator/practice-submissions" className={styles["tab-link"]}>
-            Mở trang chấm bài →
+            Chấm bài nộp GitHub →
           </Link>
         </div>
 
@@ -354,33 +388,13 @@ function AddPracticeExamPage() {
             </div>
           </form>
         ) : (
-          <div className={styles.submissions}>
-            <ul className={styles["submission-list"]}>
-              {submissions.map((item) => (
-                <li key={item.id} className={styles["submission-item"]}>
-                  <div>
-                    <p className={styles["submission-name"]}>{item.displayName}</p>
-                    <p className={styles["submission-meta"]}>
-                      @{item.student} · {item.courseCode} ·{" "}
-                      {new Date(item.submittedAt).toLocaleString("vi-VN")}
-                    </p>
-                    <a
-                      href={item.githubUrl}
-                      className={styles["submission-link"]}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {item.githubUrl}
-                    </a>
-                  </div>
-                  <span
-                    className={`${styles["submission-status"]} ${styles[`status-${item.status}`]}`}
-                  >
-                    {getSubmissionStatusLabel(item.status)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          <div className={styles.auditPanel} key={refreshKey}>
+            <ExamContributionAuditList
+              items={auditLog}
+              title="Nhật ký đóng góp đề thực hành"
+              description="Mod lưu nháp hoặc gửi Admin duyệt trước khi public (§2.4). Bài nộp GitHub của sinh viên xem tại trang chấm bài riêng (§3.4)."
+              showHistoryLink
+            />
           </div>
         )}
       </section>

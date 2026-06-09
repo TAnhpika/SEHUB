@@ -2,6 +2,11 @@ import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { useAuth } from "@/context";
+import {
+  buildFinalExamContributionPayload,
+  recordExamDraft,
+} from "@/features/moderator/exams/moderatorExamContributionStore";
 import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
 import QuestionEditorCard from "@/features/moderator/finalExams/components/QuestionEditorCard";
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
@@ -10,6 +15,8 @@ import styles from "./FinalExamQuestionsStep.module.css";
 function FinalExamQuestionsStep() {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { user } = useAuth();
+  const moderator = user?.username ?? "mod_sehub";
   const {
     examInfo,
     questions,
@@ -30,6 +37,14 @@ function FinalExamQuestionsStep() {
   const examSubtitle = `Cấu trúc đề thi ${examInfo.subjectName} (${examInfo.subjectCode}) - ${examInfo.semesterLabel}`;
 
   function handleSaveDraft() {
+    recordExamDraft(
+      buildFinalExamContributionPayload(
+        moderator,
+        examInfo,
+        completeCount,
+        "Bước 2: Soạn câu hỏi",
+      ),
+    );
     showToast("Đã lưu nháp danh sách câu hỏi.");
   }
 
