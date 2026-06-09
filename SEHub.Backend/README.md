@@ -55,8 +55,19 @@ Key sections: `ConnectionStrings`, `Jwt`, `PayOS`, `FileStorage`, `Cors`, `Ai`.
 dotnet test
 ```
 
-- **Unit tests:** `tests/SEHub.Application.UnitTests` (11 tests)
-- **Integration tests:** `tests/SEHub.API.IntegrationTests` (5 tests)
+- **Unit tests:** `tests/SEHub.Application.UnitTests`
+- **Integration tests:** `tests/SEHub.API.IntegrationTests`
+
+## FE integration (Swagger / Postman)
+
+| Resource | Path |
+| -------- | ---- |
+| Swagger UI | `http://localhost:5006/swagger` (dev) |
+| FE quickstart | [docs/FE_API_QUICKSTART.md](docs/FE_API_QUICKSTART.md) |
+| REST Client | [src/SEHub.API/SEHub.API.http](src/SEHub.API/SEHub.API.http) |
+| Postman collection | [postman/SEHub-FE.postman_collection.json](postman/SEHub-FE.postman_collection.json) |
+
+**Register password:** min 8 chars, uppercase + lowercase + digit + special character (e.g. `Student@123`).
 
 ## Documentation
 
