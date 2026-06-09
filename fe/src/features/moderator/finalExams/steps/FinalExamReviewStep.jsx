@@ -1,5 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { useAuth } from "@/context";
+import {
+  buildFinalExamContributionPayload,
+  recordExamDraft,
+  submitExamForApproval,
+} from "@/features/moderator/exams/moderatorExamContributionStore";
 import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
 import styles from "./FinalExamReviewStep.module.css";
@@ -7,18 +13,30 @@ import styles from "./FinalExamReviewStep.module.css";
 function FinalExamReviewStep() {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { user } = useAuth();
+  const moderator = user?.username ?? "mod_sehub";
   const { examInfo, questions, enteredCount, completeCount, totalQuestions } =
     useFinalExamWizard();
 
   function handleSaveDraft() {
+    recordExamDraft(
+      buildFinalExamContributionPayload(moderator, examInfo, completeCount, "Bước 3: Xem lại"),
+    );
     showToast("Đã lưu nháp. Đề chờ Admin duyệt trước khi xuất bản.");
   }
 
   function handlePublish() {
+    if (completeCount < 1) {
+      showToast("Cần ít nhất một câu hỏi hoàn chỉnh trước khi gửi duyệt.");
+      return;
+    }
+    submitExamForApproval(
+      buildFinalExamContributionPayload(moderator, examInfo, completeCount, "Bước 3: Xem lại"),
+    );
     showToast(
       "Đề thi cuối kỳ đã được gửi. Trạng thái: chờ Admin duyệt trước khi public (theo nghiệp vụ).",
     );
-    navigate("/moderator/final-exams/add");
+    navigate("/moderator/exams/history?type=final");
   }
 
   return (
