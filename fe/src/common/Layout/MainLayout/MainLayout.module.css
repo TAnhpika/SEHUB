@@ -23,6 +23,11 @@
   gap: 1.25rem;
 }
 
+/* Bù gap grid bên trái để khoảng trắng hai mép nội dung bằng nhau */
+.col-center-balanced {
+  padding-right: calc(var(--layout-gutter) + 1.25rem);
+}
+
 .col-left {
   position: sticky;
   top: var(--header-height);
@@ -51,7 +56,7 @@
 .col-center {
   min-width: 0;
   width: 100%;
-  padding: 1rem var(--layout-gutter) 1.5rem 0;
+  padding: 1rem var(--layout-gutter) 1.5rem var(--layout-gutter);
 }
 
 .col-right {
@@ -86,7 +91,8 @@
     display: none;
   }
 
-  .col-center {
-    padding: 1rem 0 1.5rem;
+  .col-center,
+  .col-center-balanced {
+    padding: 1rem var(--layout-gutter) 1.5rem;
   }
 }
