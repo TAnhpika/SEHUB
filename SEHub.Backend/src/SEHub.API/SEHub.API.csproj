@@ -23,6 +23,15 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>sehub-api-development</UserSecretsId>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
+
+  <Target Name="CopyContractsDocumentation" AfterTargets="Build">
+    <PropertyGroup>
+      <ContractsXmlPath>$(MSBuildThisFileDirectory)..\SEHub.Contracts\bin\$(Configuration)\$(TargetFramework)\SEHub.Contracts.xml</ContractsXmlPath>
+    </PropertyGroup>
+    <Copy SourceFiles="$(ContractsXmlPath)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('$(ContractsXmlPath)')" />
+  </Target>
 
 </Project>

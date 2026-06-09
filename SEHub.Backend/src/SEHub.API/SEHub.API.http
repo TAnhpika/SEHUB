@@ -1,6 +1,82 @@
-@SEHub.API_HostAddress = http://localhost:5006
+@host = http://localhost:5006
+@api = {{host}}/api/v1
 
-GET {{SEHub.API_HostAddress}}/weatherforecast/
-Accept: application/json
+# SEHub FE API quickstart — REST Client (VS Code / Cursor)
+# Import Postman: postman/SEHub-FE.postman_collection.json
+# Swagger UI: {{host}}/swagger
 
-###
+### Health (no envelope)
+GET {{host}}/health
+
+### Register — password must include upper, lower, digit, special (e.g. Student@123)
+# @name register
+POST {{api}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "fe.test.user@fpt.edu.vn",
+  "username": "fetestuser",
+  "password": "Student@123",
+  "displayName": "FE Test User"
+}
+
+### Register — weak password (expect 400 VALIDATION_FAILED)
+POST {{api}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "weak.pass@fpt.edu.vn",
+  "username": "weakpassuser",
+  "password": "hauvip123",
+  "displayName": "Weak Pass"
+}
+
+### Login (dev admin)
+# @name loginAdmin
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "emailOrUsername": "admin@sehub.local",
+  "password": "Admin@123"
+}
+
+### Login (demo student — after DemoDataSeeder)
+# @name loginDemo
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "emailOrUsername": "demo.student@sehub.local",
+  "password": "Demo@12345"
+}
+
+@token = {{loginAdmin.response.body.data.accessToken}}
+
+### Current user
+GET {{api}}/auth/me
+Authorization: Bearer {{token}}
+
+### Feed (guest-readable list; like/comment need token)
+GET {{api}}/posts?page=1&pageSize=10
+
+### Featured posts
+GET {{api}}/posts/featured
+
+### Premium plans (anonymous)
+GET {{api}}/premium/plans
+
+### Documents (authenticated — expect 401 without token)
+GET {{api}}/documents
+
+### Documents (with token)
+GET {{api}}/documents
+Authorization: Bearer {{token}}
+
+### Profile stats
+GET {{api}}/profiles/me/stats
+Authorization: Bearer {{token}}
+
+### Logout
+POST {{api}}/auth/logout
+Authorization: Bearer {{token}}
