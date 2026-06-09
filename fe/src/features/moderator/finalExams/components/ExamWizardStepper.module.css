@@ -121,3 +121,18 @@
 .stepTitle-active + .stepHint {
   color: #434655;
 }
+
+.historyLink {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 2rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--moderator-primary, #004ac6);
+  text-decoration: none;
+}
+
+.historyLink:hover {
+  text-decoration: underline;
+}
