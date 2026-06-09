@@ -19,7 +19,16 @@ public static class DemoDataSeeder
     public const string DemoStudentPassword = "Demo@12345";
     public const string DemoStudentUsername = "demo_student";
 
+    public const string FreeStudentEmail = "free.student@sehub.local";
+    public const string FreeStudentPassword = "Free@12345";
+    public const string FreeStudentUsername = "free_student";
+
+    public const string ModeratorEmail = "moderator@sehub.local";
+    public const string ModeratorPassword = "Mod@12345";
+    public const string ModeratorUsername = "demo_moderator";
+
     private const string DemoPostTag = "demo-seed";
+    private const string DemoReportTag = "demo-seed-report";
     private const string FinalExamCode = "SE301-FINAL-01";
     private const string PracticeExamCode = "SE301-LAB-01";
     private const string DocumentCategoryName = "SE301 - Software Engineering";
@@ -28,6 +37,13 @@ public static class DemoDataSeeder
     private const string SubscriptionPlanCode = "1m";
 
     private static readonly Guid DemoStudentId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    private static readonly Guid FreeStudentId = Guid.Parse("f1111111-1111-1111-1111-111111111111");
+    private static readonly Guid ModeratorUserId = Guid.Parse("f2222222-2222-2222-2222-222222222222");
+    private static readonly Guid SpammerUserId = Guid.Parse("f3333333-3333-3333-3333-333333333333");
+    private static readonly Guid DemoSpamPostId = Guid.Parse("f4444444-4444-4444-4444-444444444401");
+    private static readonly Guid DemoOffensivePostId = Guid.Parse("f4444444-4444-4444-4444-444444444402");
+    private static readonly Guid DemoReportSpamId = Guid.Parse("f5555555-5555-5555-5555-555555555501");
+    private static readonly Guid DemoReportHarmfulId = Guid.Parse("f5555555-5555-5555-5555-555555555502");
     private static readonly Guid DemoDocumentCategoryId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
     private static readonly Guid DemoDocumentId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
     private static readonly Guid DemoFinalExamId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
@@ -52,21 +68,26 @@ public static class DemoDataSeeder
 
             var before = await CaptureCountsAsync(context, userManager);
             logger.LogInformation(
-                "DemoDataSeeder starting. Before: Users={Users}, Posts={Posts}, Exams={Exams}, Questions={Questions}, Options={Options}, DocumentCategories={DocumentCategories}, Documents={Documents}, Subscriptions={Subscriptions}",
-                before.Users, before.Posts, before.Exams, before.Questions, before.Options,
+                "DemoDataSeeder starting. Before: Users={Users}, Posts={Posts}, Reports={Reports}, Exams={Exams}, Questions={Questions}, Options={Options}, DocumentCategories={DocumentCategories}, Documents={Documents}, Subscriptions={Subscriptions}",
+                before.Users, before.Posts, before.Reports, before.Exams, before.Questions, before.Options,
                 before.DocumentCategories, before.Documents, before.Subscriptions);
 
             await SeedDocumentCategoryAndDocumentAsync(context, configuration, logger);
             var student = await SeedDemoStudentAsync(userManager, context, logger);
+            var freeStudent = await SeedFreeStudentAsync(userManager, context, logger);
+            await SeedModeratorAsync(userManager, context, logger);
+            var spammer = await SeedSpammerStudentAsync(userManager, context, logger);
             await SeedFinalExamAsync(context, logger);
             await SeedPracticeExamAsync(context, logger);
             await SeedActiveSubscriptionAsync(context, subscriptionService, student.Id, logger);
             await SeedDemoPostsAsync(context, student.Id, logger);
+            await SeedReportablePostsAsync(context, spammer.Id, logger);
+            await SeedDemoPostReportsAsync(context, freeStudent.Id, student.Id, logger);
 
             var after = await CaptureCountsAsync(context, userManager);
             logger.LogInformation(
-                "DemoDataSeeder completed. After: Users={Users}, Posts={Posts}, Exams={Exams}, Questions={Questions}, Options={Options}, DocumentCategories={DocumentCategories}, Documents={Documents}, Subscriptions={Subscriptions}",
-                after.Users, after.Posts, after.Exams, after.Questions, after.Options,
+                "DemoDataSeeder completed. After: Users={Users}, Posts={Posts}, Reports={Reports}, Exams={Exams}, Questions={Questions}, Options={Options}, DocumentCategories={DocumentCategories}, Documents={Documents}, Subscriptions={Subscriptions}",
+                after.Users, after.Posts, after.Reports, after.Exams, after.Questions, after.Options,
                 after.DocumentCategories, after.Documents, after.Subscriptions);
         }
         catch (Exception ex)
@@ -162,6 +183,235 @@ public static class DemoDataSeeder
         await context.SaveChangesAsync();
         logger.LogInformation("Seeded demo student {Email}", DemoStudentEmail);
         return student;
+    }
+
+    private static async Task<ApplicationUser> SeedFreeStudentAsync(
+        UserManager<ApplicationUser> userManager,
+        SEHubDbContext context,
+        ILogger logger)
+    {
+        return await SeedRoleUserAsync(
+            userManager,
+            context,
+            logger,
+            FreeStudentId,
+            FreeStudentUsername,
+            FreeStudentEmail,
+            FreeStudentPassword,
+            "Free Student",
+            RoleNames.Student,
+            "Free student account without premium subscription.");
+    }
+
+    private static async Task SeedModeratorAsync(
+        UserManager<ApplicationUser> userManager,
+        SEHubDbContext context,
+        ILogger logger)
+    {
+        await SeedRoleUserAsync(
+            userManager,
+            context,
+            logger,
+            ModeratorUserId,
+            ModeratorUsername,
+            ModeratorEmail,
+            ModeratorPassword,
+            "Demo Moderator",
+            RoleNames.Moderator,
+            "Moderator account for local development and FE handoff.");
+    }
+
+    private static async Task<ApplicationUser> SeedSpammerStudentAsync(
+        UserManager<ApplicationUser> userManager,
+        SEHubDbContext context,
+        ILogger logger)
+    {
+        return await SeedRoleUserAsync(
+            userManager,
+            context,
+            logger,
+            SpammerUserId,
+            "spam_user",
+            "spam.user@sehub.local",
+            "Spam@12345",
+            "Spam User",
+            RoleNames.Student,
+            "Demo author of reported posts for moderation screens.");
+    }
+
+    private static async Task<ApplicationUser> SeedRoleUserAsync(
+        UserManager<ApplicationUser> userManager,
+        SEHubDbContext context,
+        ILogger logger,
+        Guid userId,
+        string username,
+        string email,
+        string password,
+        string displayName,
+        string role,
+        string bio)
+    {
+        var existing = await userManager.FindByEmailAsync(email);
+        if (existing is not null)
+        {
+            if (!await context.UserProfiles.AnyAsync(p => p.UserId == existing.Id))
+            {
+                context.UserProfiles.Add(new UserProfile
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = existing.Id,
+                    Major = "SE",
+                    Semester = 1,
+                    Bio = bio,
+                    CreatedAt = DateTime.UtcNow
+                });
+                await context.SaveChangesAsync();
+                logger.LogInformation("Created missing UserProfile for {Email}", email);
+            }
+
+            return existing;
+        }
+
+        var bronzeLevel = await context.LevelConfigs
+            .OrderBy(l => l.MinPoints)
+            .FirstAsync();
+
+        var user = new ApplicationUser
+        {
+            Id = userId,
+            UserName = username,
+            Email = email,
+            EmailConfirmed = true,
+            DisplayName = displayName,
+            Points = 0,
+            LevelId = bronzeLevel.Id,
+            StreakCount = 0
+        };
+
+        var result = await userManager.CreateAsync(user, password);
+        if (!result.Succeeded)
+        {
+            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            throw new InvalidOperationException($"Failed to create user {email}: {errors}");
+        }
+
+        await userManager.AddToRoleAsync(user, role);
+
+        context.UserProfiles.Add(new UserProfile
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            Major = "SE",
+            Semester = 1,
+            Bio = bio,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seeded {Role} user {Email}", role, email);
+        return user;
+    }
+
+    private static async Task SeedReportablePostsAsync(SEHubDbContext context, Guid authorId, ILogger logger)
+    {
+        var now = DateTime.UtcNow;
+        var posts = new List<Post>();
+
+        if (!await context.Posts.AnyAsync(p => p.Id == DemoSpamPostId))
+        {
+            posts.Add(new Post
+            {
+                Id = DemoSpamPostId,
+                AuthorId = authorId,
+                Title = "Tài liệu ôn thi bí mật — click ngay!",
+                Content = "Click ngay vào link này để nhận tài liệu ôn thi bí mật. Đăng ký gấp tại bit.ly/fake-sehub-docs.",
+                Tags = $"{DemoPostTag},{DemoReportTag},spam",
+                Status = PostStatus.Published,
+                ViewCount = 12,
+                IsFeatured = false,
+                IsDeleted = false,
+                CreatedAt = now.AddHours(-6)
+            });
+        }
+
+        if (!await context.Posts.AnyAsync(p => p.Id == DemoOffensivePostId))
+        {
+            posts.Add(new Post
+            {
+                Id = DemoOffensivePostId,
+                AuthorId = authorId,
+                Title = "Bài viết vi phạm nội dung cộng đồng",
+                Content = "Nội dung chứa quảng cáo trái phép và ngôn từ không phù hợp với quy tắc cộng đồng SEHub.",
+                Tags = $"{DemoPostTag},{DemoReportTag},violation",
+                Status = PostStatus.Published,
+                ViewCount = 5,
+                IsFeatured = false,
+                IsDeleted = false,
+                CreatedAt = now.AddHours(-4)
+            });
+        }
+
+        if (posts.Count == 0)
+        {
+            return;
+        }
+
+        context.Posts.AddRange(posts);
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seeded {Count} reportable demo posts for author {AuthorId}", posts.Count, authorId);
+    }
+
+    private static async Task SeedDemoPostReportsAsync(
+        SEHubDbContext context,
+        Guid freeStudentId,
+        Guid premiumStudentId,
+        ILogger logger)
+    {
+        var pendingCount = await context.PostReports
+            .CountAsync(r => r.Reason.Contains(DemoReportTag) && r.Status == ReportStatus.Pending);
+
+        if (pendingCount >= 2)
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        var reports = new List<PostReport>();
+
+        if (!await context.PostReports.AnyAsync(r => r.Id == DemoReportSpamId))
+        {
+            reports.Add(new PostReport
+            {
+                Id = DemoReportSpamId,
+                PostId = DemoSpamPostId,
+                ReporterId = freeStudentId,
+                Reason = $"{DemoReportTag}: Spam — quảng cáo link giả mạo tài liệu ôn thi.",
+                Status = ReportStatus.Pending,
+                CreatedAt = now.AddHours(-2)
+            });
+        }
+
+        if (!await context.PostReports.AnyAsync(r => r.Id == DemoReportHarmfulId))
+        {
+            reports.Add(new PostReport
+            {
+                Id = DemoReportHarmfulId,
+                PostId = DemoOffensivePostId,
+                ReporterId = premiumStudentId,
+                Reason = $"{DemoReportTag}: Nội dung có hại — vi phạm quy tắc cộng đồng.",
+                Status = ReportStatus.Pending,
+                CreatedAt = now.AddHours(-1)
+            });
+        }
+
+        if (reports.Count == 0)
+        {
+            return;
+        }
+
+        context.PostReports.AddRange(reports);
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seeded {Count} pending post reports", reports.Count);
     }
 
     private static async Task SeedFinalExamAsync(SEHubDbContext context, ILogger logger)
@@ -493,6 +743,8 @@ public static class DemoDataSeeder
         {
             Users = await context.Users.CountAsync(),
             Posts = demoPostCount,
+            Reports = await context.PostReports.CountAsync(r =>
+                r.Reason.Contains(DemoReportTag) && r.Status == ReportStatus.Pending),
             Exams = await context.Exams.CountAsync(e =>
                 e.Code == FinalExamCode || e.Code == PracticeExamCode),
             Questions = await context.Questions.CountAsync(q => q.Exam.Code == FinalExamCode),
@@ -507,6 +759,7 @@ public static class DemoDataSeeder
     {
         public int Users { get; init; }
         public int Posts { get; init; }
+        public int Reports { get; init; }
         public int Exams { get; init; }
         public int Questions { get; init; }
         public int Options { get; init; }
