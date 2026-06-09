@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faLock } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
@@ -14,6 +14,7 @@ import { getDocumentOverview } from "@/features/documents/documentPageContent";
 import styles from "./StudentDocumentViewer.module.css";
 
 function StudentDocumentViewer({ document: doc }) {
+  const { pathname, search } = useLocation();
   const { isPremium, isAuthenticated } = useAuth();
   const { showToast } = useToast();
   const access = getDocumentAccessState(doc, { isPremium, isAuthenticated });
@@ -61,6 +62,15 @@ function StudentDocumentViewer({ document: doc }) {
               ? "Đăng nhập để xem tài liệu học tập theo môn."
               : "Gói Basic không mở được file này. Nâng cấp Premium để xem & tải đầy đủ."}
           </p>
+          {access.reason === "login" ? (
+            <Link
+              to="/login"
+              state={{ from: `${pathname}${search}` }}
+              className={styles.upgradeBtn}
+            >
+              Đăng nhập
+            </Link>
+          ) : null}
           {access.reason === "premium_required" ? (
             <Link to="/home/premium" className={styles.upgradeBtn}>
               Xem gói Premium

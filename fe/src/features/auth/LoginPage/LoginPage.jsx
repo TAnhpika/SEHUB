@@ -2,20 +2,38 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faEye, faEyeSlash, faLock } from "@fortawesome/free-solid-svg-icons";
+import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
+import { getGoogleClientId, requestGoogleIdToken } from "@/utils/googleAuth";
 import googleGSrc from "@/img/google-g.png";
 import { getRoleHomePath } from "@/utils/roleHelpers";
-import { MODERATOR_TEST_ACCOUNTS, STUDENT_TEST_ACCOUNTS } from "@/features/moderator/moderatorMockData";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import styles from "./LoginPage.module.css";
+
+const DEMO_ACCOUNTS = [
+  {
+    label: "Demo Student",
+    username: "demo.student@sehub.local",
+    password: "Demo@12345",
+  },
+  {
+    label: "Admin",
+    username: "admin@sehub.local",
+    password: "Admin@123",
+  },
+];
 
 const REMEMBER_KEY = "sehubs_remember_login";
 
 function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
+  const { showToast } = useToast();
   const [email, setEmail] = useState(() => {
+    if (location.state?.email) {
+      return location.state.email;
+    }
     try {
       return localStorage.getItem(REMEMBER_KEY) ?? "";
     } catch {
@@ -61,42 +79,58 @@ function LoginPage() {
     }
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     setIsSubmitting(true);
     persistRememberMe();
 
-    const nextUser = login({ username: email.trim(), password });
-    navigateAfterLogin(nextUser);
+    try {
+      const nextUser = await login({ username: email.trim(), password });
+      navigateAfterLogin(nextUser);
+    } catch (error) {
+      showToast(error?.message ?? "Đăng nhập thất bại.");
+      setIsSubmitting(false);
+    }
   }
 
-  function fillTestAccount(account) {
+  async function fillTestAccount(account) {
     setEmail(account.username);
     setPassword(account.password);
     setRememberMe(true);
+    setIsSubmitting(true);
 
-    const nextUser = login({
-      username: account.username,
-      password: account.password,
-    });
     try {
-      localStorage.setItem(REMEMBER_KEY, account.username);
-    } catch {
-      /* ignore storage errors */
+      const nextUser = await login({
+        username: account.username,
+        password: account.password,
+      });
+      try {
+        localStorage.setItem(REMEMBER_KEY, account.username);
+      } catch {
+        /* ignore storage errors */
+      }
+      navigateAfterLogin(nextUser);
+    } catch (error) {
+      showToast(error?.message ?? "Đăng nhập thất bại.");
+      setIsSubmitting(false);
     }
-    navigateAfterLogin(nextUser);
   }
 
-  function handleGoogleLogin() {
+  async function handleGoogleLogin() {
+    if (!getGoogleClientId()) {
+      showToast("Chưa cấu hình Google Client ID (VITE_GOOGLE_CLIENT_ID).");
+      return;
+    }
+
     setIsSubmitting(true);
-    const nextUser = login({
-      provider: "google",
-      username: "google_user",
-      email: "google.user@gmail.com",
-      displayName: "Google User",
-      password: "",
-    });
-    navigateAfterLogin(nextUser);
+    try {
+      const idToken = await requestGoogleIdToken();
+      const nextUser = await googleLogin(idToken);
+      navigateAfterLogin(nextUser);
+    } catch (error) {
+      showToast(error?.message ?? "Đăng nhập Google thất bại.");
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -208,28 +242,17 @@ function LoginPage() {
 
           {import.meta.env.DEV && (
             <details className={styles.devAccounts}>
-              <summary className={styles.devSummary}>Tài khoản test (dev)</summary>
+              <summary className={styles.devSummary}>Tài khoản demo (API)</summary>
               <ul className={styles.devList}>
-                {STUDENT_TEST_ACCOUNTS.map((account) => (
+                {DEMO_ACCOUNTS.map((account) => (
                   <li key={account.username}>
                     <button
                       type="button"
                       className={styles.devBtn}
                       onClick={() => fillTestAccount(account)}
+                      disabled={isSubmitting}
                     >
-                      SV {account.plan}: <code>{account.username}</code> /{" "}
-                      <code>{account.password}</code>
-                    </button>
-                  </li>
-                ))}
-                {MODERATOR_TEST_ACCOUNTS.map((account) => (
-                  <li key={account.username}>
-                    <button
-                      type="button"
-                      className={styles.devBtn}
-                      onClick={() => fillTestAccount(account)}
-                    >
-                      {account.roleLabel}: <code>{account.username}</code> /{" "}
+                      {account.label}: <code>{account.username}</code> /{" "}
                       <code>{account.password}</code>
                     </button>
                   </li>

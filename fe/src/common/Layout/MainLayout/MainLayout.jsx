@@ -39,12 +39,27 @@ function MainLayout() {
     <div className={styles.layout}>
       <MainHeader />
 
-      <div className={`${styles.workspace} ${hideRightSidebar ? styles["workspace-single"] : ""}`}>
+      <div
+        className={[
+          styles.workspace,
+          hideRightSidebar && styles["workspace-single"],
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <div className={styles["col-left"]}>
           <MainSidebar />
         </div>
 
-        <main className={styles["col-center"]} id="home-top">
+        <main
+          className={[
+            styles["col-center"],
+            isSubjectArea && styles["col-center-balanced"],
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          id="home-top"
+        >
           <Outlet />
         </main>
 

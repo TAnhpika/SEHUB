@@ -60,7 +60,7 @@ import styles from "./ExamDetailPage.module.css";
 function ExamDetailPage({ page }) {
   const { courseCode, examId } = useParams();
   const navigate = useNavigate();
-  const { pathname, state: locationState } = useLocation();
+  const { pathname, search, state: locationState } = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { showToast } = useToast();
   const { requirePremium } = useRequirePremium();
@@ -112,6 +112,16 @@ function ExamDetailPage({ page }) {
       setCurrentIndex(orderedQuestions.length - 1);
     }
   }, [orderedQuestions.length, currentIndex]);
+
+  if (scope === "community" && !isAuthenticated) {
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: `${pathname}${search}` }}
+        replace
+      />
+    );
+  }
 
   if (!exam) {
     return <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />;
@@ -299,7 +309,9 @@ function ExamDetailPage({ page }) {
                   ? "Đã nộp bài này"
                   : canTakeExam
                     ? "Bắt đầu làm bài"
-                    : "Premium để làm bài"}
+                    : !isAuthenticated
+                      ? "Đăng nhập để làm bài"
+                      : "Premium để làm bài"}
               </button>
             ) : (
               <button type="button" className={styles["start-btn"]} disabled>
