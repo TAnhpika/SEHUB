@@ -1,7 +1,7 @@
 # SEHUB — Backend Architecture
 
 > **Nền tảng học tập & cộng đồng sinh viên FPT**  
-> Phiên bản **2.0** · **Giai đoạn 1 (MVP)** · Solution **`SEHub.Backend`** (6 project)  
+> Phiên bản **2.0** · **Giai đoạn 1 (MVP)** · Solution **`be`** (6 project)  
 > Đối chiếu: [SEHUB_PhanTichNghiepVu.md](./SEHUB_PhanTichNghiepVu.md) · [ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ---
@@ -152,7 +152,7 @@ Backend SEHUB phục vụ React SPA (Redux Thunk + Axios + JWT). Thiết kế th
 
 ## 2. Kiến trúc thư mục (Project Structure)
 
-Solution chính thức: **`SEHub.Backend`** — 6 project + tests, namespace thống nhất `SEHub.*`.
+Solution chính thức: **`be`** — 6 project + tests, namespace thống nhất `SEHub.*`.
 
 ### 2.1 Pattern: Clean Architecture (6 project)
 
@@ -188,7 +188,7 @@ SEHub.Shared
 ### 2.2 Solution layout
 
 ```text
-SEHub.Backend/
+be/
 │
 ├── SEHub.sln
 ├── src/
@@ -328,8 +328,8 @@ Component
 ### 2.6 Khởi tạo solution (tham khảo)
 
 ```bash
-dotnet new sln -n SEHub -o SEHub.Backend
-cd SEHub.Backend
+dotnet new sln -n SEHub -o be
+cd be
 
 dotnet new webapi -n SEHub.API -o src/SEHub.API
 dotnet new classlib -n SEHub.Application -o src/SEHub.Application
@@ -1313,7 +1313,7 @@ Thứ tự gợi ý để team không block lẫn nhau:
 
 | # | Việc | Owner | Phụ thuộc |
 | - | ---- | ----- | --------- |
-| 1 | Scaffold `SEHub.Backend` §2.6 | BE | — |
+| 1 | Scaffold `be` §2.6 | BE | — |
 | 2 | `InitialCreate` migration + seed plans | BE | — |
 | 3 | Auth + JWT + `/auth/me` | BE | — |
 | 4 | `ApiResponse` filter + Swagger | BE | — |

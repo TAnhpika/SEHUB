@@ -1,7 +1,7 @@
 # SEHub Backend Implementation Plan
 
 > **Nguồn:** [ARCHITECTURE-BE.md](ARCHITECTURE-BE.md) v2.0 · **Trạng thái repo:** Chưa có backend (.NET) — build 100% từ đầu  
-> **Solution:** `SEHub.Backend` — 6 project + 2 test project · **Scope:** Giai đoạn 1 (MVP)
+> **Solution:** `be` — 6 project + 2 test project · **Scope:** Giai đoạn 1 (MVP)
 
 ---
 
@@ -144,7 +144,7 @@ FE axiosInstance (Bearer JWT)
 # Development Roadmap
 
 ## Phase 1: Solution Foundation
-- Tạo `SEHub.Backend/SEHub.sln` + 6 project + 2 test project (§2.6)
+- Tạo `be/SEHub.sln` + 6 project + 2 test project (§2.6)
 - Cấu hình project references (§2.3)
 - `Program.cs`: DI extensions, CORS, Serilog, Swagger XML
 - `ServiceCollectionExtensions`: đăng ký Application + Infrastructure
@@ -488,8 +488,8 @@ FE axiosInstance (Bearer JWT)
 
 ### Solution root (2)
 
-- [ ] `SEHub.Backend/SEHub.sln`
-- [ ] `SEHub.Backend/.editorconfig`
+- [ ] `be/SEHub.sln`
+- [ ] `be/.editorconfig`
 
 ### SEHub.Shared (6)
 
@@ -1206,7 +1206,7 @@ Cho **mỗi module**, đánh dấu ✅ khi đạt tất cả tiêu chí:
 # Final Checklist
 
 ## Solution & Infrastructure
-- [ ] `SEHub.Backend` solution 6 project + 2 test project
+- [ ] `be` solution 6 project + 2 test project
 - [ ] Project references đúng §2.3 (API không reference Domain)
 - [ ] 5 authorization policies registered
 - [ ] `PremiumAuthorizationHandler` DB-backed (cache 2–5 phút)

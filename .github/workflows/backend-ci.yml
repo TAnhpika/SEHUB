@@ -4,12 +4,12 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - 'SEHub.Backend/**'
+      - 'be/**'
       - '.github/workflows/backend-ci.yml'
   pull_request:
     branches: [main, develop]
     paths:
-      - 'SEHub.Backend/**'
+      - 'be/**'
       - '.github/workflows/backend-ci.yml'
 
 jobs:
@@ -25,19 +25,19 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore
-        working-directory: SEHub.Backend
+        working-directory: be
         run: dotnet restore
 
       - name: Build
-        working-directory: SEHub.Backend
+        working-directory: be
         run: dotnet build --no-restore -c Release
 
       - name: Test
-        working-directory: SEHub.Backend
+        working-directory: be
         run: dotnet test --no-build -c Release --verbosity normal
 
       - name: EF migrations bundle (review)
-        working-directory: SEHub.Backend
+        working-directory: be
         run: |
           dotnet tool install --global dotnet-ef --version 8.0.11
           dotnet ef migrations bundle --project src/SEHub.Infrastructure --startup-project src/SEHub.API --self-contained -r linux-x64 -o migrations-bundle || echo "Bundle step skipped if SQL Server tools unavailable"
