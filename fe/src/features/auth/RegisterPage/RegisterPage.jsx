@@ -10,6 +10,8 @@ import {
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
+import * as authApi from "@/api/authApi";
+import { deriveUsernameFromEmail } from "@/api/authMapper";
 import googleGSrc from "@/img/google-g.png";
 import { useAuth } from "@/context";
 import { getGoogleClientId, requestGoogleIdToken } from "@/utils/googleAuth";
@@ -18,7 +20,7 @@ import styles from "./RegisterPage.module.css";
 
 function RegisterPage() {
   const navigate = useNavigate();
-  const { register, googleLogin, isAuthenticated } = useAuth();
+  const { googleLogin, isAuthenticated } = useAuth();
   const { showToast } = useToast();
 
   const [fullName, setFullName] = useState("");
@@ -52,9 +54,18 @@ function RegisterPage() {
 
     setIsSubmitting(true);
 
+    const trimmedEmail = email.trim();
+    const trimmedName = fullName.trim();
+
     try {
-      await register({ fullName: fullName.trim(), email: email.trim(), password });
-      navigate("/home", { replace: true });
+      await authApi.register({
+        email: trimmedEmail,
+        username: deriveUsernameFromEmail(trimmedEmail),
+        password,
+        displayName: trimmedName || deriveUsernameFromEmail(trimmedEmail),
+      });
+      showToast("Đăng ký thành công. Vui lòng đăng nhập để tiếp tục.");
+      navigate("/login", { replace: true, state: { email: trimmedEmail } });
     } catch (error) {
       showToast(error?.message ?? "Đăng ký thất bại.");
       setIsSubmitting(false);
