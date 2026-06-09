@@ -21,7 +21,15 @@ function CommunityLayout() {
           <FeedSidebar />
         </div>
 
-        <main className={styles["col-center"]} id="feed-top">
+        <main
+          className={[
+            styles["col-center"],
+            !isFeedHome && styles["col-center-balanced"],
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          id="feed-top"
+        >
           <Outlet />
         </main>
 
