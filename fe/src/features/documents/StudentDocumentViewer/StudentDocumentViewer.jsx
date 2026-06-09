@@ -1,21 +1,30 @@
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faLock } from "@fortawesome/free-solid-svg-icons";
+import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import {
-  buildMockPageLabels,
   getDocumentAccessState,
 } from "@/features/documents/documentAccessPolicy";
+import {
+  downloadStudentDocument,
+  isSlideDocument,
+} from "@/features/documents/documentDownload";
+import { getDocumentOverview } from "@/features/documents/documentPageContent";
 import styles from "./StudentDocumentViewer.module.css";
 
 function StudentDocumentViewer({ document: doc }) {
   const { isPremium, isAuthenticated } = useAuth();
+  const { showToast } = useToast();
   const access = getDocumentAccessState(doc, { isPremium, isAuthenticated });
+  const isSlide = isSlideDocument(doc);
+  const overview = getDocumentOverview(doc);
 
-  const pages = buildMockPageLabels(
-    access.totalPages,
-    access.canView ? access.visiblePages : 0,
-  );
+  function handleDownload() {
+    if (!access.canDownload) return;
+    downloadStudentDocument(doc);
+    showToast(`Đã tải ${doc.name} về máy.`);
+  }
 
   return (
     <section className={styles.viewer} aria-label="Xem tài liệu">
@@ -23,8 +32,10 @@ function StudentDocumentViewer({ document: doc }) {
         <div>
           <h2 className={styles.fileName}>{doc.name}</h2>
           <p className={styles.meta}>
-            {doc.pages} trang · Quyền Admin: <strong>{doc.access}</strong>
+            {isSlide ? "Slide · " : ""}
+            {doc.uploadedAt ? `Tải lên ${doc.uploadedAt}` : ""}
           </p>
+          {doc.description ? <p className={styles.description}>{doc.description}</p> : null}
         </div>
         <span
           className={`${styles.planBadge} ${
@@ -40,54 +51,57 @@ function StudentDocumentViewer({ document: doc }) {
       {!access.canView ? (
         <div className={styles.locked}>
           <FontAwesomeIcon icon={faLock} className={styles.lockIcon} />
-          <h3>Tài liệu Premium</h3>
-          <p>Gói Basic không mở được file này. Nâng cấp Premium để xem & tải đầy đủ.</p>
-          <Link to="/home/premium" className={styles.upgradeBtn}>
-            Xem gói Premium
-          </Link>
+          <h3>
+            {access.reason === "login"
+              ? "Cần đăng nhập"
+              : "Tài liệu dành cho Premium"}
+          </h3>
+          <p>
+            {access.reason === "login"
+              ? "Đăng nhập để xem tài liệu học tập theo môn."
+              : "Gói Basic không mở được file này. Nâng cấp Premium để xem & tải đầy đủ."}
+          </p>
+          {access.reason === "premium_required" ? (
+            <Link to="/home/premium" className={styles.upgradeBtn}>
+              Xem gói Premium
+            </Link>
+          ) : null}
         </div>
       ) : (
         <>
-          <div className={styles.pages}>
-            {pages.map((page) => (
-              <article
-                key={page.pageNum}
-                className={`${styles.page} ${
-                  page.visible ? styles.pageVisible : styles.pageLocked
-                }`}
-              >
-                <span className={styles.pageLabel}>Trang {page.pageNum}</span>
-                {page.visible ? (
-                  <p className={styles.pageBody}>
-                    [Mock] Nội dung trang {page.pageNum} của <em>{doc.name}</em>…
-                  </p>
-                ) : (
-                  <p className={styles.pageBlocked}>
-                    <FontAwesomeIcon icon={faLock} /> Trang bị khóa — nâng cấp Premium để xem tiếp
-                  </p>
-                )}
-              </article>
-            ))}
-          </div>
-
-          <footer className={styles.footer}>
-            {access.limited ? (
-              <p className={styles.limitNote}>
-                Bạn đang xem {access.visiblePages}/{access.totalPages} trang (giới hạn Basic).
+          <article className={styles.overview}>
+            <h4 className={styles.overviewTitle}>{overview.title}</h4>
+            <p className={styles.overviewSummary}>{overview.summary}</p>
+            <p className={styles.overviewHeading}>
+              {isSlide ? "Nội dung slide gồm:" : "Nội dung gồm:"}
+            </p>
+            <ul className={styles.overviewList}>
+              {overview.topics.map((topic) => (
+                <li key={topic}>{topic}</li>
+              ))}
+            </ul>
+            {!isPremium && access.limited ? (
+              <p className={styles.overviewHint}>
+                <FontAwesomeIcon icon={faLock} /> Tài khoản Basic xem mô tả —{" "}
+                <Link to="/home/premium">Premium</Link> để tải file đầy đủ.
               </p>
             ) : null}
+          </article>
+
+          <footer className={styles.footer}>
             <button
               type="button"
-              className={styles.downloadBtn}
+              className={`${styles.downloadBtn} ${access.canDownload ? styles.downloadBtnActive : ""}`}
               disabled={!access.canDownload}
               title={
                 access.canDownload
-                  ? "Tải file đầy đủ"
+                  ? "Tải toàn bộ tài liệu về máy"
                   : "Chỉ Premium mới được tải tài liệu"
               }
+              onClick={handleDownload}
             >
-              <FontAwesomeIcon icon={faDownload} />
-              {access.canDownload ? "Tải tài liệu" : "Tải xuống (Premium)"}
+              <FontAwesomeIcon icon={access.canDownload ? faDownload : faLock} />
+              Tải xuống
             </button>
           </footer>
         </>
