@@ -1,12 +1,10 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { hasStoredSession } from "@/context/AuthProvider";
 import { useAuth } from "@/context";
 import { mapHomeSubjectPathToCommunity } from "@/utils/subjectPaths";
 
 function PrivateRoute() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isBootstrapping } = useAuth();
   const location = useLocation();
-  const authed = isAuthenticated || hasStoredSession();
 
   if (!authed) {
     const communityPath = mapHomeSubjectPathToCommunity(location.pathname);

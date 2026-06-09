@@ -12,6 +12,7 @@ import {
   faLock,
   faMobileScreenButton,
 } from "@fortawesome/free-solid-svg-icons";
+import * as authApi from "@/api/authApi";
 import { useToast } from "@/common/Toast/ToastProvider";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import OtpInput from "@/features/auth/ForgotPasswordPage/OtpInput";
@@ -97,7 +98,13 @@ function getPasswordStrengthLevel(value) {
 }
 
 function isValidResetPassword(value) {
-  return value.length >= 8 && /[a-zA-Z]/.test(value) && /\d/.test(value);
+  return (
+    value.length >= 8 &&
+    /[a-z]/.test(value) &&
+    /[A-Z]/.test(value) &&
+    /\d/.test(value) &&
+    /[^a-zA-Z0-9]/.test(value)
+  );
 }
 
 function ForgotPasswordPage() {
@@ -154,7 +161,16 @@ function ForgotPasswordPage() {
     setStep("contact");
   }
 
-  function handleSendOtp(event) {
+  async function sendOtpToEmail(email) {
+    await authApi.forgotPassword({ email });
+    setOtp("");
+    setStep("otp");
+    showToast(
+      "Nếu email đã đăng ký, mã OTP đã được gửi. Kiểm tra hộp thư (và thư rác).",
+    );
+  }
+
+  async function handleSendOtp(event) {
     event.preventDefault();
 
     const value = contact.trim();
@@ -163,23 +179,27 @@ function ForgotPasswordPage() {
       return;
     }
 
-    if (method === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    if (method === "phone") {
+      showToast("Quên mật khẩu qua SMS chưa được kết nối. Vui lòng chọn xác minh qua Email.");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
       showToast("Email không hợp lệ.");
       return;
     }
 
-    if (method === "phone" && !/^0\d{9}$/.test(value.replace(/\s/g, ""))) {
-      showToast("Số điện thoại không hợp lệ. Vui lòng nhập 10 chữ số bắt đầu bằng 0.");
-      return;
-    }
-
     setIsSubmitting(true);
-    setOtp("");
-    setStep("otp");
-    setIsSubmitting(false);
+    try {
+      await sendOtpToEmail(value);
+    } catch (error) {
+      showToast(error?.message ?? "Không gửi được mã OTP. Vui lòng thử lại.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  function handleVerifyOtp(event) {
+  async function handleVerifyOtp(event) {
     event.preventDefault();
 
     if (otp.length !== 6) {
@@ -188,11 +208,17 @@ function ForgotPasswordPage() {
     }
 
     setIsSubmitting(true);
-    setStep("reset");
-    setIsSubmitting(false);
+    try {
+      await authApi.verifyOtp({ email: contact.trim(), code: otp });
+      setStep("reset");
+    } catch (error) {
+      showToast(error?.message ?? "Mã OTP không hợp lệ.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  function handleResetPassword(event) {
+  async function handleResetPassword(event) {
     event.preventDefault();
 
     if (!isValidResetPassword(password)) {
@@ -206,19 +232,34 @@ function ForgotPasswordPage() {
     }
 
     setIsSubmitting(true);
-    showToast("Cập nhật mật khẩu thành công. Vui lòng đăng nhập lại.");
-    navigate("/login", { replace: true });
+    try {
+      await authApi.resetPassword({
+        email: contact.trim(),
+        code: otp,
+        newPassword: password,
+      });
+      showToast("Cập nhật mật khẩu thành công. Vui lòng đăng nhập lại.");
+      navigate("/login", { replace: true });
+    } catch (error) {
+      showToast(error?.message ?? "Đặt lại mật khẩu thất bại.");
+      setIsSubmitting(false);
+    }
   }
 
-  function handleResendOtp() {
-    if (resendSeconds > 0) {
+  async function handleResendOtp() {
+    if (resendSeconds > 0 || method !== "email") {
       return;
     }
 
-    setOtp("");
-    setResendSeconds(RESEND_SECONDS);
-    const channel = method === "email" ? "email" : "SMS";
-    showToast(`Mã xác minh mới đã được gửi qua ${channel}. (Mock)`);
+    setIsSubmitting(true);
+    try {
+      await sendOtpToEmail(contact.trim());
+      setResendSeconds(RESEND_SECONDS);
+    } catch (error) {
+      showToast(error?.message ?? "Không gửi lại được mã OTP.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function handleChangeMethod() {
