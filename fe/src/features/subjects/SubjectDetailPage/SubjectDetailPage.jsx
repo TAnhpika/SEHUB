@@ -150,8 +150,7 @@ function SubjectDetailPage({ page }) {
               {isDocumentsPage ? (
                 <>
                   <th scope="col">Tên file</th>
-                  <th scope="col">Quyền truy cập</th>
-                  <th scope="col">Số trang</th>
+                  <th scope="col">Định dạng</th>
                 </>
               ) : (
                 <>
@@ -180,8 +179,9 @@ function SubjectDetailPage({ page }) {
                     {exam.uploadedAt}
                   </time>
                 </td>
-                <td className={styles.type}>{exam.type}</td>
-                <td className={styles.count}>{exam.questionCount}</td>
+                <td className={styles.count}>
+                  {exam.name?.match(/\.([^.]+)$/)?.[1]?.toUpperCase() ?? "—"}
+                </td>
               </tr>
             ))}
           </tbody>
