@@ -33,11 +33,16 @@ dotnet run --project src/SEHub.API
 
 ## Dev seed credentials
 
-| Field | Value |
-|-------|-------|
-| Email | `admin@sehub.local` |
-| Password | `Admin@123` |
-| Role | Admin |
+Seeded automatically in **Development** (`DbSeeder` + `DemoDataSeeder`).
+
+| Role | Email | Password | Notes |
+|------|-------|----------|-------|
+| Admin | `admin@sehub.local` | `Admin@123` | DbSeeder |
+| Student (Premium) | `demo.student@sehub.local` | `Demo@12345` | Active 1-month subscription |
+| Student (Free) | `free.student@sehub.local` | `Free@12345` | No premium |
+| Moderator | `moderator@sehub.local` | `Mod@12345` | Moderation APIs |
+
+Demo data also includes 5+ community posts, 2 pending post reports, final/practice exams, and one PDF document. See `SEHub.API.http` for smoke requests.
 
 ## Configuration
 
