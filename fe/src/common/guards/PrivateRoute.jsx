@@ -1,15 +1,22 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/context";
+import { mapHomeSubjectPathToCommunity } from "@/utils/subjectPaths";
 
 function PrivateRoute() {
   const { isAuthenticated, isBootstrapping } = useAuth();
   const location = useLocation();
 
-  if (isBootstrapping) {
-    return null;
-  }
+  if (!authed) {
+    const communityPath = mapHomeSubjectPathToCommunity(location.pathname);
+    if (communityPath) {
+      return (
+        <Navigate
+          to={`${communityPath}${location.search}`}
+          replace
+        />
+      );
+    }
 
-  if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
