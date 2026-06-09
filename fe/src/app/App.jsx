@@ -72,6 +72,7 @@ import ContentModerationHistoryPage from "@/features/moderator/content/ContentMo
 import FeaturedPostsPage from "@/features/moderator/featured/FeaturedPostsPage/FeaturedPostsPage";
 import ReportsPage from "@/features/moderator/reports/ReportsPage/ReportsPage";
 import PracticeFocusRedirect from "@/common/routes/PracticeFocusRedirect";
+import ExamFocusResultRedirect from "@/common/routes/ExamFocusResultRedirect";
 
 function App() {
   return (
@@ -110,6 +111,10 @@ function App() {
                   path="/home/final-exam/:courseCode/:examId"
                   element={<ExamDetailPage page="review" />}
                 />
+                <Route
+                  path="/home/final-exam/:courseCode/:examId/result"
+                  element={<ExamResultPage page="review" />}
+                />
                 <Route path="/home/pratical-exam" element={<PracticeQuestionsPage scope="home" />} />
                 <Route
                   path="/home/pratical-exam/:courseCode"
@@ -147,11 +152,11 @@ function App() {
                     path="/exam/focus/final-exam/:courseCode/:examId/do"
                     element={<ExamDoPage page="review" />}
                   />
-                  <Route
-                    path="/exam/focus/final-exam/:courseCode/:examId/result"
-                    element={<ExamResultPage page="review" />}
-                  />
                 </Route>
+                <Route
+                  path="/exam/focus/final-exam/:courseCode/:examId/result"
+                  element={<ExamFocusResultRedirect />}
+                />
               </Route>
               <Route element={<PremiumRoute />}>
                 <Route
@@ -174,6 +179,10 @@ function App() {
               <Route
                 path="final-exam/:courseCode/:examId"
                 element={<ExamDetailPage page="review" />}
+              />
+              <Route
+                path="final-exam/:courseCode/:examId/result"
+                element={<ExamResultPage page="review" />}
               />
               <Route path="pratical-exam" element={<PracticeQuestionsPage />} />
               <Route
