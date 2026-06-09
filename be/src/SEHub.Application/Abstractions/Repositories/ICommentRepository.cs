@@ -1,0 +1,12 @@
+using SEHub.Domain.Entities;
+
+namespace SEHub.Application.Abstractions.Repositories;
+
+public interface ICommentRepository
+{
+    Task<Comment?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Comment>> GetByPostIdAsync(Guid postId, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<int> CountByPostIdAsync(Guid postId, CancellationToken cancellationToken = default);
+    Task AddAsync(Comment comment, CancellationToken cancellationToken = default);
+    Task SoftDeleteAsync(Comment comment, Guid deletedById, CancellationToken cancellationToken = default);
+}
