@@ -30,8 +30,58 @@ public static class ServiceCollectionExtensions
             {
                 Title = "SEHub API",
                 Version = "v1",
-                Description = "SEHub backend API for the learning community platform."
+                Description = """
+                    SEHub backend REST API for the React SPA (Giai đoạn 1 MVP).
+
+                    **Base URL (dev):** `http://localhost:5006/api/v1`
+
+                    ## Response envelope
+                    All endpoints return `ApiResponse<T>` except `GET /health` and PayOS webhook:
+                    ```json
+                    { "success": true, "data": { }, "message": null, "errors": [] }
+                    ```
+                    Validation errors → HTTP **400**, `success: false`, `message`: "Dữ liệu không hợp lệ", `errors[]` with camelCase `field` + `message`.
+
+                    ## Auth for FE
+                    1. `POST /auth/login` or `POST /auth/register` → copy `data.accessToken`
+                    2. Swagger: **Authorize** → `Bearer {accessToken}`
+                    3. Axios: `Authorization: Bearer ${accessToken}`
+
+                    ## Register password policy (ASP.NET Identity)
+                    - Minimum 8 characters
+                    - At least one uppercase letter (A–Z)
+                    - At least one lowercase letter (a–z)
+                    - At least one digit (0–9)
+                    - At least one special character (e.g. `@`, `!`, `#`)
+
+                    Example: `Student@123`
+
+                    ## Dev seed accounts
+                    | Email | Password | Role |
+                    | --- | --- | --- |
+                    | admin@sehub.local | Admin@123 | Admin |
+                    | demo.student@sehub.local | Demo@12345 | Student (after DemoDataSeeder) |
+
+                    ## FE integration order
+                    Auth → Feed (`/posts`) → Exams → Documents → Premium → Profile → Admin
+
+                    See also: `docs/FE_API_QUICKSTART.md`, `SEHub.API.http`, `postman/SEHub-FE.postman_collection.json`
+                    """
             });
+
+            var xmlFiles = new[]
+            {
+                Path.Combine(AppContext.BaseDirectory, "SEHub.API.xml"),
+                Path.Combine(AppContext.BaseDirectory, "SEHub.Contracts.xml")
+            };
+
+            foreach (var xmlFile in xmlFiles)
+            {
+                if (File.Exists(xmlFile))
+                {
+                    options.IncludeXmlComments(xmlFile);
+                }
+            }
 
             options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
