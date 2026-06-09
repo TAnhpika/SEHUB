@@ -346,6 +346,88 @@ export function mockComputeSha256Unique() {
 let approvedStore = [];
 let rejectedStore = [];
 
+/**
+ * Moderator gửi đề thực hành vào hàng chờ Admin duyệt (§2.4).
+ * @param {{
+ *   subject: string;
+ *   semesterId: string;
+ *   title: string;
+ *   description: string;
+ *   submittedBy: string;
+ *   attachments?: Array<{ name?: string }>;
+ *   allowDiscussion?: boolean;
+ *   pinExam?: boolean;
+ * }} payload
+ */
+export function submitModeratorPracticeExam(payload) {
+  const fileName =
+    payload.attachments?.find((f) => f.name)?.name ?? `${payload.subject}-practice-exam.pdf`;
+
+  const entry = {
+    id: `p${Date.now()}`,
+    code: payload.subject?.trim() ?? "",
+    title: payload.title?.trim() ?? "",
+    submittedBy: payload.submittedBy,
+    submittedAt: todayIso(),
+    type: TYPE_PRACTICE,
+    typeKey: "practice",
+    track: "SE",
+    semester: payload.semesterId ?? "5",
+    urgent: false,
+    fileName,
+    description: payload.description?.trim() ?? "",
+    githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
+    allowDiscussion: payload.allowDiscussion ?? false,
+    pinExam: payload.pinExam ?? false,
+  };
+
+  pendingStore = [entry, ...pendingStore];
+  return entry;
+}
+
+/**
+ * Moderator gửi đề cuối kỳ vào hàng chờ Admin duyệt (§2.4).
+ * @param {{
+ *   subjectCode: string;
+ *   subjectName?: string;
+ *   semesterId: string;
+ *   title: string;
+ *   description?: string;
+ *   submittedBy: string;
+ *   examCode?: string;
+ *   durationMinutes?: number;
+ *   questionCount?: number;
+ *   fileName?: string;
+ * }} payload
+ */
+export function submitModeratorFinalExam(payload) {
+  const fileName = payload.fileName ?? `${payload.subjectCode}-final.pdf`;
+
+  const entry = {
+    id: `p${Date.now()}`,
+    code: payload.subjectCode?.trim() ?? "",
+    title: payload.title?.trim() ?? "",
+    submittedBy: payload.submittedBy,
+    submittedAt: todayIso(),
+    type: TYPE_FINAL,
+    typeKey: "final",
+    track: "SE",
+    semester: payload.semesterId ?? "5",
+    urgent: false,
+    fileName,
+    description:
+      payload.description?.trim() ??
+      `${payload.subjectName ?? payload.subjectCode} · ${payload.questionCount ?? 0} câu trắc nghiệm`,
+    githubGuide: "",
+    examCode: payload.examCode ?? "",
+    durationMinutes: payload.durationMinutes ?? FINAL_EXAM_DEFAULTS.durationMinutes,
+    questionCount: payload.questionCount ?? 0,
+  };
+
+  pendingStore = [entry, ...pendingStore];
+  return entry;
+}
+
 export function approvePendingExam(pendingId) {
   const item = pendingStore.find((p) => p.id === pendingId);
   if (!item) return null;
