@@ -1,9 +1,16 @@
-/** Nghiệp vụ phân quyền tài liệu — Basic (Free) vs Premium */
+/** Nghiệp vụ phân quyền tài liệu — Basic (Free) vs Premium (§3.5, P0) */
 
 export const FREE_PAGE_LIMIT = 3;
 
 export function isPremiumOnlyDocument(doc) {
-  return doc?.access?.includes("Premium") ?? false;
+  return doc?.access?.includes("Premium") && !doc.access.includes("Free");
+}
+
+/** Nhãn quyền hiển thị cho sinh viên (không lộ cấu hình Admin) */
+export function getDocumentAccessTierLabel(doc) {
+  if (isPremiumOnlyDocument(doc)) return "Chỉ Premium";
+  if (doc?.access?.includes("Free")) return "Miễn phí (3 trang)";
+  return doc?.access ?? "—";
 }
 
 /**
@@ -21,7 +28,8 @@ export function getDocumentAccessState(doc, viewer = {}) {
       visiblePages: 0,
       totalPages,
       canDownload: false,
-      label: "Cần đăng nhập",
+      tierLabel: getDocumentAccessTierLabel(doc),
+      label: "Cần đăng nhập để xem tài liệu",
     };
   }
 
@@ -33,7 +41,8 @@ export function getDocumentAccessState(doc, viewer = {}) {
       totalPages,
       canDownload: true,
       limited: false,
-      label: "Premium — xem & tải full",
+      tierLabel: getDocumentAccessTierLabel(doc),
+      label: "Premium — xem & tải file đầy đủ",
     };
   }
 
@@ -45,7 +54,8 @@ export function getDocumentAccessState(doc, viewer = {}) {
       totalPages,
       canDownload: false,
       limited: false,
-      label: "Chỉ Premium — SV Basic không xem được",
+      tierLabel: getDocumentAccessTierLabel(doc),
+      label: "Tài liệu Premium — nâng cấp để xem & tải",
     };
   }
 
@@ -59,9 +69,10 @@ export function getDocumentAccessState(doc, viewer = {}) {
     totalPages,
     canDownload: false,
     limited,
+    tierLabel: getDocumentAccessTierLabel(doc),
     label: limited
-      ? `Basic — xem trước ${visiblePages}/${totalPages} trang`
-      : `Basic — xem full (${totalPages} trang ≤ ${FREE_PAGE_LIMIT})`,
+      ? "Basic — xem trước · không tải file"
+      : "Basic — xem online · không tải file",
   };
 }
 

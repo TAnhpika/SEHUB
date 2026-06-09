@@ -6,7 +6,7 @@ function DocumentsPage({ scope = "community" }) {
   return (
     <CourseCatalogPage
       title="Tài liệu học tập"
-      subtitle="Bài giảng, sách giáo khoa và tài liệu tham khảo"
+      subtitle="Bài giảng, slide và giáo trình theo môn — Basic xem 3 trang, Premium xem & tải full"
       courses={REVIEW_COURSES}
       detailBasePath={getSubjectCatalogPath("documents", scope)}
     />
