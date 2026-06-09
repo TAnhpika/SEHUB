@@ -19,6 +19,11 @@ public sealed class AuthController : ControllerBase
         _authService = authService;
     }
 
+    /// <summary>Register a new student account. Returns JWT + user profile (same shape as login).</summary>
+    /// <response code="200">Registration successful</response>
+    /// <response code="400">Validation failed (password policy, email format, username rules)</response>
+    /// <response code="409">Email or username already exists</response>
+    /// <response code="429">Rate limit exceeded</response>
     [HttpPost("register")]
     [AllowAnonymous]
     [EnableRateLimiting(AuthRateLimitPolicies.Register)]
