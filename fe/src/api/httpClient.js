@@ -134,10 +134,16 @@ export async function apiRequest(path, { method = "GET", body, auth = true, retr
   try {
     return await executeRequest();
   } catch (error) {
+    if (!(error instanceof ApiError)) {
+      throw new ApiError(
+        `Không kết nối được máy chủ (${API_BASE_URL}). Hãy chạy SEHub.API rồi thử lại.`,
+        { status: 0 },
+      );
+    }
+
     const shouldRefresh =
       retryOnUnauthorized &&
       auth &&
-      error instanceof ApiError &&
       error.status === 401 &&
       getRefreshToken() &&
       !path.includes("/api/v1/auth/refresh");
