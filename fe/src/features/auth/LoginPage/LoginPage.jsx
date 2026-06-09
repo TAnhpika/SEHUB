@@ -31,6 +31,9 @@ function LoginPage() {
   const { login, googleLogin } = useAuth();
   const { showToast } = useToast();
   const [email, setEmail] = useState(() => {
+    if (location.state?.email) {
+      return location.state.email;
+    }
     try {
       return localStorage.getItem(REMEMBER_KEY) ?? "";
     } catch {
