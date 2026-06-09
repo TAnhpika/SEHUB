@@ -1,5 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { useAuth } from "@/context";
+import {
+  buildFinalExamContributionPayload,
+  recordExamDraft,
+} from "@/features/moderator/exams/moderatorExamContributionStore";
 import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
 import {
   PRACTICE_SEMESTER_OPTIONS,
@@ -11,9 +16,18 @@ import styles from "./FinalExamInfoStep.module.css";
 function FinalExamInfoStep() {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { user } = useAuth();
+  const moderator = user?.username ?? "mod_sehub";
   const { examInfo, setExamInfo } = useFinalExamWizard();
 
   function handleSaveDraft() {
+    if (!examInfo.subjectCode.trim()) {
+      showToast("Chọn mã môn học trước khi lưu nháp.");
+      return;
+    }
+    recordExamDraft(
+      buildFinalExamContributionPayload(moderator, examInfo, 0, "Bước 1: Thông tin đề"),
+    );
     showToast("Đã lưu nháp thông tin đề thi.");
   }
 

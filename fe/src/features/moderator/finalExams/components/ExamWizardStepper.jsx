@@ -1,6 +1,6 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faClockRotateLeft } from "@fortawesome/free-solid-svg-icons";
 import { WIZARD_STEPS } from "@/features/moderator/finalExams/finalExamData";
 import styles from "./ExamWizardStepper.module.css";
 
@@ -61,6 +61,10 @@ function ExamWizardStepper() {
           );
         })}
       </ol>
+      <Link to="/moderator/exams/history?type=final" className={styles.historyLink}>
+        <FontAwesomeIcon icon={faClockRotateLeft} />
+        Lịch sử đóng góp đề
+      </Link>
     </aside>
   );
 }
