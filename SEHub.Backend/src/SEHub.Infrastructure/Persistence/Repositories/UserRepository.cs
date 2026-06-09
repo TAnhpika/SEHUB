@@ -77,7 +77,7 @@ public class UserRepository : IUserRepository
         var result = await _userManager.CreateAsync(user, model.Password);
         if (!result.Succeeded)
         {
-            throw new InvalidOperationException(string.Join(", ", result.Errors.Select(e => e.Description)));
+            throw new DomainException(string.Join(" ", result.Errors.Select(e => e.Description)));
         }
 
         await _userManager.AddToRoleAsync(user, RoleNames.Student);
