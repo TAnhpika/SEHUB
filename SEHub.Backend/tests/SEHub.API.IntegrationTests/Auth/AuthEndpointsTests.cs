@@ -88,4 +88,27 @@ public sealed class AuthEndpointsTests : IClassFixture<CustomWebApplicationFacto
 
         reuseResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
+
+    [Fact]
+    public async Task Register_WeakPassword_Returns400WithValidationErrors()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest
+        {
+            Email = "weak.validation@test.local",
+            Username = "weakvalidation",
+            Password = "hauvip123",
+            DisplayName = "Weak Validation"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var body = await response.Content.ReadFromJsonAsync<ApiResponse<object?>>();
+        body.Should().NotBeNull();
+        body!.Success.Should().BeFalse();
+        body.Data.Should().BeNull();
+        body.Message.Should().Be("Dữ liệu không hợp lệ");
+        body.Errors.Should().Contain(e => e.Field == "password");
+        body.Errors.Should().Contain(e =>
+            e.Message.Contains("uppercase", StringComparison.OrdinalIgnoreCase));
+    }
 }
