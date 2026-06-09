@@ -59,6 +59,7 @@ import AdminGamificationConfigPage from "@/features/admin/gamification/AdminGami
 import AdminPermissionsPage from "@/features/admin/permissions/AdminPermissionsPage";
 import AdminActivityLogPage from "@/features/admin/activity/AdminActivityLogPage";
 import AddPracticeExamPage from "@/features/moderator/practiceExams/AddPracticeExamPage/AddPracticeExamPage";
+import ModeratorExamContributionHistoryPage from "@/features/moderator/exams/ModeratorExamContributionHistoryPage/ModeratorExamContributionHistoryPage";
 import ModeratorPracticeSubmissionsPage from "@/features/moderator/practiceExams/ModeratorPracticeSubmissionsPage";
 import NotFound from "@/features/errors/NotFound/NotFound";
 import AddFinalExamWizard from "@/features/moderator/finalExams/AddFinalExamWizard";
@@ -236,6 +237,7 @@ function App() {
                 <Route path="featured" element={<FeaturedPostsPage />} />
                 <Route path="violations" element={<ViolatingAccountsPage />} />
                 <Route path="practice-submissions" element={<ModeratorPracticeSubmissionsPage />} />
+                <Route path="exams/history" element={<ModeratorExamContributionHistoryPage />} />
                 <Route path="practice-exams/add" element={<AddPracticeExamPage />} />
                 <Route path="final-exams/add" element={<AddFinalExamWizard />}>
                   <Route index element={<FinalExamInfoStep />} />
