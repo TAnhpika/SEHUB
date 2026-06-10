@@ -8,7 +8,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
-import { FEATURE_COMPARISON, PRICING_PLANS } from "@/features/landing/PricingModal/pricingData";
+import { FEATURE_COMPARISON } from "@/features/landing/PricingModal/pricingData";
+import { usePricingPlans } from "@/features/premium/usePricingPlans";
 import styles from "./PricingContent.module.css";
 
 function ComparisonCell({ value }) {
@@ -40,6 +41,7 @@ function ComparisonCell({ value }) {
 function PricingContent({ requireLogin = false, onGuestRedirect }) {
   const navigate = useNavigate();
   const { showCountdownToast } = useToast();
+  const { plans, loading } = usePricingPlans();
 
   function handleGuestPlanSelect(planId) {
     const checkoutPath = `/home/premium/checkout/${planId}`;
@@ -71,8 +73,14 @@ function PricingContent({ requireLogin = false, onGuestRedirect }) {
         </p>
       </div>
 
+      {loading && (
+        <p className={styles.subtitle} aria-live="polite">
+          Đang tải bảng giá...
+        </p>
+      )}
+
       <div className={styles.plans}>
-        {PRICING_PLANS.map((plan) => (
+        {plans.map((plan) => (
           <article
             key={plan.id}
             className={`${styles.plan} ${plan.popular ? styles["plan-popular"] : ""}`}

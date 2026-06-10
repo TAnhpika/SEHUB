@@ -1,38 +1,117 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context";
 import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faCopy } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
+import * as premiumApi from "@/api/premiumApi";
 import {
-  buildTransactionId,
   formatVnd,
   getPlanById,
-  PRICING_PLANS,
 } from "@/features/landing/PricingModal/pricingData";
+import { isValidFePlanId } from "@/features/premium/premiumPlanMap";
 import styles from "./PaymentSuccessPage.module.css";
+
+const POLL_INTERVAL_MS = 2000;
+const MAX_POLL_ATTEMPTS = 15;
 
 function PaymentSuccessPage() {
   const { planId } = useParams();
   const location = useLocation();
   const { showToast } = useToast();
-  const { activatePremium } = useAuth();
+  const { refreshUser } = useAuth();
   const plan = useMemo(() => getPlanById(planId), [planId]);
-  const transactionId = location.state?.transactionId ?? buildTransactionId();
+
+  const orderId =
+    location.state?.orderId ?? new URLSearchParams(location.search).get("orderId");
+  const payOsOrderCode = location.state?.payOsOrderCode ?? "—";
+  const paidAmount = location.state?.amount ?? plan.checkout.totalPrice;
+
+  const [ready, setReady] = useState(false);
+  const [activating, setActivating] = useState(true);
 
   useEffect(() => {
-    activatePremium();
-  }, [activatePremium]);
+    if (!isValidFePlanId(planId)) {
+      return undefined;
+    }
 
-  if (!planId || !PRICING_PLANS.some((item) => item.id === planId)) {
+    let cancelled = false;
+    let attempts = 0;
+
+    async function activatePremiumFromApi() {
+      setActivating(true);
+      try {
+        while (!cancelled && attempts < MAX_POLL_ATTEMPTS) {
+          const subscription = await premiumApi.getSubscription();
+          if (subscription?.isActive) {
+            await refreshUser();
+            if (!cancelled) {
+              setReady(true);
+              setActivating(false);
+            }
+            return;
+          }
+
+          if (orderId) {
+            const order = await premiumApi.getOrder(orderId);
+            if (order.status === "Paid") {
+              await refreshUser();
+              if (!cancelled) {
+                setReady(true);
+                setActivating(false);
+              }
+              return;
+            }
+          }
+
+          attempts += 1;
+          await new Promise((resolve) => {
+            window.setTimeout(resolve, POLL_INTERVAL_MS);
+          });
+        }
+
+        if (!cancelled) {
+          showToast("Chưa nhận được xác nhận Premium. Vui lòng thử đăng nhập lại sau.");
+          setActivating(false);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          showToast(error?.message ?? "Không thể xác nhận gói Premium.");
+          setActivating(false);
+        }
+      }
+    }
+
+    activatePremiumFromApi();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [planId, orderId, refreshUser, showToast]);
+
+  if (!isValidFePlanId(planId)) {
+    return <Navigate to="/home/premium" replace />;
+  }
+
+  if (!orderId) {
     return <Navigate to="/home/premium" replace />;
   }
 
   function handleCopyTransactionId() {
-    navigator.clipboard.writeText(transactionId).then(() => {
+    navigator.clipboard.writeText(payOsOrderCode).then(() => {
       showToast("Đã sao chép mã giao dịch.");
     });
+  }
+
+  if (activating && !ready) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card}>
+          <p className={styles.desc}>Đang xác nhận thanh toán và kích hoạt Premium...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -58,13 +137,13 @@ function PaymentSuccessPage() {
 
           <div className={styles.row}>
             <span className={styles.label}>Tổng thanh toán</span>
-            <span className={styles.price}>{formatVnd(plan.checkout.totalPrice)}</span>
+            <span className={styles.price}>{formatVnd(paidAmount)}</span>
           </div>
 
           <div className={styles.row}>
             <span className={styles.label}>Mã giao dịch</span>
             <div className={styles["transaction-row"]}>
-              <span className={styles.transaction}>{transactionId}</span>
+              <span className={styles.transaction}>{payOsOrderCode}</span>
               <button
                 type="button"
                 className={styles.copy}

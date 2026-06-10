@@ -6,7 +6,11 @@ function PrivateRoute() {
   const { isAuthenticated, isBootstrapping } = useAuth();
   const location = useLocation();
 
-  if (!authed) {
+  if (isBootstrapping) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
     const communityPath = mapHomeSubjectPathToCommunity(location.pathname);
     if (communityPath) {
       return (

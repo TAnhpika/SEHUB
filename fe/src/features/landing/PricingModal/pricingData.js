@@ -1,5 +1,5 @@
-/** Giá gốc tham chiếu — gói Trải nghiệm 1 tháng (SEHUB §3.8: 1m / 8m / 4y) */
-export const BASE_MONTHLY_PRICE = 49000;
+/** Giá gốc tham chiếu — gói 1 tháng (khớp BE plan `1m`: 99.000đ) */
+export const BASE_MONTHLY_PRICE = 99000;
 
 function buildCheckout({ months, days, monthlyPrice, packageTitle, tagline }) {
   const originalPrice = BASE_MONTHLY_PRICE * months;
@@ -45,6 +45,7 @@ function createPlan({
 
   return {
     id,
+    planCode: id === "trial" ? "1m" : id === "semester" ? "8m" : "4y",
     name,
     duration,
     price: `${monthlyPrice.toLocaleString("vi-VN")} đ/tháng`,
@@ -62,7 +63,7 @@ export const PRICING_PLANS = [
     id: "trial",
     name: "Trải nghiệm",
     duration: "1 tháng",
-    monthlyPrice: 49000,
+    monthlyPrice: 99000,
     months: 1,
     days: 30,
     packageTitle: "Gói Trải nghiệm (1 tháng)",
@@ -81,7 +82,7 @@ export const PRICING_PLANS = [
     id: "semester",
     name: "2 Học kỳ",
     duration: "8 tháng",
-    monthlyPrice: 35000,
+    monthlyPrice: 74875,
     months: 8,
     days: 240,
     packageTitle: "Gói 2 Học kỳ (8 tháng)",
@@ -99,7 +100,7 @@ export const PRICING_PLANS = [
     id: "full",
     name: "Toàn khóa học",
     duration: "4 năm",
-    monthlyPrice: 20000,
+    monthlyPrice: 41646,
     months: 48,
     days: 1460,
     packageTitle: "Gói Toàn khóa học (4 năm)",

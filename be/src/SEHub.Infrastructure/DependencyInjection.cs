@@ -94,6 +94,7 @@ public static class DependencyInjection
         }
 
         services.AddScoped<ISmsService, MockSmsService>();
+        services.AddHttpClient(nameof(PayOsService));
         services.AddScoped<IPayOsService, PayOsService>();
         services.AddScoped<IPayOsWebhookHandler, PayOsWebhookHandler>();
         services.AddScoped<IAiExplanationService, MockAiExplanationService>();
