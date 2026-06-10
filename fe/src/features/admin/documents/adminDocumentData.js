@@ -1,5 +1,10 @@
 /** Mock store — tài liệu Admin / Student theo kì & môn (§3.5) */
 
+import * as adminApi from "@/api/adminApi";
+import { mapAdminDocumentListItem } from "@/api/adminMapper";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+
 /** @typedef {'upload' | 'exam'} AdminDocumentSource */
 
 /** @type {Array<{ id: string, name: string, subject: string, semester: string, track: string, access: string, pages: number, uploadedAt: string, source?: AdminDocumentSource, examTitle?: string, description?: string }>} */
@@ -387,4 +392,23 @@ export function removeAdminDocument(id) {
   const before = documentsStore.length;
   documentsStore = documentsStore.filter((d) => d.id !== id);
   return documentsStore.length < before;
+}
+
+export async function loadAdminDocuments() {
+  if (USE_MOCK) {
+    return getAdminDocuments();
+  }
+
+  try {
+    const page = await adminApi.listDocuments({ pageSize: 100 });
+    const apiDocs = (page.items ?? []).map(mapAdminDocumentListItem);
+    if (apiDocs.length > 0) {
+      documentsStore = apiDocs.map((doc) => ({ ...doc }));
+      return apiDocs;
+    }
+  } catch {
+    /* fallback below */
+  }
+
+  return getAdminDocuments();
 }

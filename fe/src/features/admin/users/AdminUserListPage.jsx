@@ -4,7 +4,7 @@ import Pagination from "@/common/Pagination/Pagination";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import StatusBadge from "@/features/admin/shared/StatusBadge";
 import { ADMIN_USERS_PAGE_SIZE } from "@/features/admin/adminMockData";
-import { getAdminUsers } from "@/features/admin/users/adminUserStore";
+import { getAdminUsers, loadAdminUsers } from "@/features/admin/users/adminUserStore";
 import {
   getRankBadgeClass,
   getUserGamification,
@@ -23,6 +23,17 @@ function AdminUserListPage() {
     () => searchParams.get("status") ?? "all",
   );
   const [page, setPage] = useState(1);
+  const [allUsers, setAllUsers] = useState(getAdminUsers);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadAdminUsers().then((users) => {
+      if (!cancelled) setAllUsers(users);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const fromUrl = searchParams.get("status");
@@ -32,8 +43,6 @@ function AdminUserListPage() {
       setStatusFilter((prev) => (prev === "banned" ? "all" : prev));
     }
   }, [searchParams]);
-
-  const allUsers = getAdminUsers();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

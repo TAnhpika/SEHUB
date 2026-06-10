@@ -11,14 +11,14 @@ import { ACTIVITY_BADGE_VARIANT } from "@/features/admin/dashboard/dashboardCons
 import dash from "@/features/admin/dashboard/AdminDashboardPage.module.css";
 import AdminUserActionModal from "@/features/admin/users/AdminUserActionModal";
 import {
-  banUserPermanently,
-  requestPasswordReset,
-  unbanUserAccount,
+  banUserPermanentlyViaApi,
+  requestPasswordResetViaApi,
+  unbanUserAccountViaApi,
 } from "@/features/admin/users/adminUserStore";
 import {
   ADMIN_USER_ACTIVITY_PAGE_SIZE,
   getAdminUserActivities,
-  getAdminUserDetail,
+  loadAdminUserDetail,
 } from "@/features/admin/users/adminUserDetailData";
 import { getRankBadgeClass } from "@/features/admin/users/adminUserGamification";
 import detailStyles from "./AdminUserDetailPage.module.css";
@@ -39,8 +39,23 @@ function AdminUserDetailPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [actionModal, setActionModal] = useState({ open: false, mode: "ban" });
   const [actionError, setActionError] = useState("");
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const user = useMemo(() => getAdminUserDetail(id), [id, refreshKey]);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    loadAdminUserDetail(id).then((detail) => {
+      if (!cancelled) {
+        setUser(detail);
+        setLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, refreshKey]);
+
   const activities = useMemo(() => getAdminUserActivities(id), [id]);
 
   const activityTotalPages = Math.max(
@@ -64,6 +79,20 @@ function AdminUserDetailPage() {
   useEffect(() => {
     setActivityPage(1);
   }, [id]);
+
+  if (loading) {
+    return (
+      <AdminPageLayout
+        title="Đang tải..."
+        breadcrumbs={[
+          { label: "Dashboard", to: "/admin" },
+          { label: "Quản lý tài khoản", to: "/admin/users" },
+        ]}
+      >
+        <p className={styles.empty}>Đang tải thông tin tài khoản...</p>
+      </AdminPageLayout>
+    );
+  }
 
   if (!user) {
     return (
@@ -96,19 +125,19 @@ function AdminUserDetailPage() {
     setActionError("");
   }
 
-  function handleActionSubmit(payload) {
+  async function handleActionSubmit(payload) {
     const admin = authUser?.username ?? "admin_sehub";
     let result;
 
     switch (actionModal.mode) {
       case "ban":
-        result = banUserPermanently(id, { reason: payload.reason, adminUsername: admin });
+        result = await banUserPermanentlyViaApi(id, { reason: payload.reason, adminUsername: admin });
         break;
       case "unban":
-        result = unbanUserAccount(id, { reason: payload.reason, adminUsername: admin });
+        result = await unbanUserAccountViaApi(id, { reason: payload.reason, adminUsername: admin });
         break;
       case "resetPassword":
-        result = requestPasswordReset(id, { adminUsername: admin });
+        result = await requestPasswordResetViaApi(id, { adminUsername: admin });
         break;
       default:
         return;
