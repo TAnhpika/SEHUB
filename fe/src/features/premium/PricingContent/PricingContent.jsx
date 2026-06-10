@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheck,
@@ -8,7 +9,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
-import { FEATURE_COMPARISON, PRICING_PLANS } from "@/features/landing/PricingModal/pricingData";
+import { FEATURE_COMPARISON, loadPricingPlans, PRICING_PLANS } from "@/features/landing/PricingModal/pricingData";
 import styles from "./PricingContent.module.css";
 
 function ComparisonCell({ value }) {
@@ -40,6 +41,15 @@ function ComparisonCell({ value }) {
 function PricingContent({ requireLogin = false, onGuestRedirect }) {
   const navigate = useNavigate();
   const { showCountdownToast } = useToast();
+  const [plans, setPlans] = useState(PRICING_PLANS);
+
+  useEffect(() => {
+    loadPricingPlans()
+      .then(setPlans)
+      .catch(() => {
+        setPlans(PRICING_PLANS);
+      });
+  }, []);
 
   function handleGuestPlanSelect(planId) {
     const checkoutPath = `/home/premium/checkout/${planId}`;
@@ -72,7 +82,7 @@ function PricingContent({ requireLogin = false, onGuestRedirect }) {
       </div>
 
       <div className={styles.plans}>
-        {PRICING_PLANS.map((plan) => (
+        {plans.map((plan) => (
           <article
             key={plan.id}
             className={`${styles.plan} ${plan.popular ? styles["plan-popular"] : ""}`}

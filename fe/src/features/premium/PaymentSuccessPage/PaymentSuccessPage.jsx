@@ -1,31 +1,115 @@
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context";
-import { Link, Navigate, useLocation, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faCopy } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faCopy, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import {
   buildTransactionId,
   formatVnd,
-  getPlanById,
+  loadPlanById,
+  pollPremiumActivation,
   PRICING_PLANS,
 } from "@/features/landing/PricingModal/pricingData";
+import {
+  clearCheckoutSession,
+  readCheckoutSession,
+  resolveCheckoutOrderId,
+  resolveCheckoutTransactionId,
+} from "@/features/premium/premiumCheckoutSession";
 import styles from "./PaymentSuccessPage.module.css";
 
 function PaymentSuccessPage() {
   const { planId } = useParams();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { showToast } = useToast();
-  const { activatePremium } = useAuth();
-  const plan = useMemo(() => getPlanById(planId), [planId]);
-  const transactionId = location.state?.transactionId ?? buildTransactionId();
+  const { activatePremium, isPremium } = useAuth();
+  const [plan, setPlan] = useState(null);
+  const [planReady, setPlanReady] = useState(false);
+  const [activationState, setActivationState] = useState("pending");
+  const [pollAttempt, setPollAttempt] = useState(0);
+
+  const session = useMemo(() => readCheckoutSession(planId), [planId, pollAttempt]);
+  const orderId = useMemo(
+    () =>
+      resolveCheckoutOrderId(planId, {
+        stateOrderId: location.state?.orderId,
+        queryOrderId: searchParams.get("orderId"),
+      }),
+    [location.state?.orderId, planId, searchParams],
+  );
+  const mockConfirm = Boolean(location.state?.mockConfirm);
+  const alreadyActivated = Boolean(location.state?.activated) || isPremium;
+  const transactionId =
+    resolveCheckoutTransactionId(planId, {
+      stateTransactionId: location.state?.transactionId,
+      session,
+    }) ?? buildTransactionId();
 
   useEffect(() => {
-    activatePremium();
-  }, [activatePremium]);
+    let cancelled = false;
+    setPlanReady(false);
 
-  if (!planId || !PRICING_PLANS.some((item) => item.id === planId)) {
+    loadPlanById(planId)
+      .then((loadedPlan) => {
+        if (!cancelled) {
+          setPlan(loadedPlan);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPlanReady(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [planId]);
+
+  const confirmPremium = useCallback(async () => {
+    if (alreadyActivated) {
+      setActivationState("active");
+      clearCheckoutSession();
+      return;
+    }
+
+    if (mockConfirm || !orderId) {
+      await activatePremium();
+      setActivationState("active");
+      clearCheckoutSession();
+      return;
+    }
+
+    setActivationState("pending");
+
+    try {
+      const activated = await pollPremiumActivation(orderId);
+      if (activated) {
+        await activatePremium();
+        setActivationState("active");
+        clearCheckoutSession();
+        return;
+      }
+
+      setActivationState("waiting");
+    } catch (error) {
+      setActivationState("waiting");
+      showToast(error?.message ?? "Không xác nhận được Premium.");
+    }
+  }, [activatePremium, alreadyActivated, mockConfirm, orderId, showToast]);
+
+  useEffect(() => {
+    confirmPremium();
+  }, [confirmPremium, pollAttempt]);
+
+  if (!planReady) {
+    return null;
+  }
+
+  if (!planId || !plan || !PRICING_PLANS.some((item) => item.id === planId)) {
     return <Navigate to="/home/premium" replace />;
   }
 
@@ -35,17 +119,34 @@ function PaymentSuccessPage() {
     });
   }
 
+  function handleRetryActivation() {
+    setPollAttempt((value) => value + 1);
+  }
+
+  const checkout = plan.checkout;
+  const isActive = activationState === "active" || isPremium;
+  const isWaiting = activationState === "waiting";
+
   return (
     <div className={styles.page}>
       <div className={styles.card}>
         <div className={styles.icon} aria-hidden="true">
-          <FontAwesomeIcon icon={faCheck} />
+          {activationState === "pending" ? (
+            <FontAwesomeIcon icon={faSpinner} spin />
+          ) : (
+            <FontAwesomeIcon icon={faCheck} />
+          )}
         </div>
 
-        <h1 className={styles.title}>Thanh toán thành công!</h1>
+        <h1 className={styles.title}>
+          {isActive ? "Thanh toán thành công!" : "Đã ghi nhận thanh toán"}
+        </h1>
         <p className={styles.desc}>
-          Cảm ơn bạn đã tin tưởng nâng cấp gói Premium. Tài khoản của bạn đã được kích hoạt đầy đủ
-          các tính năng đặc quyền.
+          {isActive
+            ? "Cảm ơn bạn đã tin tưởng nâng cấp gói Premium. Tài khoản của bạn đã được kích hoạt đầy đủ các tính năng đặc quyền."
+            : isWaiting
+              ? "PayOS đang xác nhận giao dịch. Premium sẽ tự kích hoạt trong vài phút sau khi webhook được xử lý."
+              : "Đang xác nhận trạng thái Premium với máy chủ..."}
         </p>
 
         <div className={styles.details}>
@@ -53,12 +154,12 @@ function PaymentSuccessPage() {
 
           <div className={styles.row}>
             <span className={styles.label}>Gói đăng ký</span>
-            <span className={styles.value}>{plan.checkout.packageTitle}</span>
+            <span className={styles.value}>{checkout.packageTitle}</span>
           </div>
 
           <div className={styles.row}>
             <span className={styles.label}>Tổng thanh toán</span>
-            <span className={styles.price}>{formatVnd(plan.checkout.totalPrice)}</span>
+            <span className={styles.price}>{formatVnd(checkout.totalPrice)}</span>
           </div>
 
           <div className={styles.row}>
@@ -76,6 +177,13 @@ function PaymentSuccessPage() {
             </div>
           </div>
 
+          {orderId && (
+            <div className={styles.row}>
+              <span className={styles.label}>Mã đơn</span>
+              <span className={styles.value}>{orderId}</span>
+            </div>
+          )}
+
           <div className={styles.row}>
             <span className={styles.label}>Phương thức</span>
             <span className={styles.method}>
@@ -88,6 +196,11 @@ function PaymentSuccessPage() {
         </div>
 
         <div className={styles.actions}>
+          {isWaiting && (
+            <Button fullWidth onClick={handleRetryActivation}>
+              Kiểm tra lại Premium
+            </Button>
+          )}
           <Button to="/home" fullWidth>
             Về trang chủ
           </Button>
