@@ -1,9 +1,12 @@
 import * as profilesApi from "@/api/profilesApi";
 import {
+  mapBadgesForSection,
   mapFormToUpdateRequest,
   mapProfileCard,
+  mapProfileRecentPost,
   mapProfileToForm,
 } from "@/api/profileMapper";
+import { loadPosts } from "@/features/feed/feedData";
 import {
   getProfileFormData,
   saveProfileFormData,
@@ -32,68 +35,81 @@ export const PROFILE_MOCK = {
   totalActivities: 10,
 };
 
-export const BADGES = [
+export const BADGE_CATALOG = [
   {
     id: 1,
+    code: "first-blogger",
     title: "First Blogger",
     description: "Viết bài blog đầu tiên",
     unlocked: true,
   },
   {
     id: 2,
+    code: "fresh-dev",
     title: "Fresh Dev",
     description: "Hoàn thành bài thi đầu tiên",
     unlocked: false,
   },
   {
     id: 3,
+    code: "active-learner",
     title: "Active Learner",
     description: "Tham gia thảo luận tích cực",
     unlocked: false,
   },
   {
     id: 4,
+    code: "advanced-contributor",
     title: "Advanced Contributor",
     description: "Đóng góp 10 bài viết chất lượng",
     unlocked: false,
   },
   {
     id: 5,
+    code: "elite-engineer",
     title: "Elite Engineer",
     description: "Đạt điểm cao trong 5 bài thi",
     unlocked: false,
   },
   {
     id: 6,
+    code: "first-challenger",
     title: "First Challenger",
     description: "Hoàn thành thử thách đầu tiên",
     unlocked: false,
   },
   {
     id: 7,
+    code: "hardworking-coder",
     title: "Hardworking Coder",
     description: "Duy trì streak 7 ngày",
     unlocked: false,
   },
   {
     id: 8,
+    code: "exam-grinder",
     title: "Exam Grinder",
     description: "Làm 20 bài thi trắc nghiệm",
     unlocked: false,
   },
   {
     id: 9,
+    code: "test-grandmaster",
     title: "Test Grandmaster",
     description: "Đạt điểm tuyệt đối 3 lần",
     unlocked: false,
   },
   {
     id: 10,
+    code: "discussion-starter",
     title: "Discussion Starter",
     description: "Mở 5 chủ đề thảo luận mới",
     unlocked: false,
   },
 ];
+
+/** @deprecated Use BADGE_CATALOG — kept for mock compatibility */
+export const BADGES = BADGE_CATALOG;
 
 export const RECENT_POSTS = [
   {
@@ -149,14 +165,43 @@ export function getProfileByUsername(username) {
   };
 }
 
-export async function loadProfileByUsername(username, { includeMyStats = false } = {}) {
+export function loadProfileBadges(profileDto) {
+  if (USE_MOCK) {
+    return BADGE_CATALOG;
+  }
+
+  return mapBadgesForSection(BADGE_CATALOG, profileDto?.badges ?? []);
+}
+
+export async function loadRecentPostsByUsername(username, { limit = 5 } = {}) {
+  const resolvedUsername = (username || PROFILE_MOCK.username).trim();
+
+  if (USE_MOCK) {
+    return RECENT_POSTS;
+  }
+
+  try {
+    const { items } = await loadPosts({ page: 1, pageSize: 50 });
+    return items
+      .filter((post) => post.author?.username === resolvedUsername)
+      .slice(0, limit)
+      .map(mapProfileRecentPost);
+  } catch {
+    return [];
+  }
+}
+
+export async function loadProfileByUsername(
+  username,
+  { includeMyStats = false, profileDto = null, postsCount = 0 } = {},
+) {
   const resolvedUsername = (username || PROFILE_MOCK.username).trim();
 
   if (USE_MOCK) {
     return getProfileByUsername(resolvedUsername);
   }
 
-  const dto = await profilesApi.getProfileByUsername(resolvedUsername);
+  const dto = profileDto ?? (await profilesApi.getProfileByUsername(resolvedUsername));
   let statsDto = null;
 
   if (includeMyStats) {
@@ -167,7 +212,7 @@ export async function loadProfileByUsername(username, { includeMyStats = false }
     }
   }
 
-  return mapProfileCard(dto, statsDto);
+  return mapProfileCard(dto, statsDto, { postsCount });
 }
 
 export async function loadProfileForm(username, authUser) {

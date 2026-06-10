@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as authApi from "@/api/authApi";
 import { deriveUsernameFromEmail, mapApiUser } from "@/api/authMapper";
+import { mapProfileStatsToAuthUser } from "@/api/profileMapper";
+import * as profilesApi from "@/api/profilesApi";
 import {
   clearAuthTokens,
   getAccessToken,
@@ -15,6 +17,7 @@ import { AuthContext } from "./authContextValue";
 
 const STORAGE_KEY = "sehubs_user";
 const REMEMBER_KEY = "sehubs_remember_login";
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 function purgeLegacyMockSession() {
   try {
@@ -98,7 +101,28 @@ function applyAuthSession(setUser, setIsBootstrapping, loginResponse) {
   persistUser(nextUser);
   setUser(nextUser);
   setIsBootstrapping(false);
+
+  if (!USE_MOCK) {
+    syncProfileStats(nextUser).then((merged) => {
+      persistUser(merged);
+      setUser(merged);
+    });
+  }
+
   return nextUser;
+}
+
+async function syncProfileStats(user) {
+  if (!user || USE_MOCK) {
+    return user;
+  }
+
+  try {
+    const stats = await profilesApi.getMyStats();
+    return mapProfileStatsToAuthUser(user, stats);
+  } catch {
+    return user;
+  }
 }
 
 function clearAuthSession(setUser) {
@@ -133,7 +157,7 @@ export function AuthProvider({ children }) {
       try {
         const me = await authApi.getMe();
         if (cancelled) return;
-        const nextUser = mapAndEnrichUser(me);
+        const nextUser = await syncProfileStats(mapAndEnrichUser(me));
         persistUser(nextUser);
         setUser(nextUser);
       } catch {
@@ -143,7 +167,7 @@ export function AuthProvider({ children }) {
             const refreshed = await refreshSession();
             if (cancelled) return;
             const me = await authApi.getMe();
-            const nextUser = mapAndEnrichUser(me ?? refreshed.user);
+            const nextUser = await syncProfileStats(mapAndEnrichUser(me ?? refreshed.user));
             persistUser(nextUser);
             setUser(nextUser);
             return;

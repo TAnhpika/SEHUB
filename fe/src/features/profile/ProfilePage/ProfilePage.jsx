@@ -6,16 +6,21 @@ import BadgesSection from "@/features/profile/BadgesSection/BadgesSection";
 import ProfileCard from "@/features/profile/ProfileCard/ProfileCard";
 import RecentPosts from "@/features/profile/RecentPosts/RecentPosts";
 import {
-  BADGES,
-  RECENT_POSTS,
+  loadProfileBadges,
   loadProfileByUsername,
+  loadRecentPostsByUsername,
 } from "@/features/profile/profileData";
+import * as profilesApi from "@/api/profilesApi";
 import styles from "./ProfilePage.module.css";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 function ProfilePage() {
   const { username } = useParams();
   const { user, isPremium } = useAuth();
   const [profile, setProfile] = useState(null);
+  const [badges, setBadges] = useState([]);
+  const [recentPosts, setRecentPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -29,9 +34,27 @@ function ProfilePage() {
       setError(null);
 
       try {
-        const data = await loadProfileByUsername(username, { includeMyStats: isOwner });
+        let profileDto = null;
+
+        if (!USE_MOCK) {
+          profileDto = await profilesApi.getProfileByUsername(username);
+        }
+
+        const [posts, badgeList] = await Promise.all([
+          loadRecentPostsByUsername(username),
+          Promise.resolve(loadProfileBadges(profileDto ?? { badges: [] })),
+        ]);
+
+        const card = await loadProfileByUsername(username, {
+          includeMyStats: isOwner,
+          profileDto,
+          postsCount: posts.length,
+        });
+
         if (!cancelled) {
-          setProfile(data);
+          setProfile(card);
+          setBadges(badgeList);
+          setRecentPosts(posts);
         }
       } catch (err) {
         if (!cancelled) {
@@ -85,9 +108,13 @@ function ProfilePage() {
       </div>
 
       <div className={styles.main}>
-        <ActivityHeatmap totalActivities={profile.totalActivities} />
-        <BadgesSection badges={BADGES} />
-        <RecentPosts posts={RECENT_POSTS} />
+        <ActivityHeatmap
+          streakCount={profile.streakCount ?? 0}
+          totalActivities={profile.totalActivities ?? 0}
+          showChart={USE_MOCK}
+        />
+        <BadgesSection badges={badges} />
+        <RecentPosts posts={recentPosts} />
       </div>
     </div>
   );

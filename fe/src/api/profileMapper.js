@@ -9,7 +9,7 @@ function deriveNextLevelLabel(levelName = "") {
   return "Silver";
 }
 
-function computeProgress(points, nextLevelPoints) {
+export function computeProgress(points, nextLevelPoints) {
   if (nextLevelPoints == null || nextLevelPoints <= 0) {
     return { pointsToNext: 0, levelProgress: 100 };
   }
@@ -21,10 +21,58 @@ function computeProgress(points, nextLevelPoints) {
   return { pointsToNext, levelProgress };
 }
 
-export function mapProfileCard(dto, statsDto = null) {
+function formatProfilePostDate(publishedAt) {
+  if (!publishedAt) return "—";
+
+  const match = String(publishedAt).match(/^(\d+) tháng (\d+), (\d+)$/);
+  if (match) {
+    return `${match[1]}/${match[2]}/${match[3]}`;
+  }
+
+  const date = new Date(publishedAt);
+  if (!Number.isNaN(date.getTime())) {
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+
+  return String(publishedAt);
+}
+
+export function mapBadgesForSection(catalog, earnedBadges = []) {
+  const earnedCodes = new Set(
+    earnedBadges.map((badge) => badge.code?.toLowerCase()).filter(Boolean),
+  );
+  const earnedNames = new Set(
+    earnedBadges.map((badge) => badge.name?.toLowerCase()).filter(Boolean),
+  );
+
+  return catalog.map((item) => ({
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    unlocked:
+      earnedCodes.has(item.code?.toLowerCase()) ||
+      earnedNames.has(item.title?.toLowerCase()),
+  }));
+}
+
+export function mapProfileRecentPost(post) {
+  return {
+    id: post.id,
+    title: post.title,
+    date: formatProfilePostDate(post.publishedAt ?? post.timeAgo),
+    comments: post.comments ?? 0,
+    likes: post.likes ?? 0,
+  };
+}
+
+export function mapProfileCard(dto, statsDto = null, { postsCount = 0 } = {}) {
   const displayName = dto.displayName?.trim() || dto.username || "User";
   const points = statsDto?.points ?? dto.points ?? 0;
   const levelName = statsDto?.levelName ?? dto.levelName ?? "Bronze";
+  const streakCount = statsDto?.streakCount ?? 0;
   const { pointsToNext, levelProgress } = computeProgress(points, statsDto?.nextLevelPoints);
 
   return {
@@ -41,15 +89,32 @@ export function mapProfileCard(dto, statsDto = null) {
       points,
       exams: 0,
       comments: 0,
-      posts: 0,
+      posts: postsCount,
     },
     joinedAgo: "—",
     updatedAgo: "—",
-    totalActivities: statsDto?.streakCount ?? statsDto?.badgesCount ?? 0,
+    streakCount,
+    totalActivities: streakCount,
     bio: dto.bio ?? "",
     major: dto.major ?? "",
     semester: dto.semester ?? "",
     avatarUrl: dto.avatarUrl ?? null,
+  };
+}
+
+export function mapProfileStatsToAuthUser(user, statsDto) {
+  if (!user || !statsDto) return user;
+
+  const points = statsDto.points ?? user.points ?? 0;
+  const { pointsToNext, levelProgress } = computeProgress(points, statsDto.nextLevelPoints);
+
+  return {
+    ...user,
+    points,
+    level: statsDto.levelName ?? user.level,
+    streak: statsDto.streakCount ?? 0,
+    levelProgress,
+    pointsToNext,
   };
 }
 
