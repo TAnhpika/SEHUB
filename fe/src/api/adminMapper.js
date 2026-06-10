@@ -1,0 +1,355 @@
+const ROLE_MAP = {
+  student: "student",
+  moderator: "moderator",
+  admin: "admin",
+};
+
+function formatAdminDate(dateStr) {
+  if (!dateStr) return "—";
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "—";
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function formatAdminDateTime(dateStr) {
+  if (!dateStr) return "—";
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "—";
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+function mapRole(role) {
+  return ROLE_MAP[String(role ?? "Student").toLowerCase()] ?? "student";
+}
+
+function extractSubjectCode(category) {
+  const match = category?.match(/^([A-Z0-9]+)/i);
+  return match?.[1]?.toUpperCase() ?? "SE";
+}
+
+function mapAccessTierLabel(accessTier) {
+  if (accessTier === "PremiumFull") return "Premium";
+  return "Free (3 trang)";
+}
+
+function mapExamStatus(status) {
+  const value = String(status ?? "").toLowerCase();
+  if (value === "published") return "published";
+  if (value === "pendingapproval") return "draft";
+  return "draft";
+}
+
+function mapExamTypeKey(examType) {
+  return String(examType ?? "").toLowerCase() === "practice" ? "practice" : "final";
+}
+
+function mapPaymentStatus(status) {
+  const value = String(status ?? "").toLowerCase();
+  if (value === "paid") return "webhook_ok";
+  if (value === "failed") return "failed";
+  if (value === "cancelled") return "failed";
+  return "pending_payment";
+}
+
+function inferPlanIdFromName(planName) {
+  const name = String(planName ?? "").toLowerCase();
+  if (name.includes("8") || name.includes("month")) return "semester";
+  if (name.includes("4") || name.includes("year")) return "full";
+  return "trial";
+}
+
+function slugify(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function mapAdminUserListItem(dto) {
+  const role = mapRole(dto.role);
+
+  return {
+    id: dto.id,
+    apiId: dto.id,
+    username: dto.username,
+    email: dto.email,
+    displayName: dto.displayName,
+    role,
+    plan: role === "student" ? (dto.isPremium ? "Premium" : "Free") : "—",
+    status: dto.isBanned ? "banned" : "active",
+    joinedAt: formatAdminDate(dto.createdAt),
+    points: dto.points ?? 0,
+    levelName: null,
+  };
+}
+
+export function mapAdminUserDetail(dto) {
+  const role = mapRole(dto.role);
+  const listItem = mapAdminUserListItem({
+    ...dto,
+    isPremium: dto.isPremium,
+    isBanned: dto.isBanned,
+    points: dto.points,
+  });
+
+  return {
+    ...listItem,
+    banReason: dto.banReason ?? null,
+    bannedAt: dto.isBanned ? formatAdminDateTime(dto.banUntil ?? dto.createdAt) : null,
+    premiumExpiresAt: dto.subscriptionExpiresAt
+      ? formatAdminDate(dto.subscriptionExpiresAt)
+      : null,
+    premiumSince: dto.isPremium ? formatAdminDate(dto.createdAt) : null,
+    points: dto.points ?? 0,
+    levelName: dto.levelName ?? null,
+    streakCount: dto.streakCount ?? 0,
+    aiTokensConsumedToday: dto.aiTokensConsumedToday ?? 0,
+    lastActivityDate: dto.lastActivityDate ? formatAdminDateTime(dto.lastActivityDate) : null,
+  };
+}
+
+export function mapAdminExamListItem(dto) {
+  const typeKey = mapExamTypeKey(dto.examType);
+  const status = mapExamStatus(dto.status);
+
+  return {
+    id: dto.id,
+    apiId: dto.id,
+    code: dto.code,
+    title: dto.title,
+    type: typeKey === "practice" ? "Thực hành" : "Cuối kỳ",
+    typeKey,
+    track: dto.major ?? "SE",
+    semester: dto.semester ?? "1",
+    status,
+    questions: dto.questionCount ?? 0,
+    questionCount: dto.questionCount ?? 0,
+    updatedAt: formatAdminDate(dto.updatedAt ?? dto.createdAt),
+    createdAt: formatAdminDate(dto.createdAt),
+    sha256: dto.contentHash ?? "",
+    description: dto.description ?? "",
+    attachments: dto.assetUrl ? [{ id: "asset", name: dto.assetUrl.split("/").pop() ?? "asset" }] : [],
+  };
+}
+
+export function mapAdminExamDetail(dto) {
+  const base = mapAdminExamListItem(dto);
+
+  return {
+    ...base,
+    questionsData: (dto.questions ?? []).map((question) => ({
+      id: question.id,
+      text: question.content,
+      options: (question.options ?? []).map((option) => option.text),
+      correct: (question.options ?? []).findIndex((option) => option.id === question.correctOptionId),
+    })),
+  };
+}
+
+export function mapAdminDocumentListItem(dto) {
+  const subject = extractSubjectCode(dto.category);
+
+  return {
+    id: dto.id,
+    apiId: dto.id,
+    name: dto.title,
+    subject,
+    semester: "1",
+    track: "SE",
+    access: mapAccessTierLabel(dto.accessTier),
+    pages: dto.pageCount ?? 0,
+    uploadedAt: formatAdminDateTime(dto.createdAt),
+    source: "upload",
+    description: dto.category ?? dto.title ?? "",
+    mimeType: dto.mimeType ?? null,
+    isDeleted: Boolean(dto.isDeleted),
+  };
+}
+
+export function mapAdminPaymentListItem(dto) {
+  return {
+    id: dto.id,
+    apiId: dto.id,
+    payosOrderId: dto.payOsOrderCode,
+    username: dto.username,
+    planId: inferPlanIdFromName(dto.planName),
+    amount: Number(dto.amount ?? 0),
+    transferContent: dto.payOsOrderCode,
+    status: mapPaymentStatus(dto.status),
+    webhookAt: dto.paidAt ? formatAdminDateTime(dto.paidAt) : null,
+    activatedAt: dto.status === "Paid" ? formatAdminDateTime(dto.paidAt ?? dto.createdAt) : null,
+    createdAt: formatAdminDateTime(dto.createdAt),
+    planName: dto.planName ?? null,
+  };
+}
+
+function mapReportStatus(status) {
+  const value = String(status ?? "Pending").toLowerCase();
+  return value === "pending" ? "pending" : "resolved";
+}
+
+export function mapAdminReportListItem(dto) {
+  const status = mapReportStatus(dto.status);
+
+  return {
+    id: dto.id,
+    apiId: dto.id,
+    postId: dto.postId,
+    reasonId: "other",
+    reason: dto.reason,
+    reporter: dto.reporter?.username ?? "unknown",
+    reportedUser: dto.reportedUser?.username ?? dto.postAuthor?.username ?? "unknown",
+    status,
+    urgent: false,
+    createdAt: formatAdminDateTime(dto.createdAt),
+    post: {
+      author: dto.reporter?.username ?? "unknown",
+      postedAt: formatAdminDateTime(dto.createdAt),
+      title: dto.postTitle,
+      excerpt: dto.postTitle,
+    },
+    resolution: dto.resolvedAt
+      ? {
+          action: String(dto.status ?? "Resolved"),
+          note: dto.reason,
+          resolvedAt: formatAdminDateTime(dto.resolvedAt),
+          resolvedBy: dto.resolvedBy?.username ?? "admin",
+        }
+      : undefined,
+  };
+}
+
+export function mapAdminBannedUser(dto) {
+  const banType = String(dto.banType ?? "").toLowerCase();
+  const type = banType.includes("permanent") ? "permanent" : "temporary";
+
+  return {
+    id: dto.id,
+    apiId: dto.id,
+    userId: dto.userId,
+    username: dto.username,
+    displayName: dto.displayName,
+    email: "",
+    reason: dto.reason ?? "—",
+    bannedBy: dto.actorUsername ?? "Admin SEHub",
+    bannedAt: formatAdminDateTime(dto.createdAt),
+    until: dto.until ? formatAdminDate(dto.until) : null,
+    type,
+    days: dto.until
+      ? Math.max(
+          1,
+          Math.ceil((new Date(dto.until).getTime() - new Date(dto.createdAt).getTime()) / 86400000),
+        )
+      : undefined,
+  };
+}
+
+export function mapLevelConfigToRankTier(dto, index) {
+  const slug = slugify(dto.name) || `rank-${index + 1}`;
+
+  return {
+    id: dto.id ?? slug,
+    apiId: dto.id ?? null,
+    slug,
+    name: dto.name,
+    minPoints: dto.minPoints ?? 0,
+    sortOrder: index + 1,
+    colorKey: slug.includes("silver") ? "silver" : slug.includes("gold") ? "gold" : slug.includes("platinum") ? "platinum" : "bronze",
+    voucherDiscount: dto.voucherPercent ?? null,
+    rewardLabel: dto.voucherPercent ? `Voucher FTES ${dto.voucherPercent}%` : "",
+    description: dto.name,
+    active: true,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function mapBadgeAdminDto(dto) {
+  const slug = slugify(dto.code || dto.name);
+
+  return {
+    id: dto.id,
+    apiId: dto.id,
+    slug,
+    name: dto.name,
+    description: dto.conditionJson ?? dto.name,
+    category: "community",
+    triggerType: "custom",
+    triggerValue: 1,
+    pointsReward: 0,
+    icon: "🏅",
+    active: true,
+    unlockCount: dto.earnedCount ?? 0,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function mapRankTiersToUpdateLevelsRequest(ranks) {
+  return {
+    levels: ranks.map((rank) => ({
+      name: rank.name,
+      minPoints: rank.minPoints,
+      voucherPercent: rank.voucherDiscount ?? null,
+    })),
+  };
+}
+
+export function mergeDashboardStats(mockPayload, stats) {
+  if (!stats) return mockPayload;
+
+  const revenueM = Math.round(Number(stats.totalRevenue ?? 0) / 1_000_000 * 10) / 10;
+  const premiumCount = stats.activeSubscriptions ?? 0;
+  const usersTotal = stats.totalUsers ?? mockPayload.studentPlan?.totalStudents ?? 0;
+
+  return {
+    ...mockPayload,
+    stats: mockPayload.stats.map((item) => {
+      if (item.id === "users") {
+        return {
+          ...item,
+          value: usersTotal.toLocaleString("vi-VN"),
+          change: `${usersTotal} tài khoản`,
+        };
+      }
+      if (item.id === "revenue") {
+        return {
+          ...item,
+          value: revenueM > 0 ? `${revenueM.toLocaleString("vi-VN")} tr` : "0 tr",
+        };
+      }
+      if (item.id === "premium") {
+        return {
+          ...item,
+          value: usersTotal
+            ? `${Math.round((premiumCount / usersTotal) * 1000) / 10}%`
+            : "0%",
+          change: `${premiumCount} subscription`,
+        };
+      }
+      if (item.id === "reports") {
+        return {
+          ...item,
+          value: String(stats.pendingReports ?? item.value),
+        };
+      }
+      if (item.id === "exams") {
+        return {
+          ...item,
+          value: String(stats.totalExams ?? item.value),
+        };
+      }
+      return item;
+    }),
+    studentPlan: {
+      ...mockPayload.studentPlan,
+      totalStudents: usersTotal,
+      premium: {
+        ...mockPayload.studentPlan.premium,
+        count: premiumCount,
+      },
+    },
+  };
+}
