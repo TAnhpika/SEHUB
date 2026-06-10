@@ -110,6 +110,22 @@ public sealed class PremiumController : ControllerBase
 
 
 
+    [HttpPost("orders/{orderId:guid}/dev/confirm")]
+
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+
+    public async Task<IActionResult> ConfirmDevPayment(Guid orderId, CancellationToken cancellationToken)
+
+    {
+
+        var result = await _premiumService.ConfirmDevPaymentAsync(orderId, cancellationToken);
+
+        return Ok(result);
+
+    }
+
+
+
     [HttpPost("webhooks/payos")]
 
     [AllowAnonymous]
