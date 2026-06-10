@@ -6,6 +6,11 @@ import {
   removeBannedByUsername,
 } from "@/features/admin/moderation/adminBannedData";
 import { ADMIN_USERS_SEED } from "@/features/admin/users/adminUsersSeed";
+import * as adminApi from "@/api/adminApi";
+import { mapAdminUserDetail, mapAdminUserListItem } from "@/api/adminMapper";
+import { isValidGuid } from "@/features/feed/postUtils";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 /** @type {typeof ADMIN_USERS_SEED} */
 let usersStore = ADMIN_USERS_SEED.map((user) => ({ ...user }));
@@ -33,6 +38,49 @@ export function getAdminUsers() {
 
 export function getAdminUserById(id) {
   return usersStore.find((user) => user.id === id) ?? null;
+}
+
+export async function loadAdminUsers() {
+  if (USE_MOCK) {
+    return getAdminUsers();
+  }
+
+  try {
+    const page = await adminApi.listUsers({ pageSize: 100 });
+    const apiUsers = (page.items ?? []).map(mapAdminUserListItem);
+    if (apiUsers.length > 0) {
+      usersStore = [
+        ...apiUsers,
+        ...usersStore.filter((user) => !apiUsers.some((apiUser) => apiUser.id === user.id)),
+      ];
+      return apiUsers;
+    }
+  } catch {
+    return getAdminUsers();
+  }
+}
+
+export async function loadAdminUserById(id) {
+  const mockUser = getAdminUserById(id);
+  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+    return mockUser;
+  }
+
+  try {
+    const dto = await adminApi.getUser(id);
+    return mapAdminUserDetail(dto);
+  } catch {
+    return mockUser;
+  }
+}
+
+export async function patchAdminUserViaApi(id, body) {
+  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+    return null;
+  }
+
+  const dto = await adminApi.patchUser(id, body);
+  return mapAdminUserDetail(dto);
 }
 
 export function findAdminUserByUsername(username) {
@@ -289,5 +337,44 @@ export function promoteToModerator(userId, { reason, adminUsername }) {
   });
 
   return { ok: true, message: modResult.message };
+}
+
+export async function banUserPermanentlyViaApi(userId, options) {
+  if (USE_MOCK || !isValidGuid(String(userId ?? ""))) {
+    return banUserPermanently(userId, options);
+  }
+
+  try {
+    await patchAdminUserViaApi(userId, { isBanned: true, banType: "Permanent" });
+    return banUserPermanently(userId, options);
+  } catch (error) {
+    return { ok: false, message: error?.message ?? "Không khóa được tài khoản." };
+  }
+}
+
+export async function unbanUserAccountViaApi(userId, options) {
+  if (USE_MOCK || !isValidGuid(String(userId ?? ""))) {
+    return unbanUserAccount(userId, options);
+  }
+
+  try {
+    await patchAdminUserViaApi(userId, { isBanned: false });
+    return unbanUserAccount(userId, options);
+  } catch (error) {
+    return { ok: false, message: error?.message ?? "Không mở khóa được tài khoản." };
+  }
+}
+
+export async function requestPasswordResetViaApi(userId, options) {
+  if (USE_MOCK || !isValidGuid(String(userId ?? ""))) {
+    return requestPasswordReset(userId, options);
+  }
+
+  try {
+    await adminApi.resetUserPassword(userId);
+    return requestPasswordReset(userId, options);
+  } catch (error) {
+    return { ok: false, message: error?.message ?? "Không gửi được email reset mật khẩu." };
+  }
 }
 

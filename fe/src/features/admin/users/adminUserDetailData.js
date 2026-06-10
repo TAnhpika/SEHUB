@@ -3,7 +3,7 @@ import {
   FREE_DAILY_TOKEN_QUOTA,
   PREMIUM_DAILY_TOKEN_QUOTA,
 } from "@/features/admin/payments/adminPaymentPolicy";
-import { getAdminUserById } from "@/features/admin/users/adminUserStore";
+import { getAdminUserById, loadAdminUserById } from "@/features/admin/users/adminUserStore";
 import { getUserGamification } from "@/features/admin/users/adminUserGamification";
 
 export const ADMIN_USER_ACTIVITY_PAGE_SIZE = 5;
@@ -21,6 +21,10 @@ export function getAdminUserDetail(id) {
   const user = getAdminUserById(id);
   if (!user) return null;
 
+  return buildAdminUserDetailView(user);
+}
+
+function buildAdminUserDetailView(user) {
   const n = parseInt(String(user.id).replace(/\D/g, ""), 10) || 1;
 
   const gamification = getUserGamification(user);
@@ -60,6 +64,25 @@ export function getAdminUserDetail(id) {
     oauthProvider: "Google",
     emailVerified: true,
     modSubjects: user.role === "moderator" ? "PRF192, SWP391, DBI202" : null,
+  };
+}
+
+export async function loadAdminUserDetail(id) {
+  const apiUser = await loadAdminUserById(id);
+  const user = apiUser ?? getAdminUserById(id);
+  if (!user) return null;
+
+  const detail = buildAdminUserDetailView(user);
+
+  return {
+    ...detail,
+    ...user,
+    gamification: getUserGamification(user),
+    roleLabel: USER_ROLE_LABEL[user.role] ?? user.role,
+    premiumExpiresAt: user.premiumExpiresAt ?? detail.premiumExpiresAt,
+    premiumSince: user.premiumSince ?? detail.premiumSince,
+    banReason: user.banReason ?? detail.banReason,
+    bannedAt: user.bannedAt ?? detail.bannedAt,
   };
 }
 
