@@ -1,18 +1,16 @@
-using System.Net.Http.Json;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SEHub.Application.Abstractions;
-using SEHub.Domain.Exceptions;
 
 namespace SEHub.Infrastructure.Payments;
 
 public class PayOsService : IPayOsService
 {
-    private const string PayOsApiBase = "https://api-merchant.payos.vn";
-    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-
+    private const string DefaultApiBaseUrl = "https://api-merchant.payos.vn";
     private readonly IConfiguration _configuration;
     private readonly IHostEnvironment _environment;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -38,91 +36,92 @@ public class PayOsService : IPayOsService
         PayOsCheckoutUrls? checkoutUrls = null,
         CancellationToken cancellationToken = default)
     {
-        if (IsMockMode())
+        if (ShouldUseMockProvider())
         {
             return CreateMockResult(payOsOrderCode, amount, checkoutUrls);
         }
 
-        if (!long.TryParse(payOsOrderCode, out var orderCode))
+        if (!long.TryParse(payOsOrderCode, out var orderCodeNumeric))
         {
-            orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            throw new InvalidOperationException("PayOsOrderCode must be numeric when using the live PayOS API.");
         }
 
-        var clientId = _configuration["PayOS:ClientId"] ?? throw new DomainException("PayOS ClientId is not configured.");
-        var apiKey = _configuration["PayOS:ApiKey"] ?? throw new DomainException("PayOS ApiKey is not configured.");
-        var checksumKey = _configuration["PayOS:ChecksumKey"] ?? throw new DomainException("PayOS ChecksumKey is not configured.");
+        var clientId = _configuration["PayOS:ClientId"] ?? string.Empty;
+        var apiKey = _configuration["PayOS:ApiKey"] ?? string.Empty;
+        var checksumKey = _configuration["PayOS:ChecksumKey"] ?? string.Empty;
+        var apiBaseUrl = _configuration["PayOS:ApiBaseUrl"] ?? DefaultApiBaseUrl;
         var returnUrl = checkoutUrls?.ReturnUrl
             ?? _configuration["PayOS:ReturnUrl"]
             ?? "http://localhost:5173/home/premium/success/trial";
         var cancelUrl = checkoutUrls?.CancelUrl
             ?? _configuration["PayOS:CancelUrl"]
             ?? "http://localhost:5173/home/premium";
-        var amountInt = (int)amount;
-        var safeDescription = TruncateDescription(description);
 
+        var amountLong = (long)amount;
+        var paymentDescription = TruncateDescription(description);
         var signature = PayOsSignatureHelper.CreatePaymentRequestSignature(
-            orderCode,
-            amountInt,
-            safeDescription,
-            returnUrl,
+            orderCodeNumeric,
+            amountLong,
+            paymentDescription,
             cancelUrl,
+            returnUrl,
             checksumKey);
 
         var requestBody = new
         {
-            orderCode,
-            amount = amountInt,
-            description = safeDescription,
+            orderCode = orderCodeNumeric,
+            amount = amountLong,
+            description = paymentDescription,
             returnUrl,
             cancelUrl,
-            signature,
+            signature
         };
 
         var client = _httpClientFactory.CreateClient(nameof(PayOsService));
-        client.DefaultRequestHeaders.Remove("x-client-id");
-        client.DefaultRequestHeaders.Remove("x-api-key");
-        client.DefaultRequestHeaders.Add("x-client-id", clientId);
-        client.DefaultRequestHeaders.Add("x-api-key", apiKey);
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{apiBaseUrl.TrimEnd('/')}/v2/payment-requests");
+        request.Headers.Add("x-client-id", clientId);
+        request.Headers.Add("x-api-key", apiKey);
+        request.Content = new StringContent(
+            JsonSerializer.Serialize(requestBody),
+            Encoding.UTF8,
+            "application/json");
+        request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
-        using var response = await client.PostAsJsonAsync(
-            $"{PayOsApiBase}/v2/payment-requests",
-            requestBody,
-            JsonOptions,
-            cancellationToken);
+        using var response = await client.SendAsync(request, cancellationToken);
+        var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
 
-        var raw = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogWarning("PayOS create payment failed: {Status} {Body}", response.StatusCode, raw);
-            throw new DomainException("Không tạo được link thanh toán PayOS.");
+            _logger.LogError(
+                "PayOS create payment failed. Status={StatusCode}, Body={Body}",
+                (int)response.StatusCode,
+                responseBody);
+            throw new InvalidOperationException("PayOS payment link creation failed.");
         }
 
-        using var document = JsonDocument.Parse(raw);
+        using var document = JsonDocument.Parse(responseBody);
         var root = document.RootElement;
-        var code = root.TryGetProperty("code", out var codeEl) ? codeEl.GetString() : null;
-        if (!string.Equals(code, "00", StringComparison.Ordinal))
+        var code = root.TryGetProperty("code", out var codeElement) ? codeElement.GetString() : null;
+        if (!string.Equals(code, "00", StringComparison.OrdinalIgnoreCase)
+            || !root.TryGetProperty("data", out var data))
         {
-            var desc = root.TryGetProperty("desc", out var descEl) ? descEl.GetString() : raw;
-            _logger.LogWarning("PayOS create payment rejected: {Desc}", desc);
-            throw new DomainException(desc ?? "PayOS từ chối tạo đơn thanh toán.");
+            var desc = root.TryGetProperty("desc", out var descElement) ? descElement.GetString() : responseBody;
+            _logger.LogError("PayOS create payment returned error: {Description}", desc);
+            throw new InvalidOperationException($"PayOS error: {desc}");
         }
 
-        if (!root.TryGetProperty("data", out var data))
-        {
-            throw new DomainException("PayOS không trả dữ liệu checkout.");
-        }
-
-        var checkoutUrl = data.TryGetProperty("checkoutUrl", out var checkoutEl)
-            ? checkoutEl.GetString() ?? string.Empty
+        var checkoutUrl = data.TryGetProperty("checkoutUrl", out var checkoutElement)
+            ? checkoutElement.GetString() ?? string.Empty
             : string.Empty;
-        var qrCode = data.TryGetProperty("qrCode", out var qrEl)
-            ? qrEl.GetString() ?? checkoutUrl
-            : checkoutUrl;
+        var qrCode = data.TryGetProperty("qrCode", out var qrElement)
+            ? qrElement.GetString()
+            : null;
 
         return new PayOsOrderResult
         {
-            QrUrl = qrCode,
             CheckoutUrl = checkoutUrl,
+            QrUrl = qrCode ?? checkoutUrl,
+            QrCodeData = qrCode
         };
     }
 
@@ -135,7 +134,7 @@ public class PayOsService : IPayOsService
 
         var checksumKey = _configuration["PayOS:ChecksumKey"] ?? "mock-checksum-key-dev";
 
-        if (IsMockMode() && (_environment.IsDevelopment() || _environment.EnvironmentName.Equals("Testing", StringComparison.OrdinalIgnoreCase)))
+        if (_environment.IsDevelopment() || _environment.EnvironmentName.Equals("Testing", StringComparison.OrdinalIgnoreCase))
         {
             if (signature.Equals($"mock-{checksumKey}", StringComparison.Ordinal))
             {
@@ -154,25 +153,27 @@ public class PayOsService : IPayOsService
         }
     }
 
-    private bool IsMockMode()
+    private bool ShouldUseMockProvider()
     {
-        var clientId = _configuration["PayOS:ClientId"];
+        var clientId = _configuration["PayOS:ClientId"] ?? string.Empty;
+        var apiKey = _configuration["PayOS:ApiKey"] ?? string.Empty;
         return string.IsNullOrWhiteSpace(clientId)
+            || string.IsNullOrWhiteSpace(apiKey)
+            || clientId.StartsWith("mock-", StringComparison.OrdinalIgnoreCase)
+            || apiKey.StartsWith("mock-", StringComparison.OrdinalIgnoreCase)
             || clientId.Equals("mock-client-id", StringComparison.OrdinalIgnoreCase);
     }
 
     private static PayOsOrderResult CreateMockResult(
         string payOsOrderCode,
         decimal amount,
-        PayOsCheckoutUrls? checkoutUrls)
-    {
-        return new PayOsOrderResult
+        PayOsCheckoutUrls? checkoutUrls) =>
+        new()
         {
             QrUrl = $"00020101021238570010A0000007270127000697040301QRIBFTTA53037045404{amount}5802VN62190815MOCK{payOsOrderCode}6304ABCD",
             CheckoutUrl = checkoutUrls?.ReturnUrl
                 ?? $"https://pay.payos.vn/web/mock/checkout/{payOsOrderCode}",
         };
-    }
 
     private static string TruncateDescription(string description)
     {

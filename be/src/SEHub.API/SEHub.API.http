@@ -107,6 +107,28 @@ Authorization: Bearer {{loginAdmin.response.body.data.accessToken}}
 ### Premium plans (anonymous)
 GET {{api}}/premium/plans
 
+### Create premium order (premium student)
+# @name createPremiumOrder
+POST {{api}}/premium/orders
+Authorization: Bearer {{loginStudent.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+  "planCode": "1m"
+}
+
+### Get order status
+GET {{api}}/premium/orders/{{createPremiumOrder.response.body.data.orderId}}
+Authorization: Bearer {{loginStudent.response.body.data.accessToken}}
+
+### Dev: confirm PayOS payment (Development only)
+POST {{api}}/premium/orders/{{createPremiumOrder.response.body.data.orderId}}/dev/confirm
+Authorization: Bearer {{loginStudent.response.body.data.accessToken}}
+
+### Subscription status
+GET {{api}}/premium/subscription
+Authorization: Bearer {{loginStudent.response.body.data.accessToken}}
+
 ### Documents (authenticated — expect 401 without token)
 GET {{api}}/documents
 

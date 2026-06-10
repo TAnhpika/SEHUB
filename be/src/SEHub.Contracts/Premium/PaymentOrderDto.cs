@@ -9,4 +9,5 @@ public sealed class PaymentOrderDto
     public string? QrUrl { get; init; }
     public string? CheckoutUrl { get; init; }
     public DateTime ExpiredAt { get; init; }
+    public string? PlanCode { get; init; }
 }

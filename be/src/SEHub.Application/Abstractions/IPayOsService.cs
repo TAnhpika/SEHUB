@@ -18,4 +18,5 @@ public sealed class PayOsOrderResult
 {
     public string QrUrl { get; init; } = string.Empty;
     public string CheckoutUrl { get; init; } = string.Empty;
+    public string? QrCodeData { get; init; }
 }
