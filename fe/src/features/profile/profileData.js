@@ -1,3 +1,16 @@
+import * as profilesApi from "@/api/profilesApi";
+import {
+  mapFormToUpdateRequest,
+  mapProfileCard,
+  mapProfileToForm,
+} from "@/api/profileMapper";
+import {
+  getProfileFormData,
+  saveProfileFormData,
+} from "@/features/profile/profileFormData";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+
 export const PROFILE_MOCK = {
   username: "anhcoding12345",
   displayName: "Anhpika",
@@ -134,4 +147,60 @@ export function getProfileByUsername(username) {
     displayName: PROFILE_MOCK.displayName,
     initial: PROFILE_MOCK.displayName.charAt(0).toUpperCase(),
   };
+}
+
+export async function loadProfileByUsername(username, { includeMyStats = false } = {}) {
+  const resolvedUsername = (username || PROFILE_MOCK.username).trim();
+
+  if (USE_MOCK) {
+    return getProfileByUsername(resolvedUsername);
+  }
+
+  const dto = await profilesApi.getProfileByUsername(resolvedUsername);
+  let statsDto = null;
+
+  if (includeMyStats) {
+    try {
+      statsDto = await profilesApi.getMyStats();
+    } catch {
+      /* stats optional for profile card */
+    }
+  }
+
+  return mapProfileCard(dto, statsDto);
+}
+
+export async function loadProfileForm(username, authUser) {
+  const localForm = getProfileFormData(username, { email: authUser?.email });
+
+  if (USE_MOCK) {
+    return localForm;
+  }
+
+  try {
+    const dto = await profilesApi.getProfileByUsername(username);
+    return mapProfileToForm(dto, authUser, localForm);
+  } catch {
+    return localForm;
+  }
+}
+
+export async function saveMyProfile(form) {
+  if (USE_MOCK) {
+    saveProfileFormData(form.username, form);
+    return getProfileByUsername(form.username);
+  }
+
+  const body = mapFormToUpdateRequest(form);
+  const dto = await profilesApi.updateMyProfile(body);
+  saveProfileFormData(form.username, form);
+
+  let statsDto = null;
+  try {
+    statsDto = await profilesApi.getMyStats();
+  } catch {
+    /* stats optional */
+  }
+
+  return mapProfileCard(dto, statsDto);
 }
