@@ -4,7 +4,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
-using SEHub.Application.Abstractions;
 using SEHub.Application.Auth;
 using SEHub.Infrastructure.Ai;
 using SEHub.Infrastructure.Auth;
@@ -94,6 +93,11 @@ public static class DependencyInjection
         }
 
         services.AddScoped<ISmsService, MockSmsService>();
+        services.AddHttpClient(nameof(PayOsService), client =>
+        {
+            client.BaseAddress = new Uri("https://api-merchant.payos.vn/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
         services.AddScoped<IPayOsService, PayOsService>();
         services.AddScoped<IPayOsWebhookHandler, PayOsWebhookHandler>();
         services.AddScoped<IAiExplanationService, MockAiExplanationService>();
