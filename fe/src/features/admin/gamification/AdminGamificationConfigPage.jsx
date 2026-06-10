@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPen,
@@ -25,6 +25,8 @@ import {
   getPointRules,
   getRankColorHex,
   getRankTiers,
+  hydrateGamificationFromApi,
+  saveRankTiersToApi,
   toggleBadgeActive,
   togglePointRuleActive,
   toggleRankTierActive,
@@ -74,6 +76,10 @@ function AdminGamificationConfigPage() {
     id: null,
     label: "",
   });
+
+  useEffect(() => {
+    hydrateGamificationFromApi().then(() => setRefreshKey((k) => k + 1));
+  }, []);
 
   const stats = useMemo(() => getGamificationStats(), [refreshKey]);
   const ranks = useMemo(() => getRankTiers(), [refreshKey]);
@@ -133,12 +139,17 @@ function AdminGamificationConfigPage() {
     if (tab === "rules") setRuleModal({ open: true, editing: null, error: "" });
   }
 
-  function handleRankSubmit(payload) {
+  async function handleRankSubmit(payload) {
     const result = rankModal.editing
       ? updateRankTier(rankModal.editing.id, payload)
       : createRankTier(payload);
     if (!result.ok) {
       setRankModal((m) => ({ ...m, error: result.message }));
+      return;
+    }
+    const saveResult = await saveRankTiersToApi();
+    if (!saveResult.ok) {
+      setRankModal((m) => ({ ...m, error: saveResult.message }));
       return;
     }
     showToast(rankModal.editing ? "Đã cập nhật cấp hạng." : "Đã tạo cấp hạng mới.");
@@ -312,10 +323,15 @@ function AdminGamificationConfigPage() {
                           gStyles.toggleBtn,
                           rank.active ? gStyles.toggleOn : gStyles.toggleOff,
                         ].join(" ")}
-                        onClick={() => {
+                        onClick={async () => {
                           const r = toggleRankTierActive(rank.id);
-                          if (!r.ok) showToast(r.message);
-                          else bump();
+                          if (!r.ok) {
+                            showToast(r.message);
+                            return;
+                          }
+                          const saveResult = await saveRankTiersToApi();
+                          if (!saveResult.ok) showToast(saveResult.message);
+                          bump();
                         }}
                       >
                         {rank.active ? "Đang bật" : "Đã tắt"}
