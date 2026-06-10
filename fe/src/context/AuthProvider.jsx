@@ -206,6 +206,14 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const me = await authApi.getMe();
+    const nextUser = mapAndEnrichUser(me);
+    persistUser(nextUser);
+    setUser(nextUser);
+    return nextUser;
+  }, []);
+
   const activatePremium = useCallback(() => {
     setUser((prev) => {
       if (!prev || resolveIsPremium(prev)) {
@@ -244,6 +252,7 @@ export function AuthProvider({ children }) {
       register,
       googleLogin,
       logout,
+      refreshUser,
       activatePremium,
     }),
     [
@@ -255,6 +264,7 @@ export function AuthProvider({ children }) {
       register,
       googleLogin,
       logout,
+      refreshUser,
       activatePremium,
     ],
   );
