@@ -63,4 +63,61 @@ public sealed class PayOsWebhookTests : IClassFixture<CustomWebApplicationFactor
             .ToListAsync();
         paidAuditLogs.Should().HaveCount(1);
     }
+
+    [Fact]
+    public async Task PayOsWebhook_WhenOrderNotFound_ReturnsOkForUrlVerification()
+    {
+        var payload = new
+        {
+            code = "00",
+            desc = "success",
+            data = new
+            {
+                orderCode = 1234567890L,
+                amount = 99000,
+                description = "PayOS URL verification",
+                reference = "payos-url-verify-test"
+            },
+            signature = "mock-mock-checksum-key-dev"
+        };
+
+        var json = JsonSerializer.Serialize(payload);
+        var response = await _client.PostAsync(
+            "/api/v1/premium/webhooks/payos",
+            new StringContent(json, Encoding.UTF8, "application/json"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task PayOsWebhook_WhenCodeIsNotSuccess_ReturnsOkAndIgnoresPayload()
+    {
+        var payload = new
+        {
+            code = "01",
+            desc = "pending",
+            data = new
+            {
+                orderCode = long.Parse(CustomWebApplicationFactory.PayOsOrderCode),
+                amount = 99000,
+                description = "SEHub Premium",
+                reference = "payos-pending-ref"
+            },
+            signature = "mock-mock-checksum-key-dev"
+        };
+
+        var json = JsonSerializer.Serialize(payload);
+        var response = await _client.PostAsync(
+            "/api/v1/premium/webhooks/payos",
+            new StringContent(json, Encoding.UTF8, "application/json"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<SEHubDbContext>();
+
+        var order = await context.PaymentOrders
+            .SingleAsync(o => o.Id == CustomWebApplicationFactory.PendingPaymentOrderId);
+        order.Status.Should().Be(PaymentOrderStatus.Pending);
+    }
 }

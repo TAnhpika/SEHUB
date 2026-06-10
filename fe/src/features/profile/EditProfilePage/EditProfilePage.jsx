@@ -1,15 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import { readStoredUser } from "@/context/AuthProvider";
 import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
-import {
-  GENDER_OPTIONS,
-  getProfileFormData,
-  saveProfileFormData,
-} from "@/features/profile/profileFormData";
+import { loadProfileForm, saveMyProfile } from "@/features/profile/profileData";
+import { GENDER_OPTIONS } from "@/features/profile/profileFormData";
 import styles from "./EditProfilePage.module.css";
 
 function EditProfilePage() {
@@ -18,22 +16,56 @@ function EditProfilePage() {
   const { user } = useAuth();
   const { showToast } = useToast();
 
-  const initialForm = useMemo(
-    () => getProfileFormData(username, { email: user?.email }),
-    [username, user?.email],
-  );
+  const [form, setForm] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  const [form, setForm] = useState(initialForm);
+  useEffect(() => {
+    if (!user || user.username !== username) return undefined;
+
+    let cancelled = false;
+
+    async function fetchForm() {
+      setLoading(true);
+      try {
+        const data = await loadProfileForm(username, user);
+        if (!cancelled) {
+          setForm(data);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          showToast(err.message ?? "Không tải được thông tin profile.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchForm();
+    return () => {
+      cancelled = true;
+    };
+  }, [username, user, showToast]);
 
   if (!user || user.username !== username) {
     return <Navigate to={`/profile/${username}`} replace />;
+  }
+
+  if (loading || !form) {
+    return (
+      <div className={styles.page}>
+        <p>Đang tải thông tin profile...</p>
+      </div>
+    );
   }
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     const fullName = form.fullName.trim();
@@ -52,9 +84,25 @@ function EditProfilePage() {
       return;
     }
 
-    saveProfileFormData(username, form);
-    showToast("Đã lưu thay đổi profile.");
-    navigate(`/profile/${username}`);
+    setSubmitting(true);
+    try {
+      await saveMyProfile(form);
+
+      const stored = readStoredUser();
+      if (stored) {
+        localStorage.setItem(
+          "sehubs_user",
+          JSON.stringify({ ...stored, displayName: fullName }),
+        );
+      }
+
+      showToast("Đã lưu thay đổi profile.");
+      navigate(`/profile/${username}`);
+    } catch (err) {
+      showToast(err.message ?? "Không lưu được profile.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -201,7 +249,9 @@ function EditProfilePage() {
         </section>
 
         <div className={styles.actions}>
-          <Button type="submit">Lưu thay đổi</Button>
+          <Button type="submit" disabled={submitting}>
+            Lưu thay đổi
+          </Button>
           <Link to={`/profile/${username}`} className={styles.cancel}>
             Hủy
           </Link>
