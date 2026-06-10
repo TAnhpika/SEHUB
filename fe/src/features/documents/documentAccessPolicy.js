@@ -33,6 +33,40 @@ export function getDocumentAccessState(doc, viewer = {}) {
     };
   }
 
+  if (doc?.pageLimit !== undefined && doc?.canDownload !== undefined) {
+    const visiblePages = Math.min(Math.max(doc.pageLimit, 0), totalPages);
+    const canDownload = Boolean(doc.canDownload);
+    const limited = !canDownload && totalPages > visiblePages;
+
+    if (visiblePages === 0 && !canDownload && isPremiumOnlyDocument(doc)) {
+      return {
+        canView: false,
+        reason: "premium_required",
+        visiblePages: 0,
+        totalPages,
+        canDownload: false,
+        limited: false,
+        tierLabel: getDocumentAccessTierLabel(doc),
+        label: "Tài liệu Premium — nâng cấp để xem & tải",
+      };
+    }
+
+    return {
+      canView: visiblePages > 0 || canDownload,
+      reason: limited ? "page_limit" : null,
+      visiblePages,
+      totalPages,
+      canDownload,
+      limited,
+      tierLabel: getDocumentAccessTierLabel(doc),
+      label: canDownload
+        ? "Premium — xem & tải file đầy đủ"
+        : limited
+          ? "Basic — xem trước · không tải file"
+          : "Basic — xem online · không tải file",
+    };
+  }
+
   if (isPremium) {
     return {
       canView: true,
