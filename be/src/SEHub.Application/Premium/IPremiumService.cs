@@ -8,4 +8,5 @@ public interface IPremiumService
     Task<PaymentOrderDto> CreateOrderAsync(CreatePaymentOrderRequest request, CancellationToken cancellationToken = default);
     Task<PaymentOrderDto> GetOrderAsync(Guid orderId, CancellationToken cancellationToken = default);
     Task<SubscriptionStatusDto> GetSubscriptionAsync(CancellationToken cancellationToken = default);
+    Task<PaymentOrderDto> ConfirmDevPaymentAsync(Guid orderId, CancellationToken cancellationToken = default);
 }
