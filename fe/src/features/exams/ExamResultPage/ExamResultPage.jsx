@@ -18,7 +18,7 @@ import {
   getScoreGrade,
   getScoreOnTen,
 } from "@/features/exams/examResultInsights";
-import { buildExamQuestions } from "@/features/exams/examDetailData";
+import { buildExamQuestions, loadExamMeta } from "@/features/exams/examDetailData";
 import {
   clearExamSession,
   createExamSession,
@@ -87,10 +87,44 @@ function ExamResultPage({ page = "review" }) {
   const decodedExamId = decodeURIComponent(examId ?? "");
   const questionNumber = Math.max(1, Number(questionIndex) || 1);
 
-  const exam = useMemo(
-    () => getExamById(courseCode, decodedExamId, page, scope),
-    [courseCode, decodedExamId, page, scope],
-  );
+  const [exam, setExam] = useState(null);
+  const [examReady, setExamReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchExam() {
+      setExamReady(false);
+      const mockExam = getExamById(courseCode, decodedExamId, page, scope);
+      if (mockExam) {
+        if (!cancelled) {
+          setExam(mockExam);
+          setExamReady(true);
+        }
+        return;
+      }
+
+      try {
+        const meta = await loadExamMeta(courseCode, decodedExamId, page, scope);
+        if (!cancelled) {
+          setExam(meta?.exam ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setExam(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setExamReady(true);
+        }
+      }
+    }
+
+    fetchExam();
+    return () => {
+      cancelled = true;
+    };
+  }, [courseCode, decodedExamId, page, scope]);
 
   const questions = useMemo(
     () => (exam ? buildExamQuestions(exam.questionCount, page) : []),
@@ -117,6 +151,14 @@ function ExamResultPage({ page = "review" }) {
 
   if (page !== "review" && page !== "practice") {
     return <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />;
+  }
+
+  if (!examReady) {
+    return (
+      <div className={styles.page}>
+        <p>Đang tải kết quả...</p>
+      </div>
+    );
   }
 
   if (!exam) {

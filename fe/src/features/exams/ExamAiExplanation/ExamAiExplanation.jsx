@@ -4,7 +4,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRobot } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import { getAiExplanation } from "@/features/exams/examAiExplainData";
+import { loadAiExplanation } from "@/features/exams/examDetailData";
 import ExamAiChat from "@/features/exams/ExamAiChat/ExamAiChat";
+import { isValidGuid } from "@/features/feed/postUtils";
 import {
   canUseExamAiChat,
   getExamAiAccess,
@@ -16,13 +18,42 @@ function ExamAiExplanation({ examId, question }) {
   const { user, isAuthenticated, isPremium, aiTokens, spendAiExplainTokens } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  const [apiExplanation, setApiExplanation] = useState(null);
   const aiAccess = getExamAiAccess(user);
   const showPremiumChat = canUseExamAiChat(user);
 
   useEffect(() => {
     setRevealed(shouldAutoRevealAiExplanation(user));
     setRefreshKey(0);
+    setApiExplanation(null);
   }, [question?.id, user?.username, user?.plan, user?.role]);
+
+  useEffect(() => {
+    if (!revealed || !question?.id || !isValidGuid(String(question.id))) {
+      setApiExplanation(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    async function fetchExplanation() {
+      try {
+        const result = await loadAiExplanation(question.id, question.text);
+        if (!cancelled) {
+          setApiExplanation(result);
+        }
+      } catch {
+        if (!cancelled) {
+          setApiExplanation(null);
+        }
+      }
+    }
+
+    fetchExplanation();
+    return () => {
+      cancelled = true;
+    };
+  }, [revealed, question?.id, question?.text, refreshKey]);
 
   function handleReveal() {
     const result = spendAiExplainTokens();
@@ -107,7 +138,7 @@ function ExamAiExplanation({ examId, question }) {
     );
   }
 
-  const explanation = getAiExplanation(question);
+  const explanation = apiExplanation ?? getAiExplanation(question);
 
   return (
     <section className={styles.panel} aria-label="AI giải thích chi tiết" key={refreshKey}>
