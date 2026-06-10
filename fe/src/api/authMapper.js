@@ -4,11 +4,15 @@ function roleLabelFor(role) {
   return undefined;
 }
 
+const PREMIUM_PLAN = "Premium";
+const FREE_PLAN = "Basic";
+
 export function mapApiUser(dto) {
   if (!dto) return null;
 
   const role = (dto.role ?? "Student").toLowerCase();
   const displayName = dto.displayName?.trim() || dto.username || dto.email || "User";
+  const isPremium = Boolean(dto.isPremium);
 
   return {
     id: dto.id,
@@ -18,7 +22,8 @@ export function mapApiUser(dto) {
     initial: displayName.charAt(0).toUpperCase(),
     role,
     roleLabel: roleLabelFor(role),
-    isPremium: Boolean(dto.isPremium),
+    isPremium,
+    plan: isPremium ? PREMIUM_PLAN : FREE_PLAN,
     points: dto.points ?? 0,
     level: dto.levelName ?? "Bronze",
     avatarUrl: dto.avatarUrl ?? null,
