@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -24,22 +24,17 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
-import { getPostById } from "@/features/feed/feedData";
+import {
+  loadPostById,
+  removeComment,
+  submitComment,
+  toggleLike,
+} from "@/features/feed/feedData";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
 import { copyPostLink, formatDisplayTitle, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./PostDetailPage.module.css";
-
-function formatCommentTime(date) {
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-
-  return `${hours}:${minutes} ${day}/${month}/${year}`;
-}
 
 function formatShortDate(publishedAt) {
   if (!publishedAt) return "";
@@ -54,23 +49,72 @@ function PostDetailPage() {
   const { user, isPremium } = useAuth();
   const { showCopyToast } = useToast();
 
-  const post = useMemo(() => getPostById(postId), [postId]);
+  const [post, setPost] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [likes, setLikes] = useState(0);
   const [liked, setLiked] = useState(false);
   const [comments, setComments] = useState([]);
   const [draft, setDraft] = useState("");
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editCommentDraft, setEditCommentDraft] = useState("");
+  const [submittingComment, setSubmittingComment] = useState(false);
 
   useEffect(() => {
-    if (!post) return;
-    setLikes(post.likes);
-    setLiked(false);
-    setComments(post.commentsList ?? []);
-    setDraft("");
-    setEditingCommentId(null);
-    setEditCommentDraft("");
-  }, [post]);
+    let cancelled = false;
+
+    async function fetchPost() {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const data = await loadPostById(postId);
+        if (cancelled) return;
+        if (!data) {
+          setPost(null);
+          return;
+        }
+        setPost(data);
+        setLikes(data.likes);
+        setLiked(Boolean(data.isLiked));
+        setComments(data.commentsList ?? []);
+        setDraft("");
+        setEditingCommentId(null);
+        setEditCommentDraft("");
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(err.message ?? "Không tải được bài viết.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchPost();
+    return () => {
+      cancelled = true;
+    };
+  }, [postId]);
+
+  if (loading) {
+    return (
+      <div className={styles.page}>
+        <p>Đang tải bài viết...</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className={styles.page}>
+        <p role="alert">{loadError}</p>
+        <button type="button" className={styles.back} onClick={() => navigate(-1)}>
+          Quay lại
+        </button>
+      </div>
+    );
+  }
 
   if (!post) {
     return <Navigate to="/home" replace />;
@@ -81,11 +125,19 @@ function PostDetailPage() {
   const shortDate = formatShortDate(post.publishedAt);
   const displayTitle = formatDisplayTitle(post.title);
 
-  function handleLike() {
-    setLiked((prev) => {
-      setLikes((count) => (prev ? count - 1 : count + 1));
-      return !prev;
-    });
+  async function handleLike() {
+    const nextLiked = !liked;
+    setLiked(nextLiked);
+    setLikes((count) => (liked ? count - 1 : count + 1));
+
+    try {
+      const result = await toggleLike(post.id, liked);
+      setLiked(result.isLiked);
+      setLikes(result.likeCount);
+    } catch {
+      setLiked(liked);
+      setLikes(post.likes);
+    }
   }
 
   async function handleShare() {
@@ -97,24 +149,20 @@ function PostDetailPage() {
     }
   }
 
-  function handleSubmitComment() {
+  async function handleSubmitComment() {
     const content = draft.trim();
-    if (!content) return;
+    if (!content || submittingComment) return;
 
-    setComments((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        author: {
-          name: user?.displayName ?? "Anhpika",
-          initial: user?.initial ?? "A",
-          username: user?.username,
-        },
-        time: formatCommentTime(new Date()),
-        content,
-      },
-    ]);
-    setDraft("");
+    setSubmittingComment(true);
+    try {
+      const newComment = await submitComment(post.id, content);
+      setComments((prev) => [...prev, newComment]);
+      setDraft("");
+    } catch (err) {
+      window.alert(err.message ?? "Không gửi được bình luận.");
+    } finally {
+      setSubmittingComment(false);
+    }
   }
 
   function handleStartEditComment(comment) {
@@ -138,14 +186,19 @@ function PostDetailPage() {
     setEditCommentDraft("");
   }
 
-  function handleDeleteComment(commentId) {
+  async function handleDeleteComment(commentId) {
     const confirmed = window.confirm("Bạn có chắc muốn xóa bình luận này?");
     if (!confirmed) return;
 
-    setComments((prev) => prev.filter((item) => item.id !== commentId));
-    if (editingCommentId === commentId) {
-      setEditingCommentId(null);
-      setEditCommentDraft("");
+    try {
+      await removeComment(post.id, commentId);
+      setComments((prev) => prev.filter((item) => item.id !== commentId));
+      if (editingCommentId === commentId) {
+        setEditingCommentId(null);
+        setEditCommentDraft("");
+      }
+    } catch (err) {
+      window.alert(err.message ?? "Không xóa được bình luận.");
     }
   }
 
