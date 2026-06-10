@@ -206,7 +206,19 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const activatePremium = useCallback(() => {
+  const activatePremium = useCallback(async () => {
+    try {
+      if (getAccessToken()) {
+        const me = await authApi.getMe();
+        const nextUser = mapAndEnrichUser(me);
+        persistUser(nextUser);
+        setUser(nextUser);
+        return nextUser;
+      }
+    } catch {
+      /* fallback below */
+    }
+
     setUser((prev) => {
       if (!prev || resolveIsPremium(prev)) {
         return prev;

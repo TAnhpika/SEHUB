@@ -1,3 +1,13 @@
+import * as premiumApi from "@/api/premiumApi";
+import {
+  mapApiPlansToFePlans,
+  mapPaymentOrderDto,
+  mapSubscriptionStatusDto,
+  resolvePlanCodeFromFeId,
+} from "@/api/premiumMapper";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+
 /** Giá gốc tham chiếu — gói Trải nghiệm 1 tháng (SEHUB §3.8: 1m / 8m / 4y) */
 export const BASE_MONTHLY_PRICE = 49000;
 
@@ -183,4 +193,106 @@ export function buildTransactionId() {
   const date = new Date();
   const stamp = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
   return `SEH_${stamp}_CONFIRMED`;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+export function resolvePlanCode(planId) {
+  return resolvePlanCodeFromFeId(planId);
+}
+
+export async function loadPricingPlans() {
+  if (USE_MOCK) {
+    return PRICING_PLANS;
+  }
+
+  try {
+    const apiPlans = await premiumApi.getPlans();
+    if ((apiPlans ?? []).length > 0) {
+      return mapApiPlansToFePlans(apiPlans, PRICING_PLANS);
+    }
+  } catch {
+    /* fallback below */
+  }
+
+  return PRICING_PLANS;
+}
+
+export async function loadPlanById(planId) {
+  const plans = await loadPricingPlans();
+  return plans.find((plan) => plan.id === planId) ?? getPlanById(planId);
+}
+
+export async function createCheckoutOrder(planId) {
+  if (USE_MOCK) {
+    return null;
+  }
+
+  const planCode = resolvePlanCode(planId);
+  if (!planCode) {
+    return null;
+  }
+
+  const dto = await premiumApi.createOrder({ planCode });
+  return mapPaymentOrderDto(dto);
+}
+
+export async function getCheckoutOrder(orderId) {
+  if (USE_MOCK || !orderId) {
+    return null;
+  }
+
+  const dto = await premiumApi.getOrder(orderId);
+  return mapPaymentOrderDto(dto);
+}
+
+export async function loadSubscriptionStatus() {
+  if (USE_MOCK) {
+    return { isActive: false, expiresAt: null, planName: null };
+  }
+
+  try {
+    const dto = await premiumApi.getSubscription();
+    return mapSubscriptionStatusDto(dto);
+  } catch {
+    return { isActive: false, expiresAt: null, planName: null };
+  }
+}
+
+export async function pollPremiumActivation(orderId, { maxAttempts = 40, intervalMs = 3000 } = {}) {
+  if (USE_MOCK) {
+    return false;
+  }
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    if (orderId) {
+      try {
+        const order = await getCheckoutOrder(orderId);
+        if (order?.status === "Paid") {
+          return true;
+        }
+      } catch {
+        /* continue polling */
+      }
+    }
+
+    try {
+      const subscription = await loadSubscriptionStatus();
+      if (subscription.isActive) {
+        return true;
+      }
+    } catch {
+      /* continue polling */
+    }
+
+    if (attempt < maxAttempts - 1) {
+      await sleep(intervalMs);
+    }
+  }
+
+  return false;
 }
