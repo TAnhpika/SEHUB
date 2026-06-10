@@ -14,6 +14,11 @@ export function getExamFocusDoPath(courseCode, examId) {
   return `${FOCUS_FINAL_BASE}/${courseCode}/${encodeURIComponent(examId)}/do`;
 }
 
+export function getExamResultPath(courseCode, examId, scope = "home") {
+  return `${getExamDetailPath(courseCode, examId, scope, "review")}/result`;
+}
+
+/** @deprecated URL focus cũ — dùng getExamResultPath; redirect qua ExamFocusResultRedirect */
 export function getExamFocusResultPath(courseCode, examId) {
   return `${FOCUS_FINAL_BASE}/${courseCode}/${encodeURIComponent(examId)}/result`;
 }

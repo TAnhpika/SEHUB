@@ -51,7 +51,7 @@ import {
 } from "@/features/exams/examReviewSessionStore";
 import {
   getExamFocusDoPath,
-  getExamFocusResultPath,
+  getExamResultPath,
   getPracticeDoPath,
   getPracticeResultPath,
 } from "@/utils/examFocusPaths";
@@ -60,7 +60,7 @@ import styles from "./ExamDetailPage.module.css";
 function ExamDetailPage({ page }) {
   const { courseCode, examId } = useParams();
   const navigate = useNavigate();
-  const { pathname, search } = useLocation();
+  const { pathname, search, state: locationState } = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { showToast } = useToast();
   const { requirePremium } = useRequirePremium();
@@ -86,6 +86,13 @@ function ExamDetailPage({ page }) {
     setCurrentIndex(0);
     setSessionTick(0);
   }, [decodedExamId]);
+
+  useEffect(() => {
+    const questionIndex = Number(locationState?.questionIndex);
+    if (!Number.isFinite(questionIndex) || questionIndex < 0) return;
+    if (questionIndex >= questions.length) return;
+    setCurrentIndex(questionIndex);
+  }, [decodedExamId, locationState?.questionIndex, questions.length]);
 
   const isReviewExam = page === "review";
 
@@ -211,7 +218,7 @@ function ExamDetailPage({ page }) {
       navigate(getPracticeResultPath(exam.courseCode, exam.id, currentIndex + 1, scope));
       return;
     }
-    navigate(getExamFocusResultPath(exam.courseCode, exam.id), { state: { scope } });
+    navigate(getExamResultPath(exam.courseCode, exam.id, scope));
   }
 
   return (
