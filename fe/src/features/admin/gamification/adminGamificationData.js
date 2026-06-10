@@ -4,6 +4,14 @@ import {
   validatePointRulePayload,
   validateRankPayload,
 } from "@/features/admin/gamification/adminGamificationPolicy";
+import * as adminApi from "@/api/adminApi";
+import {
+  mapBadgeAdminDto,
+  mapLevelConfigToRankTier,
+  mapRankTiersToUpdateLevelsRequest,
+} from "@/api/adminMapper";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 function nowIso() {
   return new Date().toISOString();
@@ -432,4 +440,41 @@ export function getActiveRankThresholds() {
   return getRankTiers()
     .filter((r) => r.active)
     .map((r) => ({ name: r.name, minPoints: r.minPoints }));
+}
+
+export async function hydrateGamificationFromApi() {
+  if (USE_MOCK) {
+    return;
+  }
+
+  try {
+    const levels = await adminApi.getGamificationLevels();
+    if ((levels ?? []).length > 0) {
+      ranksStore = levels.map(mapLevelConfigToRankTier);
+    }
+  } catch {
+    /* keep mock ranks */
+  }
+
+  try {
+    const badges = await adminApi.getGamificationBadges();
+    if ((badges ?? []).length > 0) {
+      badgesStore = badges.map(mapBadgeAdminDto);
+    }
+  } catch {
+    /* keep mock badges */
+  }
+}
+
+export async function saveRankTiersToApi() {
+  if (USE_MOCK) {
+    return { ok: true };
+  }
+
+  try {
+    await adminApi.updateGamificationLevels(mapRankTiersToUpdateLevelsRequest(getRankTiers()));
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: error?.message ?? "Không lưu được cấp hạng." };
+  }
 }
