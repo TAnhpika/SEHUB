@@ -1,6 +1,10 @@
 import { MAJORS, SEMESTERS } from "@/features/posts/createPostData";
+import * as postsApi from "@/api/postsApi";
+import { mapComment, mapPostDetail, mapPostListItem } from "@/api/feedMapper";
+import { isValidGuid } from "@/features/feed/postUtils";
 
 export const POSTS_PER_PAGE = 5;
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 const AUTHORS = [
   { username: "lamnv_dev", club: "CLB JS Club", initial: "L" },
@@ -130,5 +134,106 @@ export function getPostById(postId) {
   const id = Number(postId);
   if (!Number.isFinite(id)) return null;
   return MOCK_POSTS.find((post) => post.id === id) ?? null;
+}
+
+export async function loadPosts(options = {}) {
+  if (USE_MOCK) {
+    return { items: [...MOCK_POSTS], totalCount: MOCK_POSTS.length };
+  }
+
+  const { page = 1, pageSize = 100, semester, major, tag, search } = options;
+  const data = await postsApi.listPosts({ page, pageSize, semester, major, tag, search });
+
+  return {
+    items: (data.items ?? []).map(mapPostListItem),
+    totalCount: data.totalCount ?? 0,
+    page: data.page,
+    pageSize: data.pageSize,
+    totalPages: data.totalPages,
+  };
+}
+
+export async function loadPostById(postId) {
+  if (USE_MOCK) {
+    return getPostById(postId);
+  }
+
+  const id = String(postId ?? "").trim();
+  if (!isValidGuid(id)) return null;
+
+  const [detail, commentsResult] = await Promise.all([
+    postsApi.getPost(id),
+    postsApi.listComments(id, { page: 1, pageSize: 50 }),
+  ]);
+
+  const commentsList = (commentsResult.items ?? []).map(mapComment);
+  return mapPostDetail(detail, commentsList);
+}
+
+export async function submitPost({ title, content, tags }) {
+  if (USE_MOCK) {
+    return {
+      id: Date.now(),
+      title,
+      body: content,
+      excerpt: content.slice(0, 200),
+      tags: tags ?? [],
+      author: { username: "mock", initial: "M" },
+      likes: 0,
+      comments: 0,
+      views: 0,
+      commentsList: [],
+    };
+  }
+
+  const data = await postsApi.createPost({ title, content, tags });
+  return mapPostDetail(data, []);
+}
+
+export async function savePost(postId, { title, content, tags }) {
+  if (USE_MOCK) {
+    return { id: postId, title, body: content, excerpt: content, tags: tags ?? [] };
+  }
+
+  const data = await postsApi.updatePost(postId, { title, content, tags });
+  return mapPostDetail(data);
+}
+
+export async function removePost(postId) {
+  if (USE_MOCK) return;
+  await postsApi.deletePost(postId);
+}
+
+export async function toggleLike(postId, isLiked) {
+  if (USE_MOCK) {
+    return { isLiked: !isLiked, likeCount: 0 };
+  }
+
+  const data = isLiked ? await postsApi.unlikePost(postId) : await postsApi.likePost(postId);
+  return { isLiked: data.isLiked, likeCount: data.likeCount };
+}
+
+export async function submitComment(postId, content) {
+  if (USE_MOCK) {
+    return {
+      id: Date.now(),
+      content,
+      author: { name: "Mock", initial: "M" },
+      time: new Date().toISOString(),
+    };
+  }
+
+  const data = await postsApi.createComment(postId, { content });
+  return mapComment(data);
+}
+
+export async function removeComment(postId, commentId) {
+  if (USE_MOCK) return;
+  await postsApi.deleteComment(postId, commentId);
+}
+
+export async function submitReport(postId, reason) {
+  if (USE_MOCK) return;
+  await postsApi.reportPost(postId, { reason });
 }
 
