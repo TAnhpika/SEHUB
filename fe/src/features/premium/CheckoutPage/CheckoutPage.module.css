@@ -6,6 +6,13 @@
   padding-bottom: 2rem;
 }
 
+.loading {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+}
+
 .topbar {
   display: flex;
   align-items: center;
@@ -235,10 +242,28 @@
   color: var(--color-text);
 }
 
+.qr-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+}
+
 .qr p {
   font-size: 0.75rem;
   line-height: 1.5;
   color: var(--color-text-subtle);
+}
+
+.payosLink {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--color-text-subtle);
+  word-break: break-all;
+}
+
+.payosLink a {
+  color: var(--color-primary);
 }
 
 .transfer {
