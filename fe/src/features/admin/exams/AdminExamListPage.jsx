@@ -16,6 +16,7 @@ import {
   getAdminPendingExams,
   getSemesterLabel,
   getTrackLabel,
+  loadAdminExams,
   removeAdminExam,
 } from "@/features/admin/exams/adminExamData";
 import { getSubmissionCountByCourseCode } from "@/features/exams/practiceExamSubmissions";
@@ -79,6 +80,16 @@ function AdminExamListPage() {
   const [sortDir, setSortDir] = useState("desc");
   const [page, setPage] = useState(1);
   const [deleteId, setDeleteId] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadAdminExams().then((items) => {
+      if (!cancelled) setExams(items);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const pendingCount = getAdminPendingExams().length;
   const sortPresetValue = `${sortBy}:${sortDir}`;

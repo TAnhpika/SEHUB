@@ -1,7 +1,12 @@
 /** Mock data & helpers — quản lý đề thi Admin */
 
+import * as adminApi from "@/api/adminApi";
+import { mapAdminExamDetail, mapAdminExamListItem } from "@/api/adminMapper";
 import { addAdminDocumentFromApprovedExam } from "@/features/admin/documents/adminDocumentData";
 import { getSubmissionsByCourseCode } from "@/features/exams/practiceExamSubmissions";
+import { isValidGuid } from "@/features/feed/postUtils";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 export const ADMIN_EXAMS_PAGE_SIZE = 5;
 
@@ -520,4 +525,37 @@ export function getSemesterLabel(id) {
 
 export function getTrackLabel(id) {
   return EXAM_TRACKS.find((t) => t.id === id)?.label ?? id;
+}
+
+export async function loadAdminExams() {
+  if (USE_MOCK) {
+    return getAdminExams();
+  }
+
+  try {
+    const page = await adminApi.listExams({ pageSize: 100 });
+    const apiExams = (page.items ?? []).map(mapAdminExamListItem);
+    if (apiExams.length > 0) {
+      examsStore = apiExams.map((exam) => ({ ...exam }));
+      return apiExams;
+    }
+  } catch {
+    /* fallback below */
+  }
+
+  return getAdminExams();
+}
+
+export async function loadAdminExamById(id) {
+  const mockExam = getAdminExamById(id);
+  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+    return mockExam;
+  }
+
+  try {
+    const dto = await adminApi.getExam(id);
+    return mapAdminExamDetail(dto);
+  } catch {
+    return mockExam;
+  }
 }

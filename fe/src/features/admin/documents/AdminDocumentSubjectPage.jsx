@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCloudArrowUp } from "@fortawesome/free-solid-svg-icons";
@@ -10,6 +10,7 @@ import { getSemesterLabel } from "@/features/admin/exams/adminExamData";
 import {
   addAdminDocument,
   getAdminDocumentsBySubject,
+  loadAdminDocuments,
   removeAdminDocument,
   updateAdminDocument,
 } from "@/features/admin/documents/adminDocumentData";
@@ -38,6 +39,10 @@ function AdminDocumentSubjectPage() {
   const [uploadPages, setUploadPages] = useState(String(DEFAULT_UPLOAD_PAGES));
   const [uploadFileName, setUploadFileName] = useState("");
   const [editingDoc, setEditingDoc] = useState(null);
+
+  useEffect(() => {
+    loadAdminDocuments();
+  }, [refreshKey]);
 
   const documents = useMemo(
     () => getAdminDocumentsBySubject(code, semester),
