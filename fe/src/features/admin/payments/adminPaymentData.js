@@ -10,6 +10,11 @@ import {
   revokePremiumFromPayment,
 } from "@/features/admin/users/adminUserStore";
 import { grantVoucherFromPayment } from "@/features/admin/vouchers/adminVoucherData";
+import * as adminApi from "@/api/adminApi";
+import { mapAdminPaymentListItem } from "@/api/adminMapper";
+import { isValidGuid } from "@/features/feed/postUtils";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 /** @typedef {'pending_payment' | 'webhook_ok' | 'activated' | 'failed' | 'refunded'} PaymentStatus */
 /** @typedef {'payos_confirm' | 'manual_token' | 'manual_premium' | 'payos_refund'} AuditActionType */
@@ -385,4 +390,54 @@ export function processPayOsRefund({
       : `Đã hoàn ${formatVnd(payment.amount)} cho @${payment.username} (${payment.payosOrderId}). Lưu ý: ${revokeResult.message}`,
     audit: entry,
   };
+}
+
+export async function loadAdminPayments() {
+  if (USE_MOCK) {
+    return getAdminPayments();
+  }
+
+  try {
+    const page = await adminApi.listPayments({ pageSize: 100 });
+    const apiPayments = (page.items ?? []).map((item) => enrichPayment(mapAdminPaymentListItem(item)));
+    if (apiPayments.length > 0) {
+      return apiPayments;
+    }
+  } catch {
+    /* fallback below */
+  }
+
+  return getAdminPayments();
+}
+
+export async function loadPaymentById(id) {
+  const mockPayment = getPaymentById(id);
+  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+    return mockPayment;
+  }
+
+  try {
+    const dto = await adminApi.getPayment(id);
+    return enrichPayment(mapAdminPaymentListItem(dto));
+  } catch {
+    return mockPayment;
+  }
+}
+
+export async function confirmPayOsPaymentViaApi(paymentId, adminUsername = "admin_sehub", note = "") {
+  const payment = getPaymentById(paymentId) ?? (await loadPaymentById(paymentId));
+  if (!payment) {
+    return { ok: false, message: "Không tìm thấy giao dịch." };
+  }
+
+  if (USE_MOCK || !isValidGuid(String(payment.apiId ?? payment.id ?? ""))) {
+    return confirmPayOsPayment(paymentId, adminUsername);
+  }
+
+  try {
+    await adminApi.confirmPayment(payment.apiId ?? payment.id, { note });
+    return confirmPayOsPayment(paymentId, adminUsername);
+  } catch (error) {
+    return { ok: false, message: error?.message ?? "Không xác nhận được thanh toán." };
+  }
 }

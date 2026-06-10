@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import Button from "@/common/Button/Button";
@@ -18,7 +18,7 @@ import RefundedPaymentsPanel from "@/features/admin/payments/RefundedPaymentsPan
 
 import {
 
-  confirmPayOsPayment,
+  confirmPayOsPaymentViaApi,
 
   getAdminPayments,
 
@@ -31,6 +31,8 @@ import {
   getPaymentStats,
 
   grantManualTokens,
+
+  loadAdminPayments,
 
   processPayOsRefund,
 
@@ -112,12 +114,19 @@ function AdminPaymentListPage() {
   const [statusFilter, setStatusFilter] = useState("all");
 
   const [search, setSearch] = useState("");
+  const [payments, setPayments] = useState(getAdminPayments);
 
+  useEffect(() => {
+    let cancelled = false;
+    loadAdminPayments().then((items) => {
+      if (!cancelled) setPayments(items);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
 
-
-  const payments = useMemo(() => getAdminPayments(), [refreshKey]);
-
-  const stats = useMemo(() => getPaymentStats(), [refreshKey]);
+  const stats = useMemo(() => getPaymentStats(), [refreshKey, payments]);
 
   const auditLog = useMemo(() => getPaymentAuditLog(), [refreshKey]);
 
@@ -197,19 +206,21 @@ function AdminPaymentListPage() {
 
   function handleConfirmPayment(paymentId) {
 
-    const result = confirmPayOsPayment(paymentId, user?.username ?? "admin_sehub");
+    confirmPayOsPaymentViaApi(paymentId, user?.username ?? "admin_sehub").then((result) => {
 
-    if (result.ok) {
+      if (result.ok) {
 
-      showToast(result.message);
+        showToast(result.message);
 
-      bump();
+        bump();
 
-    } else {
+      } else {
 
-      showToast(result.message);
+        showToast(result.message);
 
-    }
+      }
+
+    });
 
   }
 
