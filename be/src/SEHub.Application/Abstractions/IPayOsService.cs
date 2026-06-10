@@ -4,7 +4,13 @@ namespace SEHub.Application.Abstractions;
 
 public interface IPayOsService
 {
-    Task<PayOsOrderResult> CreatePaymentLinkAsync(Guid orderId, string payOsOrderCode, decimal amount, string description, CancellationToken cancellationToken = default);
+    Task<PayOsOrderResult> CreatePaymentLinkAsync(
+        Guid orderId,
+        string payOsOrderCode,
+        decimal amount,
+        string description,
+        PayOsCheckoutUrls? checkoutUrls = null,
+        CancellationToken cancellationToken = default);
     bool VerifyWebhookSignature(string rawBody, string signature);
 }
 

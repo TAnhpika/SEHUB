@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AutoMapper;
+using Microsoft.Extensions.Configuration;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Contracts.Premium;
@@ -17,6 +18,7 @@ public sealed class PremiumService : IPremiumService
     private readonly ISubscriptionService _subscriptionService;
     private readonly IPayOsService _payOsService;
     private readonly ICurrentUserService _currentUser;
+    private readonly IConfiguration _configuration;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
@@ -27,6 +29,7 @@ public sealed class PremiumService : IPremiumService
         ISubscriptionService subscriptionService,
         IPayOsService payOsService,
         ICurrentUserService currentUser,
+        IConfiguration configuration,
         IUnitOfWork unitOfWork,
         IMapper mapper)
     {
@@ -36,6 +39,7 @@ public sealed class PremiumService : IPremiumService
         _subscriptionService = subscriptionService;
         _payOsService = payOsService;
         _currentUser = currentUser;
+        _configuration = configuration;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
@@ -53,13 +57,15 @@ public sealed class PremiumService : IPremiumService
             ?? throw new NotFoundException($"Plan '{request.PlanCode}' was not found.");
 
         var orderId = Guid.NewGuid();
-        var payOsOrderCode = $"{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}{orderId.ToString()[..8]}";
+        var payOsOrderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+        var checkoutUrls = BuildCheckoutUrls(orderId, plan.Code);
 
         var payOsResult = await _payOsService.CreatePaymentLinkAsync(
             orderId,
             payOsOrderCode,
             plan.PriceVnd,
             $"SEHub Premium - {plan.Name}",
+            checkoutUrls,
             cancellationToken);
 
         var order = new PaymentOrder
@@ -120,5 +126,28 @@ public sealed class PremiumService : IPremiumService
         QrUrl = order.QrUrl,
         CheckoutUrl = checkoutUrl,
         ExpiredAt = order.ExpiredAt
+    };
+
+    private PayOsCheckoutUrls BuildCheckoutUrls(Guid orderId, string planCode)
+    {
+        var frontendBase = _configuration["PayOS:FrontendBaseUrl"]
+            ?? _configuration["Cors:AllowedOrigins:0"]
+            ?? "http://localhost:5173";
+        frontendBase = frontendBase.TrimEnd('/');
+        var fePlanId = MapPlanCodeToFePlanId(planCode);
+
+        return new PayOsCheckoutUrls
+        {
+            ReturnUrl = $"{frontendBase}/home/premium/success/{fePlanId}?orderId={orderId:D}",
+            CancelUrl = $"{frontendBase}/home/premium/checkout/{fePlanId}",
+        };
+    }
+
+    private static string MapPlanCodeToFePlanId(string planCode) => planCode.ToLowerInvariant() switch
+    {
+        "1m" => "trial",
+        "8m" => "semester",
+        "4y" => "full",
+        _ => "trial",
     };
 }
