@@ -94,6 +94,20 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
 
 
+        if (root.TryGetProperty("code", out var codeElement)
+
+            && !string.Equals(codeElement.GetString(), "00", StringComparison.Ordinal))
+
+        {
+
+            _logger.LogInformation("PayOS webhook ignored with code {Code}", codeElement.GetString());
+
+            return true;
+
+        }
+
+
+
         if (!root.TryGetProperty("data", out var data)
 
             || !data.TryGetProperty("orderCode", out var orderCodeElement))
@@ -170,9 +184,23 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
             {
 
-                _logger.LogWarning("PayOS webhook order not found: {OrderCode}", orderCode);
+                _logger.LogWarning(
 
-                return false;
+                    "PayOS webhook order not found: {OrderCode} — treating as URL verification or unknown order",
+
+                    orderCode);
+
+                if (transaction is not null)
+
+                {
+
+                    await transaction.CommitAsync(cancellationToken);
+
+                }
+
+
+
+                return true;
 
             }
 

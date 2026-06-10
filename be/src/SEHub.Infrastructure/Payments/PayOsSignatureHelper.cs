@@ -74,6 +74,32 @@ internal static class PayOsSignatureHelper
 
 
 
+    public static string CreatePaymentRequestSignature(
+
+        long orderCode,
+
+        int amount,
+
+        string description,
+
+        string returnUrl,
+
+        string cancelUrl,
+
+        string checksumKey)
+
+    {
+
+        var dataString =
+
+            $"amount={amount}&cancelUrl={cancelUrl}&description={description}&orderCode={orderCode}&returnUrl={returnUrl}";
+
+        return ComputeHmacSha256Hex(dataString, checksumKey);
+
+    }
+
+
+
     private static string FormatValue(JsonElement value) => value.ValueKind switch
 
     {

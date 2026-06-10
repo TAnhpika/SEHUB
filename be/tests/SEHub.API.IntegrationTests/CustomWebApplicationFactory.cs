@@ -30,6 +30,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     public static readonly Guid PendingPaymentOrderId = Guid.Parse("44444444-4444-4444-4444-444444444444");
     public const string PayOsOrderCode = "9876543210";
     public const string WebhookReference = "payos-ref-001";
+    public const string SoftDeletedPostTitle = "Soft Deleted Post Should Not Appear";
+    public static readonly Guid SoftDeletedPostId = Guid.Parse("55555555-5555-5555-5555-555555555555");
 
     private readonly string _databaseName = Guid.NewGuid().ToString();
 
@@ -183,7 +185,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             });
         }
 
-        if (!await context.Posts.AnyAsync())
+        if (!await context.Posts.AnyAsync(p => p.Id != SoftDeletedPostId))
         {
             context.Posts.Add(new Post
             {
@@ -193,6 +195,23 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 Content = "Published post for integration tests.",
                 Tags = "test",
                 Status = PostStatus.Published,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        if (!await context.Posts.AnyAsync(p => p.Id == SoftDeletedPostId))
+        {
+            context.Posts.Add(new Post
+            {
+                Id = SoftDeletedPostId,
+                AuthorId = FreeUserId,
+                Title = SoftDeletedPostTitle,
+                Content = "This post is soft-deleted and must not appear in public listings.",
+                Tags = "test",
+                Status = PostStatus.Published,
+                IsDeleted = true,
+                DeletedAt = DateTime.UtcNow,
+                DeletedById = FreeUserId,
                 CreatedAt = DateTime.UtcNow
             });
         }
