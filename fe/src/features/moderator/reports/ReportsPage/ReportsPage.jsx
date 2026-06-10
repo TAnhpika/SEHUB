@@ -13,8 +13,10 @@ import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import {
   filterReports,
+  getCommunityReportsMock,
+  loadModeratorCommunityReports,
   REASON_META,
-  REPORTS_MOCK,
+  reloadModeratorCommunityReportsAfterResolve,
 } from "@/features/moderator/reports/reportsData";
 import {
   getExamQuestionReports,
@@ -75,15 +77,23 @@ function TrustScore({ score }) {
 function ReportsPage() {
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [communityReports, setCommunityReports] = useState(() =>
-    REPORTS_MOCK.map((report) => ({ ...report, category: "community" })),
-  );
+  const [communityReports, setCommunityReports] = useState(getCommunityReportsMock);
   const [examReports, setExamReports] = useState(getExamQuestionReports);
   const [tab, setTab] = useState("pending");
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [lastResolved, setLastResolved] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadModeratorCommunityReports().then((items) => {
+      if (!cancelled) setCommunityReports(items);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     function refreshExamReports() {
@@ -161,7 +171,7 @@ function ReportsPage() {
     );
   }
 
-  function resolveReport(id, resolution) {
+  function resolveReportLocal(id, resolution) {
     const target = reports.find((report) => report.id === id);
     if (target?.category === "exam_question") {
       resolveExamQuestionReport(id, resolution);
@@ -179,27 +189,48 @@ function ReportsPage() {
     }
   }
 
-  function handleDismiss(id) {
+  async function handleDismiss(id) {
     const target = reports.find((report) => report.id === id);
-    resolveReport(id, "ignored");
+    if (target?.category === "exam_question") {
+      resolveReportLocal(id, "ignored");
+    } else {
+      const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "dismiss");
+      if (reloaded) {
+        setCommunityReports(reloaded);
+        if (target) {
+          setLastResolved({ ...target, status: "resolved", resolution: "ignored" });
+        }
+      } else {
+        resolveReportLocal(id, "ignored");
+      }
+    }
     showToast(
       target?.category === "exam_question"
         ? "Đã bỏ qua — giữ nguyên câu hỏi trong ngân hàng đề."
-        : "Đã bỏ qua báo cáo — giữ nguyên nội dung (mock).",
+        : "Đã bỏ qua báo cáo — giữ nguyên nội dung.",
     );
     const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
     setSelectedId(nextPending[0]?.id ?? null);
   }
 
-  function handleDelete(id) {
-    resolveReport(id, "deleted");
-    showToast("Đã xóa nội dung vi phạm (mock).");
+  async function handleDelete(id) {
+    const target = reports.find((report) => report.id === id);
+    const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "delete");
+    if (reloaded) {
+      setCommunityReports(reloaded);
+      if (target) {
+        setLastResolved({ ...target, status: "resolved", resolution: "deleted" });
+      }
+    } else {
+      resolveReportLocal(id, "deleted");
+    }
+    showToast("Đã xóa nội dung vi phạm.");
     const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
     setSelectedId(nextPending[0]?.id ?? null);
   }
 
   function handleForwardExamReport(id) {
-    resolveReport(id, "forwarded_admin");
+    resolveReportLocal(id, "forwarded_admin");
     showToast("Đã ghi nhận — chuyển Admin duyệt chỉnh sửa đề thi.");
     const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
     setSelectedId(nextPending[0]?.id ?? null);
