@@ -32,6 +32,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     public const string WebhookReference = "payos-ref-001";
     public const string SoftDeletedPostTitle = "Soft Deleted Post Should Not Appear";
     public static readonly Guid SoftDeletedPostId = Guid.Parse("55555555-5555-5555-5555-555555555555");
+    public static readonly Guid RejectedPostId = Guid.Parse("66666666-6666-6666-6666-666666666666");
+    public const string TaggedPostTitle = "CSharp Tagged Post";
+    public const string RejectedPostTitle = "Rejected Post For Resubmit";
 
     private readonly string _databaseName = Guid.NewGuid().ToString();
 
@@ -181,11 +184,22 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             {
                 Id = Guid.NewGuid(),
                 UserId = FreeUserId,
+                Major = "SE",
+                Semester = 1,
                 CreatedAt = DateTime.UtcNow
             });
         }
+        else
+        {
+            var profile = await context.UserProfiles.FirstOrDefaultAsync(p => p.UserId == FreeUserId);
+            if (profile is not null)
+            {
+                profile.Major = "SE";
+                profile.Semester = 1;
+            }
+        }
 
-        if (!await context.Posts.AnyAsync(p => p.Id != SoftDeletedPostId))
+        if (!await context.Posts.AnyAsync(p => p.Id != SoftDeletedPostId && p.Id != RejectedPostId))
         {
             context.Posts.Add(new Post
             {
@@ -195,6 +209,34 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 Content = "Published post for integration tests.",
                 Tags = "test",
                 Status = PostStatus.Published,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        if (!await context.Posts.AnyAsync(p => p.Title == TaggedPostTitle))
+        {
+            context.Posts.Add(new Post
+            {
+                Id = Guid.NewGuid(),
+                AuthorId = FreeUserId,
+                Title = TaggedPostTitle,
+                Content = "Post used for tag filter integration tests.",
+                Tags = "csharp,integration",
+                Status = PostStatus.Published,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        if (!await context.Posts.AnyAsync(p => p.Id == RejectedPostId))
+        {
+            context.Posts.Add(new Post
+            {
+                Id = RejectedPostId,
+                AuthorId = FreeUserId,
+                Title = RejectedPostTitle,
+                Content = "Rejected post awaiting author resubmit.",
+                Tags = "rejected",
+                Status = PostStatus.Rejected,
                 CreatedAt = DateTime.UtcNow
             });
         }
