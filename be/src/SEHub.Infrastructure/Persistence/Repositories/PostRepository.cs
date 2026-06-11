@@ -21,17 +21,42 @@ public class PostRepository : IPostRepository
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
-            dbQuery = dbQuery.Where(p => p.Title.Contains(query.Search) || p.Content.Contains(query.Search));
+            var term = query.Search.Trim();
+            dbQuery = dbQuery.Where(p => p.Title.Contains(term) || p.Content.Contains(term));
         }
 
         if (!string.IsNullOrWhiteSpace(query.Tag))
         {
-            dbQuery = dbQuery.Where(p => p.Tags.Contains(query.Tag));
+            var tag = query.Tag.Trim();
+            dbQuery = dbQuery.Where(p => p.Tags.Contains(tag));
         }
 
+        if (!string.IsNullOrWhiteSpace(query.Major))
+        {
+            var major = query.Major.Trim();
+            dbQuery = dbQuery.Where(p =>
+                _context.UserProfiles.Any(up => up.UserId == p.AuthorId && up.Major == major));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Semester) && int.TryParse(query.Semester.Trim(), out var semester))
+        {
+            dbQuery = dbQuery.Where(p =>
+                _context.UserProfiles.Any(up => up.UserId == p.AuthorId && up.Semester == semester));
+        }
+
+        var sortDescending = !string.Equals(query.SortDir, "asc", StringComparison.OrdinalIgnoreCase);
+        var orderedQuery = (query.SortBy?.Trim().ToLowerInvariant()) switch
+        {
+            "title" => sortDescending
+                ? dbQuery.OrderByDescending(p => p.Title)
+                : dbQuery.OrderBy(p => p.Title),
+            _ => sortDescending
+                ? dbQuery.OrderByDescending(p => p.CreatedAt)
+                : dbQuery.OrderBy(p => p.CreatedAt),
+        };
+
         var total = await dbQuery.CountAsync(cancellationToken);
-        var items = await dbQuery
-            .OrderByDescending(p => p.CreatedAt)
+        var items = await orderedQuery
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
             .ToListAsync(cancellationToken);
