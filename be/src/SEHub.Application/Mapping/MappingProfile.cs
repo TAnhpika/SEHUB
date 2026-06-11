@@ -2,7 +2,6 @@ using AutoMapper;
 using SEHub.Application.Models;
 using SEHub.Contracts.Auth;
 using SEHub.Contracts.Documents;
-using SEHub.Contracts.Feed;
 using SEHub.Contracts.Exams;
 using SEHub.Contracts.Premium;
 using SEHub.Contracts.Admin;
@@ -16,13 +15,6 @@ public sealed class MappingProfile : Profile
     public MappingProfile()
     {
         CreateMap<UserAccount, AuthUserDto>();
-
-        CreateMap<Post, PostListItemDto>()
-            .ForMember(d => d.Excerpt, o => o.MapFrom(s => s.Content.Length > 200 ? s.Content.Substring(0, 200) + "..." : s.Content))
-            .ForMember(d => d.Tags, o => o.MapFrom(s => ParseTags(s.Tags)))
-            .ForMember(d => d.Author, o => o.Ignore())
-            .ForMember(d => d.LikeCount, o => o.Ignore())
-            .ForMember(d => d.CommentCount, o => o.Ignore());
 
         CreateMap<Exam, ExamListItemDto>()
             .ForMember(d => d.ExamType, o => o.MapFrom(s => s.ExamType.ToString()))
@@ -53,7 +45,4 @@ public sealed class MappingProfile : Profile
 
         CreateMap<SubscriptionPlan, SubscriptionPlanDto>();
     }
-
-    private static IReadOnlyList<string> ParseTags(string tags) =>
-        string.IsNullOrWhiteSpace(tags) ? [] : tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }
