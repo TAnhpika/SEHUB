@@ -126,6 +126,11 @@ public sealed class PostService : IPostService
         post.Title = request.Title;
         post.Content = request.Content;
         post.Tags = string.Join(',', request.Tags ?? []);
+        if (post.Status == PostStatus.Rejected)
+        {
+            post.Status = PostStatus.Pending;
+        }
+
         post.UpdatedAt = DateTime.UtcNow;
 
         await _postRepository.UpdateAsync(post, cancellationToken);
