@@ -87,10 +87,66 @@ GET {{api}}/auth/me
 Authorization: Bearer {{token}}
 
 ### Feed (guest-readable list; like/comment need token)
+# @name getPosts
 GET {{api}}/posts?page=1&pageSize=10
+
+### Feed — filter by tag, major, semester, search
+GET {{api}}/posts?page=1&pageSize=10&tag=demo-seed&major=SE&semester=1&search=SEHUB
 
 ### Featured posts
 GET {{api}}/posts/featured
+
+### Post detail (guest)
+# @name getPostDetail
+GET {{api}}/posts/{{getPosts.response.body.data.items[0].id}}
+
+### Create post (student)
+# @name createFeedPost
+POST {{api}}/posts
+Authorization: Bearer {{loginFreeStudent.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+  "title": "Chia sẻ kinh nghiệm ôn SE",
+  "content": "Markdown content up to 10k chars.",
+  "tags": ["sehub", "exam"]
+}
+
+### Like / unlike post
+POST {{api}}/posts/{{createFeedPost.response.body.data.id}}/like
+Authorization: Bearer {{loginFreeStudent.response.body.data.accessToken}}
+
+DELETE {{api}}/posts/{{createFeedPost.response.body.data.id}}/like
+Authorization: Bearer {{loginFreeStudent.response.body.data.accessToken}}
+
+### Comments
+GET {{api}}/posts/{{createFeedPost.response.body.data.id}}/comments?page=1&pageSize=20
+
+POST {{api}}/posts/{{createFeedPost.response.body.data.id}}/comments
+Authorization: Bearer {{loginFreeStudent.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+  "content": "Bài viết hữu ích!"
+}
+
+### Report post
+POST {{api}}/posts/{{createFeedPost.response.body.data.id}}/report
+Authorization: Bearer {{loginFreeStudent.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+  "reason": "Spam / misleading"
+}
+
+### Feature post (moderator)
+PATCH {{api}}/posts/{{createFeedPost.response.body.data.id}}/feature
+Authorization: Bearer {{loginModerator.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+  "isFeatured": true
+}
 
 ### Moderation — pending reports
 GET {{api}}/admin/moderation/reports?status=Pending&page=1&pageSize=20
