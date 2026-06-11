@@ -69,6 +69,9 @@ public static class DependencyInjection
         services.AddScoped<IValidator<VerifySmsOtpRequest>, VerifySmsOtpRequestValidator>();
         services.AddScoped<IValidator<GoogleAuthRequest>, GoogleAuthRequestValidator>();
         services.AddScoped<IValidator<CreatePostRequest>, CreatePostRequestValidator>();
+        services.AddScoped<IValidator<UpdatePostRequest>, UpdatePostRequestValidator>();
+        services.AddScoped<IValidator<CreateCommentRequest>, CreateCommentRequestValidator>();
+        services.AddScoped<IValidator<ReportPostRequest>, ReportPostRequestValidator>();
         services.AddScoped<IValidator<SaveAnswersRequest>, SaveAnswersRequestValidator>();
         services.AddScoped<IValidator<SubmitPracticeRequest>, SubmitPracticeRequestValidator>();
         services.AddScoped<IValidator<UpdateProfileRequest>, UpdateProfileRequestValidator>();
