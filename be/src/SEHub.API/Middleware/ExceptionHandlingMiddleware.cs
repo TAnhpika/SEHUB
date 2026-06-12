@@ -89,6 +89,11 @@ public sealed class ExceptionHandlingMiddleware
                 domain.Message,
                 [new ApiError(string.Empty, domain.Message)]),
 
+            EmailDeliveryException emailDelivery => (
+                StatusCodes.Status503ServiceUnavailable,
+                emailDelivery.Message,
+                [new ApiError("email", ErrorCodes.EmailDeliveryFailed)]),
+
             _ => (
                 StatusCodes.Status500InternalServerError,
                 "Đã xảy ra lỗi hệ thống",

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.RateLimiting;
 using SEHub.API.Extensions;
+using SEHub.API.Hubs;
 using SEHub.API.Middleware;
 using SEHub.Application;
 using SEHub.Infrastructure;
@@ -38,6 +39,7 @@ app.UseMiddleware<BannedUserMiddleware>();
 app.UseAuthorization();
 app.UseRateLimiter();
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
