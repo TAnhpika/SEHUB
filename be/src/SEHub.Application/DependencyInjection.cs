@@ -10,11 +10,17 @@ using SEHub.Application.Feed;
 using SEHub.Application.Feed.Validators;
 using SEHub.Application.Mapping;
 using SEHub.Application.Premium;
+
+using SEHub.Application.Premium.Validators;
 using SEHub.Application.Profiles;
 using SEHub.Application.Profiles.Validators;
+using SEHub.Application.Users;
+using SEHub.Application.Friends;
+using SEHub.Application.Messaging;
 using SEHub.Contracts.Auth;
 using SEHub.Contracts.Exams;
 using SEHub.Contracts.Feed;
+using SEHub.Contracts.Premium;
 using SEHub.Contracts.Profiles;
 
 namespace SEHub.Application;
@@ -44,10 +50,19 @@ public static class DependencyInjection
         services.AddScoped<IDocumentService, DocumentService>();
 
         services.AddScoped<IPremiumService, PremiumService>();
+        services.AddScoped<IPremiumRefundService, PremiumRefundService>();
         services.AddScoped<ISubscriptionService, SubscriptionService>();
+        services.AddScoped<IN8nPremiumActivationService, N8nPremiumActivationService>();
+        services.AddScoped<IValidator<N8NPremiumActivationDto>, N8nPremiumActivationValidator>();
+        services.AddScoped<IValidator<PremiumRefundRequestDto>, PremiumRefundRequestValidator>();
 
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IProfileStatsService, ProfileStatsService>();
+
+        services.AddScoped<IUserSearchService, UserSearchService>();
+        services.AddScoped<IFollowService, FollowService>();
+        services.AddScoped<IFriendService, FriendService>();
+        services.AddScoped<IMessagingService, MessagingService>();
 
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
         services.AddScoped<IAdminUserService, AdminUserService>();
