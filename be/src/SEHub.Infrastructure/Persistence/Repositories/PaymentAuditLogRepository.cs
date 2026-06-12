@@ -6,6 +6,13 @@ namespace SEHub.Infrastructure.Persistence.Repositories;
 
 public class PaymentAuditLogRepository : IPaymentAuditLogRepository
 {
+    private static readonly string[] PaymentCompletedActions =
+    [
+        "WEBHOOK_PAID",
+        "N8N_ACTIVATE",
+        "ADMIN_CONFIRM",
+    ];
+
     private readonly SEHubDbContext _context;
 
     public PaymentAuditLogRepository(SEHubDbContext context) => _context = context;
@@ -18,6 +25,13 @@ public class PaymentAuditLogRepository : IPaymentAuditLogRepository
             .Where(l => l.OrderId == orderId)
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync(cancellationToken);
+
+    public Task<DateTime?> GetPaymentCompletedAtUtcAsync(Guid orderId, CancellationToken cancellationToken = default) =>
+        _context.PaymentAuditLogs
+            .Where(l => l.OrderId == orderId && PaymentCompletedActions.Contains(l.Action))
+            .OrderBy(l => l.CreatedAt)
+            .Select(l => (DateTime?)l.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
 
     public async Task<(IReadOnlyList<PaymentAuditLog> Items, int TotalCount)> GetPagedAsync(
         int page, int pageSize, CancellationToken cancellationToken = default)

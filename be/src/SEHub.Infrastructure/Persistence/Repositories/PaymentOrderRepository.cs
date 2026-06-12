@@ -22,6 +22,25 @@ public class PaymentOrderRepository : IPaymentOrderRepository
             .Include(o => o.Plan)
             .FirstOrDefaultAsync(o => o.PayOsOrderCode == payOsOrderCode, cancellationToken);
 
+    public Task<PaymentOrder?> GetByPayOsOrderCodeAndUserIdAsync(
+        string payOsOrderCode,
+        Guid userId,
+        CancellationToken cancellationToken = default) =>
+        _context.PaymentOrders
+            .Include(o => o.Plan)
+            .FirstOrDefaultAsync(
+                o => o.PayOsOrderCode == payOsOrderCode && o.UserId == userId,
+                cancellationToken);
+
+    public Task<PaymentOrder?> GetLatestPaidByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        _context.PaymentOrders
+            .Where(o => o.UserId == userId && (
+                o.Status == PaymentOrderStatus.Paid
+                || o.Status == PaymentOrderStatus.RefundRequested
+                || o.Status == PaymentOrderStatus.ProcessingRefund))
+            .OrderByDescending(o => o.UpdatedAt ?? o.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task<(IReadOnlyList<PaymentOrder> Items, int TotalCount)> GetPagedAsync(
         int page, int pageSize, CancellationToken cancellationToken = default)
     {
