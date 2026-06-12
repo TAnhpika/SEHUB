@@ -351,7 +351,7 @@ public static class DemoDataSeeder
         var now = DateTime.UtcNow;
         var posts = new List<Post>();
 
-        if (!await context.Posts.AnyAsync(p => p.Id == DemoSpamPostId))
+        if (!await context.Posts.IgnoreQueryFilters().AnyAsync(p => p.Id == DemoSpamPostId))
         {
             posts.Add(new Post
             {
@@ -368,7 +368,7 @@ public static class DemoDataSeeder
             });
         }
 
-        if (!await context.Posts.AnyAsync(p => p.Id == DemoOffensivePostId))
+        if (!await context.Posts.IgnoreQueryFilters().AnyAsync(p => p.Id == DemoOffensivePostId))
         {
             posts.Add(new Post
             {
