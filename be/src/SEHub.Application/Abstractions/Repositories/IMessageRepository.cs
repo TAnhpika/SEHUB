@@ -1,0 +1,15 @@
+using SEHub.Domain.Entities;
+
+namespace SEHub.Application.Abstractions.Repositories;
+
+public interface IMessageRepository
+{
+    Task AddAsync(Message message, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Message>> GetPagedAsync(
+        Guid conversationId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+    Task<int> CountAsync(Guid conversationId, CancellationToken cancellationToken = default);
+    Task<Message?> GetLatestAsync(Guid conversationId, CancellationToken cancellationToken = default);
+}
