@@ -12,6 +12,7 @@ import {
   setRefreshToken,
 } from "@/api/httpClient";
 import { resolveIsPremium, STUDENT_PLAN } from "@/utils/studentPlan";
+import { loadSubscriptionStatus } from "@/features/landing/PricingModal/pricingData";
 import { consumeAiExplainTokens, getAiTokenSnapshot } from "@/utils/aiTokens";
 import { AuthContext } from "./authContextValue";
 
@@ -103,7 +104,7 @@ function applyAuthSession(setUser, setIsBootstrapping, loginResponse) {
   setIsBootstrapping(false);
 
   if (!USE_MOCK) {
-    syncProfileStats(nextUser).then((merged) => {
+    syncUserFromApi(nextUser).then((merged) => {
       persistUser(merged);
       setUser(merged);
     });
@@ -123,6 +124,32 @@ async function syncProfileStats(user) {
   } catch {
     return user;
   }
+}
+
+async function syncPremiumSubscription(user) {
+  if (!user || USE_MOCK) {
+    return user;
+  }
+
+  try {
+    const status = await loadSubscriptionStatus();
+    const isPremium = Boolean(status.isActive);
+
+    return enrichUser({
+      ...user,
+      isPremium,
+      plan: isPremium ? STUDENT_PLAN.PREMIUM : STUDENT_PLAN.FREE,
+      premiumExpiresAt: status.expiresAt ?? null,
+      premiumPlanName: status.planName ?? null,
+    });
+  } catch {
+    return user;
+  }
+}
+
+async function syncUserFromApi(user) {
+  const withStats = await syncProfileStats(user);
+  return syncPremiumSubscription(withStats);
 }
 
 function clearAuthSession(setUser) {
@@ -157,7 +184,7 @@ export function AuthProvider({ children }) {
       try {
         const me = await authApi.getMe();
         if (cancelled) return;
-        const nextUser = await syncProfileStats(mapAndEnrichUser(me));
+        const nextUser = await syncUserFromApi(mapAndEnrichUser(me));
         persistUser(nextUser);
         setUser(nextUser);
       } catch {
@@ -167,7 +194,7 @@ export function AuthProvider({ children }) {
             const refreshed = await refreshSession();
             if (cancelled) return;
             const me = await authApi.getMe();
-            const nextUser = await syncProfileStats(mapAndEnrichUser(me ?? refreshed.user));
+            const nextUser = await syncUserFromApi(mapAndEnrichUser(me ?? refreshed.user));
             persistUser(nextUser);
             setUser(nextUser);
             return;
@@ -234,7 +261,7 @@ export function AuthProvider({ children }) {
     try {
       if (getAccessToken()) {
         const me = await authApi.getMe();
-        const nextUser = mapAndEnrichUser(me);
+        const nextUser = await syncUserFromApi(mapAndEnrichUser(me));
         persistUser(nextUser);
         setUser(nextUser);
         return nextUser;
