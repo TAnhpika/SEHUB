@@ -1,5 +1,6 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Notifications;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Friends;
 using SEHub.Domain.Entities;
@@ -15,6 +16,7 @@ public sealed class FriendService : IFriendService
     private readonly IFriendRequestRepository _friendRequestRepository;
     private readonly IUserRepository _userRepository;
     private readonly IUserSearchRepository _searchRepository;
+    private readonly INotificationService _notificationService;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -22,12 +24,14 @@ public sealed class FriendService : IFriendService
         IFriendRequestRepository friendRequestRepository,
         IUserRepository userRepository,
         IUserSearchRepository searchRepository,
+        INotificationService notificationService,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
         _friendRequestRepository = friendRequestRepository;
         _userRepository = userRepository;
         _searchRepository = searchRepository;
+        _notificationService = notificationService;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -66,6 +70,20 @@ public sealed class FriendService : IFriendService
         await _friendRequestRepository.AddAsync(request, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        var senderSummary = (await _searchRepository.GetByIdsAsync([senderId], cancellationToken)).FirstOrDefault();
+        var senderName = senderSummary?.FullName ?? senderSummary?.Username ?? "Ai đó";
+
+        await _notificationService.CreateAsync(
+            targetUserId,
+            NotificationType.FriendRequest,
+            $"{senderName} đã gửi lời mời kết bạn",
+            linkUrl: senderSummary is not null && !string.IsNullOrWhiteSpace(senderSummary.Username)
+                ? $"/profile/{senderSummary.Username}"
+                : null,
+            actorUserId: senderId,
+            referenceId: request.Id,
+            cancellationToken: cancellationToken);
+
         return await MapRequestAsync(request, cancellationToken);
     }
 
@@ -80,6 +98,18 @@ public sealed class FriendService : IFriendService
 
         await _friendRequestRepository.UpdateAsync(request, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var accepterSummary = (await _searchRepository.GetByIdsAsync([userId], cancellationToken)).FirstOrDefault();
+        var accepterName = accepterSummary?.FullName ?? accepterSummary?.Username ?? "Ai đó";
+
+        await _notificationService.CreateAsync(
+            request.SenderId,
+            NotificationType.FriendAccepted,
+            $"{accepterName} đã chấp nhận lời mời kết bạn",
+            linkUrl: accepterSummary is not null ? $"/profile/{accepterSummary.Username}" : "/home/friends",
+            actorUserId: userId,
+            referenceId: request.Id,
+            cancellationToken: cancellationToken);
 
         return await MapRequestAsync(request, cancellationToken);
     }

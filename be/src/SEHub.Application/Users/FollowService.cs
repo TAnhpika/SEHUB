@@ -1,8 +1,10 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Notifications;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Users;
 using SEHub.Domain.Entities;
+using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
 
 namespace SEHub.Application.Users;
@@ -14,6 +16,7 @@ public sealed class FollowService : IFollowService
     private readonly IUserFollowRepository _followRepository;
     private readonly IUserRepository _userRepository;
     private readonly IUserSearchRepository _searchRepository;
+    private readonly INotificationService _notificationService;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -21,12 +24,14 @@ public sealed class FollowService : IFollowService
         IUserFollowRepository followRepository,
         IUserRepository userRepository,
         IUserSearchRepository searchRepository,
+        INotificationService notificationService,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
         _followRepository = followRepository;
         _userRepository = userRepository;
         _searchRepository = searchRepository;
+        _notificationService = notificationService;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -47,6 +52,18 @@ public sealed class FollowService : IFollowService
                 CreatedAt = DateTime.UtcNow
             }, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            var followerSummary = (await _searchRepository.GetByIdsAsync([followerId], cancellationToken)).FirstOrDefault();
+            var followerName = followerSummary?.FullName ?? followerSummary?.Username ?? "Ai đó";
+
+            await _notificationService.CreateAsync(
+                targetUserId,
+                NotificationType.Follow,
+                $"{followerName} đã theo dõi bạn",
+                linkUrl: followerSummary is not null ? $"/profile/{followerSummary.Username}" : null,
+                actorUserId: followerId,
+                referenceId: followerId,
+                cancellationToken: cancellationToken);
         }
 
         return await BuildActionResultAsync(followerId, targetUserId, isFollowing: true, cancellationToken);
