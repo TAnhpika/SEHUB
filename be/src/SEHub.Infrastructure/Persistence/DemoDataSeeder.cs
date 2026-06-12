@@ -74,6 +74,14 @@ public static class DemoDataSeeder
     private static readonly Guid DemoDocumentId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
     private static readonly Guid DemoFinalExamId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
     private static readonly Guid DemoPracticeExamId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+    private static readonly Guid ModPendingFinalExamId = Guid.Parse("f9999991-9991-9991-9991-999999999991");
+    private static readonly Guid ModPendingPracticeExamId = Guid.Parse("f9999992-9992-9992-9992-999999999992");
+    private static readonly Guid DemoPracticeSubmissionPendingId = Guid.Parse("faaaaaa1-aaaa-aaaa-aaaa-aaaaaaaaaaa1");
+    private static readonly Guid DemoPracticeSubmissionReviewedId = Guid.Parse("faaaaaa2-aaaa-aaaa-aaaa-aaaaaaaaaaa2");
+    private static readonly Guid DemoPracticeSubmissionPassedId = Guid.Parse("faaaaaa3-aaaa-aaaa-aaaa-aaaaaaaaaaa3");
+
+    private const string ModPendingFinalCode = "MOD-PENDING-FINAL-01";
+    private const string ModPendingPracticeCode = "MOD-PENDING-PRAC-01";
 
     private static readonly byte[] MinimalPdfBytes =
         "%PDF-1.1\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"u8.ToArray();
@@ -111,6 +119,8 @@ public static class DemoDataSeeder
             await SeedPastOffenderAsync(userManager, context, logger);
             await SeedFinalExamAsync(context, logger);
             await SeedPracticeExamAsync(context, logger);
+            await SeedModeratorPendingExamsAsync(context, logger);
+            await SeedDemoPracticeSubmissionsAsync(context, logger);
             await SeedActiveSubscriptionAsync(context, subscriptionService, student.Id, logger);
             await SeedDemoPostsAsync(context, student.Id, logger);
             await SeedPendingModerationPostsAsync(context, student.Id, logger);
@@ -729,6 +739,109 @@ public static class DemoDataSeeder
         context.Exams.Add(exam);
         await context.SaveChangesAsync();
         logger.LogInformation("Seeded practice exam {Code}", PracticeExamCode);
+    }
+
+    private static async Task SeedModeratorPendingExamsAsync(SEHubDbContext context, ILogger logger)
+    {
+        if (await context.Exams.AnyAsync(e => e.Code == ModPendingFinalCode))
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        context.Exams.AddRange(
+            new Exam
+            {
+                Id = ModPendingFinalExamId,
+                Code = ModPendingFinalCode,
+                Title = "Đề cuối kỳ SE301 — chờ duyệt (Mod)",
+                ExamType = ExamType.Final,
+                Semester = 5,
+                Major = "SE301",
+                QuestionCount = 2,
+                Status = ExamStatus.PendingApproval,
+                ContentHash = ComputeContentHash("mod-pending-final-se301"),
+                Description = "Demo đề cuối kỳ Mod gửi chờ Admin duyệt.",
+                SubmittedById = ModeratorUserId,
+                CreatedAt = now.AddDays(-2),
+                UpdatedAt = now.AddDays(-2)
+            },
+            new Exam
+            {
+                Id = ModPendingPracticeExamId,
+                Code = ModPendingPracticeCode,
+                Title = "Lab React — chờ duyệt (Mod)",
+                ExamType = ExamType.Practice,
+                Semester = 5,
+                Major = "PRF192",
+                QuestionCount = 0,
+                Status = ExamStatus.PendingApproval,
+                ContentHash = ComputeContentHash("mod-pending-practice-prf192"),
+                Description = "Demo đề thực hành Mod gửi chờ Admin duyệt.",
+                AssetUrl = "pending://prf192-lab-brief.pdf",
+                SubmittedById = ModeratorUserId,
+                CreatedAt = now.AddDays(-1),
+                UpdatedAt = now.AddDays(-1)
+            });
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seeded moderator pending exams {FinalCode} and {PracticeCode}",
+            ModPendingFinalCode, ModPendingPracticeCode);
+    }
+
+    private static async Task SeedDemoPracticeSubmissionsAsync(SEHubDbContext context, ILogger logger)
+    {
+        if (await context.PracticeSubmissions.AnyAsync(s => s.Id == DemoPracticeSubmissionPendingId))
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        context.PracticeSubmissions.AddRange(
+            new PracticeSubmission
+            {
+                Id = DemoPracticeSubmissionPendingId,
+                UserId = DemoStudentId,
+                ExamId = DemoPracticeExamId,
+                GitHubRepoUrl = "https://github.com/sehub-demo/student-lab01-pending",
+                SubmittedAt = now.AddDays(-1),
+                Status = PracticeSubmissionStatus.Submitted,
+                IsLatest = true,
+                CreatedAt = now.AddDays(-1)
+            },
+            new PracticeSubmission
+            {
+                Id = DemoPracticeSubmissionReviewedId,
+                UserId = FreeStudentId,
+                ExamId = DemoPracticeExamId,
+                GitHubRepoUrl = "https://github.com/sehub-demo/student-lab01-reviewed",
+                SubmittedAt = now.AddDays(-3),
+                Status = PracticeSubmissionStatus.Reviewed,
+                ReviewedById = ModeratorUserId,
+                ReviewedAt = now.AddDays(-2),
+                ReviewerComment = "Đã xem repo, chờ chấm điểm chi tiết.",
+                IsLatest = true,
+                CreatedAt = now.AddDays(-3),
+                UpdatedAt = now.AddDays(-2)
+            },
+            new PracticeSubmission
+            {
+                Id = DemoPracticeSubmissionPassedId,
+                UserId = DemoStudentId,
+                ExamId = DemoPracticeExamId,
+                GitHubRepoUrl = "https://github.com/sehub-demo/student-lab01-passed",
+                SubmittedAt = now.AddDays(-5),
+                Status = PracticeSubmissionStatus.Passed,
+                ReviewedById = ModeratorUserId,
+                ReviewedAt = now.AddDays(-4),
+                ReviewerComment = "Điểm: 8.5\n\nHoàn thành đủ yêu cầu rubric.",
+                IsLatest = false,
+                CreatedAt = now.AddDays(-5),
+                UpdatedAt = now.AddDays(-4)
+            });
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seeded demo practice submissions for exam {Code}", PracticeExamCode);
     }
 
     private static async Task SeedDocumentCategoryAndDocumentAsync(
