@@ -1,14 +1,30 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import * as signalR from "@microsoft/signalr";
 import { getAccessToken } from "@/api/httpClient";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5006";
 
-export function useChatHub({ onReceiveMessage, onUnreadCountUpdated, enabled = true } = {}) {
+export function useChatHub({
+  onReceiveMessage,
+  onUnreadCountUpdated,
+  onNotificationReceived,
+  onNotificationUnreadUpdated,
+  enabled = true,
+} = {}) {
   const connectionRef = useRef(null);
-  const handlersRef = useRef({ onReceiveMessage, onUnreadCountUpdated });
+  const handlersRef = useRef({
+    onReceiveMessage,
+    onUnreadCountUpdated,
+    onNotificationReceived,
+    onNotificationUnreadUpdated,
+  });
 
-  handlersRef.current = { onReceiveMessage, onUnreadCountUpdated };
+  handlersRef.current = {
+    onReceiveMessage,
+    onUnreadCountUpdated,
+    onNotificationReceived,
+    onNotificationUnreadUpdated,
+  };
 
   useEffect(() => {
     if (!enabled) {
@@ -35,6 +51,14 @@ export function useChatHub({ onReceiveMessage, onUnreadCountUpdated, enabled = t
       handlersRef.current.onUnreadCountUpdated?.(payload?.totalUnread ?? 0);
     });
 
+    connection.on("NotificationReceived", (payload) => {
+      handlersRef.current.onNotificationReceived?.(payload);
+    });
+
+    connection.on("NotificationUnreadUpdated", (payload) => {
+      handlersRef.current.onNotificationUnreadUpdated?.(payload?.totalUnread ?? 0);
+    });
+
     connectionRef.current = connection;
 
     connection
@@ -49,14 +73,14 @@ export function useChatHub({ onReceiveMessage, onUnreadCountUpdated, enabled = t
     };
   }, [enabled]);
 
-  async function joinConversation(conversationId) {
+  const joinConversation = useCallback(async (conversationId) => {
     const connection = connectionRef.current;
     if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
       return;
     }
 
     await connection.invoke("JoinConversation", conversationId);
-  }
+  }, []);
 
   return { joinConversation };
 }

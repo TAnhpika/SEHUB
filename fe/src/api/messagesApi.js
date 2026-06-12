@@ -38,3 +38,10 @@ export function markConversationRead(conversationId) {
     body: {},
   });
 }
+
+export function reportConversation(conversationId, { reason, detail }) {
+  return apiRequest(`/api/v1/conversations/${encodeURIComponent(conversationId)}/report`, {
+    method: "POST",
+    body: { reason, detail },
+  });
+}

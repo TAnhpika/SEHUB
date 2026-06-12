@@ -1,8 +1,19 @@
-function formatRelativeTime(isoDate) {
-  if (!isoDate) return "—";
+function parseApiDate(isoDate) {
+  if (!isoDate) return null;
 
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) return "—";
+  const raw = String(isoDate).trim();
+  if (!raw) return null;
+
+  const hasTimezone = /[zZ]$|[+-]\d{2}:\d{2}$/.test(raw);
+  const normalized = hasTimezone ? raw : `${raw}Z`;
+  const date = new Date(normalized);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatRelativeTime(isoDate) {
+  const date = parseApiDate(isoDate);
+  if (!date) return "—";
 
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -22,8 +33,8 @@ function formatRelativeTime(isoDate) {
 }
 
 function formatMessageTime(isoDate) {
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) return "—";
+  const date = parseApiDate(isoDate);
+  if (!date) return "—";
   return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
 }
 
