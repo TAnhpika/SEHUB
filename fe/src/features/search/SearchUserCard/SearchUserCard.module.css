@@ -26,6 +26,20 @@
   color: inherit;
 }
 
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.actionBtn {
+  min-width: 6.5rem;
+  border-radius: var(--radius-full) !important;
+  font-size: 0.8125rem !important;
+  font-weight: 600 !important;
+}
+
 .follow {
   flex-shrink: 0;
 }

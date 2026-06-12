@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import FollowButton from "@/features/social/FollowButton/FollowButton";
+import MessageUserButton from "@/features/social/MessageUserButton/MessageUserButton";
 import styles from "./SearchUserCard.module.css";
 
 function SearchUserCard({ user, onFollowChange }) {
@@ -25,12 +26,19 @@ function SearchUserCard({ user, onFollowChange }) {
         </div>
       </Link>
 
-      <FollowButton
-        userId={user.userId}
-        initialIsFollowing={user.isFollowing}
-        className={styles.follow}
-        onChange={(state) => onFollowChange?.(user.userId, state)}
-      />
+      <div className={styles.actions}>
+        <FollowButton
+          userId={user.userId}
+          initialIsFollowing={user.isFollowing}
+          className={styles.actionBtn}
+          onChange={(state) => onFollowChange?.(user.userId, state)}
+        />
+        <MessageUserButton
+          userId={user.userId}
+          className={styles.actionBtn}
+          label="Nhắn tin"
+        />
+      </div>
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import * as friendsApi from "@/api/friendsApi";
+import * as usersApi from "@/api/usersApi";
+import { mapUserSearchResult } from "@/api/usersMapper";
 
 export async function loadIncomingFriendRequests() {
   return friendsApi.getFriendRequests("incoming");
@@ -7,8 +9,6 @@ export async function loadIncomingFriendRequests() {
 export async function loadOutgoingFriendRequests() {
   return friendsApi.getFriendRequests("outgoing");
 }
-
-import { mapUserSearchResult } from "@/api/usersMapper";
 
 export async function searchMembers(query, { page = 1, pageSize = 20 } = {}) {
   const trimmed = query.trim();
