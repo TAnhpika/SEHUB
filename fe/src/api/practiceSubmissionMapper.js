@@ -10,6 +10,7 @@ export function mapApiStatusToFe(status) {
 }
 
 export function mapFeReviewStatusToApi(status) {
+  if (status === "reviewed") return "Reviewed";
   if (status === "pass") return "Passed";
   if (status === "fail") return "Failed";
   return null;

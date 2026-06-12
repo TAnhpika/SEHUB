@@ -19,6 +19,13 @@ export function getSubscription() {
   return apiRequest("/api/v1/premium/subscription");
 }
 
+export function requestRefund({ orderCode, reason }) {
+  return apiRequest("/api/v1/premium/refund", {
+    method: "POST",
+    body: { orderCode, reason },
+  });
+}
+
 /** Development only — simulates PayOS webhook after mock checkout. */
 export function confirmDevPayment(orderId) {
   return apiRequest(`/api/v1/premium/orders/${orderId}/dev/confirm`, {

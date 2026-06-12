@@ -1,3 +1,5 @@
+import { FE_ID_BY_PLAN_CODE } from "@/api/premiumMapper";
+
 const ROLE_MAP = {
   student: "student",
   moderator: "moderator",
@@ -37,7 +39,8 @@ function mapAccessTierLabel(accessTier) {
 function mapExamStatus(status) {
   const value = String(status ?? "").toLowerCase();
   if (value === "published") return "published";
-  if (value === "pendingapproval") return "draft";
+  if (value === "pendingapproval") return "pending_approval";
+  if (value === "archived") return "draft";
   return "draft";
 }
 
@@ -47,17 +50,34 @@ function mapExamTypeKey(examType) {
 
 function mapPaymentStatus(status) {
   const value = String(status ?? "").toLowerCase();
-  if (value === "paid") return "webhook_ok";
+  if (value === "paid") return "activated";
+  if (value === "refundrequested") return "refund_requested";
+  if (value === "processingrefund") return "processing_refund";
+  if (value === "refunded") return "refunded";
   if (value === "failed") return "failed";
   if (value === "cancelled") return "failed";
+  if (value === "pending") return "pending_payment";
   return "pending_payment";
 }
 
-function inferPlanIdFromName(planName) {
+function inferPlanIdFromApi({ planCode, planName }) {
+  const code = String(planCode ?? "").toLowerCase();
+  if (code && FE_ID_BY_PLAN_CODE[code]) {
+    return FE_ID_BY_PLAN_CODE[code];
+  }
+
   const name = String(planName ?? "").toLowerCase();
-  if (name.includes("8") || name.includes("month")) return "semester";
-  if (name.includes("4") || name.includes("year")) return "full";
+  if (name.includes("8") || name.includes("semester") || name.includes("học kỳ")) {
+    return "semester";
+  }
+  if (name.includes("4 năm") || name.includes("4 year") || name.includes("full") || name.includes("toàn khóa")) {
+    return "full";
+  }
   return "trial";
+}
+
+function inferPlanIdFromName(planName) {
+  return inferPlanIdFromApi({ planName });
 }
 
 function slugify(value) {
@@ -149,6 +169,99 @@ export function mapAdminExamDetail(dto) {
   };
 }
 
+const WIZARD_ANSWER_KEYS = ["A", "B", "C", "D"];
+
+function parseSemesterNumber(semesterLabel) {
+  const match = String(semesterLabel ?? "").match(/\d+/);
+  return match ? match[0] : "1";
+}
+
+export function mapWizardQuestionsToCreateItems(questions) {
+  return questions
+    .filter(
+      (question) =>
+        question.content?.trim() &&
+        WIZARD_ANSWER_KEYS.some((key) => question.answers?.[key]?.trim()),
+    )
+    .map((question, index) => {
+      const options = WIZARD_ANSWER_KEYS.map((key) => ({
+        id: crypto.randomUUID(),
+        label: key,
+        text: question.answers[key]?.trim() ?? "",
+      }));
+      const correct =
+        options.find((option) => option.label === question.correctAnswer) ?? options[0];
+
+      return {
+        orderIndex: index + 1,
+        content: question.content.trim(),
+        options,
+        correctOptionId: correct.id,
+      };
+    });
+}
+
+export function mapFinalExamWizardToCreateRequest(examInfo, questions) {
+  return {
+    code: examInfo.subjectCode.trim(),
+    title: examInfo.examCode?.trim() || `${examInfo.subjectCode} — Cuối kỳ`,
+    examType: "Final",
+    semester: parseSemesterNumber(examInfo.semesterLabel),
+    major: "SE",
+    description: examInfo.subjectName ?? "",
+    questions: mapWizardQuestionsToCreateItems(questions),
+  };
+}
+
+export function mapPracticeExamFormToCreateRequest(form) {
+  const githubGuide =
+    form.githubGuide ??
+    "Nộp link repository GitHub công khai. README ghi rõ MSSV, họ tên và hướng dẫn chạy project.";
+
+  return {
+    code: form.subjectCode.trim(),
+    title: form.title.trim(),
+    examType: "Practice",
+    semester: parseSemesterNumber(form.semester),
+    major: "SE",
+    description: [form.description, githubGuide].filter(Boolean).join("\n\n"),
+    questions: [],
+  };
+}
+
+export function mapPendingExamListItem(dto, meta = {}) {
+  const base = mapAdminExamListItem(dto);
+  const fileName =
+    meta.fileName ??
+    `${base.code}-${base.typeKey === "final" ? "final" : "practice"}.${base.typeKey === "final" ? "pdf" : "pdf"}`;
+
+  return {
+    ...base,
+    submittedBy: meta.submittedBy ?? "—",
+    submittedAt: base.createdAt,
+    urgent: Boolean(meta.urgent),
+    fileName,
+    githubGuide: meta.githubGuide ?? (base.typeKey === "practice" ? githubGuideFromDescription(base.description) : ""),
+    allowDiscussion: meta.allowDiscussion ?? false,
+    pinExam: meta.pinExam ?? false,
+  };
+}
+
+function githubGuideFromDescription(description) {
+  const parts = String(description ?? "").split("\n\n");
+  return parts.length > 1 ? parts.slice(1).join("\n\n") : "";
+}
+
+export function mapPendingExamFromCreate(dto, payload = {}) {
+  return mapPendingExamListItem(dto, {
+    submittedBy: payload.submittedBy,
+    fileName: payload.fileName,
+    githubGuide: payload.githubGuide,
+    allowDiscussion: payload.allowDiscussion,
+    pinExam: payload.pinExam,
+  });
+}
+
 export function mapAdminDocumentListItem(dto) {
   const subject = extractSubjectCode(dto.category);
 
@@ -170,19 +283,36 @@ export function mapAdminDocumentListItem(dto) {
 }
 
 export function mapAdminPaymentListItem(dto) {
+  const mappedStatus = mapPaymentStatus(dto.status);
+
   return {
     id: dto.id,
     apiId: dto.id,
     payosOrderId: dto.payOsOrderCode,
     username: dto.username,
-    planId: inferPlanIdFromName(dto.planName),
+    userEmail: dto.userEmail ?? null,
+    planId: inferPlanIdFromApi({ planCode: dto.planCode, planName: dto.planName }),
     amount: Number(dto.amount ?? 0),
     transferContent: dto.payOsOrderCode,
-    status: mapPaymentStatus(dto.status),
+    status: mappedStatus,
     webhookAt: dto.paidAt ? formatAdminDateTime(dto.paidAt) : null,
-    activatedAt: dto.status === "Paid" ? formatAdminDateTime(dto.paidAt ?? dto.createdAt) : null,
+    activatedAt:
+      mappedStatus === "activated" ||
+      mappedStatus === "refund_requested" ||
+      mappedStatus === "processing_refund" ||
+      mappedStatus === "refunded"
+        ? formatAdminDateTime(dto.paidAt ?? dto.createdAt)
+        : null,
     createdAt: formatAdminDateTime(dto.createdAt),
     planName: dto.planName ?? null,
+    refundReason: dto.refundRequestReason ?? null,
+    refundRequestedAt: dto.refundRequestedAt
+      ? formatAdminDateTime(dto.refundRequestedAt)
+      : null,
+    note:
+      mappedStatus === "refund_requested" && dto.refundRequestReason
+        ? `SV yêu cầu hoàn tiền: ${dto.refundRequestReason}`
+        : null,
   };
 }
 
