@@ -11,6 +11,8 @@ public sealed class ProfileDto
     public string? Semester { get; init; }
     public int Points { get; init; }
     public string? LevelName { get; init; }
+    public int StreakCount { get; init; }
+    public int? NextLevelPoints { get; init; }
     public IReadOnlyList<BadgeDto> Badges { get; init; } = [];
     public int FollowersCount { get; init; }
     public int FollowingCount { get; init; }
