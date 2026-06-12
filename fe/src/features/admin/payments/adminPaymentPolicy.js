@@ -26,7 +26,7 @@ export const PREMIUM_PLANS = [
     label: "1 tháng",
     durationLabel: "30 ngày",
     days: 30,
-    amount: 49000,
+    amount: 48000,
     voucher: null,
   },
   {
@@ -34,7 +34,7 @@ export const PREMIUM_PLANS = [
     label: "2 học kỳ (8 tháng)",
     durationLabel: "240 ngày",
     days: 240,
-    amount: 280000,
+    amount: 200000,
     voucher: "Voucher FTES 20%",
   },
   {
@@ -42,7 +42,7 @@ export const PREMIUM_PLANS = [
     label: "4 năm (toàn khóa)",
     durationLabel: "1.460 ngày",
     days: 1460,
-    amount: 960000,
+    amount: 650000,
     voucher: "Voucher FTES 100%",
   },
 ];
@@ -72,6 +72,16 @@ export const PAYMENT_STATUS_META = {
     status: "refunded",
     label: "Đã hoàn tiền",
     desc: "Giao dịch đã hoàn — Premium thu hồi nếu có",
+  },
+  refund_requested: {
+    status: "pending",
+    label: "Chờ duyệt hoàn tiền",
+    desc: "Sinh viên đã gửi yêu cầu — cần Admin duyệt",
+  },
+  processing_refund: {
+    status: "pending",
+    label: "Đang xử lý hoàn tiền",
+    desc: "Admin đã duyệt — chờ PayOS / n8n hoàn tiền",
   },
 };
 

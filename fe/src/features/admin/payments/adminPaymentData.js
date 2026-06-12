@@ -26,7 +26,7 @@ let paymentsStore = [
     payosOrderId: "PAYOS-8821",
     username: "minhanh_dev",
     planId: "semester",
-    amount: 280000,
+    amount: 200000,
     transferContent: "SEHUB_SEMESTER_20260601",
     status: "activated",
     webhookAt: "2026-06-01T09:12:00",
@@ -38,7 +38,7 @@ let paymentsStore = [
     payosOrderId: "PAYOS-8894",
     username: "anhcoding12345",
     planId: "trial",
-    amount: 49000,
+    amount: 48000,
     transferContent: "SEHUB_TRIAL_20260604",
     status: "webhook_ok",
     webhookAt: "2026-06-04T14:22:00",
@@ -51,7 +51,7 @@ let paymentsStore = [
     payosOrderId: "PAYOS-8901",
     username: "lee_dev_99",
     planId: "trial",
-    amount: 49000,
+    amount: 48000,
     transferContent: "SEHUB_TRIAL_20260604B",
     status: "webhook_ok",
     webhookAt: "2026-06-04T17:05:00",
@@ -64,13 +64,13 @@ let paymentsStore = [
     payosOrderId: "PAYOS-8710",
     username: "fpt_student_22",
     planId: "full",
-    amount: 960000,
+    amount: 650000,
     transferContent: "SEHUB_FULL_20260520",
     status: "refunded",
     webhookAt: "2026-05-20T11:00:00",
     activatedAt: "2026-05-20T11:30:00",
     refundedAt: "2026-05-21T09:45:00",
-    refundReason: "Callback PayOS trùng đơn — thu hồi Premium & hoàn 960.000 đ qua ngân hàng",
+    refundReason: "Callback PayOS trùng đơn — thu hồi Premium & hoàn 650.000 đ qua ngân hàng",
     createdAt: "2026-05-20T10:15:00",
     note: "Hoàn tiền do lỗi callback trùng đơn",
   },
@@ -79,7 +79,7 @@ let paymentsStore = [
     payosOrderId: "PAYOS-8655",
     username: "minhanh_dev",
     planId: "trial",
-    amount: 49000,
+    amount: 48000,
     transferContent: "SEHUB_TRIAL_20260515",
     status: "failed",
     webhookAt: null,
@@ -105,7 +105,7 @@ let auditStore = [
     action: "payos_confirm",
     username: "minhanh_dev",
     detail: "Xác nhận PayOS #PAYOS-8821 — Gói 8 tháng — kích hoạt Premium 240 ngày",
-    meta: { paymentId: "pay-001", planId: "semester", amount: 280000 },
+    meta: { paymentId: "pay-001", planId: "semester", amount: 200000 },
   },
   {
     id: "aud-002",
@@ -131,8 +131,8 @@ let auditStore = [
     admin: "admin_sehub",
     action: "payos_refund",
     username: "fpt_student_22",
-    detail: "Hoàn tiền PayOS #PAYOS-8710 — 960.000 đ — Callback trùng đơn",
-    meta: { paymentId: "pay-004", amount: 960000 },
+    detail: "Hoàn tiền PayOS #PAYOS-8710 — 650.000 đ — Callback trùng đơn",
+    meta: { paymentId: "pay-004", amount: 650000 },
   },
 ];
 
@@ -147,10 +147,18 @@ export function getRefundedPayments() {
     .sort((a, b) => (a.refundedAt ?? "") < (b.refundedAt ?? "") ? 1 : -1);
 }
 
-export function getPaymentStats() {
-  const list = paymentsStore;
+export function getPaymentStatsFromList(list = []) {
+  const now = new Date();
+  const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const monthRevenue = list
-    .filter((p) => p.status === "activated" && p.createdAt.startsWith("2026-06"))
+    .filter(
+      (p) =>
+        (p.status === "activated" ||
+          p.status === "refund_requested" ||
+          p.status === "processing_refund" ||
+          p.status === "refunded") &&
+        String(p.createdAt ?? "").startsWith(monthPrefix),
+    )
     .reduce((sum, p) => sum + p.amount, 0);
   const refundedList = list.filter((p) => p.status === "refunded");
   const refundedAmount = refundedList.reduce((sum, p) => sum + p.amount, 0);
@@ -160,6 +168,7 @@ export function getPaymentStats() {
     monthRevenueLabel: formatVnd(monthRevenue),
     awaitingConfirm: list.filter((p) => p.status === "webhook_ok").length,
     pendingPay: list.filter((p) => p.status === "pending_payment").length,
+    pendingRefund: list.filter((p) => p.status === "refund_requested").length,
     refunded: refundedList.length,
     refundedAmountLabel: formatVnd(refundedAmount),
     failed: list.filter((p) => p.status === "failed").length,
@@ -168,13 +177,29 @@ export function getPaymentStats() {
   };
 }
 
+export function getPaymentStats() {
+  return getPaymentStatsFromList(paymentsStore.map(enrichPayment));
+}
+
+export function getRefundedPaymentsFromList(list = []) {
+  return list
+    .filter((p) => p.status === "refunded")
+    .sort((a, b) => (a.refundedAt ?? a.createdAt ?? "") < (b.refundedAt ?? b.createdAt ?? "") ? 1 : -1);
+}
+
+export function getPendingRefundRequestsFromList(list = []) {
+  return list
+    .filter((p) => p.status === "refund_requested")
+    .sort((a, b) => (a.refundRequestedAt ?? a.createdAt ?? "") < (b.refundRequestedAt ?? b.createdAt ?? "") ? 1 : -1);
+}
+
 function enrichPayment(payment) {
   const plan = getPlanById(payment.planId);
   return {
     ...payment,
-    planLabel: plan.label,
+    planLabel: payment.planName ?? plan.label,
     planDays: plan.days,
-    voucher: plan.voucher,
+    voucher: payment.planName ? null : plan.voucher,
     amountLabel: formatVnd(payment.amount),
   };
 }
@@ -397,17 +422,37 @@ export async function loadAdminPayments() {
     return getAdminPayments();
   }
 
-  try {
-    const page = await adminApi.listPayments({ pageSize: 100 });
-    const apiPayments = (page.items ?? []).map((item) => enrichPayment(mapAdminPaymentListItem(item)));
-    if (apiPayments.length > 0) {
-      return apiPayments;
-    }
-  } catch {
-    /* fallback below */
+  const page = await adminApi.listPayments({ page: 1, pageSize: 100 });
+  return (page.items ?? []).map((item) => enrichPayment(mapAdminPaymentListItem(item)));
+}
+
+export async function approveRefundViaApi(paymentId, note = "") {
+  const payment = await loadPaymentById(paymentId);
+  if (!payment) {
+    return { ok: false, message: "Không tìm thấy giao dịch." };
   }
 
-  return getAdminPayments();
+  if (payment.status !== "refund_requested") {
+    return { ok: false, message: "Đơn này không ở trạng thái chờ duyệt hoàn tiền." };
+  }
+
+  if (USE_MOCK || !isValidGuid(String(payment.apiId ?? payment.id ?? ""))) {
+    return processPayOsRefund({
+      paymentId,
+      reason: payment.refundReason ?? note ?? "Admin duyệt yêu cầu hoàn tiền",
+      adminUsername: "admin_sehub",
+    });
+  }
+
+  try {
+    const result = await adminApi.approvePaymentRefund(payment.apiId ?? payment.id, { note });
+    return {
+      ok: true,
+      message: result.message ?? "Đã duyệt hoàn tiền.",
+    };
+  } catch (error) {
+    return { ok: false, message: error?.message ?? "Không duyệt được hoàn tiền." };
+  }
 }
 
 export async function loadPaymentById(id) {
