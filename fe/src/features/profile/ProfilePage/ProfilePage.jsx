@@ -10,6 +10,7 @@ import {
   loadProfileByUsername,
   loadRecentPostsByUsername,
 } from "@/features/profile/profileData";
+import FollowButton from "@/features/social/FollowButton/FollowButton";
 import * as profilesApi from "@/api/profilesApi";
 import styles from "./ProfilePage.module.css";
 
@@ -97,6 +98,19 @@ function ProfilePage() {
     );
   }
 
+  function handleFollowChange(followState) {
+    setProfile((current) =>
+      current
+        ? {
+            ...current,
+            isFollowing: followState.isFollowing,
+            followers: followState.followersCount ?? current.followers,
+            following: followState.followingCount ?? current.following,
+          }
+        : current,
+    );
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.sidebar}>
@@ -105,6 +119,15 @@ function ProfilePage() {
           isOwner={isOwner}
           isPremiumUsername={isOwner && isPremium}
         />
+        {!isOwner && profile.userId ? (
+          <div className={styles.followAction}>
+            <FollowButton
+              userId={profile.userId}
+              initialIsFollowing={profile.isFollowing}
+              onChange={handleFollowChange}
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className={styles.main}>

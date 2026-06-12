@@ -46,7 +46,7 @@ export function mergeApiPlansWithStatic(apiPlans) {
 
   const apiByCode = Object.fromEntries(apiPlans.map((plan) => [plan.code, plan]));
   const baseMonthly =
-    apiByCode["1m"]?.priceVnd ?? PRICING_PLANS[0]?.checkout?.monthlyPrice ?? 99000;
+    apiByCode["1m"]?.priceVnd ?? PRICING_PLANS[0]?.checkout?.monthlyPrice ?? 48000;
 
   return PRICING_PLANS.map((template) => {
     const beCode = getBePlanCode(template.id);
