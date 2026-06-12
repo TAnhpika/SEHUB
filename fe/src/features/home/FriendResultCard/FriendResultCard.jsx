@@ -1,20 +1,37 @@
 import { Link } from "react-router-dom";
+import FollowButton from "@/features/social/FollowButton/FollowButton";
 import styles from "./FriendResultCard.module.css";
 
-function FriendResultCard({ user }) {
-  return (
-    <Link to={`/home/friends/${user.username}`} className={styles.card}>
-      <span className={styles.avatar} aria-hidden="true">
-        {user.initial}
-      </span>
+function FriendResultCard({ user, onFollowChange }) {
+  const displayName = user.displayName ?? user.username;
 
-      <div className={styles.info}>
-        <p className={styles.username}>{user.username}</p>
-        <p className={styles.level}>
-          Level: <span className={styles["level-value"]}>{user.level}</span>
-        </p>
-      </div>
-    </Link>
+  return (
+    <div className={styles.card}>
+      <Link to={`/profile/${user.username}`} className={styles.link}>
+        <span className={styles.avatar} aria-hidden="true">
+          {user.avatarUrl ? (
+            <img src={user.avatarUrl} alt="" className={styles["avatar-image"]} />
+          ) : (
+            user.initial ?? displayName.charAt(0).toUpperCase()
+          )}
+        </span>
+
+        <div className={styles.info}>
+          <p className={styles.username}>{displayName}</p>
+          <p className={styles.level}>
+            @{user.username} · Level:{" "}
+            <span className={styles["level-value"]}>{user.level ?? "BRONZE"}</span>
+          </p>
+        </div>
+      </Link>
+
+      <FollowButton
+        userId={user.userId}
+        initialIsFollowing={user.isFollowing}
+        className={styles.follow}
+        onChange={(state) => onFollowChange?.(user.userId, state)}
+      />
+    </div>
   );
 }
 
