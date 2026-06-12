@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 
 using Microsoft.AspNetCore.Mvc;
 
+using Microsoft.Extensions.Options;
+
 using SEHub.API.Filters;
 
 using SEHub.Application.Abstractions;
@@ -11,6 +13,8 @@ using SEHub.Application.Abstractions;
 using SEHub.Application.Premium;
 
 using SEHub.Contracts.Premium;
+
+using SEHub.Infrastructure.Notifications;
 
 using SEHub.Shared.Constants;
 
@@ -30,17 +34,39 @@ public sealed class PremiumController : ControllerBase
 
     private readonly IPremiumService _premiumService;
 
+    private readonly IPremiumRefundService _premiumRefundService;
+
     private readonly IPayOsWebhookHandler _payOsWebhookHandler;
 
+    private readonly IN8nPremiumActivationService _n8nPremiumActivationService;
+
+    private readonly IOptions<N8nSettings> _n8nSettings;
 
 
-    public PremiumController(IPremiumService premiumService, IPayOsWebhookHandler payOsWebhookHandler)
+
+    public PremiumController(
+
+        IPremiumService premiumService,
+
+        IPremiumRefundService premiumRefundService,
+
+        IPayOsWebhookHandler payOsWebhookHandler,
+
+        IN8nPremiumActivationService n8nPremiumActivationService,
+
+        IOptions<N8nSettings> n8nSettings)
 
     {
 
         _premiumService = premiumService;
 
+        _premiumRefundService = premiumRefundService;
+
         _payOsWebhookHandler = payOsWebhookHandler;
+
+        _n8nPremiumActivationService = n8nPremiumActivationService;
+
+        _n8nSettings = n8nSettings;
 
     }
 
@@ -126,6 +152,26 @@ public sealed class PremiumController : ControllerBase
 
 
 
+    [HttpPost("refund")]
+
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+
+    public async Task<IActionResult> RequestRefund(
+
+        [FromBody] PremiumRefundRequestDto request,
+
+        CancellationToken cancellationToken)
+
+    {
+
+        var result = await _premiumRefundService.RequestRefundAsync(request, cancellationToken);
+
+        return Ok(result);
+
+    }
+
+
+
     [HttpPost("webhooks/payos")]
 
     [AllowAnonymous]
@@ -161,6 +207,68 @@ public sealed class PremiumController : ControllerBase
         var success = await _payOsWebhookHandler.HandleAsync(rawBody, payload.Signature ?? string.Empty, cancellationToken);
 
         return success ? Ok() : Unauthorized();
+
+    }
+
+
+
+    [HttpPost("activate")]
+
+    [AllowAnonymous]
+
+    public async Task<IActionResult> ActivateFromN8n(
+
+        [FromBody] N8NPremiumActivationDto request,
+
+        CancellationToken cancellationToken)
+
+    {
+
+        if (!IsInboundSecretValid())
+
+        {
+
+            return Unauthorized();
+
+        }
+
+
+
+        var result = await _n8nPremiumActivationService.ActivateAsync(request, cancellationToken);
+
+        return Ok(result);
+
+    }
+
+
+
+    private bool IsInboundSecretValid()
+
+    {
+
+        var configuredSecret = _n8nSettings.Value.InboundSecretKey;
+
+        if (string.IsNullOrWhiteSpace(configuredSecret))
+
+        {
+
+            return false;
+
+        }
+
+
+
+        if (!Request.Headers.TryGetValue("X-SEHUB-SECRET-KEY", out var providedSecret))
+
+        {
+
+            return false;
+
+        }
+
+
+
+        return string.Equals(providedSecret.ToString(), configuredSecret, StringComparison.Ordinal);
 
     }
 
