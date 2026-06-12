@@ -1,0 +1,43 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgb(15 23 42 / 82%);
+  backdrop-filter: blur(2px);
+  cursor: zoom-out;
+}
+
+.close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 1.125rem;
+  color: #fff;
+  background: rgb(255 255 255 / 12%);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.close:hover {
+  background: rgb(255 255 255 / 22%);
+}
+
+.image {
+  max-width: min(92vw, 72rem);
+  max-height: min(88vh, 52rem);
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 35%);
+  cursor: default;
+}
