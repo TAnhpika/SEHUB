@@ -6,4 +6,5 @@ public sealed class ModerationStatsDto
     public int PendingReports { get; init; }
     public int PendingPracticeSubmissions { get; init; }
     public int ActiveBans { get; init; }
+    public int ViolatingAccounts { get; init; }
 }
