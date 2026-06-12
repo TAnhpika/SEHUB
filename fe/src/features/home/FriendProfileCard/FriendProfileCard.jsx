@@ -1,24 +1,19 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBullseye,
-  faComment,
   faGem,
   faMedal,
 } from "@fortawesome/free-solid-svg-icons";
 import FollowButton from "@/features/social/FollowButton/FollowButton";
 import FriendButton from "@/features/social/FriendButton/FriendButton";
+import MessageUserButton from "@/features/social/MessageUserButton/MessageUserButton";
 import * as friendsApi from "@/api/friendsApi";
-import { openConversationWithUser } from "@/features/chat/messagesData";
-import Button from "@/common/Button/Button";
 import styles from "./FriendProfileCard.module.css";
 
 function FriendProfileCard({ profile, onFollowChange }) {
-  const navigate = useNavigate();
   const [friendStatus, setFriendStatus] = useState("None");
   const [friendRequestId, setFriendRequestId] = useState(null);
-  const [messageLoading, setMessageLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,22 +41,6 @@ function FriendProfileCard({ profile, onFollowChange }) {
       cancelled = true;
     };
   }, [profile.userId]);
-
-  async function handleMessage() {
-    if (!profile.userId || messageLoading) return;
-
-    setMessageLoading(true);
-    try {
-      const conversation = await openConversationWithUser(profile.userId);
-      navigate("/home/messages", {
-        state: { conversationId: conversation.conversationId },
-      });
-    } catch {
-      /* ignore */
-    } finally {
-      setMessageLoading(false);
-    }
-  }
 
   return (
     <aside className={styles.card}>
@@ -108,16 +87,7 @@ function FriendProfileCard({ profile, onFollowChange }) {
             setFriendRequestId(requestId);
           }}
         />
-        <Button
-          look="outline"
-          size="sm"
-          className={styles["message-btn"]}
-          disabled={messageLoading}
-          onClick={handleMessage}
-        >
-          <FontAwesomeIcon icon={faComment} />
-          {messageLoading ? "Đang mở..." : "Nhắn tin"}
-        </Button>
+        <MessageUserButton userId={profile.userId} className={styles["message-btn"]} />
       </div>
 
       <div className={styles.progress}>

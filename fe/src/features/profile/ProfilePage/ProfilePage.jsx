@@ -10,7 +10,7 @@ import {
   loadProfileByUsername,
   loadRecentPostsByUsername,
 } from "@/features/profile/profileData";
-import FollowButton from "@/features/social/FollowButton/FollowButton";
+import ProfileInteractionActions from "@/features/social/ProfileInteractionActions/ProfileInteractionActions";
 import * as profilesApi from "@/api/profilesApi";
 import styles from "./ProfilePage.module.css";
 
@@ -120,13 +120,7 @@ function ProfilePage() {
           isPremiumUsername={isOwner && isPremium}
         />
         {!isOwner && profile.userId ? (
-          <div className={styles.followAction}>
-            <FollowButton
-              userId={profile.userId}
-              initialIsFollowing={profile.isFollowing}
-              onChange={handleFollowChange}
-            />
-          </div>
+          <ProfileInteractionActions profile={profile} onFollowChange={handleFollowChange} />
         ) : null}
       </div>
 

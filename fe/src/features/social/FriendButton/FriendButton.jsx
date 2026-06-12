@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as friendsApi from "@/api/friendsApi";
 import Button from "@/common/Button/Button";
 
 const STATUS_LABELS = {
   None: "Kết bạn",
   PendingOutgoing: "Đã gửi lời mời",
-  PendingIncoming: "Chấp nhận",
+  PendingIncoming: "Đồng ý kết bạn",
   Accepted: "Bạn bè",
   Self: null,
 };
@@ -21,6 +21,11 @@ function FriendButton({
   const [status, setStatus] = useState(initialStatus);
   const [requestId, setRequestId] = useState(initialRequestId);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setStatus(initialStatus);
+    setRequestId(initialRequestId);
+  }, [initialStatus, initialRequestId, userId]);
 
   if (!userId || status === "Self") {
     return null;
