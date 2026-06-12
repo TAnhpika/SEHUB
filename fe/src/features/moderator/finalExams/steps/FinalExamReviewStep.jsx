@@ -17,8 +17,7 @@ function FinalExamReviewStep() {
   const { showToast } = useToast();
   const { user } = useAuth();
   const moderator = user?.username ?? "mod_sehub";
-  const { examInfo, questions, enteredCount, completeCount, totalQuestions } =
-    useFinalExamWizard();
+  const { examInfo, questions, completeCount, totalQuestions } = useFinalExamWizard();
   const [submitting, setSubmitting] = useState(false);
 
   function handleSaveDraft() {
@@ -108,7 +107,7 @@ function FinalExamReviewStep() {
           <div>
             <dt>Số câu</dt>
             <dd>
-              {completeCount}/{totalQuestions} câu hoàn thiện · {enteredCount} câu đã thêm vào đề
+              {completeCount}/{totalQuestions} câu hoàn thiện
             </dd>
           </div>
         </dl>
