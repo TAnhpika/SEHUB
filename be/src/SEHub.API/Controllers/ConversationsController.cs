@@ -11,8 +11,15 @@ namespace SEHub.API.Controllers;
 public sealed class ConversationsController : ControllerBase
 {
     private readonly IMessagingService _messagingService;
+    private readonly IConversationReportService _conversationReportService;
 
-    public ConversationsController(IMessagingService messagingService) => _messagingService = messagingService;
+    public ConversationsController(
+        IMessagingService messagingService,
+        IConversationReportService conversationReportService)
+    {
+        _messagingService = messagingService;
+        _conversationReportService = conversationReportService;
+    }
 
     [HttpGet]
     [Authorize(Policy = PolicyNames.RequireAuthenticated)]
@@ -67,5 +74,20 @@ public sealed class ConversationsController : ControllerBase
     {
         await _messagingService.MarkReadAsync(conversationId, cancellationToken);
         return Ok(new { read = true });
+    }
+
+    [HttpPost("{conversationId:guid}/report")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> ReportConversation(
+        Guid conversationId,
+        [FromBody] ReportConversationRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _conversationReportService.ReportAsync(
+            conversationId,
+            request.Reason,
+            request.Detail,
+            cancellationToken);
+        return Ok(new { reported = true });
     }
 }
