@@ -34,6 +34,7 @@ public sealed class PostsIntegrationTests : IClassFixture<CustomWebApplicationFa
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<PostDetailDto>>();
         var postId = created!.Data!.Id;
+        created.Data.Status.Should().Be(nameof(PostStatus.Pending));
 
         var likeResponse = await _client.PostAsync($"/api/v1/posts/{postId}/like", null);
         likeResponse.EnsureSuccessStatusCode();
