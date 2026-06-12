@@ -103,7 +103,9 @@ export function mapAdminUserListItem(dto) {
     status: dto.isBanned ? "banned" : "active",
     joinedAt: formatAdminDate(dto.createdAt),
     points: dto.points ?? 0,
-    levelName: null,
+    levelName: dto.levelName ?? null,
+    streakCount: dto.streakCount ?? 0,
+    apiId: dto.id,
   };
 }
 
