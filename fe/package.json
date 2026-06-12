@@ -18,8 +18,8 @@
     "@fortawesome/react-fontawesome": "^3.3.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-qr-code": "^2.2.0",
     "react-router-dom": "^7.16.0",
+    "qrcode-generator": "^2.0.4",
     "recharts": "^3.8.1"
   },
   "devDependencies": {
