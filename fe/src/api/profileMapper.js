@@ -76,6 +76,7 @@ export function mapProfileCard(dto, statsDto = null, { postsCount = 0 } = {}) {
   const { pointsToNext, levelProgress } = computeProgress(points, statsDto?.nextLevelPoints);
 
   return {
+    userId: dto.userId,
     username: dto.username,
     displayName,
     initial: displayName.charAt(0).toUpperCase(),
@@ -83,8 +84,9 @@ export function mapProfileCard(dto, statsDto = null, { postsCount = 0 } = {}) {
     nextLevel: deriveNextLevelLabel(levelName),
     pointsToNext,
     levelProgress,
-    followers: 0,
-    following: 0,
+    followers: dto.followersCount ?? 0,
+    following: dto.followingCount ?? 0,
+    isFollowing: dto.isFollowing ?? false,
     stats: {
       points,
       exams: 0,

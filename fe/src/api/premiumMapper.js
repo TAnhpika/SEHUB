@@ -19,7 +19,7 @@ export function resolveFePlanIdFromCode(planCode) {
 }
 
 function buildCheckoutFromApi({ months, days, monthlyPrice, totalPrice, packageTitle, tagline }) {
-  const originalPrice = 49000 * months;
+  const originalPrice = 48000 * months;
   const savingsAmount = Math.max(originalPrice - totalPrice, 0);
   const savingsPercent =
     savingsAmount > 0 ? Math.round((savingsAmount / originalPrice) * 100) : 0;
@@ -86,5 +86,9 @@ export function mapSubscriptionStatusDto(dto) {
     isActive: Boolean(dto.isActive),
     expiresAt: dto.expiresAt ?? null,
     planName: dto.planName ?? null,
+    latestPaidOrderCode: dto.latestPaidOrderCode ?? null,
+    lastPaidAt: dto.lastPaidAt ?? null,
+    canRequestRefund: Boolean(dto.canRequestRefund),
+    hasPendingRefundRequest: Boolean(dto.hasPendingRefundRequest),
   };
 }
