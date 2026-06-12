@@ -9,11 +9,11 @@ import {
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 /** Giá gốc tham chiếu — gói Trải nghiệm 1 tháng (SEHUB §3.8: 1m / 8m / 4y) */
-export const BASE_MONTHLY_PRICE = 49000;
+export const BASE_MONTHLY_PRICE = 48000;
 
-function buildCheckout({ months, days, monthlyPrice, packageTitle, tagline }) {
+function buildCheckout({ months, days, totalPrice, packageTitle, tagline }) {
+  const monthlyPrice = Math.round(totalPrice / months);
   const originalPrice = BASE_MONTHLY_PRICE * months;
-  const totalPrice = monthlyPrice * months;
   const savingsAmount = originalPrice - totalPrice;
   const savingsPercent =
     savingsAmount > 0 ? Math.round((savingsAmount / originalPrice) * 100) : 0;
@@ -35,7 +35,7 @@ function createPlan({
   id,
   name,
   duration,
-  monthlyPrice,
+  totalPrice,
   months,
   days,
   packageTitle,
@@ -48,10 +48,12 @@ function createPlan({
   const checkout = buildCheckout({
     months,
     days,
-    monthlyPrice,
+    totalPrice,
     packageTitle,
     tagline,
   });
+
+  const monthlyPrice = checkout.monthlyPrice;
 
   return {
     id,
@@ -72,7 +74,7 @@ export const PRICING_PLANS = [
     id: "trial",
     name: "Trải nghiệm",
     duration: "1 tháng",
-    monthlyPrice: 49000,
+    totalPrice: 48000,
     months: 1,
     days: 30,
     packageTitle: "Gói Trải nghiệm (1 tháng)",
@@ -91,7 +93,7 @@ export const PRICING_PLANS = [
     id: "semester",
     name: "2 Học kỳ",
     duration: "8 tháng",
-    monthlyPrice: 35000,
+    totalPrice: 200000,
     months: 8,
     days: 240,
     packageTitle: "Gói 2 Học kỳ (8 tháng)",
@@ -109,7 +111,7 @@ export const PRICING_PLANS = [
     id: "full",
     name: "Toàn khóa học",
     duration: "4 năm",
-    monthlyPrice: 20000,
+    totalPrice: 650000,
     months: 48,
     days: 1460,
     packageTitle: "Gói Toàn khóa học (4 năm)",
@@ -252,15 +254,55 @@ export async function getCheckoutOrder(orderId) {
 
 export async function loadSubscriptionStatus() {
   if (USE_MOCK) {
-    return { isActive: false, expiresAt: null, planName: null };
+    return {
+      isActive: false,
+      expiresAt: null,
+      planName: null,
+      latestPaidOrderCode: null,
+      lastPaidAt: null,
+      canRequestRefund: false,
+      hasPendingRefundRequest: false,
+    };
   }
 
   try {
     const dto = await premiumApi.getSubscription();
     return mapSubscriptionStatusDto(dto);
   } catch {
-    return { isActive: false, expiresAt: null, planName: null };
+    return {
+      isActive: false,
+      expiresAt: null,
+      planName: null,
+      latestPaidOrderCode: null,
+      lastPaidAt: null,
+      canRequestRefund: false,
+      hasPendingRefundRequest: false,
+    };
   }
+}
+
+export async function requestPremiumRefund({ orderCode, reason }) {
+  if (USE_MOCK) {
+    await sleep(400);
+    return {
+      orderCode,
+      status: "RefundRequested",
+      isPremium: true,
+      aiDailyTokenLimit: 1000,
+      message: "Mock: Yêu cầu hoàn tiền đã được gửi, chờ admin duyệt.",
+    };
+  }
+
+  const dto = await premiumApi.requestRefund({ orderCode, reason });
+  return {
+    orderCode: dto.orderCode ?? orderCode,
+    status: dto.status ?? "RefundRequested",
+    isPremium: Boolean(dto.isPremium),
+    aiDailyTokenLimit: Number(dto.aiDailyTokenLimit ?? 10),
+    message:
+      dto.message ??
+      "Yêu cầu hoàn tiền đã được gửi. Admin sẽ duyệt trong thời gian sớm nhất.",
+  };
 }
 
 export async function pollPremiumActivation(orderId, { maxAttempts = 40, intervalMs = 3000 } = {}) {
@@ -268,21 +310,14 @@ export async function pollPremiumActivation(orderId, { maxAttempts = 40, interva
     return false;
   }
 
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    if (orderId) {
-      try {
-        const order = await getCheckoutOrder(orderId);
-        if (order?.status === "Paid") {
-          return true;
-        }
-      } catch {
-        /* continue polling */
-      }
-    }
+  if (!orderId) {
+    return false;
+  }
 
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     try {
-      const subscription = await loadSubscriptionStatus();
-      if (subscription.isActive) {
+      const order = await getCheckoutOrder(orderId);
+      if (order?.status === "Paid") {
         return true;
       }
     } catch {

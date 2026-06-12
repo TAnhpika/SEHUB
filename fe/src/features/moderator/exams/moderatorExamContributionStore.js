@@ -11,6 +11,13 @@ import {
   submitModeratorFinalExam,
   submitModeratorPracticeExam,
 } from "@/features/admin/exams/adminExamData";
+import {
+  mapFinalExamWizardToCreateRequest,
+  mapPracticeExamFormToCreateRequest,
+} from "@/api/adminMapper";
+import { ApiError } from "@/api/httpClient";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 const STORAGE_KEY = "sehubs_moderator_exam_contribution_audit";
 const LEGACY_PRACTICE_KEY = "sehubs_practice_exam_contribution_audit";
@@ -97,7 +104,8 @@ export function resolvePendingStatus(pendingId) {
 }
 
 function enrichEntry(entry) {
-  const status = entry.pendingId ? resolvePendingStatus(entry.pendingId) : "draft_saved";
+  const status = entry.resolvedStatus
+    ?? (entry.pendingId ? resolvePendingStatus(entry.pendingId) : "draft_saved");
   const rejected = entry.pendingId
     ? getAdminRejectedExams().find((p) => p.id === entry.pendingId)
     : null;
@@ -156,32 +164,47 @@ export function recordExamDraft(payload) {
  *   fileName?: string;
  * }} payload
  */
-export function submitExamForApproval(payload) {
+export async function submitExamForApproval(payload, options = {}) {
+  const { examInfo, questions, confirmDuplicate = false } = options;
   const semesterId = parseSemesterId(payload.semester);
+
   const pending =
     payload.examType === "final"
-      ? submitModeratorFinalExam({
-          subjectCode: payload.subjectCode,
-          subjectName: payload.title,
-          semesterId,
-          title: payload.title,
-          description: payload.description,
-          submittedBy: payload.moderator,
-          examCode: payload.examCode,
-          durationMinutes: payload.durationMinutes,
-          questionCount: payload.questionCount,
-          fileName: payload.fileName,
-        })
-      : submitModeratorPracticeExam({
-          subject: payload.subjectCode,
-          semesterId,
-          title: payload.title,
-          description: payload.description ?? "",
-          submittedBy: payload.moderator,
-          attachments: payload.attachments,
-          allowDiscussion: payload.allowDiscussion,
-          pinExam: payload.pinExam,
-        });
+      ? await submitModeratorFinalExam(
+          {
+            subjectCode: payload.subjectCode,
+            subjectName: payload.title,
+            semesterId,
+            title: payload.title,
+            description: payload.description,
+            submittedBy: payload.moderator,
+            examCode: payload.examCode,
+            durationMinutes: payload.durationMinutes,
+            questionCount: payload.questionCount,
+            fileName: payload.fileName,
+          },
+          examInfo && questions ? mapFinalExamWizardToCreateRequest(examInfo, questions) : null,
+          { confirmDuplicate },
+        )
+      : await submitModeratorPracticeExam(
+          {
+            subject: payload.subjectCode,
+            semesterId,
+            title: payload.title,
+            description: payload.description ?? "",
+            submittedBy: payload.moderator,
+            attachments: payload.attachments,
+            allowDiscussion: payload.allowDiscussion,
+            pinExam: payload.pinExam,
+          },
+          mapPracticeExamFormToCreateRequest({
+            subjectCode: payload.subjectCode,
+            semester: payload.semester,
+            title: payload.title,
+            description: payload.description,
+          }),
+          { confirmDuplicate },
+        );
 
   const audit = appendEntry({
     id: `audit-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
@@ -194,12 +217,16 @@ export function submitExamForApproval(payload) {
     title: payload.title.trim(),
     description: payload.description?.trim() ?? "",
     pendingId: pending.id,
+    examApiId: pending.apiId ?? pending.id,
+    resolvedStatus: USE_MOCK ? undefined : "pending_admin",
     examCode: payload.examCode ?? null,
     questionCount: payload.questionCount ?? null,
   });
 
   return { pending, audit };
 }
+
+export { ApiError };
 
 /**
  * @param {string | undefined} moderator

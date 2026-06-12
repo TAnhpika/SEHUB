@@ -194,7 +194,7 @@ function LandingPage() {
             </div>
             <div className={styles["premium-side"]}>
               <div className={styles["premium-tags"]}>
-                <span className={styles["tag-outline"]}>Từ 49K/tháng</span>
+                <span className={styles["tag-outline"]}>Từ 48K/tháng</span>
                 <span className={styles["tag-filled"]}>
                   {SEMESTER_PLAN.savings} — {SEMESTER_PLAN.name}
                 </span>
