@@ -1,18 +1,28 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Feed;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
+using SEHub.Contracts.Exams;
+using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
+using SEHub.Shared.Constants;
 
 namespace SEHub.Application.Admin;
 
 public sealed class ModerationService : IModerationService
 {
+    private static readonly int[] AllowedBanDurations = [1, 7, 30];
+
     private readonly IPostReportRepository _reportRepository;
     private readonly IPostRepository _postRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IUserProfileRepository _profileRepository;
     private readonly IUserBanRepository _banRepository;
+    private readonly IPracticeSubmissionRepository _submissionRepository;
+    private readonly IExamRepository _examRepository;
+    private readonly IGamificationService _gamificationService;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -20,14 +30,22 @@ public sealed class ModerationService : IModerationService
         IPostReportRepository reportRepository,
         IPostRepository postRepository,
         IUserRepository userRepository,
+        IUserProfileRepository profileRepository,
         IUserBanRepository banRepository,
+        IPracticeSubmissionRepository submissionRepository,
+        IExamRepository examRepository,
+        IGamificationService gamificationService,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
         _reportRepository = reportRepository;
         _postRepository = postRepository;
         _userRepository = userRepository;
+        _profileRepository = profileRepository;
         _banRepository = banRepository;
+        _submissionRepository = submissionRepository;
+        _examRepository = examRepository;
+        _gamificationService = gamificationService;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -108,6 +126,8 @@ public sealed class ModerationService : IModerationService
                 continue;
             }
 
+            var actor = await _userRepository.GetByIdAsync(ban.ActorId, cancellationToken);
+
             result.Add(new BannedUserDto
             {
                 Id = ban.Id,
@@ -117,23 +137,263 @@ public sealed class ModerationService : IModerationService
                 BanType = ban.BanType.ToString(),
                 Until = ban.Until,
                 Reason = ban.Reason,
-                CreatedAt = ban.CreatedAt
+                CreatedAt = ban.CreatedAt,
+                ActorUsername = actor?.Username
             });
         }
 
         return result;
     }
 
-    private async Task<ReportDto> MapReportAsync(Domain.Entities.PostReport report, CancellationToken cancellationToken)
+    public async Task<ModerationStatsDto> GetStatsAsync(CancellationToken cancellationToken = default)
+    {
+        var pendingPosts = await _postRepository.CountByStatusAsync(PostStatus.Pending, cancellationToken);
+        var (_, pendingReports) = await _reportRepository.GetPagedAsync(1, 1, ReportStatus.Pending, cancellationToken);
+        var pendingSubmissions = await _submissionRepository.CountByStatusAsync(
+            PracticeSubmissionStatus.Submitted,
+            cancellationToken);
+        var activeBans = await _banRepository.CountActiveBansAsync(cancellationToken);
+
+        return new ModerationStatsDto
+        {
+            PendingPosts = pendingPosts,
+            PendingReports = pendingReports,
+            PendingPracticeSubmissions = pendingSubmissions,
+            ActiveBans = activeBans
+        };
+    }
+
+    public async Task<PagedResult<ModerationPostListItemDto>> GetPostsAsync(
+        ModerationPostQueryParams query, CancellationToken cancellationToken = default)
+    {
+        var (items, total) = await _postRepository.GetModerationPagedAsync(query, cancellationToken);
+        var dtos = new List<ModerationPostListItemDto>();
+
+        foreach (var post in items)
+        {
+            dtos.Add(await MapModerationListItemAsync(post, cancellationToken));
+        }
+
+        return new PagedResult<ModerationPostListItemDto>
+        {
+            Items = dtos,
+            Page = query.Page,
+            PageSize = query.PageSize,
+            TotalCount = total
+        };
+    }
+
+    public async Task<ModerationPostDetailDto> GetPostAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var post = await _postRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Post", id);
+
+        return await MapModerationDetailAsync(post, cancellationToken);
+    }
+
+    public async Task<ModerationPostDetailDto> ModeratePostAsync(
+        Guid id, ModeratePostRequest request, CancellationToken cancellationToken = default)
+    {
+        var actorId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+        var post = await _postRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Post", id);
+
+        if (post.Status != PostStatus.Pending && post.Status != PostStatus.Rejected)
+        {
+            throw new ForbiddenException("Only pending or resubmitted posts can be moderated.");
+        }
+
+        var action = request.Action.Trim().ToLowerInvariant();
+        post.ModeratedById = actorId;
+        post.ModeratedAt = DateTime.UtcNow;
+        post.ModerationNote = request.Note?.Trim();
+        post.UpdatedAt = DateTime.UtcNow;
+
+        switch (action)
+        {
+            case "approve":
+            case "published":
+                post.Status = PostStatus.Published;
+                await _gamificationService.AwardPostPublishedAsync(post.AuthorId, cancellationToken);
+                break;
+            case "reject":
+            case "rejected":
+                post.Status = PostStatus.Rejected;
+                if (string.IsNullOrWhiteSpace(post.ModerationNote))
+                {
+                    throw new ForbiddenException("Rejection requires a note.");
+                }
+                break;
+            default:
+                throw new ForbiddenException("Action must be approve or reject.");
+        }
+
+        await _postRepository.UpdateAsync(post, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return await MapModerationDetailAsync(post, cancellationToken);
+    }
+
+    public async Task<PagedResult<ViolatingUserDto>> GetViolatingUsersAsync(
+        ViolationsQueryParams query, CancellationToken cancellationToken = default)
+    {
+        var (userIds, total) = await _banRepository.GetViolatingUserIdsPagedAsync(
+            query.Page,
+            query.PageSize,
+            query.Search,
+            query.Status,
+            cancellationToken);
+
+        var items = new List<ViolatingUserDto>();
+        foreach (var userId in userIds)
+        {
+            items.Add(await MapViolatingUserAsync(userId, cancellationToken));
+        }
+
+        return new PagedResult<ViolatingUserDto>
+        {
+            Items = items,
+            Page = query.Page,
+            PageSize = query.PageSize,
+            TotalCount = total
+        };
+    }
+
+    public async Task<ViolatingUserDto> BanUserAsync(
+        Guid userId, ModeratorBanUserRequest request, CancellationToken cancellationToken = default)
+    {
+        if (_currentUser.Role != RoleNames.Moderator && _currentUser.Role != RoleNames.Admin)
+        {
+            throw new ForbiddenException("Moderator access required.");
+        }
+
+        if (_currentUser.Role == RoleNames.Moderator && !AllowedBanDurations.Contains(request.DurationDays))
+        {
+            throw new ForbiddenException("Moderators can only issue 1, 7, or 30 day bans.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Reason))
+        {
+            throw new ForbiddenException("Ban reason is required.");
+        }
+
+        var actorId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+        _ = await _userRepository.GetByIdAsync(userId, cancellationToken)
+            ?? throw new NotFoundException("User", userId);
+
+        var banUntil = DateTime.UtcNow.AddDays(request.DurationDays);
+
+        await _userRepository.UpdateBanAsync(
+            userId,
+            true,
+            banUntil,
+            request.Reason.Trim(),
+            BanType.Temp.ToString(),
+            cancellationToken);
+
+        await _banRepository.AddAsync(new UserBan
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            ActorId = actorId,
+            BanType = BanType.Temp,
+            Until = banUntil,
+            Reason = request.Reason.Trim(),
+            CreatedAt = DateTime.UtcNow
+        }, cancellationToken);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return await MapViolatingUserAsync(userId, cancellationToken);
+    }
+
+    public async Task<ViolatingUserDto> WarnUserAsync(
+        Guid userId, ModeratorWarnUserRequest request, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.Reason))
+        {
+            throw new ForbiddenException("Warning reason is required.");
+        }
+
+        var actorId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+        _ = await _userRepository.GetByIdAsync(userId, cancellationToken)
+            ?? throw new NotFoundException("User", userId);
+
+        await _banRepository.AddAsync(new UserBan
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            ActorId = actorId,
+            BanType = BanType.Warning,
+            Until = null,
+            Reason = request.Reason.Trim(),
+            CreatedAt = DateTime.UtcNow
+        }, cancellationToken);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return await MapViolatingUserAsync(userId, cancellationToken);
+    }
+
+    public async Task<PagedResult<PracticeSubmissionListItemDto>> GetPracticeSubmissionsAsync(
+        int page, int pageSize, string? status, CancellationToken cancellationToken = default)
+    {
+        PracticeSubmissionStatus? statusFilter = null;
+        if (!string.IsNullOrWhiteSpace(status)
+            && Enum.TryParse<PracticeSubmissionStatus>(status, true, out var parsed))
+        {
+            statusFilter = parsed;
+        }
+
+        var (items, total) = await _submissionRepository.GetPagedAsync(page, pageSize, statusFilter, cancellationToken);
+        var dtos = new List<PracticeSubmissionListItemDto>();
+
+        foreach (var item in items)
+        {
+            var user = await _userRepository.GetByIdAsync(item.UserId, cancellationToken);
+            var exam = await _examRepository.GetByIdAsync(item.ExamId, cancellationToken: cancellationToken);
+
+            dtos.Add(new PracticeSubmissionListItemDto
+            {
+                Id = item.Id,
+                ExamId = item.ExamId,
+                GitHubRepoUrl = item.GitHubRepoUrl,
+                Status = item.Status.ToString(),
+                SubmittedAt = item.SubmittedAt,
+                ReviewerComment = item.ReviewerComment,
+                ReviewedAt = item.ReviewedAt,
+                User = new PracticeSubmissionUserSummaryDto
+                {
+                    Id = item.UserId,
+                    Username = user?.Username ?? "unknown",
+                    DisplayName = user?.DisplayName ?? "Unknown"
+                },
+                ExamTitle = exam?.Title,
+                ExamCode = exam?.Code
+            });
+        }
+
+        return new PagedResult<PracticeSubmissionListItemDto>
+        {
+            Items = dtos,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = total
+        };
+    }
+
+    private async Task<ReportDto> MapReportAsync(PostReport report, CancellationToken cancellationToken)
     {
         var post = await _postRepository.GetByIdAsync(report.PostId, cancellationToken);
         var reporter = await _userRepository.GetByIdAsync(report.ReporterId, cancellationToken);
+        var author = post is null ? null : await _userRepository.GetByIdAsync(post.AuthorId, cancellationToken);
 
         return new ReportDto
         {
             Id = report.Id,
             PostId = report.PostId,
             PostTitle = post?.Title ?? "Unknown",
+            PostExcerpt = post is null ? null : BuildExcerpt(post.Content),
             Reason = report.Reason,
             Status = report.Status.ToString(),
             Reporter = new ReportUserSummaryDto
@@ -142,8 +402,125 @@ public sealed class ModerationService : IModerationService
                 Username = reporter?.Username ?? "unknown",
                 DisplayName = reporter?.DisplayName ?? "Unknown"
             },
+            ReportedUser = author is null
+                ? null
+                : new ReportUserSummaryDto
+                {
+                    Id = author.Id,
+                    Username = author.Username,
+                    DisplayName = author.DisplayName
+                },
             CreatedAt = report.CreatedAt,
             ResolvedAt = report.Status != ReportStatus.Pending ? report.UpdatedAt : null
         };
     }
+
+    private async Task<ModerationPostListItemDto> MapModerationListItemAsync(Post post, CancellationToken cancellationToken)
+    {
+        var author = await BuildModerationAuthorAsync(post.AuthorId, cancellationToken);
+        var moderator = post.ModeratedById is Guid moderatorId
+            ? await _userRepository.GetByIdAsync(moderatorId, cancellationToken)
+            : null;
+        var profile = await _profileRepository.GetByUserIdAsync(post.AuthorId, cancellationToken);
+
+        return new ModerationPostListItemDto
+        {
+            Id = post.Id,
+            Title = post.Title,
+            Excerpt = BuildExcerpt(post.Content),
+            Status = post.Status.ToString(),
+            Author = author,
+            Tags = ParseTags(post.Tags),
+            Major = profile?.Major,
+            Semester = profile?.Semester,
+            CreatedAt = post.CreatedAt,
+            ModeratedAt = post.ModeratedAt,
+            ModerationNote = post.ModerationNote,
+            ModeratorUsername = moderator?.Username
+        };
+    }
+
+    private async Task<ModerationPostDetailDto> MapModerationDetailAsync(Post post, CancellationToken cancellationToken)
+    {
+        var listItem = await MapModerationListItemAsync(post, cancellationToken);
+
+        return new ModerationPostDetailDto
+        {
+            Id = post.Id,
+            Title = post.Title,
+            Content = post.Content,
+            Excerpt = listItem.Excerpt,
+            Status = listItem.Status,
+            Author = listItem.Author,
+            Tags = listItem.Tags,
+            Major = listItem.Major,
+            Semester = listItem.Semester,
+            CreatedAt = post.CreatedAt,
+            UpdatedAt = post.UpdatedAt,
+            ModeratedAt = listItem.ModeratedAt,
+            ModerationNote = listItem.ModerationNote,
+            ModeratorUsername = listItem.ModeratorUsername
+        };
+    }
+
+    private async Task<ViolatingUserDto> MapViolatingUserAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken)
+            ?? throw new NotFoundException("User", userId);
+        var profile = await _profileRepository.GetByUserIdAsync(userId, cancellationToken);
+        var violationCount = await _banRepository.CountByUserIdAsync(userId, cancellationToken);
+        var latestBan = await _banRepository.GetLatestByUserIdAsync(userId, cancellationToken);
+
+        var status = ResolveViolationStatus(user, latestBan);
+
+        return new ViolatingUserDto
+        {
+            Id = user.Id,
+            Username = user.Username,
+            DisplayName = user.DisplayName,
+            Email = user.Email,
+            Major = profile?.Major,
+            ViolationCount = violationCount,
+            Status = status,
+            BanType = latestBan?.BanType.ToString(),
+            BanUntil = user.BanUntil,
+            BanReason = latestBan?.Reason ?? user.BanReason,
+            LastActionAt = latestBan?.CreatedAt
+        };
+    }
+
+    private static string ResolveViolationStatus(Models.UserAccount user, UserBan? latestBan)
+    {
+        if (user.IsBanned && (user.BanUntil is null || user.BanUntil > DateTime.UtcNow))
+        {
+            return "locked";
+        }
+
+        if (latestBan?.BanType == BanType.Warning)
+        {
+            return "warning";
+        }
+
+        return "normal";
+    }
+
+    private async Task<ModerationAuthorDto> BuildModerationAuthorAsync(Guid authorId, CancellationToken cancellationToken)
+    {
+        var user = await _userRepository.GetByIdAsync(authorId, cancellationToken);
+
+        return new ModerationAuthorDto
+        {
+            Id = authorId,
+            Username = user?.Username ?? "unknown",
+            DisplayName = user?.DisplayName ?? "Unknown"
+        };
+    }
+
+    private static string BuildExcerpt(string content) =>
+        content.Length <= 200 ? content : content[..200] + "...";
+
+    private static IReadOnlyList<string> ParseTags(string tags) =>
+        string.IsNullOrWhiteSpace(tags)
+            ? []
+            : tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }
