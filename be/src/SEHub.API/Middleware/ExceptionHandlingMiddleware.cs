@@ -177,6 +177,22 @@ public sealed class ExceptionHandlingMiddleware
                 [new ApiError("google", ErrorCodes.GoogleTokenInvalid)]);
         }
 
+        if (code == ErrorCodes.MessageRateLimitExceeded)
+        {
+            return (
+                StatusCodes.Status429TooManyRequests,
+                "Bạn đã gửi quá nhiều tin nhắn. Vui lòng thử lại sau.",
+                [new ApiError("message", ErrorCodes.MessageRateLimitExceeded)]);
+        }
+
+        if (code == ErrorCodes.UserBlocked || code == UserBlockedException.Code)
+        {
+            return (
+                StatusCodes.Status403Forbidden,
+                "Bạn không thể tương tác với người dùng này.",
+                [new ApiError("user", ErrorCodes.UserBlocked)]);
+        }
+
         return (
             StatusCodes.Status403Forbidden,
             exception.Message,

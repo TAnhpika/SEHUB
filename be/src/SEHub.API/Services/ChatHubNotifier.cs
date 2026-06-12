@@ -2,10 +2,11 @@ using Microsoft.AspNetCore.SignalR;
 using SEHub.API.Hubs;
 using SEHub.Application.Abstractions;
 using SEHub.Contracts.Messaging;
+using SEHub.Contracts.Notifications;
 
 namespace SEHub.API.Services;
 
-public sealed class ChatHubNotifier : IChatNotifier
+public sealed class ChatHubNotifier : IChatNotifier, INotificationNotifier
 {
     private readonly IHubContext<ChatHub> _hubContext;
 
@@ -31,4 +32,22 @@ public sealed class ChatHubNotifier : IChatNotifier
             new UnreadCountDto { TotalUnread = totalUnread },
             cancellationToken);
     }
+
+    public Task NotifyCreatedAsync(
+        Guid userId,
+        NotificationDto notification,
+        CancellationToken cancellationToken = default)
+    {
+        var userGroup = ChatHub.GetUserGroupName(userId);
+        return _hubContext.Clients.Group(userGroup).SendAsync("NotificationReceived", notification, cancellationToken);
+    }
+
+    Task INotificationNotifier.NotifyUnreadCountUpdatedAsync(
+        Guid userId,
+        int totalUnread,
+        CancellationToken cancellationToken) =>
+        _hubContext.Clients.Group(ChatHub.GetUserGroupName(userId)).SendAsync(
+            "NotificationUnreadUpdated",
+            new UnreadNotificationCountDto { TotalUnread = totalUnread },
+            cancellationToken);
 }

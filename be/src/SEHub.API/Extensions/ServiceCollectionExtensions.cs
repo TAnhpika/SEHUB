@@ -159,6 +159,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSignalR();
         services.AddScoped<IChatNotifier, ChatHubNotifier>();
+        services.AddScoped<INotificationNotifier, ChatHubNotifier>();
 
         return services;
     }
