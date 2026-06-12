@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Contracts.Admin;
 using SEHub.Contracts.Feed;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
@@ -63,6 +64,40 @@ public class PostRepository : IPostRepository
 
         return (items, total);
     }
+
+    public async Task<(IReadOnlyList<Post> Items, int TotalCount)> GetModerationPagedAsync(
+        ModerationPostQueryParams query, CancellationToken cancellationToken = default)
+    {
+        var dbQuery = _context.Posts.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(query.Status)
+            && Enum.TryParse<PostStatus>(query.Status, true, out var statusFilter))
+        {
+            dbQuery = dbQuery.Where(p => p.Status == statusFilter);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var term = query.Search.Trim();
+            dbQuery = dbQuery.Where(p => p.Title.Contains(term) || p.Content.Contains(term));
+        }
+
+        var sortOldest = string.Equals(query.Sort, "oldest", StringComparison.OrdinalIgnoreCase);
+        var orderedQuery = sortOldest
+            ? dbQuery.OrderBy(p => p.CreatedAt)
+            : dbQuery.OrderByDescending(p => p.CreatedAt);
+
+        var total = await dbQuery.CountAsync(cancellationToken);
+        var items = await orderedQuery
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, total);
+    }
+
+    public Task<int> CountByStatusAsync(PostStatus status, CancellationToken cancellationToken = default) =>
+        _context.Posts.CountAsync(p => p.Status == status, cancellationToken);
 
     public async Task<IReadOnlyList<Post>> GetFeaturedAsync(int limit, CancellationToken cancellationToken = default) =>
         await _context.Posts
