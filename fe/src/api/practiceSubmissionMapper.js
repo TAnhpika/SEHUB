@@ -12,6 +12,7 @@ export function mapApiStatusToFe(status) {
 export function mapFeReviewStatusToApi(status) {
   if (status === "pass") return "Passed";
   if (status === "fail") return "Failed";
+  if (status === "reviewed") return "Reviewed";
   return null;
 }
 
@@ -73,12 +74,13 @@ export function mapPracticeSubmissionDto(dto, context = {}) {
 
 export function mapPracticeSubmissionListItem(dto, exam) {
   const feedback = dto.reviewerComment ?? "";
+  const examCode = dto.examCode ?? exam?.code ?? "";
 
   return {
     id: dto.id,
     apiExamId: dto.examId,
-    courseCode: resolveCourseCode(exam),
-    examId: exam?.code ?? "",
+    courseCode: resolveCourseCode(exam ?? { code: examCode }),
+    examId: examCode,
     student: dto.user?.username ?? "unknown",
     displayName: dto.user?.displayName ?? dto.user?.username ?? "Unknown",
     githubUrl: dto.gitHubRepoUrl,
@@ -89,4 +91,8 @@ export function mapPracticeSubmissionListItem(dto, exam) {
     gradedAt: dto.reviewedAt ?? null,
     gradedBy: null,
   };
+}
+
+export function mapModerationPracticeSubmission(dto) {
+  return mapPracticeSubmissionListItem(dto, { code: dto.examCode, major: dto.examCode });
 }

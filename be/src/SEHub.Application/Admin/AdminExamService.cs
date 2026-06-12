@@ -15,21 +15,39 @@ public sealed class AdminExamService : IAdminExamService
 {
     private readonly IExamRepository _examRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICurrentUserService _currentUser;
     private readonly IMapper _mapper;
 
-    public AdminExamService(IExamRepository examRepository, IUnitOfWork unitOfWork, IMapper mapper)
+    public AdminExamService(
+        IExamRepository examRepository,
+        IUnitOfWork unitOfWork,
+        ICurrentUserService currentUser,
+        IMapper mapper)
     {
         _examRepository = examRepository;
         _unitOfWork = unitOfWork;
+        _currentUser = currentUser;
         _mapper = mapper;
     }
 
     public async Task<PagedResult<ExamListItemDto>> GetExamsAsync(ExamQueryParams query, CancellationToken cancellationToken = default)
     {
-        var (items, total) = await _examRepository.GetPagedAsync(query, cancellationToken);
+        var adminQuery = new ExamQueryParams
+        {
+            Type = query.Type,
+            Semester = query.Semester,
+            Major = query.Major,
+            Page = query.Page,
+            PageSize = query.PageSize,
+            Status = query.Status,
+            SubmittedById = query.Mine ? _currentUser.UserId : query.SubmittedById,
+            IncludeUnpublished = true
+        };
+
+        var (items, total) = await _examRepository.GetPagedAsync(adminQuery, cancellationToken);
         return new PagedResult<ExamListItemDto>
         {
-            Items = _mapper.Map<IReadOnlyList<ExamListItemDto>>(items),
+            Items = items.Select(MapExamListItem).ToList(),
             Page = query.Page,
             PageSize = query.PageSize,
             TotalCount = total
@@ -46,8 +64,11 @@ public sealed class AdminExamService : IAdminExamService
 
     public async Task<AdminExamDto> CreateExamAsync(CreateExamRequest request, bool confirmDuplicate = false, CancellationToken cancellationToken = default)
     {
+        var contentSource = request.Questions.Count > 0
+            ? string.Join('|', request.Questions.Select(q => q.Content))
+            : $"{request.Code}|{request.Title}|{request.Description}";
         var contentHash = OcrExamService.ComputeSha256Hash(
-            OcrExamService.NormalizeText(string.Join('|', request.Questions.Select(q => q.Content))));
+            OcrExamService.NormalizeText(contentSource));
 
         var duplicate = await _examRepository.GetByContentHashAsync(contentHash, cancellationToken);
         if (duplicate is not null && !confirmDuplicate)
@@ -55,7 +76,7 @@ public sealed class AdminExamService : IAdminExamService
             throw new ConflictException(ErrorCodes.DuplicateExam);
         }
 
-        var exam = BuildExamFromRequest(request, contentHash);
+        var exam = BuildExamFromRequest(request, contentHash, _currentUser.UserId);
         await _examRepository.AddAsync(exam, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -103,7 +124,7 @@ public sealed class AdminExamService : IAdminExamService
         return MapAdminExam(exam);
     }
 
-    private static Exam BuildExamFromRequest(CreateExamRequest request, string contentHash)
+    private static Exam BuildExamFromRequest(CreateExamRequest request, string contentHash, Guid? submittedById)
     {
         var examId = Guid.NewGuid();
         Enum.TryParse<ExamType>(request.ExamType, true, out var examType);
@@ -118,6 +139,8 @@ public sealed class AdminExamService : IAdminExamService
             Semester = semester,
             Major = request.Major ?? string.Empty,
             Description = request.Description ?? string.Empty,
+            AssetUrl = request.AssetUrl,
+            SubmittedById = submittedById,
             Status = ExamStatus.PendingApproval,
             ContentHash = contentHash,
             QuestionCount = request.Questions.Count,
@@ -178,5 +201,19 @@ public sealed class AdminExamService : IAdminExamService
                 Text = o.Text
             }).ToList()
         }).ToList()
+    };
+
+    private static ExamListItemDto MapExamListItem(Exam exam) => new()
+    {
+        Id = exam.Id,
+        Code = exam.Code,
+        Title = exam.Title,
+        ExamType = exam.ExamType.ToString(),
+        Semester = exam.Semester.ToString(),
+        Major = exam.Major,
+        QuestionCount = exam.QuestionCount,
+        Status = exam.Status.ToString(),
+        CreatedAt = exam.CreatedAt,
+        UpdatedAt = exam.UpdatedAt
     };
 }

@@ -26,6 +26,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     public const string FreeUserPassword = "Free@Test123";
 
     public static readonly Guid PublishedExamId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+    public static readonly Guid PracticeExamId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+    public static readonly Guid PracticeSubmissionId = Guid.Parse("44444444-4444-4444-4444-444444444444");
     public static readonly Guid SubscriptionPlanId = Guid.Parse("33333333-3333-3333-3333-333333333333");
     public static readonly Guid PendingPaymentOrderId = Guid.Parse("44444444-4444-4444-4444-444444444444");
     public const string PayOsOrderCode = "9876543210";
@@ -307,6 +309,39 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 ContentHash = "integration-exam-hash",
                 Description = "Exam for integration tests",
                 CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        if (!await context.Exams.AnyAsync(e => e.Id == PracticeExamId))
+        {
+            context.Exams.Add(new Exam
+            {
+                Id = PracticeExamId,
+                Code = "INT-PRAC-01",
+                Title = "Integration Practice Exam",
+                ExamType = ExamType.Practice,
+                Semester = 1,
+                Major = "SE",
+                QuestionCount = 0,
+                Status = ExamStatus.Published,
+                ContentHash = "integration-practice-exam-hash",
+                Description = "Practice exam for integration tests",
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        if (!await context.PracticeSubmissions.AnyAsync(s => s.Id == PracticeSubmissionId))
+        {
+            context.PracticeSubmissions.Add(new PracticeSubmission
+            {
+                Id = PracticeSubmissionId,
+                UserId = FreeUserId,
+                ExamId = PracticeExamId,
+                GitHubRepoUrl = "https://github.com/sehub-test/integration-lab",
+                SubmittedAt = DateTime.UtcNow.AddHours(-2),
+                Status = PracticeSubmissionStatus.Submitted,
+                IsLatest = true,
+                CreatedAt = DateTime.UtcNow.AddHours(-2)
             });
         }
 

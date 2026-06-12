@@ -7,4 +7,8 @@ public sealed class ExamQueryParams
     public string? Major { get; init; }
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = 20;
+    public string? Status { get; init; }
+    public Guid? SubmittedById { get; init; }
+    public bool IncludeUnpublished { get; init; }
+    public bool Mine { get; init; }
 }

@@ -17,6 +17,11 @@ const DEMO_ACCOUNTS = [
     password: "Demo@12345",
   },
   {
+    label: "Moderator",
+    username: "moderator@sehub.local",
+    password: "Mod@12345",
+  },
+  {
     label: "Admin",
     username: "admin@sehub.local",
     password: "Admin@123",

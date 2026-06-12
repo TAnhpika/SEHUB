@@ -1,11 +1,12 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import {
   buildFinalExamContributionPayload,
   recordExamDraft,
-  submitExamForApproval,
 } from "@/features/moderator/exams/moderatorExamContributionStore";
+import { createFinalExamViaApi } from "@/features/moderator/exams/moderatorExamService";
 import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
 import styles from "./FinalExamReviewStep.module.css";
@@ -15,6 +16,7 @@ function FinalExamReviewStep() {
   const { showToast } = useToast();
   const { user } = useAuth();
   const moderator = user?.username ?? "mod_sehub";
+  const [submitting, setSubmitting] = useState(false);
   const { examInfo, questions, enteredCount, completeCount, totalQuestions } =
     useFinalExamWizard();
 
@@ -25,18 +27,24 @@ function FinalExamReviewStep() {
     showToast("Đã lưu nháp. Đề chờ Admin duyệt trước khi xuất bản.");
   }
 
-  function handlePublish() {
+  async function handlePublish() {
     if (completeCount < 1) {
       showToast("Cần ít nhất một câu hỏi hoàn chỉnh trước khi gửi duyệt.");
       return;
     }
-    submitExamForApproval(
-      buildFinalExamContributionPayload(moderator, examInfo, completeCount, "Bước 3: Xem lại"),
-    );
-    showToast(
-      "Đề thi cuối kỳ đã được gửi. Trạng thái: chờ Admin duyệt trước khi public (theo nghiệp vụ).",
-    );
-    navigate("/moderator/exams/history?type=final");
+
+    setSubmitting(true);
+    try {
+      await createFinalExamViaApi(examInfo, questions);
+      showToast(
+        "Đề thi cuối kỳ đã được gửi. Trạng thái: chờ Admin duyệt trước khi public (theo nghiệp vụ).",
+      );
+      navigate("/moderator/exams/history?type=final");
+    } catch (error) {
+      showToast(error?.message ?? "Gửi duyệt thất bại. Vui lòng thử lại.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -99,7 +107,8 @@ function FinalExamReviewStep() {
         onSaveDraft={handleSaveDraft}
         onBack={() => navigate("/moderator/final-exams/add/questions")}
         onContinue={handlePublish}
-        continueLabel="Gửi duyệt"
+        continueLabel={submitting ? "Đang gửi..." : "Gửi duyệt"}
+        continueDisabled={submitting}
       />
     </div>
   );
