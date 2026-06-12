@@ -1,44 +1,97 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBell,
   faCommentDots,
   faFileLines,
   faFire,
+  faUserPlus,
+  faUserGroup,
+  faEnvelope,
 } from "@fortawesome/free-solid-svg-icons";
 import { faBell as faBellOutline } from "@fortawesome/free-regular-svg-icons";
-import { useAuth } from "@/context";
-import { NOTIFICATIONS, NOTIFICATION_META } from "./notificationData";
+import {
+  getNotifications,
+  getNotificationUnreadCount,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "@/api/notificationsApi";
+import { getFriendRequests } from "@/api/friendsApi";
+import { mapNotificationItem, mapNotificationPage } from "@/api/notificationsMapper";
+import { useChatHub } from "@/hooks/useChatHub";
+import { NOTIFICATION_META } from "./notificationData";
 import styles from "./NotificationDropdown.module.css";
 
 const TYPE_ICONS = {
   comment: faCommentDots,
   exam: faFileLines,
   streak: faFire,
+  follow: faUserPlus,
+  friendrequest: faUserGroup,
+  friendaccepted: faUserGroup,
+  message: faEnvelope,
+  like: faCommentDots,
+  token: faBell,
+  badge: faBell,
 };
 
 function NotificationDropdown() {
-  const { user } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState(NOTIFICATIONS);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   const rootRef = useRef(null);
   const panelId = useId();
 
-  const notifications = useMemo(
-    () =>
-      items.map((item) =>
-        item.id === "notif-3"
-          ? {
-              ...item,
-              title: `Bạn đã duy trì streak ${user?.streak ?? 0} ngày — tiếp tục phát huy nhé!`,
-            }
-          : item,
-      ),
-    [items, user?.streak],
-  );
+  const unreadItems = items.filter((item) => !item.read).length;
+  const hasNotifications = items.length > 0;
 
-  const unreadItems = notifications.filter((item) => !item.read).length;
-  const hasNotifications = notifications.length > 0;
+  const notifications = useMemo(() => items, [items]);
+
+  async function refreshNotifications() {
+    try {
+      const [page, unread] = await Promise.all([
+        getNotifications({ page: 1, pageSize: 20 }),
+        getNotificationUnreadCount(),
+      ]);
+      const mapped = mapNotificationPage(page);
+      setItems(mapped.items);
+
+      if (typeof unread?.totalUnread === "number" && unread.totalUnread !== mapped.items.filter((i) => !i.read).length) {
+        // keep badge in sync when server count differs from loaded page
+      }
+    } catch {
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useChatHub({
+    onNotificationReceived: (payload) => {
+      const mapped = mapNotificationItem(payload);
+      setItems((current) => {
+        if (current.some((item) => item.id === mapped.id)) {
+          return current;
+        }
+        return [mapped, ...current];
+      });
+    },
+    onNotificationUnreadUpdated: () => {
+      refreshNotifications();
+    },
+  });
+
+  useEffect(() => {
+    refreshNotifications();
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      refreshNotifications();
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -64,14 +117,67 @@ function NotificationDropdown() {
     };
   }, [open]);
 
-  function handleMarkAllRead() {
-    setItems((prev) => prev.map((item) => ({ ...item, read: true })));
+  async function handleMarkAllRead() {
+    try {
+      await markAllNotificationsRead();
+      setItems((prev) => prev.map((item) => ({ ...item, read: true })));
+    } catch {
+      /* ignore */
+    }
   }
 
-  function handleItemClick(id) {
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, read: true } : item)),
-    );
+  async function resolveFriendRequestProfileUrl(item) {
+    if (item.actorUsername) {
+      return `/profile/${item.actorUsername}`;
+    }
+
+    if (item.linkUrl?.startsWith("/profile/")) {
+      return item.linkUrl;
+    }
+
+    if (!item.referenceId) {
+      return null;
+    }
+
+    try {
+      const requests = await getFriendRequests("incoming");
+      const match = (requests ?? []).find((request) => request.id === item.referenceId);
+      if (match?.senderUsername) {
+        return `/profile/${match.senderUsername}`;
+      }
+    } catch {
+      /* ignore */
+    }
+
+    return null;
+  }
+
+  async function handleItemClick(item) {
+    if (!item.read) {
+      try {
+        await markNotificationRead(item.id);
+      } catch {
+        /* ignore */
+      }
+      setItems((prev) =>
+        prev.map((entry) => (entry.id === item.id ? { ...entry, read: true } : entry)),
+      );
+    }
+
+    let targetUrl = item.linkUrl;
+
+    if (item.type === "friendrequest") {
+      targetUrl = (await resolveFriendRequestProfileUrl(item)) ?? targetUrl;
+    }
+
+    if (targetUrl) {
+      setOpen(false);
+      const navigationState =
+        item.type === "friendrequest" && item.referenceId
+          ? { friendRequestId: item.referenceId }
+          : undefined;
+      navigate(targetUrl, { state: navigationState });
+    }
   }
 
   return (
@@ -105,7 +211,9 @@ function NotificationDropdown() {
             )}
           </header>
 
-          {hasNotifications ? (
+          {loading && <p className={styles.empty}>Đang tải thông báo...</p>}
+
+          {!loading && hasNotifications ? (
             <ul className={styles.list}>
               {notifications.map((item) => {
                 const meta = NOTIFICATION_META[item.type] ?? NOTIFICATION_META.comment;
@@ -116,7 +224,7 @@ function NotificationDropdown() {
                     <button
                       type="button"
                       className={`${styles.item} ${item.read ? styles["item-read"] : styles["item-unread"]}`}
-                      onClick={() => handleItemClick(item.id)}
+                      onClick={() => handleItemClick(item)}
                     >
                       <span
                         className={`${styles.iconWrap} ${styles[`icon-${meta.tone}`]}`}
@@ -137,7 +245,7 @@ function NotificationDropdown() {
                 );
               })}
             </ul>
-          ) : (
+          ) : !loading ? (
             <div className={styles.empty}>
               <span className={styles["empty-icon"]} aria-hidden="true">
                 <FontAwesomeIcon icon={faBellOutline} />
@@ -145,7 +253,7 @@ function NotificationDropdown() {
               <p className={styles["empty-title"]}>Chưa có thông báo</p>
               <p className={styles["empty-desc"]}>Cập nhật mới sẽ hiển thị tại đây.</p>
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>
