@@ -222,7 +222,9 @@ function ForgotPasswordPage() {
     event.preventDefault();
 
     if (!isValidResetPassword(password)) {
-      showToast("Mật khẩu phải có ít nhất 8 ký tự bao gồm chữ cái và số.");
+      showToast(
+        "Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.",
+      );
       return;
     }
 
