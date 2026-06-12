@@ -1,24 +1,4 @@
-function formatRelativeTime(isoDate) {
-  if (!isoDate) return "";
-
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) return "";
-
-  const diffMs = Date.now() - date.getTime();
-  const diffMinutes = Math.floor(diffMs / 60000);
-
-  if (diffMinutes < 1) return "Vừa xong";
-  if (diffMinutes < 60) return `${diffMinutes} phút trước`;
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours} giờ trước`;
-
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays === 1) return "Hôm qua";
-  if (diffDays < 7) return `${diffDays} ngày trước`;
-
-  return date.toLocaleDateString("vi-VN");
-}
+import { formatRelativeTime } from "@/utils/dateTime";
 
 export function mapNotificationItem(dto) {
   const actorUsername = dto.actorUsername ?? null;
