@@ -1,4 +1,5 @@
 import { FE_ID_BY_PLAN_CODE } from "@/api/premiumMapper";
+import { getExamAssetFileName } from "@/utils/examAssetUrl";
 
 const ROLE_MAP = {
   student: "student",
@@ -134,6 +135,7 @@ export function mapAdminUserDetail(dto) {
 export function mapAdminExamListItem(dto) {
   const typeKey = mapExamTypeKey(dto.examType);
   const status = mapExamStatus(dto.status);
+  const assetUrl = dto.assetUrl ?? null;
 
   return {
     id: dto.id,
@@ -151,7 +153,10 @@ export function mapAdminExamListItem(dto) {
     createdAt: formatAdminDate(dto.createdAt),
     sha256: dto.contentHash ?? "",
     description: dto.description ?? "",
-    attachments: dto.assetUrl ? [{ id: "asset", name: dto.assetUrl.split("/").pop() ?? "asset" }] : [],
+    assetUrl,
+    attachments: assetUrl
+      ? [{ id: "asset", name: assetUrl.split("/").pop() ?? "asset", url: assetUrl }]
+      : [],
   };
 }
 
@@ -225,6 +230,7 @@ export function mapPracticeExamFormToCreateRequest(form) {
     semester: parseSemesterNumber(form.semester),
     major: "SE",
     description: [form.description, githubGuide].filter(Boolean).join("\n\n"),
+    assetUrl: form.assetUrl ?? null,
     questions: [],
   };
 }
@@ -233,7 +239,8 @@ export function mapPendingExamListItem(dto, meta = {}) {
   const base = mapAdminExamListItem(dto);
   const fileName =
     meta.fileName ??
-    `${base.code}-${base.typeKey === "final" ? "final" : "practice"}.${base.typeKey === "final" ? "pdf" : "pdf"}`;
+    (base.assetUrl ? getExamAssetFileName(base.assetUrl) : null) ??
+    "Chưa có file đính kèm";
 
   return {
     ...base,
@@ -241,6 +248,7 @@ export function mapPendingExamListItem(dto, meta = {}) {
     submittedAt: base.createdAt,
     urgent: Boolean(meta.urgent),
     fileName,
+    assetUrl: base.assetUrl ?? null,
     githubGuide: meta.githubGuide ?? (base.typeKey === "practice" ? githubGuideFromDescription(base.description) : ""),
     allowDiscussion: meta.allowDiscussion ?? false,
     pinExam: meta.pinExam ?? false,
