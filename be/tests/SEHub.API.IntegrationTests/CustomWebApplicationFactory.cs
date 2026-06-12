@@ -33,6 +33,10 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     public const string SoftDeletedPostTitle = "Soft Deleted Post Should Not Appear";
     public static readonly Guid SoftDeletedPostId = Guid.Parse("55555555-5555-5555-5555-555555555555");
     public static readonly Guid RejectedPostId = Guid.Parse("66666666-6666-6666-6666-666666666666");
+    public static readonly Guid PendingPostId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+    public static readonly Guid ModeratorUserId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+    public const string ModeratorEmail = "moderator@test.local";
+    public const string ModeratorPassword = "Mod@Test123";
     public const string TaggedPostTitle = "CSharp Tagged Post";
     public const string RejectedPostTitle = "Rejected Post For Resubmit";
 
@@ -241,6 +245,36 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             });
         }
 
+        if (!await context.Posts.AnyAsync(p => p.Id == PendingPostId))
+        {
+            context.Posts.Add(new Post
+            {
+                Id = PendingPostId,
+                AuthorId = FreeUserId,
+                Title = "Pending Post For Moderation",
+                Content = "This post awaits moderator approval before appearing on the public feed.",
+                Tags = "pending,moderation",
+                Status = PostStatus.Pending,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        if (await userManager.FindByEmailAsync(ModeratorEmail) is null)
+        {
+            var moderator = new ApplicationUser
+            {
+                Id = ModeratorUserId,
+                UserName = "moderator",
+                Email = ModeratorEmail,
+                EmailConfirmed = true,
+                DisplayName = "Test Moderator",
+                LevelId = bronzeLevel.Id
+            };
+
+            await userManager.CreateAsync(moderator, ModeratorPassword);
+            await userManager.AddToRoleAsync(moderator, RoleNames.Moderator);
+        }
+
         if (!await context.Posts.AnyAsync(p => p.Id == SoftDeletedPostId))
         {
             context.Posts.Add(new Post
@@ -313,6 +347,28 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         {
             emailOrUsername = FreeUserEmail,
             password = FreeUserPassword
+        });
+
+        using var response = await client.PostAsync(
+            "/api/v1/auth/login",
+            new StringContent(payload, Encoding.UTF8, "application/json"));
+
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync();
+        using var document = await JsonDocument.ParseAsync(stream);
+        return document.RootElement
+            .GetProperty("data")
+            .GetProperty("accessToken")
+            .GetString()!;
+    }
+
+    public async Task<string> LoginModeratorAndGetTokenAsync(HttpClient client)
+    {
+        var payload = JsonSerializer.Serialize(new
+        {
+            emailOrUsername = ModeratorEmail,
+            password = ModeratorPassword
         });
 
         using var response = await client.PostAsync(
