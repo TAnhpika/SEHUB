@@ -2,14 +2,28 @@ import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheck,
+  faClock,
   faRocket,
   faStar,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
 import Button from "@/common/Button/Button";
+import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
-import { FEATURE_COMPARISON, loadPricingPlans, PRICING_PLANS } from "@/features/landing/PricingModal/pricingData";
+import { ApiError } from "@/api/httpClient";
+import {
+  FEATURE_COMPARISON,
+  loadPricingPlans,
+  loadSubscriptionStatus,
+  PRICING_PLANS,
+  requestPremiumRefund,
+} from "@/features/landing/PricingModal/pricingData";
+import PremiumRefundModal from "@/features/premium/PremiumRefundModal/PremiumRefundModal";
+import {
+  formatPremiumStatusSummary,
+  isPremiumExpiringSoon,
+} from "@/utils/premiumSubscription";
 import styles from "./PricingContent.module.css";
 
 function ComparisonCell({ value }) {
@@ -40,8 +54,13 @@ function ComparisonCell({ value }) {
 
 function PricingContent({ requireLogin = false, onGuestRedirect }) {
   const navigate = useNavigate();
-  const { showCountdownToast } = useToast();
+  const { showCountdownToast, showToast } = useToast();
+  const { isPremium, user } = useAuth();
   const [plans, setPlans] = useState(PRICING_PLANS);
+  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundError, setRefundError] = useState("");
+  const [refundSubmitting, setRefundSubmitting] = useState(false);
 
   useEffect(() => {
     loadPricingPlans()
@@ -50,6 +69,83 @@ function PricingContent({ requireLogin = false, onGuestRedirect }) {
         setPlans(PRICING_PLANS);
       });
   }, []);
+
+  useEffect(() => {
+    if (requireLogin) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    loadSubscriptionStatus()
+      .then((status) => {
+        if (!cancelled) {
+          setSubscriptionStatus(status);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSubscriptionStatus(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [requireLogin, isPremium, user?.premiumExpiresAt]);
+
+  const premiumSummary = formatPremiumStatusSummary({
+    isActive: Boolean(subscriptionStatus?.isActive ?? isPremium),
+    expiresAt: subscriptionStatus?.expiresAt ?? user?.premiumExpiresAt ?? null,
+  });
+  const showPremiumBanner = Boolean(premiumSummary);
+  const expiringSoon = isPremiumExpiringSoon(
+    subscriptionStatus?.expiresAt ?? user?.premiumExpiresAt ?? null,
+  );
+  const renewPlanId = plans.find((plan) => plan.popular)?.id ?? plans[0]?.id ?? "monthly";
+  const canRequestRefund = Boolean(
+    !requireLogin &&
+      subscriptionStatus?.canRequestRefund &&
+      subscriptionStatus?.latestPaidOrderCode,
+  );
+  const hasPendingRefundRequest = Boolean(subscriptionStatus?.hasPendingRefundRequest);
+
+  async function refreshSubscriptionStatus() {
+    try {
+      const status = await loadSubscriptionStatus();
+      setSubscriptionStatus(status);
+      return status;
+    } catch {
+      setSubscriptionStatus(null);
+      return null;
+    }
+  }
+
+  async function handleRefundSubmit({ reason }) {
+    const orderCode = subscriptionStatus?.latestPaidOrderCode;
+    if (!orderCode) {
+      setRefundError("Không tìm thấy mã đơn thanh toán.");
+      return;
+    }
+
+    setRefundError("");
+    setRefundSubmitting(true);
+
+    try {
+      const result = await requestPremiumRefund({ orderCode, reason });
+      setRefundOpen(false);
+      showToast(result.message ?? "Yêu cầu hoàn tiền đã được gửi.");
+      await refreshSubscriptionStatus();
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "Không gửi được yêu cầu hoàn tiền. Vui lòng thử lại.";
+      setRefundError(message);
+    } finally {
+      setRefundSubmitting(false);
+    }
+  }
 
   function handleGuestPlanSelect(planId) {
     const checkoutPath = `/home/premium/checkout/${planId}`;
@@ -67,6 +163,64 @@ function PricingContent({ requireLogin = false, onGuestRedirect }) {
 
   return (
     <>
+      {showPremiumBanner && (
+        <div
+          className={`${styles["premium-banner"]} ${expiringSoon ? styles["premium-banner-warning"] : ""}`}
+          role="status"
+        >
+          <div className={styles["premium-banner-text"]}>
+            <FontAwesomeIcon icon={faClock} className={styles["premium-banner-icon"]} />
+            <div className={styles["premium-banner-copy"]}>
+              <span>{premiumSummary}</span>
+              {hasPendingRefundRequest ? (
+                <span className={styles["premium-refund-pending"]}>
+                  Yêu cầu hoàn tiền đang chờ admin duyệt — gói Premium vẫn hoạt động.
+                </span>
+              ) : null}
+            </div>
+          </div>
+          {!requireLogin && (
+            <div className={styles["premium-banner-actions"]}>
+              {canRequestRefund ? (
+                <Button
+                  look="outline"
+                  type="button"
+                  className={styles["premium-refund-btn"]}
+                  onClick={() => {
+                    setRefundError("");
+                    setRefundOpen(true);
+                  }}
+                >
+                  Yêu cầu hoàn tiền
+                </Button>
+              ) : null}
+              <Button
+                look="primary"
+                type="button"
+                to={`/home/premium/checkout/${renewPlanId}`}
+                className={styles["premium-renew-btn"]}
+              >
+                Gia hạn Premium
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <PremiumRefundModal
+        open={refundOpen}
+        orderCode={subscriptionStatus?.latestPaidOrderCode ?? null}
+        lastPaidAt={subscriptionStatus?.lastPaidAt ?? null}
+        error={refundError}
+        submitting={refundSubmitting}
+        onClose={() => {
+          if (refundSubmitting) return;
+          setRefundOpen(false);
+          setRefundError("");
+        }}
+        onSubmit={handleRefundSubmit}
+      />
+
       <div className={styles.header}>
         <span className={styles.badge}>
           <FontAwesomeIcon icon={faRocket} />

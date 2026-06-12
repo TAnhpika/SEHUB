@@ -9,6 +9,7 @@ import {
   buildTransactionId,
   formatVnd,
   loadPlanById,
+  loadSubscriptionStatus,
   pollPremiumActivation,
   PRICING_PLANS,
 } from "@/features/landing/PricingModal/pricingData";
@@ -18,7 +19,13 @@ import {
   resolveCheckoutOrderId,
   resolveCheckoutTransactionId,
 } from "@/features/premium/premiumCheckoutSession";
+import {
+  formatPremiumExpiryDate,
+  getPremiumDaysRemaining,
+} from "@/utils/premiumSubscription";
 import styles from "./PaymentSuccessPage.module.css";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 function PaymentSuccessPage() {
   const { planId } = useParams();
@@ -30,6 +37,7 @@ function PaymentSuccessPage() {
   const [planReady, setPlanReady] = useState(false);
   const [activationState, setActivationState] = useState("pending");
   const [pollAttempt, setPollAttempt] = useState(0);
+  const [subscriptionInfo, setSubscriptionInfo] = useState(null);
 
   const session = useMemo(() => readCheckoutSession(planId), [planId, pollAttempt]);
   const orderId = useMemo(
@@ -40,8 +48,8 @@ function PaymentSuccessPage() {
       }),
     [location.state?.orderId, planId, searchParams],
   );
-  const mockConfirm = Boolean(location.state?.mockConfirm);
-  const alreadyActivated = Boolean(location.state?.activated) || isPremium;
+  const paidThisSession = Boolean(location.state?.activated);
+  const mockConfirm = USE_MOCK && Boolean(location.state?.mockConfirm);
   const transactionId =
     resolveCheckoutTransactionId(planId, {
       stateTransactionId: location.state?.transactionId,
@@ -69,18 +77,32 @@ function PaymentSuccessPage() {
     };
   }, [planId]);
 
+  const refreshSubscriptionInfo = useCallback(async () => {
+    try {
+      const status = await loadSubscriptionStatus();
+      setSubscriptionInfo(status);
+      return status;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const confirmPremium = useCallback(async () => {
-    if (alreadyActivated) {
+    if (paidThisSession || mockConfirm) {
+      await activatePremium();
+      const status = await refreshSubscriptionInfo();
       setActivationState("active");
       clearCheckoutSession();
-      return;
+      if (mockConfirm && !paidThisSession) {
+        showToast("Mock: Premium đã kích hoạt (dev).");
+      }
+      return status;
     }
 
-    if (mockConfirm || !orderId) {
-      await activatePremium();
-      setActivationState("active");
-      clearCheckoutSession();
-      return;
+    if (!orderId) {
+      setActivationState("waiting");
+      showToast("Thiếu mã đơn thanh toán. Kiểm tra lại sau khi PayOS xác nhận.");
+      return null;
     }
 
     setActivationState("pending");
@@ -89,9 +111,10 @@ function PaymentSuccessPage() {
       const activated = await pollPremiumActivation(orderId);
       if (activated) {
         await activatePremium();
+        const status = await refreshSubscriptionInfo();
         setActivationState("active");
         clearCheckoutSession();
-        return;
+        return status;
       }
 
       setActivationState("waiting");
@@ -99,7 +122,16 @@ function PaymentSuccessPage() {
       setActivationState("waiting");
       showToast(error?.message ?? "Không xác nhận được Premium.");
     }
-  }, [activatePremium, alreadyActivated, mockConfirm, orderId, showToast]);
+
+    return null;
+  }, [
+    activatePremium,
+    mockConfirm,
+    orderId,
+    paidThisSession,
+    refreshSubscriptionInfo,
+    showToast,
+  ]);
 
   useEffect(() => {
     confirmPremium();
@@ -124,8 +156,11 @@ function PaymentSuccessPage() {
   }
 
   const checkout = plan.checkout;
-  const isActive = activationState === "active" || isPremium;
+  const isActive = activationState === "active";
   const isWaiting = activationState === "waiting";
+  const expiresAt = subscriptionInfo?.expiresAt ?? null;
+  const daysRemaining = getPremiumDaysRemaining(expiresAt);
+  const isRenewal = isPremium && paidThisSession;
 
   return (
     <div className={styles.page}>
@@ -139,14 +174,20 @@ function PaymentSuccessPage() {
         </div>
 
         <h1 className={styles.title}>
-          {isActive ? "Thanh toán thành công!" : "Đã ghi nhận thanh toán"}
+          {isActive
+            ? isRenewal
+              ? "Gia hạn Premium thành công!"
+              : "Thanh toán thành công!"
+            : "Đang xác nhận thanh toán"}
         </h1>
         <p className={styles.desc}>
           {isActive
-            ? "Cảm ơn bạn đã tin tưởng nâng cấp gói Premium. Tài khoản của bạn đã được kích hoạt đầy đủ các tính năng đặc quyền."
+            ? expiresAt
+              ? `Premium của bạn ${daysRemaining === 0 ? "hết hạn hôm nay" : `còn ${daysRemaining} ngày`} · hết hạn ${formatPremiumExpiryDate(expiresAt)}.`
+              : "Cảm ơn bạn đã tin tưởng nâng cấp gói Premium. Tài khoản đã được kích hoạt đầy đủ các tính năng đặc quyền."
             : isWaiting
-              ? "PayOS đang xác nhận giao dịch. Premium sẽ tự kích hoạt trong vài phút sau khi webhook được xử lý."
-              : "Đang xác nhận trạng thái Premium với máy chủ..."}
+              ? "PayOS đang xác nhận giao dịch. Premium sẽ kích hoạt sau khi webhook được xử lý — thử kiểm tra lại sau vài phút."
+              : "Đang xác nhận trạng thái thanh toán với máy chủ..."}
         </p>
 
         <div className={styles.details}>
@@ -161,6 +202,16 @@ function PaymentSuccessPage() {
             <span className={styles.label}>Tổng thanh toán</span>
             <span className={styles.price}>{formatVnd(checkout.totalPrice)}</span>
           </div>
+
+          {expiresAt && isActive ? (
+            <div className={styles.row}>
+              <span className={styles.label}>Hết hạn Premium</span>
+              <span className={styles.value}>
+                {formatPremiumExpiryDate(expiresAt)}
+                {daysRemaining !== null ? ` (${daysRemaining} ngày)` : ""}
+              </span>
+            </div>
+          ) : null}
 
           <div className={styles.row}>
             <span className={styles.label}>Mã giao dịch</span>
@@ -198,7 +249,7 @@ function PaymentSuccessPage() {
         <div className={styles.actions}>
           {isWaiting && (
             <Button fullWidth onClick={handleRetryActivation}>
-              Kiểm tra lại Premium
+              Kiểm tra lại thanh toán
             </Button>
           )}
           <Button to="/home" fullWidth>
