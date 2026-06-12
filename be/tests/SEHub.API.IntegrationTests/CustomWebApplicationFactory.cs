@@ -29,6 +29,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     public static readonly Guid SubscriptionPlanId = Guid.Parse("33333333-3333-3333-3333-333333333333");
     public static readonly Guid PendingPaymentOrderId = Guid.Parse("44444444-4444-4444-4444-444444444444");
     public const string PayOsOrderCode = "9876543210";
+    public const string N8nInboundSecretKey = "integration-n8n-secret";
     public const string WebhookReference = "payos-ref-001";
     public const string SoftDeletedPostTitle = "Soft Deleted Post Should Not Appear";
     public static readonly Guid SoftDeletedPostId = Guid.Parse("55555555-5555-5555-5555-555555555555");
@@ -60,7 +61,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 ["RateLimit:LoginPermitLimit"] = "100",
                 ["RateLimit:GoogleLoginPermitLimit"] = "100",
                 ["RateLimit:RegisterPermitLimit"] = "100",
-                ["RateLimit:RefreshPermitLimit"] = "100"
+                ["RateLimit:RefreshPermitLimit"] = "100",
+                ["N8n:InboundSecretKey"] = N8nInboundSecretKey
             });
         });
 
@@ -242,7 +244,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 Code = "1m",
                 Name = "1 Month",
                 DurationDays = 30,
-                PriceVnd = 99000,
+                PriceVnd = 48000,
                 CreatedAt = DateTime.UtcNow
             });
         }
@@ -255,7 +257,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 UserId = FreeUserId,
                 PlanId = SubscriptionPlanId,
                 PayOsOrderCode = PayOsOrderCode,
-                Amount = 99000,
+                Amount = 48000,
                 Status = PaymentOrderStatus.Pending,
                 ExpiredAt = DateTime.UtcNow.AddMinutes(15),
                 CreatedAt = DateTime.UtcNow
