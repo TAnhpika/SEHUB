@@ -18,8 +18,19 @@ public sealed class ModerationController : ControllerBase
         _moderationService = moderationService;
     }
 
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats(CancellationToken cancellationToken)
+    {
+        var result = await _moderationService.GetStatsAsync(cancellationToken);
+        return Ok(result);
+    }
+
     [HttpGet("reports")]
-    public async Task<IActionResult> GetReports([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? status = null, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetReports(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? status = null,
+        CancellationToken cancellationToken = default)
     {
         var result = await _moderationService.GetReportsAsync(page, pageSize, status, cancellationToken);
         return Ok(result);
@@ -33,9 +44,36 @@ public sealed class ModerationController : ControllerBase
     }
 
     [HttpPatch("reports/{id:guid}")]
-    public async Task<IActionResult> ResolveReport(Guid id, [FromBody] ResolveReportRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> ResolveReport(
+        Guid id,
+        [FromBody] ResolveReportRequest request,
+        CancellationToken cancellationToken)
     {
         var result = await _moderationService.ResolveReportAsync(id, request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("posts")]
+    public async Task<IActionResult> GetPosts([FromQuery] ModerationPostQueryParams query, CancellationToken cancellationToken)
+    {
+        var result = await _moderationService.GetPostsAsync(query, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("posts/{id:guid}")]
+    public async Task<IActionResult> GetPost(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _moderationService.GetPostAsync(id, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPatch("posts/{id:guid}")]
+    public async Task<IActionResult> ModeratePost(
+        Guid id,
+        [FromBody] ModeratePostRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _moderationService.ModeratePostAsync(id, request, cancellationToken);
         return Ok(result);
     }
 
@@ -43,6 +81,44 @@ public sealed class ModerationController : ControllerBase
     public async Task<IActionResult> GetBannedUsers(CancellationToken cancellationToken)
     {
         var result = await _moderationService.GetBannedUsersAsync(cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("violations")]
+    public async Task<IActionResult> GetViolatingUsers([FromQuery] ViolationsQueryParams query, CancellationToken cancellationToken)
+    {
+        var result = await _moderationService.GetViolatingUsersAsync(query, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("users/{id:guid}/ban")]
+    public async Task<IActionResult> BanUser(
+        Guid id,
+        [FromBody] ModeratorBanUserRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _moderationService.BanUserAsync(id, request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("users/{id:guid}/warn")]
+    public async Task<IActionResult> WarnUser(
+        Guid id,
+        [FromBody] ModeratorWarnUserRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _moderationService.WarnUserAsync(id, request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("practice-submissions")]
+    public async Task<IActionResult> GetPracticeSubmissions(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? status = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _moderationService.GetPracticeSubmissionsAsync(page, pageSize, status, cancellationToken);
         return Ok(result);
     }
 }
