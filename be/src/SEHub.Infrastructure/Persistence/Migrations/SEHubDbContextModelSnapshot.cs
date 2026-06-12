@@ -261,6 +261,53 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.ToTable("Comments");
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.Conversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("LastMessageAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastMessagePreview")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastMessageAt");
+
+                    b.ToTable("Conversations");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.ConversationParticipant", b =>
+                {
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("LastReadAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ConversationId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ConversationParticipants");
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.Document", b =>
                 {
                     b.Property<Guid>("Id")
@@ -456,6 +503,43 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.ToTable("ExamAttempts");
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.FriendRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ReceiverId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("SenderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceiverId");
+
+                    b.HasIndex("SenderId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("SenderId", "ReceiverId");
+
+                    b.ToTable("FriendRequests");
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.LevelConfig", b =>
                 {
                     b.Property<Guid>("Id")
@@ -484,6 +568,41 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.HasIndex("MinPoints");
 
                     b.ToTable("LevelConfigs");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.Message", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("SenderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SenderId");
+
+                    b.HasIndex("ConversationId", "SentAt");
+
+                    b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.OtpVerification", b =>
@@ -1009,6 +1128,26 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.ToTable("UserBans");
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.UserFollow", b =>
+                {
+                    b.Property<Guid>("FollowerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("FollowingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("FollowerId", "FollowingId");
+
+                    b.HasIndex("FollowerId");
+
+                    b.HasIndex("FollowingId");
+
+                    b.ToTable("UserFollows", (string)null);
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.UserProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1219,6 +1358,23 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Navigation("Post");
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.ConversationParticipant", b =>
+                {
+                    b.HasOne("SEHub.Domain.Entities.Conversation", "Conversation")
+                        .WithMany("Participants")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.Document", b =>
                 {
                     b.HasOne("SEHub.Domain.Entities.DocumentCategory", "Category")
@@ -1239,6 +1395,38 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Exam");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.FriendRequest", b =>
+                {
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ReceiverId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.Message", b =>
+                {
+                    b.HasOne("SEHub.Domain.Entities.Conversation", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.PaymentAuditLog", b =>
@@ -1340,6 +1528,21 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Navigation("Badge");
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.UserFollow", b =>
+                {
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("FollowerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("FollowingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.UserProfile", b =>
                 {
                     b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
@@ -1367,6 +1570,13 @@ namespace SEHub.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("SEHub.Domain.Entities.Comment", b =>
                 {
                     b.Navigation("Replies");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.Conversation", b =>
+                {
+                    b.Navigation("Messages");
+
+                    b.Navigation("Participants");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.DocumentCategory", b =>

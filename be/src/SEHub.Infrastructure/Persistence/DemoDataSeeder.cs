@@ -36,6 +36,13 @@ public static class DemoDataSeeder
     private const string DocumentRelativePath = "demo/se301-ch1.pdf";
     private const string SubscriptionPlanCode = "1m";
 
+    private static readonly (string Code, decimal PriceVnd)[] OfficialSubscriptionPlanPrices =
+    [
+        ("1m", 48000),
+        ("8m", 200000),
+        ("4y", 650000),
+    ];
+
     private static readonly Guid DemoStudentId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     private static readonly Guid FreeStudentId = Guid.Parse("f1111111-1111-1111-1111-111111111111");
     private static readonly Guid ModeratorUserId = Guid.Parse("f2222222-2222-2222-2222-222222222222");
@@ -65,6 +72,7 @@ public static class DemoDataSeeder
         try
         {
             await EnsurePrerequisitesAsync(context, logger);
+            await RestoreOfficialSubscriptionPlanPricesAsync(context, logger);
 
             var before = await CaptureCountsAsync(context, userManager);
             logger.LogInformation(
@@ -79,7 +87,7 @@ public static class DemoDataSeeder
             var spammer = await SeedSpammerStudentAsync(userManager, context, logger);
             await SeedFinalExamAsync(context, logger);
             await SeedPracticeExamAsync(context, logger);
-            await SeedActiveSubscriptionAsync(context, subscriptionService, student.Id, logger);
+            // demo.student stays Free so checkout/PayOS can be tested end-to-end.
             await SeedDemoPostsAsync(context, student.Id, logger);
             await SeedReportablePostsAsync(context, spammer.Id, logger);
             await SeedDemoPostReportsAsync(context, freeStudent.Id, student.Id, logger);
@@ -117,6 +125,32 @@ public static class DemoDataSeeder
         }
 
         logger.LogInformation("DemoDataSeeder prerequisites verified.");
+    }
+
+    private static async Task RestoreOfficialSubscriptionPlanPricesAsync(SEHubDbContext context, ILogger logger)
+    {
+        var updated = false;
+
+        foreach (var (code, priceVnd) in OfficialSubscriptionPlanPrices)
+        {
+            var plan = await context.SubscriptionPlans.FirstOrDefaultAsync(p => p.Code == code);
+            if (plan is null || plan.PriceVnd == priceVnd)
+            {
+                continue;
+            }
+
+            plan.PriceVnd = priceVnd;
+            updated = true;
+            logger.LogInformation(
+                "Restored official subscription price for plan {PlanCode}: {PriceVnd} VND",
+                code,
+                priceVnd);
+        }
+
+        if (updated)
+        {
+            await context.SaveChangesAsync();
+        }
     }
 
     private static async Task<ApplicationUser> SeedDemoStudentAsync(

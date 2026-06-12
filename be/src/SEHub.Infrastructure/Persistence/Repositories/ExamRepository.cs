@@ -28,7 +28,16 @@ public class ExamRepository : IExamRepository
 
     public async Task<(IReadOnlyList<Exam> Items, int TotalCount)> GetPagedAsync(ExamQueryParams query, CancellationToken cancellationToken = default)
     {
-        var dbQuery = _context.Exams.Where(e => e.Status == ExamStatus.Published);
+        var dbQuery = _context.Exams.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(query.Status) && Enum.TryParse<ExamStatus>(query.Status, true, out var statusFilter))
+        {
+            dbQuery = dbQuery.Where(e => e.Status == statusFilter);
+        }
+        else
+        {
+            dbQuery = dbQuery.Where(e => e.Status == ExamStatus.Published);
+        }
 
         if (!string.IsNullOrWhiteSpace(query.Type) && Enum.TryParse<ExamType>(query.Type, true, out var examType))
         {
