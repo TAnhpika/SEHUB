@@ -1,21 +1,20 @@
-import { createContext, useContext, useMemo, useState } from "react";
-import {
-  FINAL_EXAM_INFO_MOCK,
-  buildFinalExamQuestionsMock,
-} from "@/features/moderator/moderatorMockData";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import {
   ANSWER_KEYS,
+  EMPTY_FINAL_EXAM_INFO,
+  buildEmptyQuestions,
   createEmptyQuestion,
+  parseTotalQuestions,
 } from "@/features/moderator/finalExams/finalExamData";
 
 const FinalExamWizardContext = createContext(null);
 
 export function FinalExamWizardProvider({ children }) {
-  const [examInfo, setExamInfo] = useState(FINAL_EXAM_INFO_MOCK);
-  const [questions, setQuestions] = useState(() => buildFinalExamQuestionsMock());
-  const [activeQuestionIndex, setActiveQuestionIndex] = useState(() =>
-    buildFinalExamQuestionsMock().length - 1,
-  );
+  const [examInfo, setExamInfo] = useState(EMPTY_FINAL_EXAM_INFO);
+  const [questions, setQuestions] = useState([]);
+  const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
+
+  const totalQuestions = examInfo.totalQuestions;
 
   const completeCount = useMemo(
     () =>
@@ -27,7 +26,33 @@ export function FinalExamWizardProvider({ children }) {
     [questions],
   );
 
-  const enteredCount = questions.length;
+  const ensureQuestionSlots = useCallback((count = totalQuestions) => {
+    const target = parseTotalQuestions(count) ?? 1;
+
+    setQuestions((prev) => {
+      if (prev.length === target) {
+        return prev;
+      }
+
+      if (prev.length === 0) {
+        return buildEmptyQuestions(target);
+      }
+
+      if (prev.length < target) {
+        const extra = Array.from({ length: target - prev.length }, (_, index) =>
+          createEmptyQuestion(`q-${prev.length + index + 1}`),
+        );
+        return [...prev, ...extra];
+      }
+
+      return prev.slice(0, target).map((question, index) => ({
+        ...question,
+        id: `q-${index + 1}`,
+      }));
+    });
+
+    setActiveQuestionIndex((prev) => Math.min(prev, target - 1));
+  }, [totalQuestions]);
 
   const value = useMemo(
     () => ({
@@ -37,10 +62,11 @@ export function FinalExamWizardProvider({ children }) {
       setQuestions,
       activeQuestionIndex,
       setActiveQuestionIndex,
-      enteredCount,
       completeCount,
-      totalQuestions: examInfo.totalQuestions,
-      progressPercent: Math.round((enteredCount / examInfo.totalQuestions) * 100),
+      totalQuestions,
+      progressPercent:
+        totalQuestions > 0 ? Math.round((completeCount / totalQuestions) * 100) : 0,
+      ensureQuestionSlots,
       updateActiveQuestion(patch) {
         setQuestions((prev) =>
           prev.map((item, index) =>
@@ -57,21 +83,15 @@ export function FinalExamWizardProvider({ children }) {
           ),
         );
       },
-      addQuestion() {
-        const nextIndex = questions.length + 1;
-        if (nextIndex > examInfo.totalQuestions) return false;
-        const next = createEmptyQuestion(`q-${nextIndex}`);
-        setQuestions((prev) => [...prev, next]);
-        setActiveQuestionIndex(questions.length);
-        return true;
-      },
-      removeActiveQuestion() {
-        if (questions.length <= 1) return;
-        setQuestions((prev) => prev.filter((_, index) => index !== activeQuestionIndex));
-        setActiveQuestionIndex((prev) => Math.max(0, prev - 1));
-      },
     }),
-    [examInfo, questions, activeQuestionIndex, enteredCount, completeCount],
+    [
+      examInfo,
+      questions,
+      activeQuestionIndex,
+      completeCount,
+      totalQuestions,
+      ensureQuestionSlots,
+    ],
   );
 
   return (
