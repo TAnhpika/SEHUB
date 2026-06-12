@@ -21,6 +21,15 @@ export const WIZARD_STEPS = [
   },
 ];
 
+export const EMPTY_FINAL_EXAM_INFO = {
+  subjectCode: "",
+  subjectName: "",
+  semesterLabel: "",
+  examCode: "",
+  durationMinutes: 60,
+  totalQuestions: 50,
+};
+
 export function createEmptyQuestion(id) {
   return {
     id,
@@ -30,4 +39,17 @@ export function createEmptyQuestion(id) {
     explanation: "",
     showExplanation: false,
   };
+}
+
+export function parseTotalQuestions(value) {
+  const parsed = Number(String(value ?? "").trim());
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+  return Math.floor(parsed);
+}
+
+export function buildEmptyQuestions(count) {
+  const total = parseTotalQuestions(count) ?? 1;
+  return Array.from({ length: total }, (_, index) => createEmptyQuestion(`q-${index + 1}`));
 }
