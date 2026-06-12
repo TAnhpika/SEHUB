@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SEHub.Contracts.Common;
-using SEHub.Contracts.Friends;
 using SEHub.Contracts.Messaging;
 using SEHub.Domain.Entities;
 using SEHub.Infrastructure.Identity;
@@ -29,61 +28,6 @@ public sealed class SocialPhase2EndpointsTests : IClassFixture<CustomWebApplicat
     {
         _factory = factory;
         _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task FriendRequest_SendAcceptUnfriend_Works()
-    {
-        await SeedTargetUserAsync();
-
-        var token = await _factory.LoginAndGetTokenAsync(_client);
-
-        Guid requestId;
-        using (var sendRequest = CreateAuthorizedJsonPost(
-            token,
-            "/api/v1/friends/request",
-            new SendFriendRequestRequest { TargetUserId = TargetUserId }))
-        {
-            var sendResponse = await _client.SendAsync(sendRequest);
-            sendResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-
-            var sendBody = await sendResponse.Content.ReadFromJsonAsync<ApiResponse<FriendRequestDto>>();
-            sendBody!.Data!.Status.Should().Be("Pending");
-            requestId = sendBody.Data.Id;
-        }
-
-        using (var acceptRequest = CreateAuthorizedJsonPost(
-            token,
-            "/api/v1/friends/accept",
-            new FriendRequestActionRequest { RequestId = requestId }))
-        {
-            var acceptResponse = await _client.SendAsync(acceptRequest);
-            acceptResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        }
-
-        var targetToken = await LoginTargetUserAsync();
-
-        using (var acceptRequest = CreateAuthorizedJsonPost(
-            targetToken,
-            "/api/v1/friends/accept",
-            new FriendRequestActionRequest { RequestId = requestId }))
-        {
-            var acceptResponse = await _client.SendAsync(acceptRequest);
-            acceptResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        }
-
-        using (var statusRequest = CreateAuthorizedGet(token, $"/api/v1/friends/status/{TargetUserId}"))
-        {
-            var statusResponse = await _client.SendAsync(statusRequest);
-            var statusBody = await statusResponse.Content.ReadFromJsonAsync<ApiResponse<FriendStatusDto>>();
-            statusBody!.Data!.Status.Should().Be("Accepted");
-        }
-
-        using (var unfriendRequest = CreateAuthorizedDelete(token, $"/api/v1/friends/unfriend?userId={TargetUserId}"))
-        {
-            var unfriendResponse = await _client.SendAsync(unfriendRequest);
-            unfriendResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        }
     }
 
     [Fact]

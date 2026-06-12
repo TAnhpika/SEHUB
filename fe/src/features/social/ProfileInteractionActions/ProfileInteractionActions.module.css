@@ -11,7 +11,3 @@
   font-size: 0.8125rem !important;
   font-weight: 600 !important;
 }
-
-.messageBtn {
-  grid-column: 1 / -1;
-}
