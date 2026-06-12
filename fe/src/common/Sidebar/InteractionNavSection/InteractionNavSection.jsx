@@ -1,11 +1,40 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMessage } from "@fortawesome/free-solid-svg-icons";
-
-export const UNREAD_MESSAGES_COUNT = 3;
+import { loadUnreadCount } from "@/features/chat/messagesData";
+import { useChatHub } from "@/hooks/useChatHub";
 
 function InteractionNavSection({ pathname, styles }) {
   const isActive = pathname === "/home/messages" || pathname.startsWith("/home/messages/");
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useChatHub({
+    onUnreadCountUpdated: setUnreadCount,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchUnread() {
+      try {
+        const count = await loadUnreadCount();
+        if (!cancelled) {
+          setUnreadCount(count);
+        }
+      } catch {
+        if (!cancelled) {
+          setUnreadCount(0);
+        }
+      }
+    }
+
+    fetchUnread();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
 
   return (
     <>
@@ -23,9 +52,9 @@ function InteractionNavSection({ pathname, styles }) {
                 <FontAwesomeIcon icon={faMessage} className={styles.icon} />
                 Nhắn tin
               </span>
-              {UNREAD_MESSAGES_COUNT > 0 && (
-                <span className={styles["message-badge"]} aria-label={`${UNREAD_MESSAGES_COUNT} tin nhắn chưa đọc`}>
-                  {UNREAD_MESSAGES_COUNT}
+              {unreadCount > 0 && (
+                <span className={styles["message-badge"]} aria-label={`${unreadCount} tin nhắn chưa đọc`}>
+                  {unreadCount}
                 </span>
               )}
             </Link>
