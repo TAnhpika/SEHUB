@@ -16,7 +16,6 @@ using SEHub.Application.Premium.Validators;
 using SEHub.Application.Profiles;
 using SEHub.Application.Profiles.Validators;
 using SEHub.Application.Users;
-using SEHub.Application.Friends;
 using SEHub.Application.Messaging;
 using SEHub.Application.Notifications;
 using SEHub.Contracts.Auth;
@@ -64,7 +63,6 @@ public static class DependencyInjection
 
         services.AddScoped<IUserSearchService, UserSearchService>();
         services.AddScoped<IFollowService, FollowService>();
-        services.AddScoped<IFriendService, FriendService>();
         services.AddScoped<IMessagingService, MessagingService>();
         services.AddScoped<IConversationReportService, ConversationReportService>();
         services.AddScoped<INotificationService, NotificationService>();
