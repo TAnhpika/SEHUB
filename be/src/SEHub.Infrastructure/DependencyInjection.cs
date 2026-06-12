@@ -79,7 +79,11 @@ public static class DependencyInjection
         services.AddScoped<IFriendRequestRepository, FriendRequestRepository>();
         services.AddScoped<IConversationRepository, ConversationRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<IUserBlockRepository, UserBlockRepository>();
+        services.AddScoped<IConversationReportRepository, ConversationReportRepository>();
         services.AddScoped<IChatNotifier, NullChatNotifier>();
+        services.AddScoped<INotificationNotifier, NullNotificationNotifier>();
 
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
 
