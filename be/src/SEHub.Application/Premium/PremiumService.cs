@@ -121,7 +121,36 @@ public sealed class PremiumService : IPremiumService
     public async Task<SubscriptionStatusDto> GetSubscriptionAsync(CancellationToken cancellationToken = default)
     {
         var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
-        return await _subscriptionService.GetStatusAsync(userId, cancellationToken);
+        var status = await _subscriptionService.GetStatusAsync(userId, cancellationToken);
+
+        if (!status.IsActive)
+        {
+            return status;
+        }
+
+        var latestPaidOrder = await _orderRepository.GetLatestPaidByUserIdAsync(userId, cancellationToken);
+        if (latestPaidOrder is null)
+        {
+            return status;
+        }
+
+        var paidAt = await _auditLogRepository.GetPaymentCompletedAtUtcAsync(latestPaidOrder.Id, cancellationToken)
+            ?? latestPaidOrder.UpdatedAt
+            ?? latestPaidOrder.CreatedAt;
+
+        var canRequestRefund = latestPaidOrder.Status == PaymentOrderStatus.Paid
+            && (DateTime.UtcNow - paidAt).TotalHours <= 24;
+
+        return new SubscriptionStatusDto
+        {
+            IsActive = status.IsActive,
+            ExpiresAt = status.ExpiresAt,
+            PlanName = status.PlanName,
+            LatestPaidOrderCode = latestPaidOrder.PayOsOrderCode,
+            LastPaidAt = paidAt,
+            CanRequestRefund = canRequestRefund,
+            HasPendingRefundRequest = latestPaidOrder.Status == PaymentOrderStatus.RefundRequested,
+        };
     }
 
     public async Task<PaymentOrderDto> ConfirmDevPaymentAsync(Guid orderId, CancellationToken cancellationToken = default)

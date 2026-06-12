@@ -45,16 +45,21 @@ public sealed class SubscriptionService : ISubscriptionService
         var plan = await _planRepository.GetByIdAsync(planId, cancellationToken)
             ?? throw new InvalidOperationException("Plan not found.");
 
+        var now = DateTime.UtcNow;
+        var existing = await _subscriptionRepository.GetActiveByUserIdAsync(userId, cancellationToken);
+        var extendFromExisting = existing is not null && existing.IsActive && existing.EndAt > now;
+        var subscriptionStart = extendFromExisting ? existing!.StartAt : now;
+        var baseDate = extendFromExisting ? existing!.EndAt : now;
+
         await _subscriptionRepository.DeactivateAllForUserAsync(userId, cancellationToken);
 
-        var now = DateTime.UtcNow;
         await _subscriptionRepository.AddAsync(new Subscription
         {
             Id = Guid.NewGuid(),
             UserId = userId,
             PlanId = planId,
-            StartAt = now,
-            EndAt = now.AddDays(plan.DurationDays),
+            StartAt = subscriptionStart,
+            EndAt = baseDate.AddDays(plan.DurationDays),
             IsActive = true,
             CreatedAt = now
         }, cancellationToken);
