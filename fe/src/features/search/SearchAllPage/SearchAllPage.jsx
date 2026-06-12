@@ -1,17 +1,17 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import PostCard from "@/features/feed/PostCard/PostCard";
 import SearchResourceCard from "@/features/search/SearchResourceCard/SearchResourceCard";
 import SearchUserCard from "@/features/search/SearchUserCard/SearchUserCard";
+import { searchMembers } from "@/features/home/friendsData";
 import {
   SEARCH_TABS,
   getSearchCounts,
-  searchAll,
+  searchLocalContent,
   searchDocuments,
   searchFinalExams,
   searchPosts,
   searchPracticeExams,
-  searchUsers,
 } from "@/features/search/searchAllData";
 import styles from "./SearchAllPage.module.css";
 
@@ -22,8 +22,52 @@ function SearchAllPage() {
   const query = searchParams.get("q")?.trim() ?? "";
   const activeTab = searchParams.get("tab") ?? "all";
 
-  const results = useMemo(() => searchAll(query), [query]);
-  const counts = useMemo(() => getSearchCounts(query), [query]);
+  const localResults = useMemo(() => searchLocalContent(query), [query]);
+  const [userResults, setUserResults] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchUsers() {
+      if (!query) {
+        setUserResults([]);
+        setUsersError(null);
+        return;
+      }
+
+      setUsersLoading(true);
+      setUsersError(null);
+
+      try {
+        const data = await searchMembers(query);
+        if (!cancelled) {
+          setUserResults(data.items);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setUserResults([]);
+          setUsersError(err.message ?? "Không tải được kết quả người dùng.");
+        }
+      } finally {
+        if (!cancelled) {
+          setUsersLoading(false);
+        }
+      }
+    }
+
+    fetchUsers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [query]);
+
+  const counts = useMemo(
+    () => getSearchCounts(query, userResults.length),
+    [query, userResults.length],
+  );
 
   function handleTabChange(tabId) {
     setSearchParams((prev) => {
@@ -39,6 +83,14 @@ function SearchAllPage() {
 
   function handleOpenPost(post) {
     navigate(`/home/posts/${post.id}`);
+  }
+
+  function handleUserFollowChange(userId, followState) {
+    setUserResults((current) =>
+      current.map((user) =>
+        user.userId === userId ? { ...user, isFollowing: followState.isFollowing } : user,
+      ),
+    );
   }
 
   function renderPosts(posts) {
@@ -60,7 +112,19 @@ function SearchAllPage() {
     );
   }
 
-  function renderUsers(users) {
+  function renderUsers(users, { showLoading = false, showError = null } = {}) {
+    if (showLoading) {
+      return <p className={styles.empty}>Đang tải người dùng...</p>;
+    }
+
+    if (showError) {
+      return (
+        <p className={styles.empty} role="alert">
+          {showError}
+        </p>
+      );
+    }
+
     if (users.length === 0) return null;
 
     return (
@@ -70,8 +134,8 @@ function SearchAllPage() {
         </h2>
         <ul className={styles.list}>
           {users.map((user) => (
-            <li key={user.id}>
-              <SearchUserCard user={user} />
+            <li key={user.userId}>
+              <SearchUserCard user={user} onFollowChange={handleUserFollowChange} />
             </li>
           ))}
         </ul>
@@ -107,26 +171,21 @@ function SearchAllPage() {
       );
     }
 
-    const tabResults = {
-      blogs: results.blogs,
-      documents: results.documents,
-      exams: results.exams,
-      practice: results.practice,
-      users: results.users,
-    };
+    if (activeTab === "users") {
+      if (usersLoading) {
+        return renderUsers([], { showLoading: true });
+      }
 
-    const currentItems =
-      activeTab === "all"
-        ? null
-        : activeTab === "blogs"
-          ? searchPosts(query)
-          : activeTab === "documents"
-            ? searchDocuments(query)
-            : activeTab === "exams"
-              ? searchFinalExams(query)
-              : activeTab === "practice"
-                ? searchPracticeExams(query)
-                : searchUsers(query);
+      if (usersError) {
+        return renderUsers([], { showError: usersError });
+      }
+
+      if (userResults.length === 0) {
+        return <p className={styles.empty}>Không tìm thấy kết quả phù hợp.</p>;
+      }
+
+      return renderUsers(userResults);
+    }
 
     if (activeTab !== "all") {
       const count = counts[activeTab] ?? 0;
@@ -135,47 +194,44 @@ function SearchAllPage() {
       }
 
       if (activeTab === "blogs") {
-        return renderPosts(currentItems);
-      }
-      if (activeTab === "users") {
-        return renderUsers(currentItems);
+        return renderPosts(searchPosts(query));
       }
       if (activeTab === "documents") {
-        return renderResources(currentItems, "Tài liệu", "search-documents-heading");
+        return renderResources(searchDocuments(query), "Tài liệu", "search-documents-heading");
       }
       if (activeTab === "exams") {
         return renderResources(
-          currentItems.map((item) => ({ ...item, typeLabel: "Đề thi" })),
+          searchFinalExams(query).map((item) => ({ ...item, typeLabel: "Đề thi" })),
           "Đề thi",
           "search-exams-heading",
         );
       }
       return renderResources(
-        currentItems.map((item) => ({ ...item, typeLabel: "Thực hành" })),
+        searchPracticeExams(query).map((item) => ({ ...item, typeLabel: "Thực hành" })),
         "Thực hành",
         "search-practice-heading",
       );
     }
 
-    if (counts.all === 0) {
+    if (counts.all === 0 && !usersLoading) {
       return <p className={styles.empty}>Không tìm thấy kết quả phù hợp.</p>;
     }
 
     return (
       <>
-        {renderPosts(tabResults.blogs)}
-        {renderResources(tabResults.documents, "Tài liệu", "search-documents-heading")}
+        {renderPosts(localResults.blogs)}
+        {renderResources(localResults.documents, "Tài liệu", "search-documents-heading")}
         {renderResources(
-          tabResults.exams.map((item) => ({ ...item, typeLabel: "Đề thi" })),
+          localResults.exams.map((item) => ({ ...item, typeLabel: "Đề thi" })),
           "Đề thi",
           "search-exams-heading",
         )}
         {renderResources(
-          tabResults.practice.map((item) => ({ ...item, typeLabel: "Thực hành" })),
+          localResults.practice.map((item) => ({ ...item, typeLabel: "Thực hành" })),
           "Thực hành",
           "search-practice-heading",
         )}
-        {renderUsers(tabResults.users)}
+        {renderUsers(userResults, { showLoading: usersLoading, showError: usersError })}
       </>
     );
   }
