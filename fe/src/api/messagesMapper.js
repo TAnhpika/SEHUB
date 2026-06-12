@@ -1,15 +1,4 @@
-function parseApiDate(isoDate) {
-  if (!isoDate) return null;
-
-  const raw = String(isoDate).trim();
-  if (!raw) return null;
-
-  const hasTimezone = /[zZ]$|[+-]\d{2}:\d{2}$/.test(raw);
-  const normalized = hasTimezone ? raw : `${raw}Z`;
-  const date = new Date(normalized);
-
-  return Number.isNaN(date.getTime()) ? null : date;
-}
+import { parseApiDate } from "@/utils/dateTime";
 
 function formatRelativeTime(isoDate) {
   const date = parseApiDate(isoDate);
