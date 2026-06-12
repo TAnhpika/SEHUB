@@ -17,7 +17,7 @@ namespace SEHub.API.IntegrationTests.Users;
 
 public sealed class SocialUserEndpointsTests : IClassFixture<CustomWebApplicationFactory>
 {
-    public static readonly Guid TargetUserId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+    public static readonly Guid TargetUserId = Guid.Parse("88888888-8888-8888-8888-888888888001");
     public const string TargetUsername = "searchtarget";
     public const string TargetDisplayName = "Search Target User";
 
