@@ -41,6 +41,7 @@ public static class DemoDataSeeder
     private static readonly Guid ModeratorUserId = Guid.Parse("f2222222-2222-2222-2222-222222222222");
     private static readonly Guid SpammerUserId = Guid.Parse("f3333333-3333-3333-3333-333333333333");
     private static readonly Guid DemoSpamPostId = Guid.Parse("f4444444-4444-4444-4444-444444444401");
+    public static readonly Guid DemoPendingPostId = Guid.Parse("f6666666-6666-6666-6666-666666666601");
     private static readonly Guid DemoOffensivePostId = Guid.Parse("f4444444-4444-4444-4444-444444444402");
     private static readonly Guid DemoReportSpamId = Guid.Parse("f5555555-5555-5555-5555-555555555501");
     private static readonly Guid DemoReportHarmfulId = Guid.Parse("f5555555-5555-5555-5555-555555555502");
@@ -81,6 +82,7 @@ public static class DemoDataSeeder
             await SeedPracticeExamAsync(context, logger);
             await SeedActiveSubscriptionAsync(context, subscriptionService, student.Id, logger);
             await SeedDemoPostsAsync(context, student.Id, logger);
+            await SeedPendingModerationPostsAsync(context, student.Id, logger);
             await SeedReportablePostsAsync(context, spammer.Id, logger);
             await SeedDemoPostReportsAsync(context, freeStudent.Id, student.Id, logger);
 
@@ -665,6 +667,46 @@ public static class DemoDataSeeder
         context.Posts.AddRange(postsToCreate);
         await context.SaveChangesAsync();
         logger.LogInformation("Seeded {Count} demo posts for author {AuthorId}", postsToCreate.Count, authorId);
+    }
+
+    private static async Task SeedPendingModerationPostsAsync(SEHubDbContext context, Guid authorId, ILogger logger)
+    {
+        if (await context.Posts.AnyAsync(p => p.Id == DemoPendingPostId))
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        context.Posts.AddRange(
+            new Post
+            {
+                Id = DemoPendingPostId,
+                AuthorId = authorId,
+                Title = "Hỏi về kinh nghiệm thi môn Cấu trúc dữ liệu",
+                Content = "Mọi người cho mình hỏi môn CSD thi FE có khó không? Mình đang ôn theo slide tuần 1–8.",
+                Tags = $"{DemoPostTag},CSD,FE",
+                Status = PostStatus.Pending,
+                ViewCount = 0,
+                IsFeatured = false,
+                IsDeleted = false,
+                CreatedAt = now.AddMinutes(-30)
+            },
+            new Post
+            {
+                Id = Guid.Parse("f6666666-6666-6666-6666-666666666602"),
+                AuthorId = authorId,
+                Title = "Tuyển thành viên tham gia Hackathon FPT 2026",
+                Content = "Team mình đang tìm thêm 2 bạn backend và 1 bạn UI/UX cho Hackathon FPT 2026.",
+                Tags = $"{DemoPostTag},Hackathon,Team",
+                Status = PostStatus.Pending,
+                ViewCount = 0,
+                IsFeatured = false,
+                IsDeleted = false,
+                CreatedAt = now.AddHours(-2)
+            });
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seeded pending moderation posts for author {AuthorId}", authorId);
     }
 
     private static IEnumerable<Post> BuildDemoPosts(Guid authorId)
