@@ -167,3 +167,7 @@ export function updateGamificationLevels(body) {
 export function getGamificationBadges() {
   return apiRequest("/api/v1/admin/gamification/badges");
 }
+
+export function listModerationPracticeSubmissions(params = {}) {
+  return apiRequest(`/api/v1/admin/moderation/practice-submissions${buildQuery(params)}`);
+}
