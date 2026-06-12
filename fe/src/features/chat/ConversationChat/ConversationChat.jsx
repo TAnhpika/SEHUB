@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
+  faBan,
   faCircleInfo,
   faFaceSmile,
+  faFlag,
   faImage,
   faPaperPlane,
   faPhone,
@@ -23,14 +25,21 @@ function ConversationChat({
   compact = false,
   onBack,
   onClose,
+  isBlockedByMe = false,
+  isBlockedEitherWay = false,
+  onBlock,
+  onUnblock,
+  onReport,
 }) {
   const [draft, setDraft] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
   const renderedMessages = useMemo(() => messages, [messages]);
 
   async function handleSend() {
     const text = draft.trim();
-    if (!text || sending) return;
+    if (!text || sending || isBlockedEitherWay) return;
 
     setDraft("");
     await onSend?.(text);
@@ -73,9 +82,49 @@ function ConversationChat({
               </button>
             </>
           )}
-          <button type="button" className={styles["action-btn"]} aria-label="Thông tin hội thoại" disabled>
-            <FontAwesomeIcon icon={faCircleInfo} />
-          </button>
+          <div className={styles["menu-wrap"]} ref={menuRef}>
+            <button
+              type="button"
+              className={styles["action-btn"]}
+              aria-label="Tùy chọn hội thoại"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((prev) => !prev)}
+            >
+              <FontAwesomeIcon icon={faCircleInfo} />
+            </button>
+            {menuOpen && (
+              <div className={styles.menu} role="menu">
+                <button
+                  type="button"
+                  className={styles["menu-item"]}
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onReport?.();
+                  }}
+                >
+                  <FontAwesomeIcon icon={faFlag} />
+                  Báo cáo hội thoại
+                </button>
+                <button
+                  type="button"
+                  className={styles["menu-item"]}
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    if (isBlockedByMe) {
+                      onUnblock?.();
+                    } else {
+                      onBlock?.();
+                    }
+                  }}
+                >
+                  <FontAwesomeIcon icon={faBan} />
+                  {isBlockedByMe ? "Bỏ chặn người dùng" : "Chặn người dùng"}
+                </button>
+              </div>
+            )}
+          </div>
           {compact && onClose && (
             <button type="button" className={styles["action-btn"]} aria-label="Đóng" onClick={onClose}>
               <FontAwesomeIcon icon={faXmark} />
@@ -115,6 +164,14 @@ function ConversationChat({
       </div>
 
       <footer className={styles.footer}>
+        {isBlockedEitherWay && (
+          <p className={styles.blockedNotice}>
+            {isBlockedByMe
+              ? "Bạn đã chặn người dùng này. Bỏ chặn để tiếp tục nhắn tin."
+              : "Bạn không thể nhắn tin với người dùng này."}
+          </p>
+        )}
+
         {!compact && (
           <>
             <button type="button" className={styles["footer-btn"]} aria-label="Thêm" disabled>
@@ -134,7 +191,7 @@ function ConversationChat({
             onKeyDown={handleKeyDown}
             placeholder="Nhập tin nhắn..."
             aria-label="Nhập tin nhắn"
-            disabled={sending}
+            disabled={sending || isBlockedEitherWay}
           />
           <button type="button" className={styles.emoji} aria-label="Chọn emoji" disabled>
             <FontAwesomeIcon icon={faFaceSmile} />
@@ -146,7 +203,7 @@ function ConversationChat({
           className={styles.send}
           aria-label="Gửi tin nhắn"
           onClick={handleSend}
-          disabled={!draft.trim() || sending}
+          disabled={!draft.trim() || sending || isBlockedEitherWay}
         >
           <FontAwesomeIcon icon={faPaperPlane} />
         </button>

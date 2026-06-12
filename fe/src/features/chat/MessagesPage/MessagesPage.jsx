@@ -4,18 +4,23 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
 import ConversationAvatar from "@/features/chat/ConversationAvatar/ConversationAvatar";
 import ConversationChat from "@/features/chat/ConversationChat/ConversationChat";
+import ChatEmptyState, { faCommentDots, faInbox } from "@/features/chat/ChatEmptyState/ChatEmptyState";
+import ReportConversationModal from "@/features/chat/ReportConversationModal/ReportConversationModal";
 import {
   loadConversationMessages,
   loadConversations,
   markConversationAsRead,
   sendConversationMessage,
 } from "@/features/chat/messagesData";
+import { blockUser, getBlockStatus, unblockUser } from "@/api/blockApi";
 import { mapMessageItem } from "@/api/messagesMapper";
+import { useToast } from "@/common/Toast/ToastProvider";
 import { useChatHub } from "@/hooks/useChatHub";
 import styles from "./MessagesPage.module.css";
 
 function MessagesPage() {
   const location = useLocation();
+  const { showToast } = useToast();
   const [conversations, setConversations] = useState([]);
   const [selectedId, setSelectedId] = useState(location.state?.conversationId ?? null);
   const [messages, setMessages] = useState([]);
@@ -24,6 +29,12 @@ function MessagesPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [error, setError] = useState(null);
   const [sending, setSending] = useState(false);
+  const [blockStatus, setBlockStatus] = useState({
+    isBlockedByMe: false,
+    isBlockedByThem: false,
+    isBlockedEitherWay: false,
+  });
+  const [reportOpen, setReportOpen] = useState(false);
 
   const handleReceiveMessage = useCallback((messageDto) => {
     const mapped = mapMessageItem(messageDto);
@@ -121,9 +132,7 @@ function MessagesPage() {
           setMessages([]);
         }
       } finally {
-        if (!cancelled) {
-          setMessagesLoading(false);
-        }
+        setMessagesLoading(false);
       }
     }
 
@@ -148,6 +157,83 @@ function MessagesPage() {
   const activeConversation =
     conversations.find((item) => item.conversationId === selectedId) ?? null;
 
+  useEffect(() => {
+    if (!activeConversation?.otherUserId) {
+      setBlockStatus({
+        isBlockedByMe: false,
+        isBlockedByThem: false,
+        isBlockedEitherWay: false,
+      });
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    async function fetchBlockStatus() {
+      try {
+        const status = await getBlockStatus(activeConversation.otherUserId);
+        if (!cancelled) {
+          setBlockStatus({
+            isBlockedByMe: Boolean(status?.isBlockedByMe),
+            isBlockedByThem: Boolean(status?.isBlockedByThem),
+            isBlockedEitherWay: Boolean(status?.isBlockedEitherWay),
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setBlockStatus({
+            isBlockedByMe: false,
+            isBlockedByThem: false,
+            isBlockedEitherWay: false,
+          });
+        }
+      }
+    }
+
+    fetchBlockStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeConversation?.otherUserId]);
+
+  async function handleBlockUser() {
+    if (!activeConversation?.otherUserId) return;
+
+    try {
+      await blockUser(activeConversation.otherUserId);
+      setBlockStatus({
+        isBlockedByMe: true,
+        isBlockedByThem: false,
+        isBlockedEitherWay: true,
+      });
+      setConversations((current) =>
+        current.filter((item) => item.conversationId !== activeConversation.conversationId),
+      );
+      setSelectedId(null);
+      setMessages([]);
+      showToast("Đã chặn người dùng này.");
+    } catch (err) {
+      showToast(err.message ?? "Không chặn được người dùng.");
+    }
+  }
+
+  async function handleUnblockUser() {
+    if (!activeConversation?.otherUserId) return;
+
+    try {
+      await unblockUser(activeConversation.otherUserId);
+      setBlockStatus({
+        isBlockedByMe: false,
+        isBlockedByThem: false,
+        isBlockedEitherWay: false,
+      });
+      showToast("Đã bỏ chặn người dùng.");
+    } catch (err) {
+      showToast(err.message ?? "Không bỏ chặn được người dùng.");
+    }
+  }
+
   async function handleSend(text) {
     if (!selectedId || !text.trim()) return;
 
@@ -162,6 +248,8 @@ function MessagesPage() {
             : item,
         ),
       );
+    } catch (err) {
+      showToast(err.message ?? "Không gửi được tin nhắn.");
     } finally {
       setSending(false);
     }
@@ -188,11 +276,22 @@ function MessagesPage() {
           />
         </label>
 
-        {loading && <p className={styles.empty}>Đang tải hội thoại...</p>}
-        {error && !loading && <p className={styles.empty} role="alert">{error}</p>}
+        {loading && (
+          <ChatEmptyState compact title="Đang tải hội thoại..." />
+        )}
+        {error && !loading && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
 
         {!loading && !error && filteredConversations.length === 0 && (
-          <p className={styles.empty}>Chưa có hội thoại nào.</p>
+          <ChatEmptyState
+            compact
+            icon={faInbox}
+            title="Chưa có hội thoại nào"
+            description="Tìm bạn bè và bấm Nhắn tin trên profile để bắt đầu trò chuyện."
+          />
         )}
 
         <ul className={styles.conversations}>
@@ -237,11 +336,27 @@ function MessagesPage() {
             loading={messagesLoading}
             sending={sending}
             onSend={handleSend}
+            isBlockedByMe={blockStatus.isBlockedByMe}
+            isBlockedEitherWay={blockStatus.isBlockedEitherWay}
+            onBlock={handleBlockUser}
+            onUnblock={handleUnblockUser}
+            onReport={() => setReportOpen(true)}
           />
         ) : (
-          <p className={styles.empty}>Chọn một hội thoại để bắt đầu nhắn tin.</p>
+          <ChatEmptyState
+            icon={faCommentDots}
+            title="Chọn một hội thoại"
+            description="Chọn cuộc trò chuyện bên trái hoặc nhắn tin từ profile người dùng."
+          />
         )}
       </section>
+
+      <ReportConversationModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        conversationId={activeConversation?.conversationId}
+        conversationName={activeConversation?.name}
+      />
     </div>
   );
 }
