@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faXmark } from "@fortawesome/free-solid-svg-icons";
 import ConversationChat from "@/features/chat/ConversationChat/ConversationChat";
+import ChatEmptyState, { faInbox } from "@/features/chat/ChatEmptyState/ChatEmptyState";
 import {
   loadConversationMessages,
   loadConversations,
@@ -76,9 +77,7 @@ function ChatModal({ onClose }) {
         }
         await joinConversation(selectedId);
       } finally {
-        if (!cancelled) {
-          setMessagesLoading(false);
-        }
+        setMessagesLoading(false);
       }
     }
 
@@ -127,10 +126,17 @@ function ChatModal({ onClose }) {
         </button>
       </div>
 
-      {loading && <p className={styles.empty}>Đang tải...</p>}
+      {loading && (
+        <ChatEmptyState compact title="Đang tải..." />
+      )}
 
       {!loading && conversations.length === 0 && (
-        <p className={styles.empty}>Chưa có hội thoại nào.</p>
+        <ChatEmptyState
+          compact
+          icon={faInbox}
+          title="Chưa có hội thoại nào"
+          description="Mở profile bạn bè và bấm Nhắn tin để bắt đầu."
+        />
       )}
 
       <ul className={styles.list}>
