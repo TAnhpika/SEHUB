@@ -247,6 +247,71 @@ export function mapAdminBannedUser(dto) {
   };
 }
 
+function mapLevelNameToRank(levelName) {
+  const normalized = String(levelName ?? "").trim().toLowerCase();
+  if (normalized.includes("platinum")) return "platinum";
+  if (normalized.includes("gold")) return "gold";
+  if (normalized.includes("silver")) return "silver";
+  return "bronze";
+}
+
+function mapViolationHistoryItem(dto) {
+  const banType = String(dto.banType ?? "").toLowerCase();
+  let actionLabel = "Ghi nhận";
+  if (banType.includes("warning")) actionLabel = "Cảnh báo";
+  else if (banType.includes("temp")) actionLabel = "Khóa tạm";
+  else if (banType.includes("permanent")) actionLabel = "Khóa vĩnh viễn";
+
+  return {
+    id: dto.id,
+    banType: dto.banType,
+    actionLabel,
+    reason: dto.reason ?? "—",
+    until: dto.until ? formatAdminDateTime(dto.until) : null,
+    createdAt: formatAdminDateTime(dto.createdAt),
+    actorUsername: dto.actorUsername ?? "Moderator",
+  };
+}
+
+export function mapViolatingUser(dto) {
+  const displayName = dto.displayName ?? dto.username ?? "Unknown";
+  const username = dto.username ?? "unknown";
+  const semesterLabel = dto.semester ? `Kỳ ${dto.semester}` : null;
+  const subtitle = [dto.major, semesterLabel].filter(Boolean).join(" · ") || `@${username}`;
+
+  return {
+    id: dto.id,
+    apiId: dto.id,
+    username,
+    studentId: subtitle,
+    displayName,
+    email: dto.email ?? "",
+    department: dto.major ? `Chuyên ngành ${dto.major}` : "—",
+    major: dto.major ?? null,
+    semester: dto.semester ?? null,
+    rank: mapLevelNameToRank(dto.levelName),
+    levelName: dto.levelName ?? null,
+    points: dto.points ?? 0,
+    violations: dto.violationCount ?? 0,
+    warningCount: dto.warningCount ?? 0,
+    status: String(dto.status ?? "normal").toLowerCase(),
+    banType: dto.banType ?? null,
+    lockDurationDays: dto.lockDurationDays ?? null,
+    lockedUntil: dto.banUntil ?? null,
+    banReason: dto.banReason ?? null,
+    lastActionAt: dto.lastActionAt ?? null,
+    initial: displayName.charAt(0).toUpperCase(),
+  };
+}
+
+export function mapViolatingUserDetail(dto) {
+  return {
+    ...mapViolatingUser(dto),
+    tempBanCount: dto.tempBanCount ?? 0,
+    history: (dto.history ?? []).map(mapViolationHistoryItem),
+  };
+}
+
 export function mapLevelConfigToRankTier(dto, index) {
   const slug = slugify(dto.name) || `rank-${index + 1}`;
 
