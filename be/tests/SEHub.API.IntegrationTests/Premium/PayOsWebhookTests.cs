@@ -29,7 +29,7 @@ public sealed class PayOsWebhookTests : IClassFixture<CustomWebApplicationFactor
             data = new
             {
                 orderCode = long.Parse(CustomWebApplicationFactory.PayOsOrderCode),
-                amount = 99000,
+                amount = 48000,
                 description = "SEHub Premium",
                 reference = CustomWebApplicationFactory.WebhookReference
             },
@@ -62,6 +62,11 @@ public sealed class PayOsWebhookTests : IClassFixture<CustomWebApplicationFactor
             .Where(l => l.OrderId == CustomWebApplicationFactory.PendingPaymentOrderId && l.Action == "WEBHOOK_PAID")
             .ToListAsync();
         paidAuditLogs.Should().HaveCount(1);
+
+        var emailCapture = _factory.EmailCapture;
+        emailCapture.LastPaymentConfirmation.Should().NotBeNull();
+        emailCapture.LastPaymentConfirmation!.ToEmail.Should().Be(CustomWebApplicationFactory.FreeUserEmail);
+        emailCapture.LastPaymentConfirmation.OrderCode.Should().Be(CustomWebApplicationFactory.PayOsOrderCode);
     }
 
     [Fact]
@@ -74,7 +79,7 @@ public sealed class PayOsWebhookTests : IClassFixture<CustomWebApplicationFactor
             data = new
             {
                 orderCode = 1234567890L,
-                amount = 99000,
+                amount = 48000,
                 description = "PayOS URL verification",
                 reference = "payos-url-verify-test"
             },
@@ -99,7 +104,7 @@ public sealed class PayOsWebhookTests : IClassFixture<CustomWebApplicationFactor
             data = new
             {
                 orderCode = long.Parse(CustomWebApplicationFactory.PayOsOrderCode),
-                amount = 99000,
+                amount = 48000,
                 description = "SEHub Premium",
                 reference = "payos-pending-ref"
             },
