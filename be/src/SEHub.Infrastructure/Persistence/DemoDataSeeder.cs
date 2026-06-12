@@ -27,6 +27,24 @@ public static class DemoDataSeeder
     public const string ModeratorPassword = "Mod@12345";
     public const string ModeratorUsername = "demo_moderator";
 
+    public const string ToxicUserEmail = "toxic.user@sehub.local";
+    public const string ToxicUserPassword = "Toxic@12345";
+
+    public const string RepeatOffenderEmail = "repeat.offender@sehub.local";
+    public const string RepeatOffenderPassword = "Repeat@12345";
+
+    public const string JunkPosterEmail = "junk.poster@sehub.local";
+    public const string JunkPosterPassword = "Junk@12345";
+
+    public const string CooledUserEmail = "cooled.user@sehub.local";
+    public const string CooledUserPassword = "Cooled@12345";
+
+    public const string EligibleWarnEmail = "eligible.warn@sehub.local";
+    public const string EligibleWarnPassword = "Eligible@12345";
+
+    public const string PastOffenderEmail = "past.offender@sehub.local";
+    public const string PastOffenderPassword = "Past@12345";
+
     private const string DemoPostTag = "demo-seed";
     private const string DemoReportTag = "demo-seed-report";
     private const string FinalExamCode = "SE301-FINAL-01";
@@ -40,6 +58,13 @@ public static class DemoDataSeeder
     private static readonly Guid FreeStudentId = Guid.Parse("f1111111-1111-1111-1111-111111111111");
     private static readonly Guid ModeratorUserId = Guid.Parse("f2222222-2222-2222-2222-222222222222");
     private static readonly Guid SpammerUserId = Guid.Parse("f3333333-3333-3333-3333-333333333333");
+    private static readonly Guid ToxicUserId = Guid.Parse("f8888881-8881-8881-8881-888888888881");
+    private static readonly Guid RepeatOffenderUserId = Guid.Parse("f8888882-8882-8882-8882-888888888882");
+    private static readonly Guid JunkPosterUserId = Guid.Parse("f8888883-8883-8883-8883-888888888883");
+    private static readonly Guid CooledUserId = Guid.Parse("f8888884-8884-8884-8884-888888888884");
+    private static readonly Guid EligibleWarnUserId = Guid.Parse("f8888885-8885-8885-8885-888888888885");
+    private static readonly Guid PastOffenderUserId = Guid.Parse("f8888886-8886-8886-8886-888888888886");
+    private static readonly Guid CooledUserExtraWarningId = Guid.Parse("f7777777-7777-7777-7777-777777778403");
     private static readonly Guid DemoSpamPostId = Guid.Parse("f4444444-4444-4444-4444-444444444401");
     public static readonly Guid DemoPendingPostId = Guid.Parse("f6666666-6666-6666-6666-666666666601");
     private static readonly Guid DemoOffensivePostId = Guid.Parse("f4444444-4444-4444-4444-444444444402");
@@ -78,6 +103,12 @@ public static class DemoDataSeeder
             var freeStudent = await SeedFreeStudentAsync(userManager, context, logger);
             await SeedModeratorAsync(userManager, context, logger);
             var spammer = await SeedSpammerStudentAsync(userManager, context, logger);
+            await SeedToxicStudentAsync(userManager, context, logger);
+            await SeedRepeatOffenderAsync(userManager, context, logger);
+            await SeedJunkPosterAsync(userManager, context, logger);
+            await SeedCooledUserAsync(userManager, context, logger);
+            await SeedEligibleWarnUserAsync(userManager, context, logger);
+            await SeedPastOffenderAsync(userManager, context, logger);
             await SeedFinalExamAsync(context, logger);
             await SeedPracticeExamAsync(context, logger);
             await SeedActiveSubscriptionAsync(context, subscriptionService, student.Id, logger);
@@ -85,6 +116,7 @@ public static class DemoDataSeeder
             await SeedPendingModerationPostsAsync(context, student.Id, logger);
             await SeedReportablePostsAsync(context, spammer.Id, logger);
             await SeedDemoPostReportsAsync(context, freeStudent.Id, student.Id, logger);
+            await SeedDemoViolationRecordsAsync(context, ModeratorUserId, logger);
 
             var after = await CaptureCountsAsync(context, userManager);
             logger.LogInformation(
@@ -241,6 +273,140 @@ public static class DemoDataSeeder
             "Demo author of reported posts for moderation screens.");
     }
 
+    private static async Task SeedToxicStudentAsync(
+        UserManager<ApplicationUser> userManager,
+        SEHubDbContext context,
+        ILogger logger) =>
+        await SeedRoleUserAsync(
+            userManager,
+            context,
+            logger,
+            ToxicUserId,
+            "toxic_user",
+            ToxicUserEmail,
+            ToxicUserPassword,
+            "Toxic Student",
+            RoleNames.Student,
+            "Demo account — mới bị cảnh báo lần đầu.");
+
+    private static async Task SeedRepeatOffenderAsync(
+        UserManager<ApplicationUser> userManager,
+        SEHubDbContext context,
+        ILogger logger) =>
+        await SeedRoleUserAsync(
+            userManager,
+            context,
+            logger,
+            RepeatOffenderUserId,
+            "repeat_offender",
+            RepeatOffenderEmail,
+            RepeatOffenderPassword,
+            "Repeat Offender",
+            RoleNames.Student,
+            "Demo account — đang bị khóa tạm 1 ngày.");
+
+    private static async Task SeedJunkPosterAsync(
+        UserManager<ApplicationUser> userManager,
+        SEHubDbContext context,
+        ILogger logger)
+    {
+        var user = await SeedRoleUserAsync(
+            userManager,
+            context,
+            logger,
+            JunkPosterUserId,
+            "junk_poster",
+            JunkPosterEmail,
+            JunkPosterPassword,
+            "Junk Poster",
+            RoleNames.Student,
+            "Demo account — nhiều cảnh báo, hạng Bạc.");
+
+        await EnsureUserLevelAsync(context, user.Id, "Silver", 120, logger);
+    }
+
+    private static async Task SeedCooledUserAsync(
+        UserManager<ApplicationUser> userManager,
+        SEHubDbContext context,
+        ILogger logger)
+    {
+        var user = await SeedRoleUserAsync(
+            userManager,
+            context,
+            logger,
+            CooledUserId,
+            "cooled_user",
+            CooledUserEmail,
+            CooledUserPassword,
+            "Cooled User",
+            RoleNames.Student,
+            "Demo account — từng khóa 30 ngày, hiện bình thường.");
+
+        await EnsureUserLevelAsync(context, user.Id, "Gold", 520, logger);
+    }
+
+    private static async Task SeedEligibleWarnUserAsync(
+        UserManager<ApplicationUser> userManager,
+        SEHubDbContext context,
+        ILogger logger) =>
+        await SeedRoleUserAsync(
+            userManager,
+            context,
+            logger,
+            EligibleWarnUserId,
+            "eligible_warn",
+            EligibleWarnEmail,
+            EligibleWarnPassword,
+            "Eligible Warn",
+            RoleNames.Student,
+            "Demo account — bình thường, sẵn sàng nhận cảnh báo mới.");
+
+    private static async Task SeedPastOffenderAsync(
+        UserManager<ApplicationUser> userManager,
+        SEHubDbContext context,
+        ILogger logger) =>
+        await SeedRoleUserAsync(
+            userManager,
+            context,
+            logger,
+            PastOffenderUserId,
+            "past_offender",
+            PastOffenderEmail,
+            PastOffenderPassword,
+            "Past Offender",
+            RoleNames.Student,
+            "Demo account — từng vi phạm, hiện trạng thái bình thường.");
+
+    private static async Task EnsureUserLevelAsync(
+        SEHubDbContext context,
+        Guid userId,
+        string levelName,
+        int points,
+        ILogger logger)
+    {
+        var level = await context.LevelConfigs.FirstOrDefaultAsync(l => l.Name == levelName);
+        if (level is null)
+        {
+            return;
+        }
+
+        var user = await context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        if (user is null)
+        {
+            return;
+        }
+
+        if (user.LevelId == level.Id && user.Points == points)
+        {
+            return;
+        }
+
+        user.LevelId = level.Id;
+        user.Points = points;
+        await context.SaveChangesAsync();
+        logger.LogInformation("Updated gamification level for demo user {UserId} to {LevelName}", userId, levelName);
+    }
+
     private static async Task<ApplicationUser> SeedRoleUserAsync(
         UserManager<ApplicationUser> userManager,
         SEHubDbContext context,
@@ -319,7 +485,7 @@ public static class DemoDataSeeder
         var now = DateTime.UtcNow;
         var posts = new List<Post>();
 
-        if (!await context.Posts.AnyAsync(p => p.Id == DemoSpamPostId))
+        if (!await context.Posts.IgnoreQueryFilters().AnyAsync(p => p.Id == DemoSpamPostId))
         {
             posts.Add(new Post
             {
@@ -336,7 +502,7 @@ public static class DemoDataSeeder
             });
         }
 
-        if (!await context.Posts.AnyAsync(p => p.Id == DemoOffensivePostId))
+        if (!await context.Posts.IgnoreQueryFilters().AnyAsync(p => p.Id == DemoOffensivePostId))
         {
             posts.Add(new Post
             {
@@ -671,7 +837,7 @@ public static class DemoDataSeeder
 
     private static async Task SeedPendingModerationPostsAsync(SEHubDbContext context, Guid authorId, ILogger logger)
     {
-        if (await context.Posts.AnyAsync(p => p.Id == DemoPendingPostId))
+        if (await context.Posts.IgnoreQueryFilters().AnyAsync(p => p.Id == DemoPendingPostId))
         {
             return;
         }
@@ -707,6 +873,324 @@ public static class DemoDataSeeder
 
         await context.SaveChangesAsync();
         logger.LogInformation("Seeded pending moderation posts for author {AuthorId}", authorId);
+    }
+
+    private static async Task SeedDemoViolationRecordsAsync(
+        SEHubDbContext context,
+        Guid moderatorUserId,
+        ILogger logger)
+    {
+        var now = DateTime.UtcNow;
+
+        await NormalizeCooledUserDemoStateAsync(context, logger);
+        await SeedSpammerViolationRecordsAsync(context, SpammerUserId, moderatorUserId, now, logger);
+        await SeedToxicUserViolationRecordsAsync(context, ToxicUserId, moderatorUserId, now, logger);
+        await SeedRepeatOffenderViolationRecordsAsync(context, RepeatOffenderUserId, moderatorUserId, now, logger);
+        await SeedJunkPosterViolationRecordsAsync(context, JunkPosterUserId, moderatorUserId, now, logger);
+        await SeedCooledUserViolationRecordsAsync(context, CooledUserId, moderatorUserId, now, logger);
+        await SeedEligibleWarnViolationRecordsAsync(context, EligibleWarnUserId, moderatorUserId, now, logger);
+        await SeedPastOffenderViolationRecordsAsync(context, PastOffenderUserId, moderatorUserId, now, logger);
+    }
+
+    private static async Task NormalizeCooledUserDemoStateAsync(SEHubDbContext context, ILogger logger)
+    {
+        var extraWarning = await context.UserBans.FindAsync(CooledUserExtraWarningId);
+        if (extraWarning is null)
+        {
+            return;
+        }
+
+        context.UserBans.Remove(extraWarning);
+
+        var user = await context.Users.FirstOrDefaultAsync(u => u.Id == CooledUserId);
+        if (user is not null && user.IsBanned && user.BanUntil is not null && user.BanUntil <= DateTime.UtcNow)
+        {
+            user.IsBanned = false;
+            user.BanUntil = null;
+            user.BanReason = null;
+        }
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Normalized cooled_user demo data to status normal");
+    }
+
+    private static async Task SeedSpammerViolationRecordsAsync(
+        SEHubDbContext context,
+        Guid userId,
+        Guid moderatorUserId,
+        DateTime now,
+        ILogger logger)
+    {
+        if (await context.UserBans.AnyAsync(b => b.UserId == userId))
+        {
+            return;
+        }
+
+        context.UserBans.AddRange(
+            new UserBan
+            {
+                Id = Guid.Parse("f7777777-7777-7777-7777-777777777701"),
+                UserId = userId,
+                ActorId = moderatorUserId,
+                BanType = BanType.Warning,
+                Reason = "Đăng liên kết spam lần 1 — cảnh báo.",
+                CreatedAt = now.AddDays(-5)
+            },
+            new UserBan
+            {
+                Id = Guid.Parse("f7777777-7777-7777-7777-777777777702"),
+                UserId = userId,
+                ActorId = moderatorUserId,
+                BanType = BanType.Warning,
+                Reason = "Tái phạm quảng cáo trái phép.",
+                CreatedAt = now.AddDays(-2)
+            },
+            new UserBan
+            {
+                Id = Guid.Parse("f7777777-7777-7777-7777-777777777703"),
+                UserId = userId,
+                ActorId = moderatorUserId,
+                BanType = BanType.Temp,
+                Until = now.AddDays(5),
+                Reason = "Khóa tạm 7 ngày do spam nhiều lần.",
+                CreatedAt = now.AddDays(-2).AddHours(1)
+            });
+
+        await ApplyActiveTempBanAsync(
+            context,
+            userId,
+            now.AddDays(5),
+            "Khóa tạm 7 ngày do spam nhiều lần.");
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seeded violation records for spammer user {UserId}", userId);
+    }
+
+    private static async Task SeedToxicUserViolationRecordsAsync(
+        SEHubDbContext context,
+        Guid userId,
+        Guid moderatorUserId,
+        DateTime now,
+        ILogger logger)
+    {
+        if (await context.UserBans.AnyAsync(b => b.UserId == userId))
+        {
+            return;
+        }
+
+        context.UserBans.Add(new UserBan
+        {
+            Id = Guid.Parse("f7777777-7777-7777-7777-777777778101"),
+            UserId = userId,
+            ActorId = moderatorUserId,
+            BanType = BanType.Warning,
+            Reason = "Ngôn từ không phù hợp trong bình luận cộng đồng.",
+            CreatedAt = now.AddDays(-1)
+        });
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seeded warning-only violation records for user {UserId}", userId);
+    }
+
+    private static async Task SeedRepeatOffenderViolationRecordsAsync(
+        SEHubDbContext context,
+        Guid userId,
+        Guid moderatorUserId,
+        DateTime now,
+        ILogger logger)
+    {
+        if (await context.UserBans.AnyAsync(b => b.UserId == userId))
+        {
+            return;
+        }
+
+        context.UserBans.AddRange(
+            new UserBan
+            {
+                Id = Guid.Parse("f7777777-7777-7777-7777-777777778201"),
+                UserId = userId,
+                ActorId = moderatorUserId,
+                BanType = BanType.Warning,
+                Reason = "Đăng nội dung gây tranh cãi.",
+                CreatedAt = now.AddDays(-3)
+            },
+            new UserBan
+            {
+                Id = Guid.Parse("f7777777-7777-7777-7777-777777778202"),
+                UserId = userId,
+                ActorId = moderatorUserId,
+                BanType = BanType.Temp,
+                Until = now.AddDays(1),
+                Reason = "Khóa tạm 1 ngày — tái phạm sau cảnh báo.",
+                CreatedAt = now.AddHours(-2)
+            });
+
+        await ApplyActiveTempBanAsync(
+            context,
+            userId,
+            now.AddDays(1),
+            "Khóa tạm 1 ngày — tái phạm sau cảnh báo.");
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seeded 1-day temp ban violation records for user {UserId}", userId);
+    }
+
+    private static async Task SeedJunkPosterViolationRecordsAsync(
+        SEHubDbContext context,
+        Guid userId,
+        Guid moderatorUserId,
+        DateTime now,
+        ILogger logger)
+    {
+        if (await context.UserBans.AnyAsync(b => b.UserId == userId))
+        {
+            return;
+        }
+
+        context.UserBans.AddRange(
+            new UserBan
+            {
+                Id = Guid.Parse("f7777777-7777-7777-7777-777777778301"),
+                UserId = userId,
+                ActorId = moderatorUserId,
+                BanType = BanType.Warning,
+                Reason = "Bài viết trùng lặp / spam nhẹ.",
+                CreatedAt = now.AddDays(-10)
+            },
+            new UserBan
+            {
+                Id = Guid.Parse("f7777777-7777-7777-7777-777777778302"),
+                UserId = userId,
+                ActorId = moderatorUserId,
+                BanType = BanType.Warning,
+                Reason = "Tiếp tục đăng nội dung quảng cáo.",
+                CreatedAt = now.AddDays(-4)
+            },
+            new UserBan
+            {
+                Id = Guid.Parse("f7777777-7777-7777-7777-777777778303"),
+                UserId = userId,
+                ActorId = moderatorUserId,
+                BanType = BanType.Warning,
+                Reason = "Cảnh báo lần 3 — cần tuân thủ quy định.",
+                CreatedAt = now.AddHours(-6)
+            });
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seeded multi-warning violation records for user {UserId}", userId);
+    }
+
+    private static async Task SeedCooledUserViolationRecordsAsync(
+        SEHubDbContext context,
+        Guid userId,
+        Guid moderatorUserId,
+        DateTime now,
+        ILogger logger)
+    {
+        if (await context.UserBans.AnyAsync(b => b.UserId == userId))
+        {
+            return;
+        }
+
+        context.UserBans.AddRange(
+            new UserBan
+            {
+                Id = Guid.Parse("f7777777-7777-7777-7777-777777778401"),
+                UserId = userId,
+                ActorId = moderatorUserId,
+                BanType = BanType.Warning,
+                Reason = "Chia sẻ tài liệu không rõ nguồn.",
+                CreatedAt = now.AddDays(-45)
+            },
+            new UserBan
+            {
+                Id = Guid.Parse("f7777777-7777-7777-7777-777777778402"),
+                UserId = userId,
+                ActorId = moderatorUserId,
+                BanType = BanType.Temp,
+                Until = now.AddDays(-5),
+                Reason = "Khóa tạm 30 ngày — vi phạm nặng.",
+                CreatedAt = now.AddDays(-35)
+            });
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seeded expired-ban violation history for user {UserId}", userId);
+    }
+
+    private static async Task SeedEligibleWarnViolationRecordsAsync(
+        SEHubDbContext context,
+        Guid userId,
+        Guid moderatorUserId,
+        DateTime now,
+        ILogger logger)
+    {
+        if (await context.UserBans.AnyAsync(b => b.UserId == userId))
+        {
+            return;
+        }
+
+        context.UserBans.Add(new UserBan
+        {
+            Id = Guid.Parse("f7777777-7777-7777-7777-777777778501"),
+            UserId = userId,
+            ActorId = moderatorUserId,
+            BanType = BanType.Temp,
+            Until = now.AddDays(-3),
+            Reason = "Khóa tạm 7 ngày đã hết hạn — chờ xử lý tiếp.",
+            CreatedAt = now.AddDays(-10)
+        });
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seeded normal-status violation record for user {UserId}", userId);
+    }
+
+    private static async Task SeedPastOffenderViolationRecordsAsync(
+        SEHubDbContext context,
+        Guid userId,
+        Guid moderatorUserId,
+        DateTime now,
+        ILogger logger)
+    {
+        if (await context.UserBans.AnyAsync(b => b.UserId == userId))
+        {
+            return;
+        }
+
+        context.UserBans.AddRange(
+            new UserBan
+            {
+                Id = Guid.Parse("f7777777-7777-7777-7777-777777778601"),
+                UserId = userId,
+                ActorId = moderatorUserId,
+                BanType = BanType.Warning,
+                Reason = "Đăng bài sai chuyên mục.",
+                CreatedAt = now.AddDays(-20)
+            },
+            new UserBan
+            {
+                Id = Guid.Parse("f7777777-7777-7777-7777-777777778602"),
+                UserId = userId,
+                ActorId = moderatorUserId,
+                BanType = BanType.Temp,
+                Until = now.AddDays(-8),
+                Reason = "Khóa tạm 7 ngày đã hết hạn.",
+                CreatedAt = now.AddDays(-15)
+            });
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seeded normal-status violation history for user {UserId}", userId);
+    }
+
+    private static async Task ApplyActiveTempBanAsync(
+        SEHubDbContext context,
+        Guid userId,
+        DateTime banUntil,
+        string banReason)
+    {
+        var user = await context.Users.FirstAsync(u => u.Id == userId);
+        user.IsBanned = true;
+        user.BanUntil = banUntil;
+        user.BanReason = banReason;
     }
 
     private static IEnumerable<Post> BuildDemoPosts(Guid authorId)

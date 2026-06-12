@@ -8,6 +8,7 @@ using SEHub.Contracts.Admin;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
+using SEHub.Shared.Constants;
 
 namespace SEHub.Application.UnitTests.Admin;
 
@@ -116,7 +117,8 @@ public sealed class ModerationServiceTests
                 Id = userId,
                 Username = "bad",
                 DisplayName = "Bad",
-                Email = "bad@test.local"
+                Email = "bad@test.local",
+                Role = RoleNames.Student
             });
 
         var act = () => _service.BanUserAsync(
@@ -125,5 +127,42 @@ public sealed class ModerationServiceTests
             CancellationToken.None);
 
         await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task WarnUserAsync_WithoutReason_UsesDefaultReason()
+    {
+        var userId = Guid.NewGuid();
+        _userRepository.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserAccount
+            {
+                Id = userId,
+                Username = "student",
+                DisplayName = "Student",
+                Email = "student@test.local",
+                Role = RoleNames.Student
+            });
+        _banRepository.Setup(r => r.CountByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+        _banRepository.Setup(r => r.CountByUserIdAndTypeAsync(userId, BanType.Warning, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+        _banRepository.Setup(r => r.GetLatestByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserBan
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                ActorId = _moderatorId,
+                BanType = BanType.Warning,
+                Reason = "Vi phạm quy định cộng đồng SEHUB.",
+                CreatedAt = DateTime.UtcNow
+            });
+        _profileRepository.Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserProfile { Major = "SE", Semester = 1 });
+
+        await _service.WarnUserAsync(userId, new ModeratorWarnUserRequest { Reason = "" }, CancellationToken.None);
+
+        _banRepository.Verify(
+            r => r.AddAsync(It.Is<UserBan>(b => b.Reason.Contains("SEHUB")), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

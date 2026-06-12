@@ -6,4 +6,6 @@ public sealed class ViolationsQueryParams
     public int PageSize { get; init; } = 20;
     public string? Search { get; init; }
     public string? Status { get; init; }
+    public string? Rank { get; init; }
+    public string? Sort { get; init; }
 }

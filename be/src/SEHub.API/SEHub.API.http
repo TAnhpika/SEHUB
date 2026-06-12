@@ -181,7 +181,11 @@ Content-Type: application/json
 }
 
 ### Moderation — violating accounts
-GET {{api}}/admin/moderation/violations?page=1&pageSize=20
+GET {{api}}/admin/moderation/violations?page=1&pageSize=20&sort=violations-desc&status=all
+Authorization: Bearer {{loginModerator.response.body.data.accessToken}}
+
+### Moderation — violating account detail (demo spammer)
+GET {{api}}/admin/moderation/violations/f3333333-3333-3333-3333-333333333333
 Authorization: Bearer {{loginModerator.response.body.data.accessToken}}
 
 ### Moderation — temp ban user (1 day)
@@ -201,6 +205,15 @@ Content-Type: application/json
 
 {
   "reason": "Cảnh báo lần đầu — nội dung không phù hợp."
+}
+
+### Moderation — lift temp ban
+POST {{api}}/admin/moderation/users/{{loginFreeStudent.response.body.data.user.id}}/unban
+Authorization: Bearer {{loginModerator.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+  "note": "Đã cam kết tuân thủ quy định."
 }
 
 ### Moderation — practice submissions queue

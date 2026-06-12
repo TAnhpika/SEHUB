@@ -91,6 +91,13 @@ public sealed class ModerationController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("violations/{id:guid}")]
+    public async Task<IActionResult> GetViolatingUser(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _moderationService.GetViolatingUserAsync(id, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpPost("users/{id:guid}/ban")]
     public async Task<IActionResult> BanUser(
         Guid id,
@@ -108,6 +115,16 @@ public sealed class ModerationController : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _moderationService.WarnUserAsync(id, request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("users/{id:guid}/unban")]
+    public async Task<IActionResult> UnbanUser(
+        Guid id,
+        [FromBody] UnbanUserRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _moderationService.UnbanUserAsync(id, request, cancellationToken);
         return Ok(result);
     }
 

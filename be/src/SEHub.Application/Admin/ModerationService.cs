@@ -14,6 +14,7 @@ namespace SEHub.Application.Admin;
 public sealed class ModerationService : IModerationService
 {
     private static readonly int[] AllowedBanDurations = [1, 7, 30];
+    private const string DefaultWarningReason = "Vi phạm quy định cộng đồng SEHUB.";
 
     private readonly IPostReportRepository _reportRepository;
     private readonly IPostRepository _postRepository;
@@ -153,13 +154,15 @@ public sealed class ModerationService : IModerationService
             PracticeSubmissionStatus.Submitted,
             cancellationToken);
         var activeBans = await _banRepository.CountActiveBansAsync(cancellationToken);
+        var violatingAccounts = await _banRepository.CountDistinctViolatingUsersAsync(cancellationToken);
 
         return new ModerationStatsDto
         {
             PendingPosts = pendingPosts,
             PendingReports = pendingReports,
             PendingPracticeSubmissions = pendingSubmissions,
-            ActiveBans = activeBans
+            ActiveBans = activeBans,
+            ViolatingAccounts = violatingAccounts
         };
     }
 
@@ -242,6 +245,8 @@ public sealed class ModerationService : IModerationService
             query.PageSize,
             query.Search,
             query.Status,
+            query.Rank,
+            query.Sort,
             cancellationToken);
 
         var items = new List<ViolatingUserDto>();
@@ -256,6 +261,53 @@ public sealed class ModerationService : IModerationService
             Page = query.Page,
             PageSize = query.PageSize,
             TotalCount = total
+        };
+    }
+
+    public async Task<ViolatingUserDetailDto> GetViolatingUserAsync(
+        Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await SyncExpiredBanIfNeededAsync(userId, cancellationToken);
+        var violationCount = await _banRepository.CountByUserIdAsync(userId, cancellationToken);
+        if (violationCount == 0)
+        {
+            throw new NotFoundException("ViolatingUser", userId);
+        }
+
+        var profile = await _profileRepository.GetByUserIdAsync(userId, cancellationToken);
+        var warningCount = await _banRepository.CountByUserIdAndTypeAsync(userId, BanType.Warning, cancellationToken);
+        var tempBanCount = await _banRepository.CountByUserIdAndTypeAsync(userId, BanType.Temp, cancellationToken);
+        var latestBan = await _banRepository.GetLatestByUserIdAsync(userId, cancellationToken);
+        var historyRecords = await _banRepository.GetHistoryByUserIdAsync(userId, 1, 20, cancellationToken);
+        var history = new List<ViolationHistoryItemDto>();
+
+        foreach (var record in historyRecords)
+        {
+            history.Add(await MapViolationHistoryAsync(record, cancellationToken));
+        }
+
+        var summary = BuildViolatingUserDto(user, profile, violationCount, warningCount, latestBan);
+
+        return new ViolatingUserDetailDto
+        {
+            Id = summary.Id,
+            Username = summary.Username,
+            DisplayName = summary.DisplayName,
+            Email = summary.Email,
+            Major = summary.Major,
+            Semester = summary.Semester,
+            LevelName = summary.LevelName,
+            Points = summary.Points,
+            ViolationCount = summary.ViolationCount,
+            WarningCount = summary.WarningCount,
+            TempBanCount = tempBanCount,
+            Status = summary.Status,
+            BanType = summary.BanType,
+            BanUntil = summary.BanUntil,
+            LockDurationDays = summary.LockDurationDays,
+            BanReason = summary.BanReason,
+            LastActionAt = summary.LastActionAt,
+            History = history
         };
     }
 
@@ -278,8 +330,18 @@ public sealed class ModerationService : IModerationService
         }
 
         var actorId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
-        _ = await _userRepository.GetByIdAsync(userId, cancellationToken)
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken)
             ?? throw new NotFoundException("User", userId);
+
+        if (user.Role == RoleNames.Admin && _currentUser.Role != RoleNames.Admin)
+        {
+            throw new ForbiddenException("Moderators cannot ban admin accounts.");
+        }
+
+        if (user.Role == RoleNames.Moderator && _currentUser.Role != RoleNames.Admin)
+        {
+            throw new ForbiddenException("Moderators cannot ban other moderators.");
+        }
 
         var banUntil = DateTime.UtcNow.AddDays(request.DurationDays);
 
@@ -310,14 +372,18 @@ public sealed class ModerationService : IModerationService
     public async Task<ViolatingUserDto> WarnUserAsync(
         Guid userId, ModeratorWarnUserRequest request, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(request.Reason))
-        {
-            throw new ForbiddenException("Warning reason is required.");
-        }
+        var reason = string.IsNullOrWhiteSpace(request.Reason)
+            ? DefaultWarningReason
+            : request.Reason.Trim();
 
         var actorId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
-        _ = await _userRepository.GetByIdAsync(userId, cancellationToken)
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken)
             ?? throw new NotFoundException("User", userId);
+
+        if (user.Role is RoleNames.Admin or RoleNames.Moderator && _currentUser.Role != RoleNames.Admin)
+        {
+            throw new ForbiddenException("Moderators cannot warn staff accounts.");
+        }
 
         await _banRepository.AddAsync(new UserBan
         {
@@ -326,10 +392,36 @@ public sealed class ModerationService : IModerationService
             ActorId = actorId,
             BanType = BanType.Warning,
             Until = null,
-            Reason = request.Reason.Trim(),
+            Reason = reason,
             CreatedAt = DateTime.UtcNow
         }, cancellationToken);
 
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return await MapViolatingUserAsync(userId, cancellationToken);
+    }
+
+    public async Task<ViolatingUserDto> UnbanUserAsync(
+        Guid userId, UnbanUserRequest request, CancellationToken cancellationToken = default)
+    {
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken)
+            ?? throw new NotFoundException("User", userId);
+
+        if (!IsActiveBan(user))
+        {
+            throw new ForbiddenException("User is not currently banned.");
+        }
+
+        if (_currentUser.Role == RoleNames.Moderator)
+        {
+            var latestBan = await _banRepository.GetLatestByUserIdAsync(userId, cancellationToken);
+            if (latestBan?.BanType == BanType.Permanent)
+            {
+                throw new ForbiddenException("Moderators cannot lift permanent bans.");
+            }
+        }
+
+        await _userRepository.UpdateBanAsync(userId, false, null, null, null, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return await MapViolatingUserAsync(userId, cancellationToken);
@@ -465,13 +557,33 @@ public sealed class ModerationService : IModerationService
 
     private async Task<ViolatingUserDto> MapViolatingUserAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByIdAsync(userId, cancellationToken)
-            ?? throw new NotFoundException("User", userId);
-        var profile = await _profileRepository.GetByUserIdAsync(userId, cancellationToken);
+        var user = await SyncExpiredBanIfNeededAsync(userId, cancellationToken);
         var violationCount = await _banRepository.CountByUserIdAsync(userId, cancellationToken);
+        if (violationCount == 0)
+        {
+            throw new NotFoundException("ViolatingUser", userId);
+        }
+
+        var profile = await _profileRepository.GetByUserIdAsync(userId, cancellationToken);
+        var warningCount = await _banRepository.CountByUserIdAndTypeAsync(userId, BanType.Warning, cancellationToken);
         var latestBan = await _banRepository.GetLatestByUserIdAsync(userId, cancellationToken);
 
+        return BuildViolatingUserDto(user, profile, violationCount, warningCount, latestBan);
+    }
+
+    private static ViolatingUserDto BuildViolatingUserDto(
+        Models.UserAccount user,
+        Domain.Entities.UserProfile? profile,
+        int violationCount,
+        int warningCount,
+        UserBan? latestBan)
+    {
         var status = ResolveViolationStatus(user, latestBan);
+        int? lockDurationDays = null;
+        if (IsActiveBan(user) && user.BanUntil.HasValue)
+        {
+            lockDurationDays = Math.Max(1, (int)Math.Ceiling((user.BanUntil.Value - DateTime.UtcNow).TotalDays));
+        }
 
         return new ViolatingUserDto
         {
@@ -480,18 +592,58 @@ public sealed class ModerationService : IModerationService
             DisplayName = user.DisplayName,
             Email = user.Email,
             Major = profile?.Major,
+            Semester = profile?.Semester,
+            LevelName = user.LevelName,
+            Points = user.Points,
             ViolationCount = violationCount,
+            WarningCount = warningCount,
             Status = status,
             BanType = latestBan?.BanType.ToString(),
             BanUntil = user.BanUntil,
+            LockDurationDays = lockDurationDays,
             BanReason = latestBan?.Reason ?? user.BanReason,
             LastActionAt = latestBan?.CreatedAt
         };
     }
 
+    private async Task<Models.UserAccount> SyncExpiredBanIfNeededAsync(
+        Guid userId, CancellationToken cancellationToken)
+    {
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken)
+            ?? throw new NotFoundException("User", userId);
+
+        if (user.IsBanned && user.BanUntil.HasValue && user.BanUntil <= DateTime.UtcNow)
+        {
+            await _userRepository.UpdateBanAsync(userId, false, null, null, null, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            user = await _userRepository.GetByIdAsync(userId, cancellationToken) ?? user;
+        }
+
+        return user;
+    }
+
+    private async Task<ViolationHistoryItemDto> MapViolationHistoryAsync(
+        UserBan record, CancellationToken cancellationToken)
+    {
+        var actor = await _userRepository.GetByIdAsync(record.ActorId, cancellationToken);
+
+        return new ViolationHistoryItemDto
+        {
+            Id = record.Id,
+            BanType = record.BanType.ToString(),
+            Reason = record.Reason,
+            Until = record.Until,
+            CreatedAt = record.CreatedAt,
+            ActorUsername = actor?.Username
+        };
+    }
+
+    private static bool IsActiveBan(Models.UserAccount user) =>
+        user.IsBanned && (user.BanUntil is null || user.BanUntil > DateTime.UtcNow);
+
     private static string ResolveViolationStatus(Models.UserAccount user, UserBan? latestBan)
     {
-        if (user.IsBanned && (user.BanUntil is null || user.BanUntil > DateTime.UtcNow))
+        if (IsActiveBan(user))
         {
             return "locked";
         }
