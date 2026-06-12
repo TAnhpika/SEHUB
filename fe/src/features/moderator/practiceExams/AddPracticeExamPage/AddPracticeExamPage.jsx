@@ -21,6 +21,7 @@ import { useAuth } from "@/context";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import ExamContributionAuditList from "@/features/moderator/exams/components/ExamContributionAuditList/ExamContributionAuditList";
 import {
+  ApiError,
   getExamContributionAudit,
   getPendingContributionCount,
   recordExamDraft,
@@ -65,6 +66,7 @@ function AddPracticeExamPage() {
   const [allowDiscussion, setAllowDiscussion] = useState(DEMO_DRAFT.allowDiscussion);
   const [pinExam, setPinExam] = useState(DEMO_DRAFT.pinExam);
   const [isDragging, setIsDragging] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const auditLog = getExamContributionAudit(moderator, { examType: "practice" });
   const pendingApprovalCount = getPendingContributionCount(moderator, "practice");
@@ -93,16 +95,45 @@ function AddPracticeExamPage() {
     showToast("Đã lưu nháp đề thi thực hành.");
   }
 
-  function handlePublish(event) {
+  async function handlePublish(event) {
     event?.preventDefault?.();
     if (!subject || !semester || !title.trim() || !description.trim()) {
       showToast("Vui lòng điền đầy đủ các trường bắt buộc.");
       return;
     }
-    submitExamForApproval(buildPayload());
-    setRefreshKey((k) => k + 1);
-    setActiveTab("audit");
-    showToast("Đề thi đã gửi chờ Admin duyệt trước khi xuất bản.");
+
+    const payload = buildPayload();
+
+    async function send(confirmDuplicate = false) {
+      await submitExamForApproval(payload, { confirmDuplicate });
+      setRefreshKey((k) => k + 1);
+      setActiveTab("audit");
+      showToast("Đề thi đã gửi chờ Admin duyệt trước khi xuất bản.");
+    }
+
+    setSubmitting(true);
+    try {
+      await send(false);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        const confirmed = window.confirm(
+          "Đề trùng metadata với đề đã có. Gửi duyệt anyway?",
+        );
+        if (confirmed) {
+          try {
+            await send(true);
+            return;
+          } catch (retryError) {
+            showToast(retryError?.message ?? "Không gửi được đề.");
+            return;
+          }
+        }
+        return;
+      }
+      showToast(error?.message ?? "Không gửi được đề.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function addFiles(fileList) {
@@ -139,9 +170,9 @@ function AddPracticeExamPage() {
       <button type="button" className={styles["btn-draft"]} onClick={handleSaveDraft}>
         Lưu nháp
       </button>
-      <Button type="button" className={styles["btn-publish"]} onClick={handlePublish}>
+      <Button type="button" className={styles["btn-publish"]} onClick={handlePublish} disabled={submitting}>
         <FontAwesomeIcon icon={faArrowUpFromBracket} />
-        Lưu &amp; Xuất bản
+        {submitting ? "Đang gửi..." : "Lưu & Xuất bản"}
       </Button>
     </div>
   );

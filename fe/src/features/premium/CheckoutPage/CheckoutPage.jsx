@@ -22,13 +22,13 @@ import {
   formatVnd,
   getCheckoutOrder,
   loadPlanById,
-  loadSubscriptionStatus,
   PAYMENT_INFO,
   PRICING_PLANS,
 } from "@/features/landing/PricingModal/pricingData";
 import styles from "./CheckoutPage.module.css";
 
 const COUNTDOWN_SECONDS = 15 * 60;
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 function formatTimer(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60);
@@ -151,10 +151,7 @@ function CheckoutPage() {
           setSecondsLeft(resolveSecondsUntil(updated.expiredAt));
         }
 
-        const subscription = await loadSubscriptionStatus().catch(() => null);
-        const isPaid = updated.status === "Paid" || Boolean(subscription?.isActive);
-
-        if (isPaid) {
+        if (updated.status === "Paid") {
           await activatePremium();
           clearCheckoutSession();
           navigate(`/home/premium/success/${plan.id}`, {
@@ -191,16 +188,22 @@ function CheckoutPage() {
   function handleOpenBankApp() {
     if (order?.checkoutUrl) {
       window.open(order.checkoutUrl, "_blank", "noreferrer");
+      showToast("Hoàn tất thanh toán trên PayOS. Premium kích hoạt sau khi webhook xác nhận.");
       return;
     }
 
-    navigate(`/home/premium/success/${plan.id}`, {
-      state: {
-        orderId: order?.orderId ?? null,
-        transactionId: order?.payOsOrderCode ?? buildTransactionId(),
-        mockConfirm: !order?.orderId,
-      },
-    });
+    if (USE_MOCK) {
+      navigate(`/home/premium/success/${plan.id}`, {
+        state: {
+          orderId: order?.orderId ?? null,
+          transactionId: order?.payOsOrderCode ?? buildTransactionId(),
+          mockConfirm: !order?.orderId,
+        },
+      });
+      return;
+    }
+
+    showToast("Chưa có link PayOS. Vui lòng quét mã QR hoặc chuyển khoản theo thông tin đơn.");
   }
 
   if (!planReady) {
