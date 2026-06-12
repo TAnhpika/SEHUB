@@ -7,9 +7,10 @@ import {
   loadConversationMessages,
   loadConversations,
   markConversationAsRead,
+  sendConversationAttachment,
   sendConversationMessage,
 } from "@/features/chat/messagesData";
-import { mapMessageItem } from "@/api/messagesMapper";
+import { mapMessageItem, appendMessageIfNew } from "@/api/messagesMapper";
 import { useChatHub } from "@/hooks/useChatHub";
 import styles from "./ChatModal.module.css";
 
@@ -25,9 +26,7 @@ function ChatModal({ onClose }) {
     onReceiveMessage: (messageDto) => {
       if (selectedId !== messageDto.conversationId) return;
       const mapped = mapMessageItem(messageDto);
-      setMessages((current) =>
-        current.some((item) => item.id === mapped.id) ? current : [...current, mapped],
-      );
+      setMessages((current) => appendMessageIfNew(current, mapped));
     },
   });
 
@@ -101,11 +100,16 @@ function ChatModal({ onClose }) {
           compact
           onBack={() => setSelectedId(null)}
           onClose={onClose}
-          onSend={async (text) => {
+          onSend={async ({ text = "", file = null } = {}) => {
+            const trimmed = text.trim();
+            if (!file && !trimmed) return;
+
             setSending(true);
             try {
-              const mapped = await sendConversationMessage(selectedId, text);
-              setMessages((current) => [...current, mapped]);
+              const mapped = file
+                ? await sendConversationAttachment(selectedId, file, trimmed)
+                : await sendConversationMessage(selectedId, trimmed);
+              setMessages((current) => appendMessageIfNew(current, mapped));
             } finally {
               setSending(false);
             }
