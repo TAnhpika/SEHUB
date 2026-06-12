@@ -31,7 +31,7 @@ import {
 import { canTakeReviewExam } from "@/utils/examAccess";
 import {
   getExamDetailPath,
-  getExamFocusResultPath,
+  getExamResultPath,
   isExamFocusPath,
   resolveExamScope,
 } from "@/utils/examFocusPaths";
@@ -108,9 +108,9 @@ function ExamDoPage({ page = "review" }) {
   const detailPath = exam
     ? getExamDetailPath(exam.courseCode, exam.id, scope)
     : config?.detailBase ?? "/home/final-exam";
-  const resultPath = isFocusMode
-    ? getExamFocusResultPath(exam?.courseCode ?? courseCode ?? "", exam?.id ?? decodedExamId)
-    : `${detailPath}/result`;
+  const resultPath = exam
+    ? getExamResultPath(exam.courseCode, exam.id, scope)
+    : getExamResultPath(courseCode ?? "", decodedExamId, scope);
 
   const submitExam = useCallback(
     async (auto = false) => {
@@ -128,7 +128,7 @@ function ExamDoPage({ page = "review" }) {
       }
 
       showToast(auto ? "Hết giờ — hệ thống đã nộp bài tự động." : "Đã nộp bài thành công.");
-      navigate(resultPath, isFocusMode ? { state: { scope } } : undefined);
+      navigate(resultPath);
     },
     [
       exam,
@@ -137,10 +137,8 @@ function ExamDoPage({ page = "review" }) {
       attemptId,
       questions,
       startedAt,
-      isFocusMode,
       navigate,
       resultPath,
-      scope,
       showToast,
     ],
   );
