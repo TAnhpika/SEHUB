@@ -72,8 +72,9 @@ export function mapProfileCard(dto, statsDto = null, { postsCount = 0 } = {}) {
   const displayName = dto.displayName?.trim() || dto.username || "User";
   const points = statsDto?.points ?? dto.points ?? 0;
   const levelName = statsDto?.levelName ?? dto.levelName ?? "Bronze";
-  const streakCount = statsDto?.streakCount ?? 0;
-  const { pointsToNext, levelProgress } = computeProgress(points, statsDto?.nextLevelPoints);
+  const streakCount = statsDto?.streakCount ?? dto.streakCount ?? 0;
+  const nextLevelPoints = statsDto?.nextLevelPoints ?? dto.nextLevelPoints;
+  const { pointsToNext, levelProgress } = computeProgress(points, nextLevelPoints);
 
   return {
     userId: dto.userId,
