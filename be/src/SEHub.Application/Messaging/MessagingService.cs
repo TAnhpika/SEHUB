@@ -1,9 +1,12 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Notifications;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Messaging;
 using SEHub.Domain.Entities;
+using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
+using SEHub.Shared.Constants;
 
 namespace SEHub.Application.Messaging;
 
@@ -11,11 +14,14 @@ public sealed class MessagingService : IMessagingService
 {
     private const int MaxPageSize = 100;
     private const int MaxContentLength = 4000;
+    private const int MaxMessagesPerMinute = 30;
 
     private readonly IConversationRepository _conversationRepository;
     private readonly IMessageRepository _messageRepository;
     private readonly IUserRepository _userRepository;
     private readonly IUserSearchRepository _searchRepository;
+    private readonly IUserBlockRepository _blockRepository;
+    private readonly INotificationService _notificationService;
     private readonly IChatNotifier _chatNotifier;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
@@ -25,6 +31,8 @@ public sealed class MessagingService : IMessagingService
         IMessageRepository messageRepository,
         IUserRepository userRepository,
         IUserSearchRepository searchRepository,
+        IUserBlockRepository blockRepository,
+        INotificationService notificationService,
         IChatNotifier chatNotifier,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
@@ -33,6 +41,8 @@ public sealed class MessagingService : IMessagingService
         _messageRepository = messageRepository;
         _userRepository = userRepository;
         _searchRepository = searchRepository;
+        _blockRepository = blockRepository;
+        _notificationService = notificationService;
         _chatNotifier = chatNotifier;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
@@ -42,11 +52,18 @@ public sealed class MessagingService : IMessagingService
         CancellationToken cancellationToken = default)
     {
         var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+        var blockedUserIds = await _blockRepository.GetBlockedRelatedUserIdsAsync(userId, cancellationToken);
         var conversations = await _conversationRepository.GetForUserAsync(userId, cancellationToken);
         var items = new List<ConversationListItemDto>();
 
         foreach (var conversation in conversations)
         {
+            var otherParticipant = conversation.Participants.FirstOrDefault(p => p.UserId != userId);
+            if (otherParticipant is not null && blockedUserIds.Contains(otherParticipant.UserId))
+            {
+                continue;
+            }
+
             items.Add(await MapConversationAsync(conversation, userId, cancellationToken));
         }
 
@@ -63,6 +80,11 @@ public sealed class MessagingService : IMessagingService
         if (userId == otherUserId)
         {
             throw new DomainException("You cannot start a conversation with yourself.");
+        }
+
+        if (await _blockRepository.IsBlockedEitherWayAsync(userId, otherUserId, cancellationToken))
+        {
+            throw new UserBlockedException();
         }
 
         var existingId = await _conversationRepository.GetDirectConversationIdAsync(userId, otherUserId, cancellationToken);
@@ -113,6 +135,17 @@ public sealed class MessagingService : IMessagingService
     {
         var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
         await EnsureParticipantAsync(conversationId, userId, cancellationToken);
+        await EnsureNotBlockedInConversationAsync(conversationId, userId, cancellationToken);
+
+        var sentRecently = await _messageRepository.CountSentByUserSinceAsync(
+            userId,
+            DateTime.UtcNow.AddMinutes(-1),
+            cancellationToken);
+
+        if (sentRecently >= MaxMessagesPerMinute)
+        {
+            throw new ForbiddenException(ErrorCodes.MessageRateLimitExceeded);
+        }
 
         var trimmed = content.Trim();
         if (string.IsNullOrWhiteSpace(trimmed))
@@ -158,6 +191,24 @@ public sealed class MessagingService : IMessagingService
         {
             var unread = await _conversationRepository.GetTotalUnreadCountAsync(participantId, cancellationToken);
             await _chatNotifier.NotifyUnreadCountUpdatedAsync(participantId, unread, cancellationToken);
+        }
+
+        var recipientId = participantIds.FirstOrDefault(id => id != userId);
+        if (recipientId != Guid.Empty)
+        {
+            var senderSummary = (await _searchRepository.GetByIdsAsync([userId], cancellationToken)).FirstOrDefault();
+            var senderName = senderSummary?.FullName ?? senderSummary?.Username ?? "Ai đó";
+            var preview = trimmed.Length > 80 ? $"{trimmed[..77]}..." : trimmed;
+
+            await _notificationService.CreateAsync(
+                recipientId,
+                NotificationType.Message,
+                $"{senderName} đã gửi tin nhắn cho bạn",
+                preview,
+                $"/home/messages?conversation={conversationId}",
+                userId,
+                conversationId,
+                cancellationToken);
         }
 
         return dto;
@@ -231,6 +282,26 @@ public sealed class MessagingService : IMessagingService
         if (!await _conversationRepository.IsParticipantAsync(conversationId, userId, cancellationToken))
         {
             throw new ForbiddenException("You are not a participant in this conversation.");
+        }
+    }
+
+    private async Task EnsureNotBlockedInConversationAsync(
+        Guid conversationId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var conversation = await _conversationRepository.GetByIdAsync(conversationId, cancellationToken)
+            ?? throw new NotFoundException("Conversation", conversationId);
+
+        var otherParticipant = conversation.Participants.FirstOrDefault(p => p.UserId != userId);
+        if (otherParticipant is null)
+        {
+            return;
+        }
+
+        if (await _blockRepository.IsBlockedEitherWayAsync(userId, otherParticipant.UserId, cancellationToken))
+        {
+            throw new UserBlockedException();
         }
     }
 

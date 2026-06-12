@@ -39,4 +39,12 @@ public sealed class MessageRepository : IMessageRepository
             .Where(m => m.ConversationId == conversationId)
             .OrderByDescending(m => m.SentAt)
             .FirstOrDefaultAsync(cancellationToken);
+
+    public Task<int> CountSentByUserSinceAsync(
+        Guid senderId,
+        DateTime sinceUtc,
+        CancellationToken cancellationToken = default) =>
+        _context.Messages.CountAsync(
+            m => m.SenderId == senderId && m.SentAt >= sinceUtc,
+            cancellationToken);
 }

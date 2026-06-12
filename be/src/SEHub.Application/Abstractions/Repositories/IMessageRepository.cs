@@ -12,4 +12,9 @@ public interface IMessageRepository
         CancellationToken cancellationToken = default);
     Task<int> CountAsync(Guid conversationId, CancellationToken cancellationToken = default);
     Task<Message?> GetLatestAsync(Guid conversationId, CancellationToken cancellationToken = default);
+
+    Task<int> CountSentByUserSinceAsync(
+        Guid senderId,
+        DateTime sinceUtc,
+        CancellationToken cancellationToken = default);
 }
