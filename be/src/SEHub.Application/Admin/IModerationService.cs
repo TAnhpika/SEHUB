@@ -1,5 +1,6 @@
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
+using SEHub.Contracts.Exams;
 
 namespace SEHub.Application.Admin;
 
@@ -9,4 +10,13 @@ public interface IModerationService
     Task<ReportDto> GetReportAsync(Guid id, CancellationToken cancellationToken = default);
     Task<ReportDto> ResolveReportAsync(Guid id, ResolveReportRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<BannedUserDto>> GetBannedUsersAsync(CancellationToken cancellationToken = default);
+    Task<ModerationStatsDto> GetStatsAsync(CancellationToken cancellationToken = default);
+    Task<PagedResult<ModerationPostListItemDto>> GetPostsAsync(ModerationPostQueryParams query, CancellationToken cancellationToken = default);
+    Task<ModerationPostDetailDto> GetPostAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<ModerationPostDetailDto> ModeratePostAsync(Guid id, ModeratePostRequest request, CancellationToken cancellationToken = default);
+    Task<PagedResult<ViolatingUserDto>> GetViolatingUsersAsync(ViolationsQueryParams query, CancellationToken cancellationToken = default);
+    Task<ViolatingUserDto> BanUserAsync(Guid userId, ModeratorBanUserRequest request, CancellationToken cancellationToken = default);
+    Task<ViolatingUserDto> WarnUserAsync(Guid userId, ModeratorWarnUserRequest request, CancellationToken cancellationToken = default);
+    Task<PagedResult<PracticeSubmissionListItemDto>> GetPracticeSubmissionsAsync(
+        int page, int pageSize, string? status, CancellationToken cancellationToken = default);
 }
