@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using SEHub.Application.Admin;
+using SEHub.Application.Admin.Validators;
 using SEHub.Application.Auth;
 using SEHub.Application.Auth.Validators;
 using SEHub.Application.Documents;
@@ -19,6 +20,7 @@ using SEHub.Application.Friends;
 using SEHub.Application.Messaging;
 using SEHub.Application.Notifications;
 using SEHub.Contracts.Auth;
+using SEHub.Contracts.Admin;
 using SEHub.Contracts.Exams;
 using SEHub.Contracts.Feed;
 using SEHub.Contracts.Premium;
@@ -88,6 +90,12 @@ public static class DependencyInjection
         services.AddScoped<IValidator<VerifySmsOtpRequest>, VerifySmsOtpRequestValidator>();
         services.AddScoped<IValidator<GoogleAuthRequest>, GoogleAuthRequestValidator>();
         services.AddScoped<IValidator<CreatePostRequest>, CreatePostRequestValidator>();
+        services.AddScoped<IValidator<UpdatePostRequest>, UpdatePostRequestValidator>();
+        services.AddScoped<IValidator<CreateCommentRequest>, CreateCommentRequestValidator>();
+        services.AddScoped<IValidator<ReportPostRequest>, ReportPostRequestValidator>();
+        services.AddScoped<IValidator<ModeratePostRequest>, ModeratePostRequestValidator>();
+        services.AddScoped<IValidator<ModeratorBanUserRequest>, ModeratorBanUserRequestValidator>();
+        services.AddScoped<IValidator<ModeratorWarnUserRequest>, ModeratorWarnUserRequestValidator>();
         services.AddScoped<IValidator<SaveAnswersRequest>, SaveAnswersRequestValidator>();
         services.AddScoped<IValidator<SubmitPracticeRequest>, SubmitPracticeRequestValidator>();
         services.AddScoped<IValidator<UpdateProfileRequest>, UpdateProfileRequestValidator>();

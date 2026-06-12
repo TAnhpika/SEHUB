@@ -78,7 +78,7 @@ function FinalExamQuestionsStep() {
             <p className={styles.subtitle}>{examSubtitle}</p>
           </div>
           <p className={styles.count}>
-            Đã nhập: {enteredCount}/{totalQuestions} câu
+            Hoàn thiện: {completeCount}/{totalQuestions} câu · {enteredCount} câu trong đề
           </p>
         </div>
         <div
@@ -104,7 +104,12 @@ function FinalExamQuestionsStep() {
         onRemove={removeActiveQuestion}
       />
 
-      <button type="button" className={styles.addQuestion} onClick={handleAddQuestion}>
+      <button
+        type="button"
+        className={styles.addQuestion}
+        onClick={handleAddQuestion}
+        disabled={questions.length >= totalQuestions}
+      >
         <FontAwesomeIcon icon={faPlus} />
         Thêm câu hỏi
       </button>

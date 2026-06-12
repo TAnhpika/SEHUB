@@ -31,3 +31,20 @@ export function createEmptyQuestion(id) {
     showExplanation: false,
   };
 }
+
+export function createEmptyFinalExamInfo() {
+  return {
+    subjectCode: "",
+    subjectName: "",
+    semesterLabel: "",
+    examCode: "",
+    durationMinutes: 60,
+    totalQuestions: 50,
+  };
+}
+
+export function clampQuestionTotal(value, fallback = 50) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(100, Math.max(1, Math.round(parsed)));
+}

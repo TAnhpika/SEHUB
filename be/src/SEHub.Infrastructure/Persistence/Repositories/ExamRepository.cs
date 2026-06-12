@@ -30,13 +30,22 @@ public class ExamRepository : IExamRepository
     {
         var dbQuery = _context.Exams.AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(query.Status) && Enum.TryParse<ExamStatus>(query.Status, true, out var statusFilter))
+        if (query.IncludeUnpublished)
         {
-            dbQuery = dbQuery.Where(e => e.Status == statusFilter);
+            if (!string.IsNullOrWhiteSpace(query.Status)
+                && Enum.TryParse<ExamStatus>(query.Status, true, out var statusFilter))
+            {
+                dbQuery = dbQuery.Where(e => e.Status == statusFilter);
+            }
         }
         else
         {
             dbQuery = dbQuery.Where(e => e.Status == ExamStatus.Published);
+        }
+
+        if (query.SubmittedById is Guid submittedById)
+        {
+            dbQuery = dbQuery.Where(e => e.SubmittedById == submittedById);
         }
 
         if (!string.IsNullOrWhiteSpace(query.Type) && Enum.TryParse<ExamType>(query.Type, true, out var examType))

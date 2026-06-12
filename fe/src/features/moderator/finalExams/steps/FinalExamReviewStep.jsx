@@ -17,9 +17,9 @@ function FinalExamReviewStep() {
   const { showToast } = useToast();
   const { user } = useAuth();
   const moderator = user?.username ?? "mod_sehub";
+  const [submitting, setSubmitting] = useState(false);
   const { examInfo, questions, enteredCount, completeCount, totalQuestions } =
     useFinalExamWizard();
-  const [submitting, setSubmitting] = useState(false);
 
   function handleSaveDraft() {
     recordExamDraft(
@@ -135,6 +135,7 @@ function FinalExamReviewStep() {
         onBack={() => navigate("/moderator/final-exams/add/questions")}
         onContinue={handlePublish}
         continueLabel={submitting ? "Đang gửi..." : "Gửi duyệt"}
+        continueDisabled={submitting}
       />
     </div>
   );

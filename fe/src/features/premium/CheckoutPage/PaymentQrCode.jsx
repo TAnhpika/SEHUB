@@ -1,6 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faQrcode } from "@fortawesome/free-solid-svg-icons";
-import QRCode from "react-qr-code";
+import QrCodeSvg from "@/common/QrCodeSvg/QrCodeSvg";
 import styles from "./CheckoutPage.module.css";
 
 function isHttpUrl(value) {
@@ -10,7 +10,7 @@ function isHttpUrl(value) {
 export default function PaymentQrCode({ qrValue, checkoutUrl }) {
   if (qrValue && !isHttpUrl(qrValue)) {
     return (
-      <QRCode
+      <QrCodeSvg
         value={qrValue}
         size={128}
         className={styles["qr-image"]}

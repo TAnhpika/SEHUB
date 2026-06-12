@@ -131,6 +131,35 @@ export function listBannedUsers() {
   return apiRequest("/api/v1/admin/moderation/banned");
 }
 
+export function listViolatingUsers(params = {}) {
+  return apiRequest(`/api/v1/admin/moderation/violations${buildQuery(params)}`);
+}
+
+export function getViolatingUser(id) {
+  return apiRequest(`/api/v1/admin/moderation/violations/${id}`);
+}
+
+export function warnViolatingUser(id, body = {}) {
+  return apiRequest(`/api/v1/admin/moderation/users/${id}/warn`, {
+    method: "POST",
+    body,
+  });
+}
+
+export function banViolatingUser(id, body) {
+  return apiRequest(`/api/v1/admin/moderation/users/${id}/ban`, {
+    method: "POST",
+    body,
+  });
+}
+
+export function unbanViolatingUser(id, body = {}) {
+  return apiRequest(`/api/v1/admin/moderation/users/${id}/unban`, {
+    method: "POST",
+    body,
+  });
+}
+
 export function getGamificationLevels() {
   return apiRequest("/api/v1/admin/gamification/levels");
 }
@@ -144,4 +173,8 @@ export function updateGamificationLevels(body) {
 
 export function getGamificationBadges() {
   return apiRequest("/api/v1/admin/gamification/badges");
+}
+
+export function listModerationPracticeSubmissions(params = {}) {
+  return apiRequest(`/api/v1/admin/moderation/practice-submissions${buildQuery(params)}`);
 }

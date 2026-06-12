@@ -20,11 +20,32 @@ function FinalExamInfoStep() {
   const moderator = user?.username ?? "mod_sehub";
   const { examInfo, setExamInfo } = useFinalExamWizard();
 
-  function handleSaveDraft() {
+  function validateExamInfo() {
     if (!examInfo.subjectCode.trim()) {
-      showToast("Chọn mã môn học trước khi lưu nháp.");
-      return;
+      showToast("Vui lòng chọn mã môn học.");
+      return false;
     }
+    if (!examInfo.semesterLabel.trim()) {
+      showToast("Vui lòng chọn học kỳ.");
+      return false;
+    }
+    if (!examInfo.examCode.trim()) {
+      showToast("Vui lòng nhập mã đề.");
+      return false;
+    }
+    if (examInfo.durationMinutes < 15 || examInfo.durationMinutes > 180) {
+      showToast("Thời gian làm bài phải từ 15 đến 180 phút.");
+      return false;
+    }
+    if (examInfo.totalQuestions < 1 || examInfo.totalQuestions > 100) {
+      showToast("Số câu hỏi phải từ 1 đến 100.");
+      return false;
+    }
+    return true;
+  }
+
+  function handleSaveDraft() {
+    if (!validateExamInfo()) return;
     recordExamDraft(
       buildFinalExamContributionPayload(moderator, examInfo, 0, "Bước 1: Thông tin đề"),
     );
@@ -32,10 +53,7 @@ function FinalExamInfoStep() {
   }
 
   function handleContinue() {
-    if (!examInfo.subjectCode.trim()) {
-      showToast("Vui lòng chọn mã môn học.");
-      return;
-    }
+    if (!validateExamInfo()) return;
     navigate("/moderator/final-exams/add/questions");
   }
 
@@ -58,13 +76,14 @@ function FinalExamInfoStep() {
             <select
               className={styles.input}
               value={examInfo.subjectCode}
+              required
               onChange={(event) => {
                 const code = event.target.value;
                 setExamInfo((prev) => ({
                   ...prev,
                   subjectCode: code,
-                  subjectName: code ? `Môn ${code}` : "",
-                  examCode: code ? `FE-${code}-SP2024` : "",
+                  subjectName: code ? prev.subjectName || `Môn ${code}` : "",
+                  examCode: code ? prev.examCode || `FE-${code}-SP2024` : "",
                 }));
               }}
             >
@@ -84,6 +103,7 @@ function FinalExamInfoStep() {
             <select
               className={styles.input}
               value={examInfo.semesterLabel}
+              required
               onChange={(event) =>
                 setExamInfo((prev) => ({ ...prev, semesterLabel: event.target.value }))
               }
@@ -152,7 +172,7 @@ function FinalExamInfoStep() {
               onChange={(event) =>
                 setExamInfo((prev) => ({
                   ...prev,
-                  totalQuestions: Number(event.target.value) || 50,
+                  totalQuestions: Math.min(100, Math.max(1, Number(event.target.value) || 50)),
                 }))
               }
             />

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -22,8 +22,8 @@ import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShe
 import ExamContributionAuditList from "@/features/moderator/exams/components/ExamContributionAuditList/ExamContributionAuditList";
 import {
   ApiError,
-  getExamContributionAudit,
-  getPendingContributionCount,
+  loadExamContributionAudit,
+  loadPendingContributionCount,
   recordExamDraft,
   submitExamForApproval,
 } from "@/features/moderator/exams/moderatorExamContributionStore";
@@ -58,6 +58,8 @@ function AddPracticeExamPage() {
 
   const [activeTab, setActiveTab] = useState("create");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [auditLog, setAuditLog] = useState([]);
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
   const [subject, setSubject] = useState(DEMO_DRAFT.subject);
   const [semester, setSemester] = useState(DEMO_DRAFT.semester);
   const [title, setTitle] = useState(DEMO_DRAFT.title);
@@ -68,8 +70,29 @@ function AddPracticeExamPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const auditLog = getExamContributionAudit(moderator, { examType: "practice" });
-  const pendingApprovalCount = getPendingContributionCount(moderator, "practice");
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all([
+      loadExamContributionAudit(moderator, { examType: "practice" }),
+      loadPendingContributionCount(moderator, "practice"),
+    ])
+      .then(([items, pendingCount]) => {
+        if (cancelled) return;
+        setAuditLog(items);
+        setPendingApprovalCount(pendingCount);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAuditLog([]);
+          setPendingApprovalCount(0);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [moderator, refreshKey]);
 
   function buildPayload() {
     return {
@@ -424,6 +447,11 @@ function AddPracticeExamPage() {
               items={auditLog}
               title="Nhật ký đóng góp đề thực hành"
               description="Mod lưu nháp hoặc gửi Admin duyệt trước khi public (§2.4). Bài nộp GitHub của sinh viên xem tại trang chấm bài riêng (§3.4)."
+              emptyMessage={
+                user?.role === "admin"
+                  ? "Đăng nhập Moderator (moderator@sehub.local) để xem demo đóng góp, hoặc bấm Lưu & Xuất bản để tạo đề mới."
+                  : "Chưa có bản ghi. Gửi đề mới hoặc xem Lịch sử đóng góp đề trên menu bên trái."
+              }
               showHistoryLink
             />
           </div>

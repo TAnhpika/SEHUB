@@ -35,6 +35,30 @@ public class PracticeSubmissionRepository : IPracticeSubmissionRepository
         return (items, total);
     }
 
+    public async Task<(IReadOnlyList<PracticeSubmission> Items, int TotalCount)> GetPagedAsync(
+        int page, int pageSize, PracticeSubmissionStatus? status, CancellationToken cancellationToken = default)
+    {
+        var query = _context.PracticeSubmissions.Where(s => s.IsLatest);
+        if (status.HasValue)
+        {
+            query = query.Where(s => s.Status == status.Value);
+        }
+
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(s => s.SubmittedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, total);
+    }
+
+    public Task<int> CountByStatusAsync(PracticeSubmissionStatus status, CancellationToken cancellationToken = default) =>
+        _context.PracticeSubmissions.CountAsync(
+            s => s.IsLatest && s.Status == status,
+            cancellationToken);
+
     public async Task AddAsync(PracticeSubmission submission, CancellationToken cancellationToken = default) =>
         await _context.PracticeSubmissions.AddAsync(submission, cancellationToken);
 

@@ -6,4 +6,5 @@ public sealed class AdminUserPatchRequest
     public string? BanType { get; init; }
     public string? Role { get; init; }
     public bool? IsBanned { get; init; }
+    public string? BanReason { get; init; }
 }
