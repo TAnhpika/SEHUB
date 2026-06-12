@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import Pagination from "@/common/Pagination/Pagination";
 import { useAuth } from "@/context";
@@ -6,8 +6,8 @@ import ExamContributionAuditList from "@/features/moderator/exams/components/Exa
 import {
   CONTRIBUTION_STATUS_FILTERS,
   CONTRIBUTION_TYPE_FILTERS,
-  getExamContributionAudit,
-  getPendingContributionCount,
+  loadExamContributionAudit,
+  loadPendingContributionCount,
 } from "@/features/moderator/exams/moderatorExamContributionStore";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import styles from "./ModeratorExamContributionHistoryPage.module.css";
@@ -27,41 +27,69 @@ function ModeratorExamContributionHistoryPage() {
   const initialType = searchParams.get("type");
 
   const [typeFilter, setTypeFilter] = useState(
-    CONTRIBUTION_TYPE_FILTERS.some((f) => f.id === initialType) ? initialType : "all",
+    CONTRIBUTION_TYPE_FILTERS.some((filter) => filter.id === initialType) ? initialType : "all",
   );
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [allItems, setAllItems] = useState([]);
+  const [pendingTotal, setPendingTotal] = useState(0);
+  const [pendingFinal, setPendingFinal] = useState(0);
+  const [pendingPractice, setPendingPractice] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
-  const allItems = useMemo(
-    () =>
-      getExamContributionAudit(moderator, {
-        examType: typeFilter,
-        status: statusFilter,
-      }),
-    [moderator, typeFilter, statusFilter, refreshKey],
-  );
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
 
-  const pendingTotal = getPendingContributionCount(moderator, "all");
-  const pendingFinal = getPendingContributionCount(moderator, "final");
-  const pendingPractice = getPendingContributionCount(moderator, "practice");
+    Promise.all([
+      loadExamContributionAudit(moderator, { examType: typeFilter, status: statusFilter }),
+      loadPendingContributionCount(moderator, "all"),
+      loadPendingContributionCount(moderator, "final"),
+      loadPendingContributionCount(moderator, "practice"),
+    ])
+      .then(([items, totalPending, finalPending, practicePending]) => {
+        if (cancelled) return;
+        setAllItems(items);
+        setPendingTotal(totalPending);
+        setPendingFinal(finalPending);
+        setPendingPractice(practicePending);
+        setLoadError(null);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setAllItems([]);
+          setLoadError(error?.message ?? "Không tải được lịch sử đóng góp.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [moderator, typeFilter, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(allItems.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const pageItems = allItems.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const pageItems = useMemo(
+    () => allItems.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
+    [allItems, safePage],
+  );
   const rangeStart = allItems.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const rangeEnd = Math.min(safePage * PAGE_SIZE, allItems.length);
 
   function handleTypeChange(value) {
     setTypeFilter(value);
     setPage(1);
-    setRefreshKey((k) => k + 1);
   }
 
   function handleStatusChange(value) {
     setStatusFilter(value);
     setPage(1);
-    setRefreshKey((k) => k + 1);
   }
 
   return (
@@ -124,13 +152,23 @@ function ModeratorExamContributionHistoryPage() {
         </div>
 
         <section className={styles.panel}>
-          <ExamContributionAuditList
-            items={pageItems}
-            emptyMessage="Không có bản ghi phù hợp bộ lọc."
-            description="Theo dõi mọi lần lưu nháp và gửi Admin duyệt. Trạng thái cập nhật khi Admin duyệt hoặc từ chối trên hàng chờ."
-          />
+          {loading ? (
+            <p className={styles.loading}>Đang tải lịch sử đóng góp...</p>
+          ) : loadError ? (
+            <p className={styles.error}>{loadError}</p>
+          ) : (
+            <ExamContributionAuditList
+              items={pageItems}
+              emptyMessage={
+                user?.role === "admin"
+                  ? "Admin không có đóng góp riêng. Đăng nhập Moderator (moderator@sehub.local) để xem demo, hoặc gửi đề mới từ menu bên trái."
+                  : "Không có bản ghi phù hợp bộ lọc. Gửi đề mới từ menu Thêm đề cuối kỳ / Thêm đề thực hành."
+              }
+              description="Theo dõi mọi lần lưu nháp và gửi Admin duyệt. Trạng thái cập nhật khi Admin duyệt hoặc từ chối trên hàng chờ."
+            />
+          )}
 
-          {allItems.length > PAGE_SIZE ? (
+          {!loading && allItems.length > PAGE_SIZE ? (
             <footer className={styles.footer}>
               <p className={styles.footerMeta}>
                 Hiển thị {rangeStart}–{rangeEnd} / {allItems.length} bản ghi
