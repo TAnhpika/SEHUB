@@ -14,33 +14,26 @@ import {
 import ConversationAvatar from "@/features/chat/ConversationAvatar/ConversationAvatar";
 import styles from "./ConversationChat.module.css";
 
-function formatTime(date) {
-  return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-}
-
-function ConversationChat({ conversation, compact = false, onBack, onClose }) {
+function ConversationChat({
+  conversation,
+  messages = [],
+  onSend,
+  sending = false,
+  loading = false,
+  compact = false,
+  onBack,
+  onClose,
+}) {
   const [draft, setDraft] = useState("");
-  const [extraMessages, setExtraMessages] = useState([]);
 
-  const messages = useMemo(
-    () => [...conversation.messages, ...extraMessages],
-    [conversation.messages, extraMessages],
-  );
+  const renderedMessages = useMemo(() => messages, [messages]);
 
-  function handleSend() {
+  async function handleSend() {
     const text = draft.trim();
-    if (!text) return;
+    if (!text || sending) return;
 
-    setExtraMessages((prev) => [
-      ...prev,
-      {
-        id: `local-${Date.now()}`,
-        type: "sent",
-        text,
-        time: formatTime(new Date()),
-      },
-    ]);
     setDraft("");
+    await onSend?.(text);
   }
 
   function handleKeyDown(event) {
@@ -64,13 +57,7 @@ function ConversationChat({ conversation, compact = false, onBack, onClose }) {
             <ConversationAvatar conversation={conversation} size={compact ? "sm" : "md"} />
             <div className={styles.meta}>
               <p className={styles.name}>{conversation.name}</p>
-              <p className={styles.status}>
-                {conversation.typing
-                  ? "Đang nhập..."
-                  : conversation.online
-                    ? "Đang hoạt động"
-                    : "Ngoại tuyến"}
-              </p>
+              <p className={styles.status}>Ngoại tuyến</p>
             </div>
           </div>
         </div>
@@ -78,15 +65,15 @@ function ConversationChat({ conversation, compact = false, onBack, onClose }) {
         <div className={styles.actions}>
           {!compact && (
             <>
-              <button type="button" className={styles["action-btn"]} aria-label="Gọi thoại">
+              <button type="button" className={styles["action-btn"]} aria-label="Gọi thoại" disabled>
                 <FontAwesomeIcon icon={faPhone} />
               </button>
-              <button type="button" className={styles["action-btn"]} aria-label="Gọi video">
+              <button type="button" className={styles["action-btn"]} aria-label="Gọi video" disabled>
                 <FontAwesomeIcon icon={faVideo} />
               </button>
             </>
           )}
-          <button type="button" className={styles["action-btn"]} aria-label="Thông tin hội thoại">
+          <button type="button" className={styles["action-btn"]} aria-label="Thông tin hội thoại" disabled>
             <FontAwesomeIcon icon={faCircleInfo} />
           </button>
           {compact && onClose && (
@@ -98,7 +85,13 @@ function ConversationChat({ conversation, compact = false, onBack, onClose }) {
       </header>
 
       <div className={styles.body}>
-        {messages.map((message) => {
+        {loading && <p className={styles.loading}>Đang tải tin nhắn...</p>}
+
+        {!loading && renderedMessages.length === 0 && (
+          <p className={styles.loading}>Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện.</p>
+        )}
+
+        {renderedMessages.map((message) => {
           if (message.type === "date") {
             return (
               <div key={message.id} className={styles["date-divider"]}>
@@ -119,25 +112,15 @@ function ConversationChat({ conversation, compact = false, onBack, onClose }) {
             </div>
           );
         })}
-
-        {conversation.typing && (
-          <div className={`${styles["message-row"]} ${styles.received}`}>
-            <div className={`${styles.bubble} ${styles.typing}`} aria-label="Đang nhập">
-              <span />
-              <span />
-              <span />
-            </div>
-          </div>
-        )}
       </div>
 
       <footer className={styles.footer}>
         {!compact && (
           <>
-            <button type="button" className={styles["footer-btn"]} aria-label="Thêm">
+            <button type="button" className={styles["footer-btn"]} aria-label="Thêm" disabled>
               <FontAwesomeIcon icon={faPlus} />
             </button>
-            <button type="button" className={styles["footer-btn"]} aria-label="Gửi ảnh">
+            <button type="button" className={styles["footer-btn"]} aria-label="Gửi ảnh" disabled>
               <FontAwesomeIcon icon={faImage} />
             </button>
           </>
@@ -151,8 +134,9 @@ function ConversationChat({ conversation, compact = false, onBack, onClose }) {
             onKeyDown={handleKeyDown}
             placeholder="Nhập tin nhắn..."
             aria-label="Nhập tin nhắn"
+            disabled={sending}
           />
-          <button type="button" className={styles.emoji} aria-label="Chọn emoji">
+          <button type="button" className={styles.emoji} aria-label="Chọn emoji" disabled>
             <FontAwesomeIcon icon={faFaceSmile} />
           </button>
         </label>
@@ -162,7 +146,7 @@ function ConversationChat({ conversation, compact = false, onBack, onClose }) {
           className={styles.send}
           aria-label="Gửi tin nhắn"
           onClick={handleSend}
-          disabled={!draft.trim()}
+          disabled={!draft.trim() || sending}
         >
           <FontAwesomeIcon icon={faPaperPlane} />
         </button>

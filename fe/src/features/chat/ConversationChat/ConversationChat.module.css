@@ -310,3 +310,10 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+.loading {
+  margin: 0;
+  text-align: center;
+  color: var(--color-text-subtle);
+  font-size: 0.875rem;
+}
