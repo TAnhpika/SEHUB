@@ -202,6 +202,7 @@ export async function submitExamForApproval(payload, options = {}) {
             semester: payload.semester,
             title: payload.title,
             description: payload.description,
+            assetUrl: payload.attachments?.find((file) => file.assetUrl)?.assetUrl ?? null,
           }),
           { confirmDuplicate },
         );
