@@ -32,6 +32,8 @@ public sealed class AdminUserService : IAdminUserService
 
     private readonly IUserBanRepository _banRepository;
 
+    private readonly ILevelConfigRepository _levelConfigRepository;
+
     private readonly ICurrentUserService _currentUser;
 
     private readonly IUnitOfWork _unitOfWork;
@@ -48,6 +50,8 @@ public sealed class AdminUserService : IAdminUserService
 
         IUserBanRepository banRepository,
 
+        ILevelConfigRepository levelConfigRepository,
+
         ICurrentUserService currentUser,
 
         IUnitOfWork unitOfWork)
@@ -61,6 +65,8 @@ public sealed class AdminUserService : IAdminUserService
         _tokenUsageRepository = tokenUsageRepository;
 
         _banRepository = banRepository;
+
+        _levelConfigRepository = levelConfigRepository;
 
         _currentUser = currentUser;
 
@@ -88,6 +94,8 @@ public sealed class AdminUserService : IAdminUserService
 
             var subscription = await _subscriptionRepository.GetActiveByUserIdAsync(user.Id, cancellationToken);
 
+            var level = await _levelConfigRepository.GetForPointsAsync(user.Points, cancellationToken);
+
             items.Add(new AdminUserListItemDto
 
             {
@@ -107,6 +115,8 @@ public sealed class AdminUserService : IAdminUserService
                 IsPremium = subscription is not null && subscription.IsActive && subscription.EndAt > DateTime.UtcNow,
 
                 Points = user.Points,
+
+                LevelName = level?.Name ?? user.LevelName,
 
                 CreatedAt = user.CreatedAt
 
