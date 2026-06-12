@@ -505,7 +505,7 @@ export async function savePracticeSubmissionReview(submission, payload) {
 
   const apiStatus = mapFeReviewStatusToApi(payload.status);
   if (!apiStatus) {
-    return gradePracticeSubmission(submission.id, payload);
+    throw new Error("Trạng thái chấm bài không được hỗ trợ qua API.");
   }
 
   const dto = await practiceSubmissionsApi.reviewPracticeSubmission(

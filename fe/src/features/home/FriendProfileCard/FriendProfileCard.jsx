@@ -1,15 +1,68 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBullseye,
   faComment,
   faGem,
   faMedal,
-  faPlus,
 } from "@fortawesome/free-solid-svg-icons";
+import FollowButton from "@/features/social/FollowButton/FollowButton";
+import FriendButton from "@/features/social/FriendButton/FriendButton";
+import * as friendsApi from "@/api/friendsApi";
+import { openConversationWithUser } from "@/features/chat/messagesData";
 import Button from "@/common/Button/Button";
 import styles from "./FriendProfileCard.module.css";
 
-function FriendProfileCard({ profile }) {
+function FriendProfileCard({ profile, onFollowChange }) {
+  const navigate = useNavigate();
+  const [friendStatus, setFriendStatus] = useState("None");
+  const [friendRequestId, setFriendRequestId] = useState(null);
+  const [messageLoading, setMessageLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchFriendStatus() {
+      if (!profile.userId) return;
+
+      try {
+        const data = await friendsApi.getFriendStatus(profile.userId);
+        if (!cancelled) {
+          setFriendStatus(data.status ?? "None");
+          setFriendRequestId(data.requestId ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setFriendStatus("None");
+          setFriendRequestId(null);
+        }
+      }
+    }
+
+    fetchFriendStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profile.userId]);
+
+  async function handleMessage() {
+    if (!profile.userId || messageLoading) return;
+
+    setMessageLoading(true);
+    try {
+      const conversation = await openConversationWithUser(profile.userId);
+      navigate("/home/messages", {
+        state: { conversationId: conversation.conversationId },
+      });
+    } catch {
+      /* ignore */
+    } finally {
+      setMessageLoading(false);
+    }
+  }
+
   return (
     <aside className={styles.card}>
       <div className={styles.hero}>
@@ -17,9 +70,13 @@ function FriendProfileCard({ profile }) {
           <FontAwesomeIcon icon={faGem} />
         </span>
         <span className={styles.avatar} aria-hidden="true">
-          {profile.initial}
+          {profile.avatarUrl ? (
+            <img src={profile.avatarUrl} alt="" className={styles["avatar-image"]} />
+          ) : (
+            profile.initial
+          )}
         </span>
-        <h1 className={styles.username}>{profile.username}</h1>
+        <h1 className={styles.username}>{profile.displayName ?? profile.username}</h1>
       </div>
 
       <div className={styles.social}>
@@ -35,13 +92,31 @@ function FriendProfileCard({ profile }) {
       </div>
 
       <div className={styles.actions}>
-        <Button size="sm" className={styles["follow-btn"]}>
-          <FontAwesomeIcon icon={faPlus} />
-          Theo dõi
-        </Button>
-        <Button look="outline" size="sm" className={styles["message-btn"]}>
+        <FollowButton
+          userId={profile.userId}
+          initialIsFollowing={profile.isFollowing}
+          className={styles["follow-btn"]}
+          onChange={onFollowChange}
+        />
+        <FriendButton
+          userId={profile.userId}
+          initialStatus={friendStatus}
+          initialRequestId={friendRequestId}
+          className={styles["follow-btn"]}
+          onChange={({ status, requestId }) => {
+            setFriendStatus(status);
+            setFriendRequestId(requestId);
+          }}
+        />
+        <Button
+          look="outline"
+          size="sm"
+          className={styles["message-btn"]}
+          disabled={messageLoading}
+          onClick={handleMessage}
+        >
           <FontAwesomeIcon icon={faComment} />
-          Nhắn tin
+          {messageLoading ? "Đang mở..." : "Nhắn tin"}
         </Button>
       </div>
 
