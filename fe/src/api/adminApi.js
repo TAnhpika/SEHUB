@@ -98,6 +98,13 @@ export function listPaymentAudit(params = {}) {
   return apiRequest(`/api/v1/admin/payments/audit${buildQuery(params)}`);
 }
 
+export function approvePaymentRefund(orderId, body = {}) {
+  return apiRequest(`/api/v1/admin/payments/${orderId}/refund/approve`, {
+    method: "POST",
+    body,
+  });
+}
+
 export function confirmPayment(orderId, body = {}) {
   return apiRequest(`/api/v1/admin/payments/${orderId}/confirm`, {
     method: "POST",
