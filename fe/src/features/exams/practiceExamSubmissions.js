@@ -1,10 +1,12 @@
 /** Mock store — bài nộp đề thực hành (GitHub). §3.4 SEHUB_PhanTichNghiepVu */
 
+import * as adminApi from "@/api/adminApi";
 import * as examsApi from "@/api/examsApi";
 import * as practiceSubmissionsApi from "@/api/practiceSubmissionsApi";
 import {
   buildReviewerComment,
   mapFeReviewStatusToApi,
+  mapModerationPracticeSubmission,
   mapPracticeSubmissionDto,
   mapPracticeSubmissionListItem,
 } from "@/api/practiceSubmissionMapper";
@@ -463,6 +465,16 @@ export async function submitPracticeExamAsync(payload) {
 export async function loadAllPracticeSubmissions() {
   if (USE_MOCK) {
     return getAllPracticeSubmissions();
+  }
+
+  try {
+    const page = await adminApi.listModerationPracticeSubmissions({ pageSize: 100 });
+    const submissions = (page.items ?? []).map((item) => mapModerationPracticeSubmission(item));
+    if (submissions.length > 0) {
+      return submissions.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+    }
+  } catch {
+    /* fallback below */
   }
 
   try {
