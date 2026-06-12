@@ -5,5 +5,8 @@ public enum PaymentOrderStatus
     Pending,
     Paid,
     Failed,
-    Cancelled
+    Cancelled,
+    RefundRequested,
+    ProcessingRefund,
+    Refunded
 }
