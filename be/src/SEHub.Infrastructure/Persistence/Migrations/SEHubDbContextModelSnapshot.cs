@@ -626,6 +626,21 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("AttachmentFileName")
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<string>("AttachmentMimeType")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("AttachmentPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long?>("AttachmentSizeBytes")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasMaxLength(4000)
@@ -636,6 +651,11 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
 
                     b.Property<Guid>("SenderId")
                         .HasColumnType("uniqueidentifier");

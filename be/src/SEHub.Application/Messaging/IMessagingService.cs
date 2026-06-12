@@ -18,6 +18,14 @@ public interface IMessagingService
         Guid conversationId,
         string content,
         CancellationToken cancellationToken = default);
+    Task<MessageDto> SendAttachmentMessageAsync(
+        Guid conversationId,
+        Stream fileContent,
+        string fileName,
+        string mimeType,
+        long fileSizeBytes,
+        string? caption,
+        CancellationToken cancellationToken = default);
     Task MarkReadAsync(Guid conversationId, CancellationToken cancellationToken = default);
     Task<UnreadCountDto> GetUnreadCountAsync(CancellationToken cancellationToken = default);
 }
