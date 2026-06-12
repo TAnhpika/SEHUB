@@ -1,4 +1,4 @@
-import { apiRequest } from "./httpClient";
+import { apiFormRequest, apiRequest } from "./httpClient";
 
 function buildQuery(params = {}) {
   const search = new URLSearchParams();
@@ -54,6 +54,12 @@ export function createExam(body, confirmDuplicate = false) {
     method: "POST",
     body,
   });
+}
+
+export function uploadExamAsset(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiFormRequest("/api/v1/admin/exams/upload-asset", { formData });
 }
 
 export function updateExam(id, body) {
