@@ -1,4 +1,4 @@
-import { apiRequest } from "@/api/httpClient";
+import { apiRequest, apiUploadRequest } from "@/api/httpClient";
 
 export function getConversations() {
   return apiRequest("/api/v1/conversations");
@@ -30,6 +30,19 @@ export function sendMessage(conversationId, content) {
     method: "POST",
     body: { content },
   });
+}
+
+export function sendMessageAttachment(conversationId, file, content = "") {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (content?.trim()) {
+    formData.append("content", content.trim());
+  }
+
+  return apiUploadRequest(
+    `/api/v1/conversations/${encodeURIComponent(conversationId)}/messages/attachment`,
+    formData,
+  );
 }
 
 export function markConversationRead(conversationId) {
