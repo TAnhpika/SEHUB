@@ -78,9 +78,9 @@ public static class DbSeeder
 
         var plans = new[]
         {
-            new SubscriptionPlan { Id = Guid.NewGuid(), Code = "1m", Name = "1 Month", DurationDays = 30, PriceVnd = 99000, CreatedAt = DateTime.UtcNow },
-            new SubscriptionPlan { Id = Guid.NewGuid(), Code = "8m", Name = "8 Months", DurationDays = 240, PriceVnd = 599000, CreatedAt = DateTime.UtcNow },
-            new SubscriptionPlan { Id = Guid.NewGuid(), Code = "4y", Name = "4 Years", DurationDays = 1460, PriceVnd = 1999000, CreatedAt = DateTime.UtcNow }
+            new SubscriptionPlan { Id = Guid.NewGuid(), Code = "1m", Name = "1 Month", DurationDays = 30, PriceVnd = 48000, CreatedAt = DateTime.UtcNow },
+            new SubscriptionPlan { Id = Guid.NewGuid(), Code = "8m", Name = "8 Months", DurationDays = 240, PriceVnd = 200000, CreatedAt = DateTime.UtcNow },
+            new SubscriptionPlan { Id = Guid.NewGuid(), Code = "4y", Name = "4 Years", DurationDays = 1460, PriceVnd = 650000, CreatedAt = DateTime.UtcNow }
         };
 
         context.SubscriptionPlans.AddRange(plans);

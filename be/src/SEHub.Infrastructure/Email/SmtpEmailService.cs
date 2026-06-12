@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MimeKit;
 using SEHub.Application.Abstractions;
+using SEHub.Contracts.Premium;
+using SEHub.Domain.Exceptions;
 
 namespace SEHub.Infrastructure.Email;
 
@@ -59,14 +61,80 @@ public sealed class SmtpEmailService : IEmailService
             await client.SendAsync(message, cancellationToken);
             await client.DisconnectAsync(true, cancellationToken);
         }
-        catch (AuthenticationException ex)
+        catch (Exception ex) when (ex is AuthenticationException or SmtpCommandException or SmtpProtocolException)
         {
-            _logger.LogError(ex, "SMTP authentication failed for {Username} on {Host}", smtp.Username, smtp.Host);
-            throw new InvalidOperationException(
-                "Không xác thực được SMTP. Kiểm tra Gmail App Password (bật 2FA, tạo mật khẩu ứng dụng mới).",
-                ex);
+            throw CreateDeliveryException(ex, smtp.Username, smtp.Host);
         }
 
         _logger.LogInformation("OTP email sent to {Email} via SMTP host {Host}", email, smtp.Host);
+    }
+
+    public async Task SendPaymentConfirmationEmailAsync(
+        PaymentConfirmationEmailMessage message,
+        CancellationToken cancellationToken = default)
+    {
+        var smtp = _settings.Smtp;
+        ValidateSmtpConfig(smtp);
+
+        var password = smtp.Password.Replace(" ", string.Empty, StringComparison.Ordinal);
+        var mimeMessage = new MimeMessage();
+        mimeMessage.From.Add(new MailboxAddress(smtp.FromDisplayName, smtp.From));
+        mimeMessage.To.Add(MailboxAddress.Parse(message.ToEmail));
+        mimeMessage.Subject = PaymentConfirmationEmailComposer.BuildSubject();
+
+        var bodyBuilder = new BodyBuilder
+        {
+            TextBody = PaymentConfirmationEmailComposer.BuildPlainText(message),
+            HtmlBody = PaymentConfirmationEmailComposer.BuildHtml(message),
+        };
+        mimeMessage.Body = bodyBuilder.ToMessageBody();
+
+        try
+        {
+            using var client = new SmtpClient();
+            var socketOptions = smtp.Port == 465
+                ? SecureSocketOptions.SslOnConnect
+                : SecureSocketOptions.StartTls;
+
+            await client.ConnectAsync(smtp.Host, smtp.Port, socketOptions, cancellationToken);
+            await client.AuthenticateAsync(smtp.Username, password, cancellationToken);
+            await client.SendAsync(mimeMessage, cancellationToken);
+            await client.DisconnectAsync(true, cancellationToken);
+        }
+        catch (Exception ex) when (ex is AuthenticationException or SmtpCommandException or SmtpProtocolException)
+        {
+            throw CreateDeliveryException(ex, smtp.Username, smtp.Host);
+        }
+
+        _logger.LogInformation(
+            "Payment confirmation email sent to {Email} via SMTP host {Host}",
+            message.ToEmail,
+            smtp.Host);
+    }
+
+    private EmailDeliveryException CreateDeliveryException(Exception ex, string username, string host)
+    {
+        _logger.LogError(ex, "SMTP delivery failed for {Username} on {Host}", username, host);
+        return new EmailDeliveryException(
+            "Không gửi được email. Kiểm tra cấu hình SMTP (Gmail App Password) hoặc thử lại sau.",
+            ex);
+    }
+
+    private static void ValidateSmtpConfig(SmtpSettings smtp)
+    {
+        if (string.IsNullOrWhiteSpace(smtp.Host))
+        {
+            throw new InvalidOperationException("Email:Smtp:Host is required when Email:Provider is Smtp.");
+        }
+
+        if (string.IsNullOrWhiteSpace(smtp.From))
+        {
+            throw new InvalidOperationException("Email:Smtp:From is required when Email:Provider is Smtp.");
+        }
+
+        if (string.IsNullOrWhiteSpace(smtp.Username) || string.IsNullOrWhiteSpace(smtp.Password))
+        {
+            throw new InvalidOperationException("Email:Smtp:Username and Email:Smtp:Password are required when Email:Provider is Smtp.");
+        }
     }
 }

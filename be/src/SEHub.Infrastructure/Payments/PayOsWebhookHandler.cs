@@ -8,6 +8,10 @@ using SEHub.Application.Abstractions;
 
 using SEHub.Application.Abstractions.Repositories;
 
+using SEHub.Application.Premium;
+
+using SEHub.Contracts.Premium;
+
 using SEHub.Domain.Entities;
 
 using SEHub.Domain.Enums;
@@ -32,9 +36,9 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
     private readonly IPaymentAuditLogRepository _auditLogRepository;
 
-    private readonly IPremiumStatusService _premiumStatusService;
+    private readonly ISubscriptionService _subscriptionService;
 
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IPaymentConfirmationNotifier _paymentConfirmationNotifier;
 
     private readonly ILogger<PayOsWebhookHandler> _logger;
 
@@ -48,9 +52,9 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
         IPaymentAuditLogRepository auditLogRepository,
 
-        IPremiumStatusService premiumStatusService,
+        ISubscriptionService subscriptionService,
 
-        IUnitOfWork unitOfWork,
+        IPaymentConfirmationNotifier paymentConfirmationNotifier,
 
         ILogger<PayOsWebhookHandler> logger)
 
@@ -62,9 +66,9 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
         _auditLogRepository = auditLogRepository;
 
-        _premiumStatusService = premiumStatusService;
+        _subscriptionService = subscriptionService;
 
-        _unitOfWork = unitOfWork;
+        _paymentConfirmationNotifier = paymentConfirmationNotifier;
 
         _logger = logger;
 
@@ -232,50 +236,6 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
 
 
-            var existingActive = await _dbContext.Subscriptions
-
-                .Where(s => s.UserId == order.UserId && s.IsActive && s.EndAt > DateTime.UtcNow)
-
-                .ToListAsync(cancellationToken);
-
-
-
-            foreach (var sub in existingActive)
-
-            {
-
-                sub.IsActive = false;
-
-                sub.UpdatedAt = DateTime.UtcNow;
-
-            }
-
-
-
-            var startAt = DateTime.UtcNow;
-
-            await _dbContext.Subscriptions.AddAsync(new Subscription
-
-            {
-
-                Id = Guid.NewGuid(),
-
-                UserId = order.UserId,
-
-                PlanId = order.PlanId,
-
-                StartAt = startAt,
-
-                EndAt = startAt.AddDays(order.Plan.DurationDays),
-
-                IsActive = true,
-
-                CreatedAt = startAt
-
-            }, cancellationToken);
-
-
-
             await _dbContext.PaymentAuditLogs.AddAsync(new PaymentAuditLog
 
             {
@@ -294,7 +254,7 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
 
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
 
             if (transaction is not null)
 
@@ -306,7 +266,9 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
 
 
-            _premiumStatusService.InvalidateCache(order.UserId);
+            await _subscriptionService.ActivateSubscriptionAsync(order.UserId, order.PlanId, cancellationToken);
+
+            await DispatchPaymentNotificationAsync(order, cancellationToken);
 
             _logger.LogInformation("PayOS webhook processed for order {OrderCode}", orderCode);
 
@@ -325,6 +287,76 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
                 await transaction.DisposeAsync();
 
             }
+
+        }
+
+    }
+
+
+
+    private async Task DispatchPaymentNotificationAsync(PaymentOrder order, CancellationToken cancellationToken)
+
+    {
+
+        try
+
+        {
+
+            var user = await _dbContext.Users
+
+                .AsNoTracking()
+
+                .FirstOrDefaultAsync(u => u.Id == order.UserId, cancellationToken);
+
+
+
+            var subscription = await _subscriptionService.GetStatusAsync(order.UserId, cancellationToken);
+
+
+
+            await _paymentConfirmationNotifier.NotifyPaymentConfirmedAsync(
+
+                new PaymentPaidNotification
+
+                {
+
+                    UserId = order.UserId,
+
+                    UserEmail = user?.Email ?? string.Empty,
+
+                    DisplayName = user?.DisplayName ?? string.Empty,
+
+                    OrderId = order.Id,
+
+                    PayOsOrderCode = order.PayOsOrderCode,
+
+                    PlanId = order.PlanId,
+
+                    PlanName = order.Plan?.Name ?? string.Empty,
+
+                    AmountVnd = order.Amount,
+
+                    PaidAt = DateTime.UtcNow,
+
+                    ExpiresAt = subscription.ExpiresAt,
+
+                },
+
+                cancellationToken);
+
+        }
+
+        catch (Exception ex)
+
+        {
+
+            _logger.LogWarning(
+
+                ex,
+
+                "Payment notification webhook dispatch failed for order {OrderId}",
+
+                order.Id);
 
         }
 
