@@ -4,6 +4,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import logoSrc from "@/img/logo.png";
 import { getAdminNavSections } from "@/features/admin/adminNavData";
+import {
+  getAdminNavBadgeCounts,
+  loadAdminNavBadgeCounts,
+} from "@/features/admin/adminNavBadges";
 import styles from "./AdminSidebar.module.css";
 
 function isNavGroup(item) {
@@ -133,7 +137,25 @@ function NavGroup({ group, pathname, searchParams }) {
 function AdminSidebar() {
   const { pathname, search } = useLocation();
   const searchParams = new URLSearchParams(search);
-  const navSections = getAdminNavSections();
+  const [badgeCounts, setBadgeCounts] = useState(() => getAdminNavBadgeCounts());
+  const navSections = getAdminNavSections(badgeCounts);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadAdminNavBadgeCounts().then((counts) => {
+      if (!cancelled) setBadgeCounts(counts);
+    });
+    const refresh = () => {
+      loadAdminNavBadgeCounts().then((counts) => {
+        if (!cancelled) setBadgeCounts(counts);
+      });
+    };
+    window.addEventListener("sehub-admin-stats-updated", refresh);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("sehub-admin-stats-updated", refresh);
+    };
+  }, []);
 
   return (
     <aside className={styles.sidebar}>
