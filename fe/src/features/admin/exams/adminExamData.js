@@ -289,13 +289,9 @@ export async function loadAdminPendingExams() {
     return getAdminPendingExams();
   }
 
-  try {
-    const page = await adminApi.listExams({ status: "PendingApproval", pageSize: 100 });
-    apiPendingCache = (page.items ?? []).map((dto) => mapPendingExamListItem(dto));
-    return apiPendingCache;
-  } catch {
-    return getAdminPendingExams();
-  }
+  const page = await adminApi.listExams({ status: "PendingApproval", pageSize: 100 });
+  apiPendingCache = (page.items ?? []).map((dto) => mapPendingExamListItem(dto));
+  return apiPendingCache;
 }
 
 async function createExamViaApi(body, confirmDuplicate = false) {
@@ -654,18 +650,10 @@ export async function loadAdminExams() {
     return getAdminExams();
   }
 
-  try {
-    const page = await adminApi.listExams({ pageSize: 100 });
-    const apiExams = (page.items ?? []).map(mapAdminExamListItem);
-    if (apiExams.length > 0) {
-      examsStore = apiExams.map((exam) => ({ ...exam }));
-      return apiExams;
-    }
-  } catch {
-    /* fallback below */
-  }
-
-  return getAdminExams();
+  const page = await adminApi.listExams({ pageSize: 100 });
+  const apiExams = (page.items ?? []).map(mapAdminExamListItem);
+  examsStore = apiExams.map((exam) => ({ ...exam }));
+  return apiExams;
 }
 
 export async function loadAdminExamById(id) {
