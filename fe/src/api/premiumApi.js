@@ -4,11 +4,16 @@ export function getPlans() {
   return apiRequest("/api/v1/premium/plans", { auth: false });
 }
 
-export function createOrder({ planCode }) {
+export function createOrder({ planCode, applyRankDiscount = true }) {
   return apiRequest("/api/v1/premium/orders", {
     method: "POST",
-    body: { planCode },
+    body: { planCode, applyRankDiscount },
   });
+}
+
+export function getRankVoucherPreview({ planCode } = {}) {
+  const query = planCode ? `?planCode=${encodeURIComponent(planCode)}` : "";
+  return apiRequest(`/api/v1/premium/rank-voucher${query}`);
 }
 
 export function getOrder(orderId, { markWaitingConfirmation = false } = {}) {
