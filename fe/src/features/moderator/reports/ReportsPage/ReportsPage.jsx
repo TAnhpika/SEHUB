@@ -96,7 +96,7 @@ function ReportsPage() {
       })
       .catch((err) => {
         if (!cancelled) {
-          showToast(err.message ?? "Không tải được báo cáo cộng đồng.", "error");
+          showToast(err.message ?? "Không tải được báo cáo cộng đồng.");
         }
       });
     return () => {
@@ -150,23 +150,24 @@ function ReportsPage() {
 
   useEffect(() => {
     const fromUrl = searchParams.get("id");
-    if (fromUrl && reports.some((r) => r.id === fromUrl)) {
-      setSelectedId(fromUrl);
-      const item = reports.find((r) => r.id === fromUrl);
-      if (item?.status === "resolved") setTab("resolved");
-      else if (item?.status === "pending") setTab("pending");
-    }
-  }, [searchParams, reports]);
+    const urlItem = fromUrl ? reports.find((report) => report.id === fromUrl) : null;
 
-  useEffect(() => {
+    if (urlItem) {
+      setSelectedId(urlItem.id);
+      if (urlItem.status === "resolved") setTab("resolved");
+      else if (urlItem.status === "pending") setTab("pending");
+      return;
+    }
+
     if (filtered.length === 0) {
       setSelectedId(null);
       return;
     }
-    if (!selectedId || !filtered.some((r) => r.id === selectedId)) {
-      setSelectedId(filtered[0].id);
-    }
-  }, [filtered, selectedId]);
+
+    setSelectedId((current) =>
+      current && filtered.some((report) => report.id === current) ? current : filtered[0].id,
+    );
+  }, [searchParams, reports, filtered]);
 
   const selected = reports.find((r) => r.id === selectedId) ?? null;
 
@@ -231,7 +232,7 @@ function ReportsPage() {
         const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "dismiss");
         finishCommunityResolve(id, "ignored", reloaded);
       } catch (err) {
-        showToast(err.message ?? "Không xử lý được báo cáo.", "error");
+        showToast(err.message ?? "Không xử lý được báo cáo.");
         return;
       }
     }
@@ -254,7 +255,7 @@ function ReportsPage() {
         const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "delete");
         finishCommunityResolve(id, "deleted", reloaded);
       } catch (err) {
-        showToast(err.message ?? "Không xóa được nội dung.", "error");
+        showToast(err.message ?? "Không xóa được nội dung.");
         return;
       }
     }
