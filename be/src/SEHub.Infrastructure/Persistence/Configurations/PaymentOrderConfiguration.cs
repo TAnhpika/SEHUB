@@ -13,6 +13,8 @@ public class PaymentOrderConfiguration : IEntityTypeConfiguration<PaymentOrder>
         builder.HasIndex(o => o.UserId);
         builder.Property(o => o.PayOsOrderCode).HasMaxLength(50).IsRequired();
         builder.Property(o => o.Amount).HasPrecision(18, 2);
+        builder.Property(o => o.OriginalAmount).HasPrecision(18, 2);
+        builder.Property(o => o.DiscountSource).HasMaxLength(50);
         builder.Property(o => o.QrUrl).HasMaxLength(500);
         builder.Property(o => o.VerificationMethod).HasMaxLength(50);
 
