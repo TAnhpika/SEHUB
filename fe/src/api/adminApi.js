@@ -92,6 +92,25 @@ export function deleteDocument(id) {
   return apiRequest(`/api/v1/admin/documents/${id}`, { method: "DELETE" });
 }
 
+export function updateDocument(id, body) {
+  return apiRequest(`/api/v1/admin/documents/${id}`, {
+    method: "PUT",
+    body,
+  });
+}
+
+export function uploadDocument({ file, title, categoryId, accessTier, pageCount }) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("Title", title);
+  formData.append("CategoryId", categoryId);
+  formData.append("AccessTier", accessTier);
+  if (pageCount != null && pageCount !== "") {
+    formData.append("PageCount", String(pageCount));
+  }
+  return apiFormRequest("/api/v1/admin/documents", { formData });
+}
+
 export function listPayments(params = {}) {
   return apiRequest(`/api/v1/admin/payments${buildQuery(params)}`);
 }
@@ -128,6 +147,25 @@ export function getReport(id) {
 
 export function resolveReport(id, body) {
   return apiRequest(`/api/v1/admin/moderation/reports/${id}`, {
+    method: "PATCH",
+    body,
+  });
+}
+
+export function getModerationStats() {
+  return apiRequest("/api/v1/admin/moderation/stats");
+}
+
+export function listModerationPosts(params = {}) {
+  return apiRequest(`/api/v1/admin/moderation/posts${buildQuery(params)}`);
+}
+
+export function getModerationPost(id) {
+  return apiRequest(`/api/v1/admin/moderation/posts/${id}`);
+}
+
+export function moderatePost(id, body) {
+  return apiRequest(`/api/v1/admin/moderation/posts/${id}`, {
     method: "PATCH",
     body,
   });
@@ -179,6 +217,24 @@ export function updateGamificationLevels(body) {
 
 export function getGamificationBadges() {
   return apiRequest("/api/v1/admin/gamification/badges");
+}
+
+export function createGamificationBadge(body) {
+  return apiRequest("/api/v1/admin/gamification/badges", {
+    method: "POST",
+    body,
+  });
+}
+
+export function updateGamificationBadge(id, body) {
+  return apiRequest(`/api/v1/admin/gamification/badges/${id}`, {
+    method: "PUT",
+    body,
+  });
+}
+
+export function deleteGamificationBadge(id) {
+  return apiRequest(`/api/v1/admin/gamification/badges/${id}`, { method: "DELETE" });
 }
 
 export function listModerationPracticeSubmissions(params = {}) {
