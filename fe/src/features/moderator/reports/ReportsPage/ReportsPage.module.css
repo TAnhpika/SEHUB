@@ -569,24 +569,44 @@
   border-radius: 9999px;
 }
 
-.trustLow {
-  color: #dc2626;
-  background: #dc2626;
+.trustFill.trustLow {
+  background: #ef4444;
 }
 
-.trustMid {
-  color: #ea580c;
+.trustFill.trustMid {
   background: #f97316;
 }
 
-.trustHigh {
-  color: #16a34a;
+.trustFill.trustHigh {
   background: #22c55e;
 }
 
 .trustValue {
+  min-width: 3rem;
+  padding: 0.125rem 0.5rem;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 700;
+  text-align: center;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.trustValue.trustLow {
+  color: #991b1b;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+}
+
+.trustValue.trustMid {
+  color: #9a3412;
+  background: #ffedd5;
+  border: 1px solid #fed7aa;
+}
+
+.trustValue.trustHigh {
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
 }
 
 .violationBox {
