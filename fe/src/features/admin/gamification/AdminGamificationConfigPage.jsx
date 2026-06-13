@@ -158,16 +158,22 @@ function AdminGamificationConfigPage() {
   }
 
   function handleBadgeSubmit(payload) {
-    const result = badgeModal.editing
+    const action = badgeModal.editing
       ? updateBadge(badgeModal.editing.id, payload)
       : createBadge(payload);
-    if (!result.ok) {
-      setBadgeModal((m) => ({ ...m, error: result.message }));
-      return;
-    }
-    showToast(badgeModal.editing ? "Đã cập nhật danh hiệu." : "Đã tạo danh hiệu mới.");
-    setBadgeModal({ open: false, editing: null, error: "" });
-    bump();
+    action
+      .then((result) => {
+        if (!result.ok) {
+          setBadgeModal((m) => ({ ...m, error: result.message }));
+          return;
+        }
+        showToast(badgeModal.editing ? "Đã cập nhật danh hiệu." : "Đã tạo danh hiệu mới.");
+        setBadgeModal({ open: false, editing: null, error: "" });
+        bump();
+      })
+      .catch((err) => {
+        setBadgeModal((m) => ({ ...m, error: err.message ?? "Không lưu được danh hiệu." }));
+      });
   }
 
   function handleRuleSubmit(payload) {
@@ -185,18 +191,25 @@ function AdminGamificationConfigPage() {
 
   function confirmDelete() {
     if (!deleteModal.id) return;
-    let result;
-    if (deleteModal.type === "rank") result = deleteRankTier(deleteModal.id);
-    else if (deleteModal.type === "badge") result = deleteBadge(deleteModal.id);
-    else result = deletePointRule(deleteModal.id);
+    const runDelete = async () => {
+      if (deleteModal.type === "rank") return deleteRankTier(deleteModal.id);
+      if (deleteModal.type === "badge") return deleteBadge(deleteModal.id);
+      return deletePointRule(deleteModal.id);
+    };
 
-    if (!result.ok) {
-      showToast(result.message);
-      return;
-    }
-    showToast(`Đã xóa ${deleteModal.label}.`);
-    setDeleteModal({ open: false, type: "", id: null, label: "" });
-    bump();
+    runDelete()
+      .then((result) => {
+        if (!result.ok) {
+          showToast(result.message);
+          return;
+        }
+        showToast(`Đã xóa ${deleteModal.label}.`);
+        setDeleteModal({ open: false, type: "", id: null, label: "" });
+        bump();
+      })
+      .catch((err) => {
+        showToast(err.message ?? "Không xóa được.");
+      });
   }
 
   const createLabel =
@@ -503,8 +516,12 @@ function AdminGamificationConfigPage() {
                               className={styles.actionBtn}
                               title={badge.active ? "Tắt" : "Bật"}
                               onClick={() => {
-                                toggleBadgeActive(badge.id);
-                                bump();
+                                toggleBadgeActive(badge.id)
+                                  .then((result) => {
+                                    if (!result.ok) showToast(result.message);
+                                    else bump();
+                                  })
+                                  .catch((err) => showToast(err.message ?? "Không đổi trạng thái."));
                               }}
                             >
                               {badge.active ? "⏸" : "▶"}
