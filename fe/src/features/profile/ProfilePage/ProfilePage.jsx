@@ -8,9 +8,11 @@ import RecentPosts from "@/features/profile/RecentPosts/RecentPosts";
 import {
   loadProfileBadges,
   loadProfileByUsername,
+  loadProfileActivity,
   loadRecentPostsByUsername,
 } from "@/features/profile/profileData";
 import ProfileInteractionActions from "@/features/social/ProfileInteractionActions/ProfileInteractionActions";
+import ProfilePageSkeleton from "@/features/profile/ProfilePageSkeleton/ProfilePageSkeleton";
 import * as profilesApi from "@/api/profilesApi";
 import styles from "./ProfilePage.module.css";
 
@@ -22,6 +24,7 @@ function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [badges, setBadges] = useState([]);
   const [recentPosts, setRecentPosts] = useState([]);
+  const [activity, setActivity] = useState({ heatmap: null, totalActivities: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -41,21 +44,19 @@ function ProfilePage() {
           profileDto = await profilesApi.getProfileByUsername(username);
         }
 
-        const [posts, badgeList] = await Promise.all([
+        const [posts, badgeList, activityData] = await Promise.all([
           loadRecentPostsByUsername(username),
-          Promise.resolve(loadProfileBadges(profileDto ?? { badges: [] })),
+          loadProfileBadges(profileDto ?? { badges: [] }),
+          loadProfileActivity(username),
         ]);
 
-        const card = await loadProfileByUsername(username, {
-          includeMyStats: isOwner,
-          profileDto,
-          postsCount: posts.length,
-        });
+        const card = await loadProfileByUsername(username, { profileDto });
 
         if (!cancelled) {
           setProfile(card);
           setBadges(badgeList);
           setRecentPosts(posts);
+          setActivity(activityData);
         }
       } catch (err) {
         if (!cancelled) {
@@ -75,11 +76,7 @@ function ProfilePage() {
   }, [username, isOwner]);
 
   if (loading) {
-    return (
-      <div className={styles.page}>
-        <p>Đang tải profile...</p>
-      </div>
-    );
+    return <ProfilePageSkeleton />;
   }
 
   if (error) {
@@ -127,8 +124,9 @@ function ProfilePage() {
       <div className={styles.main}>
         <ActivityHeatmap
           streakCount={profile.streakCount ?? 0}
-          totalActivities={profile.totalActivities ?? 0}
-          showChart={USE_MOCK}
+          totalActivities={activity.totalActivities ?? 0}
+          showChart={USE_MOCK || Boolean(activity.heatmap)}
+          heatmapData={activity.heatmap}
         />
         <BadgesSection badges={badges} />
         <RecentPosts posts={recentPosts} />
