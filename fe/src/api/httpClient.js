@@ -250,3 +250,59 @@ export async function apiUploadRequest(path, formData, { auth = true, retryOnUna
     return executeRequest();
   }
 }
+
+export async function downloadCsv(path, { auth = true, retryOnUnauthorized = true } = {}) {
+  const headers = {
+    Accept: "text/csv",
+  };
+
+  if (auth) {
+    const token = getAccessToken();
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+  }
+
+  async function executeRequest() {
+    const response = await fetch(`${API_BASE_URL}${path}`, { method: "GET", headers });
+    if (!response.ok) {
+      throw new ApiError("Không tải được file xuất.", { status: response.status });
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get("content-disposition") ?? "";
+    const match = disposition.match(/filename="?([^";]+)"?/i);
+    const fileName = match?.[1] ?? "export.csv";
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  try {
+    await executeRequest();
+  } catch (error) {
+    if (!(error instanceof ApiError)) {
+      throw new ApiError(
+        `Không kết nối được máy chủ (${API_BASE_URL}). Hãy chạy SEHub.API rồi thử lại.`,
+        { status: 0 },
+      );
+    }
+
+    const shouldRefresh =
+      retryOnUnauthorized &&
+      auth &&
+      error.status === 401 &&
+      getRefreshToken() &&
+      !path.includes("/api/v1/auth/refresh");
+
+    if (!shouldRefresh) {
+      throw error;
+    }
+
+    await refreshSession();
+    await executeRequest();
+  }
+}
