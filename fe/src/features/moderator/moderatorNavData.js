@@ -12,6 +12,7 @@ import { getPendingContentCount } from "@/features/moderator/content/contentMode
 import { getPendingExamQuestionReportCount } from "@/features/exams/examQuestionReportStore";
 import {
   getCommunityReportsPendingCount,
+  syncCachedPendingReportsCount,
 } from "@/features/moderator/reports/reportsData";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
@@ -157,6 +158,7 @@ export async function loadModeratorNavBadgeCounts() {
 
   try {
     const stats = await adminApi.getModerationStats();
+    syncCachedPendingReportsCount(stats.pendingReports ?? 0);
     const examPending = getPendingExamQuestionReportCount();
     return {
       reports: (stats.pendingReports ?? 0) + examPending,
