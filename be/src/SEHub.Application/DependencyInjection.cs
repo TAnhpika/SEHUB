@@ -94,6 +94,12 @@ public static class DependencyInjection
         services.AddScoped<IValidator<ModeratePostRequest>, ModeratePostRequestValidator>();
         services.AddScoped<IValidator<ModeratorBanUserRequest>, ModeratorBanUserRequestValidator>();
         services.AddScoped<IValidator<ModeratorWarnUserRequest>, ModeratorWarnUserRequestValidator>();
+        services.AddScoped<IValidator<UpdateDocumentRequest>, UpdateDocumentRequestValidator>();
+        services.AddScoped<IValidator<AdminUserPatchRequest>, AdminUserPatchRequestValidator>();
+        services.AddScoped<IValidator<UpdateLevelsRequest>, UpdateLevelsRequestValidator>();
+        services.AddScoped<IValidator<CreateBadgeRequest>, CreateBadgeRequestValidator>();
+        services.AddScoped<IValidator<UpdateBadgeRequest>, UpdateBadgeRequestValidator>();
+        services.AddScoped<IValidator<GrantTokensRequest>, GrantTokensRequestValidator>();
         services.AddScoped<IValidator<SaveAnswersRequest>, SaveAnswersRequestValidator>();
         services.AddScoped<IValidator<SubmitPracticeRequest>, SubmitPracticeRequestValidator>();
         services.AddScoped<IValidator<UpdateProfileRequest>, UpdateProfileRequestValidator>();
