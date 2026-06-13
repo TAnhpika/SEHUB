@@ -37,4 +37,9 @@ public class SubscriptionRepository : ISubscriptionRepository
             sub.UpdatedAt = DateTime.UtcNow;
         }
     }
+
+    public Task<int> CountActiveAsync(CancellationToken cancellationToken = default) =>
+        _context.Subscriptions.CountAsync(
+            s => s.IsActive && s.EndAt > DateTime.UtcNow,
+            cancellationToken);
 }
