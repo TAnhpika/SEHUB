@@ -31,7 +31,7 @@ const CONTENT_CRUMBS = [
 
 function ContentModerationPage() {
   const { showToast } = useToast();
-  const { items, approveItems, rejectItems, resetItems } = useContentModerationItems();
+  const { items, loading, error, approveItems, rejectItems, reload } = useContentModerationItems();
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
@@ -112,23 +112,38 @@ function ContentModerationPage() {
   }
 
   function handleApprove(ids) {
-    approveItems(ids);
-    clearSelection(ids);
-    showToast(`Đã duyệt ${ids.length} bài viết. Xem tại Lịch sử duyệt bài.`);
+    approveItems(ids)
+      .then(() => {
+        clearSelection(ids);
+        showToast(`Đã duyệt ${ids.length} bài viết. Xem tại Lịch sử duyệt bài.`);
+      })
+      .catch((err) => {
+        showToast(err.message ?? "Không duyệt được bài viết.", "error");
+      });
   }
 
   function handleReject(ids) {
-    rejectItems(ids);
-    clearSelection(ids);
-    showToast(`Đã từ chối ${ids.length} bài viết. Sinh viên có thể chỉnh sửa và gửi lại.`);
+    rejectItems(ids)
+      .then(() => {
+        clearSelection(ids);
+        showToast(`Đã từ chối ${ids.length} bài viết. Sinh viên có thể chỉnh sửa và gửi lại.`);
+      })
+      .catch((err) => {
+        showToast(err.message ?? "Không từ chối được bài viết.", "error");
+      });
   }
 
   function handleRefresh() {
-    resetItems();
-    setSelectedIds(new Set());
-    setFocusedId(null);
-    setPage(1);
-    showToast("Đã làm mới dữ liệu duyệt bài viết.");
+    reload()
+      .then(() => {
+        setSelectedIds(new Set());
+        setFocusedId(null);
+        setPage(1);
+        showToast("Đã làm mới dữ liệu duyệt bài viết.");
+      })
+      .catch((err) => {
+        showToast(err.message ?? "Không tải được dữ liệu.", "error");
+      });
   }
 
   function focusItem(id) {
@@ -141,6 +156,8 @@ function ContentModerationPage() {
       description="Duyệt bài viết sinh viên gửi trước khi hiển thị trên cộng đồng. Bài Rejected có thể được gửi duyệt lại."
       crumbs={CONTENT_CRUMBS}
     >
+      {error ? <p role="alert">{error}</p> : null}
+      {loading ? <p>Đang tải hàng đợi…</p> : null}
       <section className={styles.card}>
         <div className={styles.toolbarBlock}>
           <ModeratorToolbar
