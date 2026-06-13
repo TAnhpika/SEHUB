@@ -78,6 +78,11 @@ export function mapPaymentOrderDto(dto) {
     qrUrl: dto.qrUrl ?? null,
     checkoutUrl: dto.checkoutUrl ?? null,
     expiredAt: dto.expiredAt ?? null,
+    planCode: dto.planCode ?? null,
+    paidAt: dto.paidAt ?? null,
+    verifiedAt: dto.verifiedAt ?? null,
+    verificationMethod: dto.verificationMethod ?? null,
+    message: dto.message ?? null,
   };
 }
 
