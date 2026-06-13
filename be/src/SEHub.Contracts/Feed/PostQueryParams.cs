@@ -10,4 +10,5 @@ public sealed class PostQueryParams
     public string? Search { get; init; }
     public string? SortBy { get; init; }
     public string? SortDir { get; init; }
+    public bool? IsFeatured { get; init; }
 }
