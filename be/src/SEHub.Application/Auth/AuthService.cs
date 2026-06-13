@@ -6,6 +6,9 @@ using SEHub.Application.Abstractions;
 
 using SEHub.Application.Abstractions.Repositories;
 
+using SEHub.Application.Gamification;
+using SEHub.Application.Profiles;
+
 using SEHub.Application.Models;
 
 using SEHub.Contracts.Auth;
@@ -52,6 +55,9 @@ public sealed class AuthService : IAuthService
 
     private readonly JwtSettings _jwtSettings;
 
+    private readonly IBadgeCheckService _badgeCheckService;
+    private readonly IUserActivityService _userActivityService;
+
 
 
     public AuthService(
@@ -78,7 +84,11 @@ public sealed class AuthService : IAuthService
 
         IOptions<AuthSettings> authSettings,
 
-        IOptions<JwtSettings> jwtSettings)
+        IOptions<JwtSettings> jwtSettings,
+
+        IBadgeCheckService badgeCheckService,
+
+        IUserActivityService userActivityService)
 
     {
 
@@ -105,6 +115,10 @@ public sealed class AuthService : IAuthService
         _authSettings = authSettings.Value;
 
         _jwtSettings = jwtSettings.Value;
+
+        _badgeCheckService = badgeCheckService;
+
+        _userActivityService = userActivityService;
 
     }
 
@@ -210,9 +224,9 @@ public sealed class AuthService : IAuthService
 
         await EnsureNotBannedAsync(user.Id, cancellationToken);
 
-        await _userRepository.UpdateStreakOnLoginAsync(user.Id, cancellationToken);
+        await _userActivityService.RecordActivityAsync(user.Id, cancellationToken);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _badgeCheckService.EvaluateForTriggerAsync(user.Id, BadgeCheckService.TriggerStreakDays, cancellationToken);
 
 
 
@@ -264,9 +278,9 @@ public sealed class AuthService : IAuthService
 
         await EnsureNotBannedAsync(user.Id, cancellationToken);
 
-        await _userRepository.UpdateStreakOnLoginAsync(user.Id, cancellationToken);
+        await _userActivityService.RecordActivityAsync(user.Id, cancellationToken);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _badgeCheckService.EvaluateForTriggerAsync(user.Id, BadgeCheckService.TriggerStreakDays, cancellationToken);
 
 
 
