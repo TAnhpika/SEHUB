@@ -1,4 +1,9 @@
+import * as postsApi from "@/api/postsApi";
+import { mapPostDetail, mapPostListItem } from "@/api/feedMapper";
+
 export const MAX_PINNED_POSTS = 5;
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 export const FEATURE_SEARCH_SORT_OPTIONS = [
   { value: "newest", label: "Mới nhất" },
@@ -305,10 +310,71 @@ export function filterSearchPosts(posts, { query, sort = "newest", pinnedIds }) 
       return getFeaturedInteractionCount(b) - getFeaturedInteractionCount(a);
     }
     if (sort === "oldest") {
-      return (b.sortOrder ?? 0) - (a.sortOrder ?? 0);
+      return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
     }
-    return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+    return (b.sortOrder ?? 0) - (a.sortOrder ?? 0);
   });
 
   return result;
+}
+
+function mapPostToFeaturedCard(dto) {
+  const mapped = mapPostListItem(dto);
+  const createdMs = new Date(dto.createdAt).getTime();
+  const tag = String((dto.tags ?? [])[0] ?? "document").toLowerCase();
+
+  return {
+    id: mapped.id,
+    authorName: mapped.author.displayName || mapped.author.username,
+    authorInitial: mapped.author.initial,
+    timeLabel: mapped.timeAgo,
+    categoryLabel: tagToCategoryLabel(tag),
+    tag,
+    title: mapped.title,
+    excerpt: mapped.excerpt,
+    likes: mapped.likes,
+    comments: mapped.comments,
+    status: "approved",
+    sortOrder: Number.isNaN(createdMs) ? 0 : createdMs,
+    isFeatured: mapped.isFeatured,
+  };
+}
+
+export async function loadFeaturedPostsState() {
+  if (USE_MOCK) {
+    return {
+      pinned: PINNED_POSTS_INITIAL,
+      searchPool: SEARCH_POSTS_INITIAL,
+    };
+  }
+
+  const page = await postsApi.listPosts({ pageSize: 100, sortBy: "createdAt", sortDir: "desc" });
+  const cards = (page.items ?? []).map(mapPostToFeaturedCard);
+  const pinned = cards.filter((post) => post.isFeatured).slice(0, MAX_PINNED_POSTS);
+  const searchPool = cards.filter((post) => !post.isFeatured);
+
+  return { pinned, searchPool };
+}
+
+export async function loadFeaturedPostDetail(id) {
+  if (USE_MOCK) {
+    return findFeaturedPost(id, PINNED_POSTS_INITIAL, SEARCH_POSTS_INITIAL);
+  }
+
+  const dto = await postsApi.getPost(id);
+  const card = mapPostToFeaturedCard(dto);
+  const detail = mapPostDetail(dto);
+
+  return enrichFeaturedPost({
+    ...card,
+    content: detail.body,
+    tags: detail.tags,
+    allowComments: true,
+    anonymous: false,
+  });
+}
+
+export async function setPostFeatured(id, isFeatured) {
+  if (USE_MOCK) return;
+  await postsApi.featurePost(id, { isFeatured });
 }
