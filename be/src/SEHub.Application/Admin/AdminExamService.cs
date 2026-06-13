@@ -73,6 +73,12 @@ public sealed class AdminExamService : IAdminExamService
 
     public async Task<AdminExamDto> CreateExamAsync(CreateExamRequest request, bool confirmDuplicate = false, CancellationToken cancellationToken = default)
     {
+        var code = request.Code.Trim();
+        if (await _examRepository.GetByCodeAsync(code, cancellationToken) is not null)
+        {
+            throw new ConflictException("Mã đề đã tồn tại. Vui lòng dùng mã khác.");
+        }
+
         var contentHash = OcrExamService.ComputeSha256Hash(
             OcrExamService.NormalizeText(BuildContentHashSource(request)));
 
@@ -262,6 +268,9 @@ public sealed class AdminExamService : IAdminExamService
         Major = exam.Major,
         QuestionCount = exam.QuestionCount,
         Status = exam.Status.ToString(),
+        Description = exam.Description,
+        AssetUrl = exam.AssetUrl,
+        ContentHash = exam.ContentHash,
         CreatedAt = exam.CreatedAt,
         UpdatedAt = exam.UpdatedAt
     };
