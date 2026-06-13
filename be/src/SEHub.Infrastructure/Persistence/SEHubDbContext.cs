@@ -13,6 +13,7 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     {
     }
 
+    public DbSet<UserDailyActivity> UserDailyActivities => Set<UserDailyActivity>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<OtpVerification> OtpVerifications => Set<OtpVerification>();
@@ -27,6 +28,7 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<PracticeSubmission> PracticeSubmissions => Set<PracticeSubmission>();
     public DbSet<DocumentCategory> DocumentCategories => Set<DocumentCategory>();
     public DbSet<Document> Documents => Set<Document>();
+    public DbSet<DocumentAccessLog> DocumentAccessLogs => Set<DocumentAccessLog>();
     public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<PaymentOrder> PaymentOrders => Set<PaymentOrder>();
