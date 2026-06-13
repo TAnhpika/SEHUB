@@ -16,6 +16,9 @@ public class PostRepository : IPostRepository
     public Task<Post?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         _context.Posts.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
+    public Task<Post?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default) =>
+        _context.Posts.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+
     public async Task<(IReadOnlyList<Post> Items, int TotalCount)> GetPagedAsync(PostQueryParams query, CancellationToken cancellationToken = default)
     {
         var dbQuery = _context.Posts.Where(p => p.Status == PostStatus.Published);
@@ -98,6 +101,23 @@ public class PostRepository : IPostRepository
 
     public Task<int> CountByStatusAsync(PostStatus status, CancellationToken cancellationToken = default) =>
         _context.Posts.CountAsync(p => p.Status == status, cancellationToken);
+
+    public Task<int> CountByAuthorIdAsync(Guid authorId, CancellationToken cancellationToken = default) =>
+        _context.Posts.CountAsync(p => p.AuthorId == authorId && p.Status == PostStatus.Published, cancellationToken);
+
+    public async Task<(IReadOnlyList<Post> Items, int TotalCount)> GetPagedByAuthorIdAsync(
+        Guid authorId, int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var dbQuery = _context.Posts.Where(p => p.AuthorId == authorId && p.Status == PostStatus.Published);
+        var total = await dbQuery.CountAsync(cancellationToken);
+        var items = await dbQuery
+            .OrderByDescending(p => p.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, total);
+    }
 
     public async Task<IReadOnlyList<Post>> GetFeaturedAsync(int limit, CancellationToken cancellationToken = default) =>
         await _context.Posts
