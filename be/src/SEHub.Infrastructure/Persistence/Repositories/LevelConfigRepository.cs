@@ -27,4 +27,7 @@ public class LevelConfigRepository : ILevelConfigRepository
         _context.LevelConfigs.UpdateRange(levels);
         await Task.CompletedTask;
     }
+
+    public async Task AddAsync(LevelConfig level, CancellationToken cancellationToken = default) =>
+        await _context.LevelConfigs.AddAsync(level, cancellationToken);
 }
