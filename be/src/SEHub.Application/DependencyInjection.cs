@@ -82,6 +82,8 @@ public static class DependencyInjection
         services.AddScoped<IModerationService, ModerationService>();
         services.AddScoped<IAdminPaymentService, AdminPaymentService>();
         services.AddScoped<IAdminGamificationService, AdminGamificationService>();
+        services.AddScoped<IAdminExportService, AdminExportService>();
+        services.AddScoped<IAdminOverviewService, AdminOverviewService>();
         services.AddScoped<IOcrExamService, OcrExamService>();
 
         services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
