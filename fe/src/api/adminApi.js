@@ -1,4 +1,4 @@
-import { apiFormRequest, apiRequest, apiUploadRequest } from "./httpClient";
+import { apiFormRequest, apiRequest, apiUploadRequest, downloadCsv } from "./httpClient";
 
 function buildQuery(params = {}) {
   const search = new URLSearchParams();
@@ -154,6 +154,22 @@ export function resolveReport(id, body) {
 
 export function getModerationStats() {
   return apiRequest("/api/v1/admin/moderation/stats");
+}
+
+export function getFeaturedPosts(params = {}) {
+  return apiRequest(`/api/v1/admin/moderation/featured-posts${buildQuery(params)}`);
+}
+
+export function getAdminOverview() {
+  return apiRequest("/api/v1/admin/overview");
+}
+
+export function downloadAdminExport(kind) {
+  return downloadCsv(`/api/v1/admin/export/${kind}.csv`);
+}
+
+export function downloadModerationViolationsExport() {
+  return downloadCsv("/api/v1/admin/moderation/violations/export.csv");
 }
 
 export function listModerationPosts(params = {}) {
