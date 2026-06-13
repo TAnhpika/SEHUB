@@ -21,8 +21,16 @@ function ProfileCard({ profile, isOwner = false, isPremiumUsername = false }) {
         <span className={styles.badge} aria-hidden="true">
           <FontAwesomeIcon icon={faGem} />
         </span>
-        <span className={styles.avatar} aria-hidden="true">
-          {profile.initial}
+        <span className={styles.avatar} aria-hidden={Boolean(profile.avatarUrl)}>
+          {profile.avatarUrl ? (
+            <img
+              src={profile.avatarUrl}
+              alt={`Avatar ${profile.displayName ?? profile.username}`}
+              className={styles["avatar-image"]}
+            />
+          ) : (
+            profile.initial
+          )}
         </span>
         <h1
           className={withPremiumUsernameClass(styles.username, isPremiumUsername)}
