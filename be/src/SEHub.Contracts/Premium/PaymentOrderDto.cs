@@ -5,6 +5,9 @@ public sealed class PaymentOrderDto
     public Guid OrderId { get; init; }
     public string PayOsOrderCode { get; init; } = string.Empty;
     public decimal Amount { get; init; }
+    public decimal OriginalAmount { get; init; }
+    public int? DiscountPercent { get; init; }
+    public string? DiscountSource { get; init; }
     public string Status { get; init; } = string.Empty;
     public string? QrUrl { get; init; }
     public string? CheckoutUrl { get; init; }
