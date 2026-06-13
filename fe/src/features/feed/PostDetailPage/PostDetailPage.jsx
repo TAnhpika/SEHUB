@@ -248,6 +248,13 @@ function PostDetailPage() {
         <h1 className={styles.title}>
           <span className={styles.hash}>#</span> {displayTitle}
         </h1>
+        {post.images?.length > 0 ? (
+          <div className={styles.images}>
+            {post.images.map((image) => (
+              <img key={image.id} className={styles.image} src={image.url} alt="" loading="lazy" />
+            ))}
+          </div>
+        ) : null}
         <p className={styles.body}>{post.body ?? post.excerpt}</p>
 
         {post.tags?.length > 0 && (

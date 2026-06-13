@@ -74,6 +74,18 @@ export function ocrExam(body) {
   });
 }
 
+export function uploadExamAttachment(examId, file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiUploadRequest(`/api/v1/admin/exams/${examId}/attachments`, formData);
+}
+
+export function deleteExamAttachment(examId, attachmentId) {
+  return apiRequest(`/api/v1/admin/exams/${examId}/attachments/${attachmentId}`, {
+    method: "DELETE",
+  });
+}
+
 export function listDocuments(params = {}) {
   return apiRequest(`/api/v1/admin/documents${buildQuery(params)}`);
 }

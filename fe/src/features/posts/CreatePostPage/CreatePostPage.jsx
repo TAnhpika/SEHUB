@@ -40,6 +40,7 @@ function CreatePostPage() {
   const [contentMode, setContentMode] = useState("edit");
   const [coverMode, setCoverMode] = useState("upload");
   const [coverUrl, setCoverUrl] = useState("");
+  const [coverFile, setCoverFile] = useState(null);
   const [coverFileName, setCoverFileName] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState([]);
@@ -68,6 +69,7 @@ function CreatePostPage() {
   function handleCoverFileChange(event) {
     const file = event.target.files?.[0];
     if (!file) return;
+    setCoverFile(file);
     setCoverFileName(file.name);
   }
 
@@ -81,6 +83,7 @@ function CreatePostPage() {
         title: title.trim(),
         content: content.trim(),
         tags,
+        coverFile: coverMode === "upload" ? coverFile : null,
       });
       showToast("Đã gửi bài viết — chờ moderator duyệt trước khi hiển thị.", 5500);
       window.setTimeout(() => navigate("/home"), 1200);
