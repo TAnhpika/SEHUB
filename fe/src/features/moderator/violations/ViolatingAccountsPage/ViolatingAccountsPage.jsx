@@ -9,6 +9,7 @@ import {
   faTrophy,
 } from "@fortawesome/free-solid-svg-icons";
 import { ApiError } from "@/api/httpClient";
+import * as adminApi from "@/api/adminApi";
 import FilterDropdown from "@/common/FilterDropdown/FilterDropdown";
 import Pagination from "@/common/Pagination/Pagination";
 import { useToast } from "@/common/Toast/ToastProvider";
@@ -189,8 +190,13 @@ function ViolatingAccountsPage() {
     };
   }
 
-  function handleExport() {
-    showToast("Xuất báo cáo sẽ được bổ sung ở phiên bản sau.");
+  async function handleExport() {
+    try {
+      await adminApi.downloadModerationViolationsExport();
+      showToast("Đã tải file CSV tài khoản vi phạm.");
+    } catch (error) {
+      showToast(error instanceof ApiError ? error.message : "Không xuất được báo cáo.", "error");
+    }
   }
 
   function handleAddWarning() {
