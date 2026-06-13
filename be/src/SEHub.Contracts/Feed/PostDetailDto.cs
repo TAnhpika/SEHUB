@@ -13,6 +13,7 @@ public sealed class PostDetailDto
     public int ViewCount { get; init; }
     public bool IsFeatured { get; init; }
     public bool? IsLiked { get; init; }
+    public IReadOnlyList<PostImageDto> Images { get; init; } = [];
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 }

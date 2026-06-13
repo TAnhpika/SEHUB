@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<IOtpService, OtpService>();
 
         services.AddScoped<IPostService, PostService>();
+        services.AddScoped<IPostImageService, PostImageService>();
         services.AddScoped<ICommentService, CommentService>();
         services.AddScoped<IPostLikeService, PostLikeService>();
         services.AddScoped<IPostReportService, PostReportService>();
@@ -47,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<IGamificationCatalogService, GamificationCatalogService>();
 
         services.AddScoped<IExamQueryService, ExamQueryService>();
+        services.AddScoped<IExamAttachmentService, ExamAttachmentService>();
         services.AddScoped<IExamAttemptService, ExamAttemptService>();
         services.AddScoped<IExamGradingService, ExamGradingService>();
         services.AddScoped<IAiExplanationApplicationService, AiExplanationApplicationService>();

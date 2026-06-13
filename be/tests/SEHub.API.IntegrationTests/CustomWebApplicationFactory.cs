@@ -16,6 +16,7 @@ using SEHub.Application.Abstractions;
 using IGoogleTokenValidator = SEHub.Application.Abstractions.IGoogleTokenValidator;
 using SEHub.Infrastructure.Persistence;
 using SEHub.Shared.Constants;
+using SEHub.API.IntegrationTests.Storage;
 
 namespace SEHub.API.IntegrationTests;
 
@@ -118,6 +119,17 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             services.AddScoped<IEmailService>(sp => sp.GetRequiredService<CapturingEmailService>());
             services.AddSingleton(GoogleTokenValidator);
             services.AddScoped<IGoogleTokenValidator>(sp => sp.GetRequiredService<FakeGoogleTokenValidator>());
+
+            var cloudStorageDescriptors = services
+                .Where(d => d.ServiceType == typeof(ICloudFileStorageService))
+                .ToList();
+            foreach (var descriptor in cloudStorageDescriptors)
+            {
+                services.Remove(descriptor);
+            }
+
+            services.AddSingleton<FakeCloudFileStorageService>();
+            services.AddScoped<ICloudFileStorageService>(sp => sp.GetRequiredService<FakeCloudFileStorageService>());
 
             services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
             {

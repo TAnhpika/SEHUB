@@ -11,4 +11,5 @@ public sealed class PostListItemDto
     public int CommentCount { get; init; }
     public DateTime CreatedAt { get; init; }
     public bool IsFeatured { get; init; }
+    public IReadOnlyList<PostImageDto> Images { get; init; } = [];
 }

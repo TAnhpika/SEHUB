@@ -20,4 +20,5 @@ public class Exam : BaseEntity
     public ICollection<Question> Questions { get; set; } = [];
     public ICollection<ExamAttempt> Attempts { get; set; } = [];
     public ICollection<PracticeSubmission> PracticeSubmissions { get; set; } = [];
+    public ICollection<ExamAttachment> Attachments { get; set; } = [];
 }
