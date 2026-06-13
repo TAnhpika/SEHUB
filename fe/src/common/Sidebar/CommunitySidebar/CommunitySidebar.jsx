@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRocket } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
-import { FEATURED_POSTS } from "@/features/feed/feedData";
+import FeaturedPostsPanel from "@/common/Sidebar/FeaturedPostsPanel/FeaturedPostsPanel";
 import styles from "./CommunitySidebar.module.css";
 
 function CommunitySidebar() {
@@ -31,23 +31,7 @@ function CommunitySidebar() {
         </p>
       </div>
 
-      <div className={`${styles.panel} ${styles.featured}`}>
-        <h2 className={styles.title}>Bài viết nổi bật</h2>
-        <ul className={styles.posts}>
-          {FEATURED_POSTS.map((post, index) => (
-            <li key={post.url} className={index < FEATURED_POSTS.length - 1 ? styles.item : undefined}>
-              <a
-                href={post.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles["post-link"]}
-              >
-                {post.title}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <FeaturedPostsPanel className={`${styles.panel} ${styles.featured}`} />
     </aside>
   );
 }
