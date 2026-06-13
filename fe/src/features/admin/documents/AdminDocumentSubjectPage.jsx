@@ -9,10 +9,11 @@ import StatusBadge from "@/features/admin/shared/StatusBadge";
 import { getSemesterLabel } from "@/features/admin/exams/adminExamData";
 import {
   addAdminDocument,
+  deleteAdminDocumentViaApi,
   getAdminDocumentsBySubject,
   loadAdminDocuments,
-  removeAdminDocument,
-  updateAdminDocument,
+  updateAdminDocumentViaApi,
+  uploadAdminDocumentViaApi,
 } from "@/features/admin/documents/adminDocumentData";
 import DocumentEditModal from "@/features/admin/documents/DocumentEditModal";
 import { getAdminDocumentsCatalogUrl } from "@/features/admin/documents/adminDocumentPaths";
@@ -74,20 +75,29 @@ function AdminDocumentSubjectPage() {
 
     if (!file) return;
 
-    addAdminDocument({
-      name: file.name,
+    uploadAdminDocumentViaApi({
+      file,
       subject: code,
       semester: semester !== "all" ? semester : "1",
       access: access === "free" ? "Free (3 trang)" : "Premium",
       pages,
-    });
-    setRefreshKey((k) => k + 1);
-    showToast("Đã upload tài liệu.");
-    setShowUpload(false);
-    setUploadAccess("free");
-    setUploadPages(String(DEFAULT_UPLOAD_PAGES));
-    setUploadFileName("");
-    form.reset();
+    })
+      .then((result) => {
+        if (!result.ok) {
+          showToast(result.message ?? "Upload thất bại.");
+          return;
+        }
+        setRefreshKey((k) => k + 1);
+        showToast("Đã upload tài liệu.");
+        setShowUpload(false);
+        setUploadAccess("free");
+        setUploadPages(String(DEFAULT_UPLOAD_PAGES));
+        setUploadFileName("");
+        form.reset();
+      })
+      .catch((err) => {
+        showToast(err.message ?? "Upload thất bại.");
+      });
   }
 
   const uploadPreviewDoc = useMemo(
@@ -100,23 +110,36 @@ function AdminDocumentSubjectPage() {
   );
 
   function handleDelete(id) {
-    if (removeAdminDocument(id)) {
-      if (editingDoc?.id === id) setEditingDoc(null);
-      setRefreshKey((k) => k + 1);
-      showToast("Đã xóa tài liệu.");
-    }
+    deleteAdminDocumentViaApi(id)
+      .then((result) => {
+        if (!result.ok) {
+          showToast(result.message ?? "Không xóa được tài liệu.");
+          return;
+        }
+        if (editingDoc?.id === id) setEditingDoc(null);
+        setRefreshKey((k) => k + 1);
+        showToast("Đã xóa tài liệu.");
+      })
+      .catch((err) => {
+        showToast(err.message ?? "Không xóa được tài liệu.");
+      });
   }
 
   function handleEditSave(payload) {
     if (!editingDoc) return;
-    const result = updateAdminDocument(editingDoc.id, payload);
-    if (!result.ok) {
-      showToast(result.message ?? "Không thể cập nhật tài liệu.");
-      return;
-    }
-    setRefreshKey((k) => k + 1);
-    setEditingDoc(null);
-    showToast("Đã cập nhật tài liệu.");
+    updateAdminDocumentViaApi(editingDoc.id, payload)
+      .then((result) => {
+        if (!result.ok) {
+          showToast(result.message ?? "Không thể cập nhật tài liệu.");
+          return;
+        }
+        setRefreshKey((k) => k + 1);
+        setEditingDoc(null);
+        showToast("Đã cập nhật tài liệu.");
+      })
+      .catch((err) => {
+        showToast(err.message ?? "Không thể cập nhật tài liệu.");
+      });
   }
 
   const semesterLabel =
