@@ -34,12 +34,13 @@ public sealed class DocumentsController : ControllerBase
         }
 
         await using var stream = file.OpenReadStream();
+        var pageCount = request.PageCount is > 0 ? request.PageCount.Value : 1;
         var result = await _adminDocumentService.UploadAsync(
             request,
             stream,
             file.FileName,
             file.ContentType,
-            pageCount: 1,
+            pageCount,
             cancellationToken);
 
         return Ok(result);
@@ -49,6 +50,13 @@ public sealed class DocumentsController : ControllerBase
     public async Task<IActionResult> GetDocument(Guid id, CancellationToken cancellationToken)
     {
         var result = await _adminDocumentService.GetDocumentAsync(id, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateDocumentRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _adminDocumentService.UpdateAsync(id, request, cancellationToken);
         return Ok(result);
     }
 
