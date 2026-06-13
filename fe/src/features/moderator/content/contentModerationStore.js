@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
+import * as adminApi from "@/api/adminApi";
 import {
   buildDefaultContentItems,
   DEFAULT_REJECT_REASON,
+  loadModerationContentItems,
 } from "@/features/moderator/content/contentModerationData";
 
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 const STORAGE_KEY = "sehub-content-moderation-v1";
+const UPDATE_EVENT = "sehub-content-moderation-updated";
+const STATS_EVENT = "sehub-moderator-stats-updated";
+
 const MODERATOR_ACTOR = {
   moderatorName: "Nguyễn Mod SEHUB",
   moderatorId: "MOD001",
@@ -18,6 +24,11 @@ function formatActionTime() {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function notifyUpdated() {
+  window.dispatchEvent(new CustomEvent(UPDATE_EVENT));
+  window.dispatchEvent(new CustomEvent(STATS_EVENT));
 }
 
 export function loadContentItems() {
@@ -38,6 +49,7 @@ export function saveContentItems(items) {
 }
 
 export function getPendingContentCount() {
+  if (!USE_MOCK) return 0;
   return loadContentItems().filter((item) => item.status === "pending").length;
 }
 
@@ -74,45 +86,103 @@ export function rejectContentItems(items, ids, reason = DEFAULT_REJECT_REASON, a
 }
 
 export function useContentModerationItems() {
-  const [items, setItemsState] = useState(() => loadContentItems());
+  const [items, setItemsState] = useState(() => (USE_MOCK ? loadContentItems() : []));
+  const [loading, setLoading] = useState(!USE_MOCK);
+  const [error, setError] = useState(null);
 
   const persist = useCallback((next) => {
     const resolved = typeof next === "function" ? next(loadContentItems()) : next;
     setItemsState(resolved);
     saveContentItems(resolved);
-    window.dispatchEvent(new CustomEvent("sehub-content-moderation-updated"));
+    notifyUpdated();
+  }, []);
+
+  const reload = useCallback(async () => {
+    if (USE_MOCK) {
+      setItemsState(loadContentItems());
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const next = await loadModerationContentItems();
+      setItemsState(next);
+    } catch (err) {
+      setError(err.message ?? "Không tải được danh sách bài viết.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    function syncFromStorage() {
-      setItemsState(loadContentItems());
+    reload();
+  }, [reload]);
+
+  useEffect(() => {
+    if (USE_MOCK) {
+      function syncFromStorage() {
+        setItemsState(loadContentItems());
+      }
+
+      window.addEventListener(UPDATE_EVENT, syncFromStorage);
+      window.addEventListener("storage", syncFromStorage);
+      return () => {
+        window.removeEventListener(UPDATE_EVENT, syncFromStorage);
+        window.removeEventListener("storage", syncFromStorage);
+      };
     }
 
-    window.addEventListener("sehub-content-moderation-updated", syncFromStorage);
-    window.addEventListener("storage", syncFromStorage);
-    return () => {
-      window.removeEventListener("sehub-content-moderation-updated", syncFromStorage);
-      window.removeEventListener("storage", syncFromStorage);
-    };
-  }, []);
+    function onExternalUpdate() {
+      reload();
+    }
+
+    window.addEventListener(UPDATE_EVENT, onExternalUpdate);
+    return () => window.removeEventListener(UPDATE_EVENT, onExternalUpdate);
+  }, [reload]);
 
   const approveItems = useCallback(
-    (ids) => {
-      persist((prev) => approveContentItems(prev, ids));
+    async (ids) => {
+      if (USE_MOCK) {
+        persist((prev) => approveContentItems(prev, ids));
+        return;
+      }
+
+      for (const id of ids) {
+        await adminApi.moderatePost(id, {
+          action: "approve",
+          note: "Đã duyệt — hiển thị trên feed cộng đồng.",
+        });
+      }
+      await reload();
+      notifyUpdated();
     },
-    [persist],
+    [persist, reload],
   );
 
   const rejectItems = useCallback(
-    (ids, reason) => {
-      persist((prev) => rejectContentItems(prev, ids, reason));
+    async (ids, reason = DEFAULT_REJECT_REASON) => {
+      if (USE_MOCK) {
+        persist((prev) => rejectContentItems(prev, ids, reason));
+        return;
+      }
+
+      for (const id of ids) {
+        await adminApi.moderatePost(id, { action: "reject", note: reason });
+      }
+      await reload();
+      notifyUpdated();
     },
-    [persist],
+    [persist, reload],
   );
 
   const resetItems = useCallback(() => {
-    persist(buildDefaultContentItems());
-  }, [persist]);
+    if (USE_MOCK) {
+      persist(buildDefaultContentItems());
+      return;
+    }
+    reload();
+  }, [persist, reload]);
 
-  return { items, approveItems, rejectItems, resetItems };
+  return { items, loading, error, approveItems, rejectItems, resetItems, reload };
 }
