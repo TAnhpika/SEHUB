@@ -11,6 +11,7 @@ public class PaymentAuditLogRepository : IPaymentAuditLogRepository
         "WEBHOOK_PAID",
         "N8N_ACTIVATE",
         "ADMIN_CONFIRM",
+        "ManualVerification",
     ];
 
     private readonly SEHubDbContext _context;

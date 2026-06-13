@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
-import * as adminApi from "@/api/adminApi";
+import {
+  approveModerationPosts,
+  CONTENT_MODERATION_USE_MOCK,
+  getCachedPendingContentCount,
+  loadModerationHistory,
+  loadModerationPostDetail,
+  loadModerationQueue,
+  refreshPendingContentCount,
+  rejectModerationPosts,
+} from "@/features/moderator/content/contentModerationService";
 import {
   buildDefaultContentItems,
   DEFAULT_REJECT_REASON,
-  loadModerationContentItems,
 } from "@/features/moderator/content/contentModerationData";
 
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 const STORAGE_KEY = "sehub-content-moderation-v1";
-const UPDATE_EVENT = "sehub-content-moderation-updated";
-const STATS_EVENT = "sehub-moderator-stats-updated";
-
 const MODERATOR_ACTOR = {
   moderatorName: "Nguyễn Mod SEHUB",
   moderatorId: "MOD001",
@@ -26,12 +30,7 @@ function formatActionTime() {
   });
 }
 
-function notifyUpdated() {
-  window.dispatchEvent(new CustomEvent(UPDATE_EVENT));
-  window.dispatchEvent(new CustomEvent(STATS_EVENT));
-}
-
-export function loadContentItems() {
+function loadMockContentItems() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -44,23 +43,18 @@ export function loadContentItems() {
   return buildDefaultContentItems();
 }
 
-export function saveContentItems(items) {
+function saveMockContentItems(items) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 
-export function getPendingContentCount() {
-  if (!USE_MOCK) return 0;
-  return loadContentItems().filter((item) => item.status === "pending").length;
-}
-
-function patchItems(items, ids, patch) {
+function patchMockItems(items, ids, patch) {
   const idSet = new Set(ids);
   return items.map((item) => (idSet.has(item.id) ? { ...item, ...patch } : item));
 }
 
-export function approveContentItems(items, ids, actor = MODERATOR_ACTOR) {
+function approveMockItems(items, ids, actor = MODERATOR_ACTOR) {
   const actionAtLabel = formatActionTime();
-  return patchItems(items, ids, {
+  return patchMockItems(items, ids, {
     status: "approved",
     moderation: {
       moderatorName: actor.moderatorName,
@@ -71,9 +65,9 @@ export function approveContentItems(items, ids, actor = MODERATOR_ACTOR) {
   });
 }
 
-export function rejectContentItems(items, ids, reason = DEFAULT_REJECT_REASON, actor = MODERATOR_ACTOR) {
+function rejectMockItems(items, ids, reason = DEFAULT_REJECT_REASON, actor = MODERATOR_ACTOR) {
   const actionAtLabel = formatActionTime();
-  return patchItems(items, ids, {
+  return patchMockItems(items, ids, {
     status: "rejected",
     moderation: {
       moderatorName: actor.moderatorName,
@@ -85,104 +79,226 @@ export function rejectContentItems(items, ids, reason = DEFAULT_REJECT_REASON, a
   });
 }
 
-export function useContentModerationItems() {
-  const [items, setItemsState] = useState(() => (USE_MOCK ? loadContentItems() : []));
-  const [loading, setLoading] = useState(!USE_MOCK);
+function notifyUpdated() {
+  window.dispatchEvent(new CustomEvent("sehub-content-moderation-updated"));
+  window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
+}
+
+export function getPendingContentCount() {
+  if (CONTENT_MODERATION_USE_MOCK) {
+    return loadMockContentItems().filter((item) => item.status === "pending").length;
+  }
+  return getCachedPendingContentCount();
+}
+
+export function useContentModerationQueue() {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sort, setSort] = useState("newest");
 
-  const persist = useCallback((next) => {
-    const resolved = typeof next === "function" ? next(loadContentItems()) : next;
-    setItemsState(resolved);
-    saveContentItems(resolved);
-    notifyUpdated();
-  }, []);
-
-  const reload = useCallback(async () => {
-    if (USE_MOCK) {
-      setItemsState(loadContentItems());
-      return;
-    }
-
+  const refresh = useCallback(async (nextSort = sort) => {
     setLoading(true);
     setError(null);
     try {
-      const next = await loadModerationContentItems();
-      setItemsState(next);
+      if (CONTENT_MODERATION_USE_MOCK) {
+        const mockItems = loadMockContentItems();
+        setItems(mockItems);
+        notifyUpdated();
+        return mockItems;
+      }
+
+      const data = await loadModerationQueue({ sort: nextSort });
+      setItems(data);
+      return data;
     } catch (err) {
-      setError(err.message ?? "Không tải được danh sách bài viết.");
+      setError(err.message ?? "Không tải được hàng đợi duyệt bài.");
+      setItems([]);
+      return [];
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sort]);
 
   useEffect(() => {
-    reload();
-  }, [reload]);
+    refresh(sort);
+  }, [sort, refresh]);
 
   useEffect(() => {
-    if (USE_MOCK) {
+    if (CONTENT_MODERATION_USE_MOCK) {
       function syncFromStorage() {
-        setItemsState(loadContentItems());
+        setItems(loadMockContentItems());
       }
 
-      window.addEventListener(UPDATE_EVENT, syncFromStorage);
+      window.addEventListener("sehub-content-moderation-updated", syncFromStorage);
       window.addEventListener("storage", syncFromStorage);
       return () => {
-        window.removeEventListener(UPDATE_EVENT, syncFromStorage);
+        window.removeEventListener("sehub-content-moderation-updated", syncFromStorage);
         window.removeEventListener("storage", syncFromStorage);
       };
     }
 
-    function onExternalUpdate() {
-      reload();
-    }
-
-    window.addEventListener(UPDATE_EVENT, onExternalUpdate);
-    return () => window.removeEventListener(UPDATE_EVENT, onExternalUpdate);
-  }, [reload]);
+    refreshPendingContentCount().catch(() => {});
+    return undefined;
+  }, [refresh]);
 
   const approveItems = useCallback(
     async (ids) => {
-      if (USE_MOCK) {
-        persist((prev) => approveContentItems(prev, ids));
+      if (CONTENT_MODERATION_USE_MOCK) {
+        const next = approveMockItems(loadMockContentItems(), ids);
+        saveMockContentItems(next);
+        setItems(next);
+        notifyUpdated();
         return;
       }
 
-      for (const id of ids) {
-        await adminApi.moderatePost(id, {
-          action: "approve",
-          note: "Đã duyệt — hiển thị trên feed cộng đồng.",
-        });
-      }
-      await reload();
-      notifyUpdated();
+      await approveModerationPosts(ids);
+      await refresh(sort);
     },
-    [persist, reload],
+    [refresh, sort],
   );
 
   const rejectItems = useCallback(
-    async (ids, reason = DEFAULT_REJECT_REASON) => {
-      if (USE_MOCK) {
-        persist((prev) => rejectContentItems(prev, ids, reason));
+    async (ids, reason) => {
+      if (CONTENT_MODERATION_USE_MOCK) {
+        const next = rejectMockItems(loadMockContentItems(), ids, reason);
+        saveMockContentItems(next);
+        setItems(next);
+        notifyUpdated();
         return;
       }
 
-      for (const id of ids) {
-        await adminApi.moderatePost(id, { action: "reject", note: reason });
-      }
-      await reload();
-      notifyUpdated();
+      await rejectModerationPosts(ids, reason);
+      await refresh(sort);
     },
-    [persist, reload],
+    [refresh, sort],
   );
 
-  const resetItems = useCallback(() => {
-    if (USE_MOCK) {
-      persist(buildDefaultContentItems());
+  const resetItems = useCallback(async () => {
+    if (CONTENT_MODERATION_USE_MOCK) {
+      const next = buildDefaultContentItems();
+      saveMockContentItems(next);
+      setItems(next);
+      notifyUpdated();
       return;
     }
-    reload();
-  }, [persist, reload]);
 
-  return { items, loading, error, approveItems, rejectItems, resetItems, reload };
+    await refresh(sort);
+  }, [refresh, sort]);
+
+  return {
+    items,
+    loading,
+    error,
+    sort,
+    setSort,
+    refresh,
+    approveItems,
+    rejectItems,
+    resetItems,
+  };
+}
+
+export function useContentModerationHistory({ status = "all", sort = "newest" } = {}) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (CONTENT_MODERATION_USE_MOCK) {
+        setItems(loadMockContentItems());
+        return;
+      }
+
+      const data = await loadModerationHistory({ status, sort });
+      setItems(data);
+    } catch (err) {
+      setError(err.message ?? "Không tải được lịch sử duyệt bài.");
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [status, sort]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    if (CONTENT_MODERATION_USE_MOCK) {
+      function syncFromStorage() {
+        setItems(loadMockContentItems());
+      }
+
+      window.addEventListener("sehub-content-moderation-updated", syncFromStorage);
+      window.addEventListener("storage", syncFromStorage);
+      return () => {
+        window.removeEventListener("sehub-content-moderation-updated", syncFromStorage);
+        window.removeEventListener("storage", syncFromStorage);
+      };
+    }
+
+    return undefined;
+  }, []);
+
+  return { items, loading, error, refresh };
+}
+
+export function useContentModerationDetail(postId) {
+  const [item, setItem] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!postId) {
+      setItem(null);
+      setError(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    async function fetchDetail() {
+      setLoading(true);
+      setError(null);
+      try {
+        if (CONTENT_MODERATION_USE_MOCK) {
+          const mockItem = loadMockContentItems().find((entry) => entry.id === postId) ?? null;
+          if (!cancelled) setItem(mockItem);
+          return;
+        }
+
+        const detail = await loadModerationPostDetail(postId);
+        if (!cancelled) setItem(detail);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message ?? "Không tải được chi tiết bài viết.");
+          setItem(null);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    fetchDetail();
+    return () => {
+      cancelled = true;
+    };
+  }, [postId]);
+
+  return { item, loading, error };
+}
+
+/** @deprecated — dùng useContentModerationQueue / useContentModerationHistory */
+export function useContentModerationItems() {
+  const queue = useContentModerationQueue();
+  return {
+    items: queue.items,
+    approveItems: queue.approveItems,
+    rejectItems: queue.rejectItems,
+    resetItems: queue.resetItems,
+  };
 }

@@ -11,8 +11,9 @@ export function createOrder({ planCode }) {
   });
 }
 
-export function getOrder(orderId) {
-  return apiRequest(`/api/v1/premium/orders/${orderId}`);
+export function getOrder(orderId, { markWaitingConfirmation = false } = {}) {
+  const query = markWaitingConfirmation ? "?markWaitingConfirmation=true" : "";
+  return apiRequest(`/api/v1/premium/orders/${orderId}${query}`);
 }
 
 export function getSubscription() {

@@ -23,7 +23,7 @@ function PaymentReturnPage() {
     async function pollOrder() {
       try {
         while (!cancelled && attempts < MAX_POLL_ATTEMPTS) {
-          const order = await premiumApi.getOrder(orderId);
+          const order = await premiumApi.getOrder(orderId, { markWaitingConfirmation: true });
           if (order.status === "Paid") {
             const fePlanId = getFePlanId(order.planCode) ?? "semester";
             navigate(`/home/premium/success/${fePlanId}`, {
@@ -44,7 +44,20 @@ function PaymentReturnPage() {
         }
 
         if (!cancelled) {
-          setError("Chưa nhận được xác nhận thanh toán. Vui lòng kiểm tra lại sau.");
+          try {
+            const order = await premiumApi.getOrder(orderId, { markWaitingConfirmation: true });
+            const fePlanId = getFePlanId(order.planCode) ?? "semester";
+            navigate(`/home/premium/success/${fePlanId}`, {
+              replace: true,
+              state: {
+                orderId: order.orderId ?? orderId,
+                payOsOrderCode: order.payOsOrderCode,
+                manualConfirmRequired: true,
+              },
+            });
+          } catch {
+            setError("Chưa nhận được xác nhận thanh toán. Vui lòng kiểm tra lại sau.");
+          }
         }
       } catch (err) {
         if (!cancelled) {

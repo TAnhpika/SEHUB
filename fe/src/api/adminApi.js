@@ -1,4 +1,4 @@
-import { apiFormRequest, apiRequest } from "./httpClient";
+import { apiFormRequest, apiRequest, apiUploadRequest } from "./httpClient";
 
 function buildQuery(params = {}) {
   const search = new URLSearchParams();
@@ -99,16 +99,16 @@ export function updateDocument(id, body) {
   });
 }
 
-export function uploadDocument({ file, title, categoryId, accessTier, pageCount }) {
+export function uploadDocument({ file, title, subjectCode, semester, categoryId, accessTier, pageCount }) {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("Title", title);
-  formData.append("CategoryId", categoryId);
+  if (subjectCode) formData.append("SubjectCode", subjectCode);
+  if (semester != null && semester !== "") formData.append("Semester", String(semester));
+  if (categoryId) formData.append("CategoryId", categoryId);
   formData.append("AccessTier", accessTier);
-  if (pageCount != null && pageCount !== "") {
-    formData.append("PageCount", String(pageCount));
-  }
-  return apiFormRequest("/api/v1/admin/documents", { formData });
+  if (pageCount != null && pageCount !== "") formData.append("PageCount", String(pageCount));
+  return apiUploadRequest("/api/v1/admin/documents", formData);
 }
 
 export function listPayments(params = {}) {

@@ -13,7 +13,7 @@ import {
   loadPaymentById,
   processPayOsRefund,
 } from "@/features/admin/payments/adminPaymentData";
-import { PAYMENT_STATUS_META } from "@/features/admin/payments/adminPaymentPolicy";
+import { PAYMENT_STATUS_META, canAdminConfirmPayment } from "@/features/admin/payments/adminPaymentPolicy";
 import { getAdminUserDetailUrl } from "@/features/admin/users/adminUserStore";
 import payStyles from "@/features/admin/payments/AdminPayments.module.css";
 import styles from "@/features/admin/shared/adminPage.module.css";
@@ -117,7 +117,7 @@ function AdminPaymentDetailPage() {
       ]}
       actions={
         <>
-          {payment.status === "webhook_ok" ? (
+          {canAdminConfirmPayment(payment.status) ? (
             <Button onClick={handleConfirm}>Xác nhận & kích hoạt</Button>
           ) : null}
           {payment.status === "activated" ? (

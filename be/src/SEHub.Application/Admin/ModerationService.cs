@@ -1,6 +1,8 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
+using SEHub.Application.Gamification;
+using SEHub.Application.Profiles;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Exams;
@@ -24,6 +26,8 @@ public sealed class ModerationService : IModerationService
     private readonly IPracticeSubmissionRepository _submissionRepository;
     private readonly IExamRepository _examRepository;
     private readonly IGamificationService _gamificationService;
+    private readonly IBadgeCheckService _badgeCheckService;
+    private readonly IUserActivityService _userActivityService;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -36,6 +40,8 @@ public sealed class ModerationService : IModerationService
         IPracticeSubmissionRepository submissionRepository,
         IExamRepository examRepository,
         IGamificationService gamificationService,
+        IBadgeCheckService badgeCheckService,
+        IUserActivityService userActivityService,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
@@ -47,6 +53,8 @@ public sealed class ModerationService : IModerationService
         _submissionRepository = submissionRepository;
         _examRepository = examRepository;
         _gamificationService = gamificationService;
+        _badgeCheckService = badgeCheckService;
+        _userActivityService = userActivityService;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -207,6 +215,7 @@ public sealed class ModerationService : IModerationService
         }
 
         var action = request.Action.Trim().ToLowerInvariant();
+        var shouldRecordAuthorActivity = false;
         post.ModeratedById = actorId;
         post.ModeratedAt = DateTime.UtcNow;
         post.ModerationNote = request.Note?.Trim();
@@ -218,6 +227,11 @@ public sealed class ModerationService : IModerationService
             case "published":
                 post.Status = PostStatus.Published;
                 await _gamificationService.AwardPostPublishedAsync(post.AuthorId, cancellationToken);
+                await _badgeCheckService.EvaluateForTriggerAsync(
+                    post.AuthorId,
+                    BadgeCheckService.TriggerPostsPublished,
+                    cancellationToken);
+                shouldRecordAuthorActivity = true;
                 break;
             case "reject":
             case "rejected":
@@ -233,6 +247,11 @@ public sealed class ModerationService : IModerationService
 
         await _postRepository.UpdateAsync(post, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (shouldRecordAuthorActivity)
+        {
+            await _userActivityService.RecordActivityAsync(post.AuthorId, cancellationToken);
+        }
 
         return await MapModerationDetailAsync(post, cancellationToken);
     }
@@ -476,7 +495,7 @@ public sealed class ModerationService : IModerationService
 
     private async Task<ReportDto> MapReportAsync(PostReport report, CancellationToken cancellationToken)
     {
-        var post = await _postRepository.GetByIdAsync(report.PostId, cancellationToken);
+        var post = await _postRepository.GetByIdIncludingDeletedAsync(report.PostId, cancellationToken);
         var reporter = await _userRepository.GetByIdAsync(report.ReporterId, cancellationToken);
         var author = post is null ? null : await _userRepository.GetByIdAsync(post.AuthorId, cancellationToken);
 

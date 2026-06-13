@@ -9,9 +9,11 @@ import IntroductionSection from "@/features/home/IntroductionSection/Introductio
 import {
   loadProfileBadges,
   loadProfileByUsername,
+  loadProfileActivity,
   loadRecentPostsByUsername,
 } from "@/features/profile/profileData";
 import * as profilesApi from "@/api/profilesApi";
+import ProfilePageSkeleton from "@/features/profile/ProfilePageSkeleton/ProfilePageSkeleton";
 import styles from "./FriendProfilePage.module.css";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
@@ -22,6 +24,7 @@ function FriendProfilePage() {
   const [profile, setProfile] = useState(null);
   const [badges, setBadges] = useState([]);
   const [recentPosts, setRecentPosts] = useState([]);
+  const [activity, setActivity] = useState({ heatmap: null, totalActivities: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notFound, setNotFound] = useState(false);
@@ -47,21 +50,19 @@ function FriendProfilePage() {
           profileDto = await profilesApi.getProfileByUsername(username);
         }
 
-        const [posts, badgeList] = await Promise.all([
+        const [posts, badgeList, activityData] = await Promise.all([
           loadRecentPostsByUsername(username),
-          Promise.resolve(loadProfileBadges(profileDto ?? { badges: [] })),
+          loadProfileBadges(profileDto ?? { badges: [] }),
+          loadProfileActivity(username),
         ]);
 
-        const card = await loadProfileByUsername(username, {
-          includeMyStats: false,
-          profileDto,
-          postsCount: posts.length,
-        });
+        const card = await loadProfileByUsername(username, { profileDto });
 
         if (!cancelled) {
           setProfile(card);
           setBadges(badgeList);
           setRecentPosts(posts);
+          setActivity(activityData);
         }
       } catch (err) {
         if (!cancelled) {
@@ -90,11 +91,7 @@ function FriendProfilePage() {
   }
 
   if (loading) {
-    return (
-      <div className={styles.page}>
-        <p>Đang tải profile...</p>
-      </div>
-    );
+    return <ProfilePageSkeleton showIntro />;
   }
 
   if (notFound) {
@@ -130,7 +127,12 @@ function FriendProfilePage() {
 
       <div className={styles.main}>
         <IntroductionSection introduction={profile.bio ?? ""} />
-        <ActivityHeatmap totalActivities={profile.totalActivities} />
+        <ActivityHeatmap
+          streakCount={profile.streakCount ?? 0}
+          totalActivities={activity.totalActivities ?? 0}
+          showChart={USE_MOCK || Boolean(activity.heatmap)}
+          heatmapData={activity.heatmap}
+        />
         <BadgesSection badges={badges} />
         <RecentPosts posts={recentPosts} />
       </div>

@@ -104,7 +104,10 @@ public sealed class PremiumService : IPremiumService
         return MapOrder(order, payOsResult.CheckoutUrl, plan.Code);
     }
 
-    public async Task<PaymentOrderDto> GetOrderAsync(Guid orderId, CancellationToken cancellationToken = default)
+    public async Task<PaymentOrderDto> GetOrderAsync(
+        Guid orderId,
+        bool markWaitingConfirmation = false,
+        CancellationToken cancellationToken = default)
     {
         var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
         var order = await _orderRepository.GetByIdAsync(orderId, cancellationToken)
@@ -115,7 +118,40 @@ public sealed class PremiumService : IPremiumService
             throw new ForbiddenException("You do not have access to this order.");
         }
 
-        return MapOrder(order, null, order.Plan?.Code);
+        await ExpireIfWaitingTooLongAsync(order, cancellationToken);
+
+        string? message = null;
+        if (markWaitingConfirmation && order.Status == PaymentOrderStatus.Pending)
+        {
+            var now = DateTime.UtcNow;
+            order.Status = PaymentOrderStatus.WaitingConfirmation;
+            order.WaitingConfirmationAt = now;
+            order.UpdatedAt = now;
+
+            await _orderRepository.UpdateAsync(order, cancellationToken);
+            await _auditLogRepository.AddAsync(new PaymentAuditLog
+            {
+                Id = Guid.NewGuid(),
+                OrderId = order.Id,
+                Action = "WAITING_CONFIRMATION",
+                ActorId = userId,
+                PayloadJson = JsonSerializer.Serialize(new { source = "user_poll" }),
+                CreatedAt = now
+            }, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            message = "Thanh toán đang chờ xác nhận từ quản trị viên.";
+        }
+        else if (order.Status == PaymentOrderStatus.WaitingConfirmation)
+        {
+            message = "Thanh toán đang chờ xác nhận từ quản trị viên.";
+        }
+        else if (order.Status == PaymentOrderStatus.Expired)
+        {
+            message = "Đơn thanh toán đã hết hạn xác nhận (24 giờ).";
+        }
+
+        return MapOrder(order, null, order.Plan?.Code, message);
     }
 
     public async Task<SubscriptionStatusDto> GetSubscriptionAsync(CancellationToken cancellationToken = default)
@@ -200,10 +236,39 @@ public sealed class PremiumService : IPremiumService
             throw new InvalidOperationException("Dev payment confirmation failed.");
         }
 
-        return await GetOrderAsync(orderId, cancellationToken);
+        return await GetOrderAsync(orderId, cancellationToken: cancellationToken);
     }
 
-    private PaymentOrderDto MapOrder(PaymentOrder order, string? checkoutUrl, string? planCode) => new()
+    private async Task ExpireIfWaitingTooLongAsync(PaymentOrder order, CancellationToken cancellationToken)
+    {
+        if (order.Status != PaymentOrderStatus.WaitingConfirmation
+            || order.WaitingConfirmationAt is null
+            || order.WaitingConfirmationAt.Value.AddHours(PaymentOrderMaintenanceService.WaitingConfirmationExpiryHours) >= DateTime.UtcNow)
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        order.Status = PaymentOrderStatus.Expired;
+        order.UpdatedAt = now;
+
+        await _orderRepository.UpdateAsync(order, cancellationToken);
+        await _auditLogRepository.AddAsync(new PaymentAuditLog
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            Action = "PAYMENT_EXPIRED",
+            PayloadJson = JsonSerializer.Serialize(new
+            {
+                reason = "WaitingConfirmation exceeded 24 hours",
+                order.WaitingConfirmationAt
+            }),
+            CreatedAt = now
+        }, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    private PaymentOrderDto MapOrder(PaymentOrder order, string? checkoutUrl, string? planCode, string? message = null) => new()
     {
         OrderId = order.Id,
         PayOsOrderCode = order.PayOsOrderCode,
@@ -212,7 +277,11 @@ public sealed class PremiumService : IPremiumService
         QrUrl = order.QrUrl,
         CheckoutUrl = checkoutUrl,
         ExpiredAt = order.ExpiredAt,
-        PlanCode = planCode
+        PlanCode = planCode,
+        PaidAt = order.PaidAt,
+        VerifiedAt = order.VerifiedAt,
+        VerificationMethod = order.VerificationMethod,
+        Message = message
     };
 
     private PayOsCheckoutUrls BuildCheckoutUrls(Guid orderId, string planCode)

@@ -108,11 +108,14 @@ public sealed class PremiumController : ControllerBase
 
     [Authorize(Policy = PolicyNames.RequireAuthenticated)]
 
-    public async Task<IActionResult> GetOrder(Guid orderId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetOrder(
+        Guid orderId,
+        CancellationToken cancellationToken,
+        [FromQuery] bool markWaitingConfirmation = false)
 
     {
 
-        var result = await _premiumService.GetOrderAsync(orderId, cancellationToken);
+        var result = await _premiumService.GetOrderAsync(orderId, markWaitingConfirmation, cancellationToken);
 
         return Ok(result);
 

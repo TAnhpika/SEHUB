@@ -10,4 +10,8 @@ public sealed class PaymentOrderDto
     public string? CheckoutUrl { get; init; }
     public DateTime ExpiredAt { get; init; }
     public string? PlanCode { get; init; }
+    public DateTime? PaidAt { get; init; }
+    public DateTime? VerifiedAt { get; init; }
+    public string? VerificationMethod { get; init; }
+    public string? Message { get; init; }
 }

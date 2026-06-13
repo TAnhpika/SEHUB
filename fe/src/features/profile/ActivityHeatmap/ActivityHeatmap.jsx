@@ -1,4 +1,3 @@
-import { HEATMAP_DATA } from "@/features/profile/profileData";
 import styles from "./ActivityHeatmap.module.css";
 
 const LEVEL_CLASS = {
@@ -11,9 +10,28 @@ const LEVEL_CLASS = {
 const DAY_LABEL_ROWS = [0, 2, 4];
 const WEEKS = 26;
 
-function ActivityHeatmap({ streakCount = 0, totalActivities = 0, showChart = false }) {
+function formatActivityLabel(cell) {
+  if (!cell?.date) {
+    return "Không có hoạt động";
+  }
+
+  const count = cell.count ?? 0;
+  if (count <= 0) {
+    return `${cell.date}, không có hoạt động`;
+  }
+
+  return `${cell.date}, ${count} hoạt động`;
+}
+
+function ActivityHeatmap({
+  streakCount = 0,
+  totalActivities = 0,
+  showChart = false,
+  heatmapData = null,
+}) {
   const weeks = Array.from({ length: WEEKS }, (_, index) => index);
-  const showHeatmapChart = showChart && totalActivities > 0;
+  const chartData = heatmapData;
+  const showHeatmapChart = showChart && totalActivities > 0 && chartData?.cells?.length;
 
   let subtitle = "Biểu đồ hoạt động sẽ có trong bản cập nhật sau";
   if (showHeatmapChart) {
@@ -31,15 +49,17 @@ function ActivityHeatmap({ streakCount = 0, totalActivities = 0, showChart = fal
 
       {!showHeatmapChart ? (
         <p className={styles.empty}>
-          {streakCount > 0 && !showChart
-            ? "Biểu đồ hoạt động chi tiết sẽ có trong bản cập nhật sau."
-            : "Chưa có hoạt động nào. Bắt đầu hoạt động!"}
+          {totalActivities > 0
+            ? "Chưa đủ dữ liệu để hiển thị biểu đồ chi tiết."
+            : streakCount > 0
+              ? "Biểu đồ hoạt động chi tiết sẽ có khi bạn tích lũy thêm hoạt động."
+              : "Chưa có hoạt động nào. Bắt đầu đăng bài, bình luận hoặc làm bài thi!"}
         </p>
       ) : (
         <div className={styles.chart}>
           <div className={styles.months} aria-hidden="true">
-            {HEATMAP_DATA.months.map((month) => (
-              <span key={month} className={styles.month}>
+            {chartData.months.map((month, index) => (
+              <span key={`${month}-${index}`} className={styles.month}>
                 {month}
               </span>
             ))}
@@ -53,24 +73,31 @@ function ActivityHeatmap({ streakCount = 0, totalActivities = 0, showChart = fal
                   className={styles.day}
                   style={{ "--row-index": dayIndex }}
                 >
-                  {HEATMAP_DATA.dayLabels[dayIndex]}
+                  {chartData.dayLabels[dayIndex]}
                 </span>
               ))}
             </div>
 
-            <div className={styles.grid} role="img" aria-label="Biểu đồ hoạt động 6 tháng">
+            <div
+              className={styles.grid}
+              role="img"
+              aria-label={`Biểu đồ hoạt động 6 tháng, ${totalActivities} hoạt động`}
+            >
               {weeks.map((week) => (
                 <div key={week} className={styles.column}>
-                  {HEATMAP_DATA.dayLabels.map((_, day) => {
-                    const cell = HEATMAP_DATA.cells.find(
+                  {chartData.dayLabels.map((_, day) => {
+                    const cell = chartData.cells.find(
                       (item) => item.week === week && item.day === day,
                     );
                     const level = cell?.level ?? 0;
+                    const label = formatActivityLabel(cell);
 
                     return (
                       <span
                         key={`${week}-${day}`}
                         className={`${styles.cell} ${LEVEL_CLASS[level]}`}
+                        title={label}
+                        aria-label={label}
                       />
                     );
                   })}

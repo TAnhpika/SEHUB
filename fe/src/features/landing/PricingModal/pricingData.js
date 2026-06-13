@@ -243,12 +243,12 @@ export async function createCheckoutOrder(planId) {
   return mapPaymentOrderDto(dto);
 }
 
-export async function getCheckoutOrder(orderId) {
+export async function getCheckoutOrder(orderId, { markWaitingConfirmation = false } = {}) {
   if (USE_MOCK || !orderId) {
     return null;
   }
 
-  const dto = await premiumApi.getOrder(orderId);
+  const dto = await premiumApi.getOrder(orderId, { markWaitingConfirmation });
   return mapPaymentOrderDto(dto);
 }
 
@@ -305,7 +305,10 @@ export async function requestPremiumRefund({ orderCode, reason }) {
   };
 }
 
-export async function pollPremiumActivation(orderId, { maxAttempts = 40, intervalMs = 3000 } = {}) {
+export async function pollPremiumActivation(
+  orderId,
+  { maxAttempts = 40, intervalMs = 3000, markWaitingConfirmation = false } = {},
+) {
   if (USE_MOCK) {
     return false;
   }
@@ -314,11 +317,17 @@ export async function pollPremiumActivation(orderId, { maxAttempts = 40, interva
     return false;
   }
 
+  let markedWaiting = false;
+
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     try {
-      const order = await getCheckoutOrder(orderId);
+      const shouldMark = markWaitingConfirmation && !markedWaiting;
+      const order = await getCheckoutOrder(orderId, { markWaitingConfirmation: shouldMark });
       if (order?.status === "Paid") {
         return true;
+      }
+      if (shouldMark && order?.status === "WaitingConfirmation") {
+        markedWaiting = true;
       }
     } catch {
       /* continue polling */

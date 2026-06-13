@@ -37,6 +37,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     public static readonly Guid SoftDeletedPostId = Guid.Parse("55555555-5555-5555-5555-555555555555");
     public static readonly Guid RejectedPostId = Guid.Parse("66666666-6666-6666-6666-666666666666");
     public static readonly Guid PendingPostId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+    public static readonly Guid RejectModerationPostId = Guid.Parse("77777777-7777-7777-7777-777777777778");
     public static readonly Guid ModeratorUserId = Guid.Parse("88888888-8888-8888-8888-888888888888");
     public const string ModeratorEmail = "moderator@test.local";
     public const string ModeratorPassword = "Mod@Test123";
@@ -261,6 +262,30 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 Status = PostStatus.Pending,
                 CreatedAt = DateTime.UtcNow
             });
+        }
+        else
+        {
+            var pendingPost = await context.Posts.IgnoreQueryFilters().FirstAsync(p => p.Id == PendingPostId);
+            pendingPost.Status = PostStatus.Pending;
+        }
+
+        if (!await context.Posts.AnyAsync(p => p.Id == RejectModerationPostId))
+        {
+            context.Posts.Add(new Post
+            {
+                Id = RejectModerationPostId,
+                AuthorId = FreeUserId,
+                Title = "Reject Moderation Candidate",
+                Content = "Used by integration tests for legacy post rejection API.",
+                Tags = "reject,moderation",
+                Status = PostStatus.Pending,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+        else
+        {
+            var rejectCandidate = await context.Posts.IgnoreQueryFilters().FirstAsync(p => p.Id == RejectModerationPostId);
+            rejectCandidate.Status = PostStatus.Pending;
         }
 
         if (await userManager.FindByEmailAsync(ModeratorEmail) is null)

@@ -57,6 +57,8 @@ function mapPaymentStatus(status) {
   if (value === "refunded") return "refunded";
   if (value === "failed") return "failed";
   if (value === "cancelled") return "failed";
+  if (value === "expired") return "expired";
+  if (value === "waitingconfirmation") return "waiting_confirmation";
   if (value === "pending") return "pending_payment";
   return "pending_payment";
 }
@@ -284,7 +286,7 @@ export function mapAdminDocumentListItem(dto) {
     categoryId: dto.categoryId,
     name: dto.title,
     subject,
-    semester: "1",
+    semester: dto.semester ? String(dto.semester) : "1",
     track: "SE",
     access: mapAccessTierLabel(dto.accessTier),
     pages: dto.pageCount ?? 0,
@@ -292,6 +294,8 @@ export function mapAdminDocumentListItem(dto) {
     source: "upload",
     description: dto.category ?? dto.title ?? "",
     mimeType: dto.mimeType ?? null,
+    filePath: dto.filePath ?? null,
+    categoryId: dto.categoryId ?? null,
     isDeleted: Boolean(dto.isDeleted),
   };
 }

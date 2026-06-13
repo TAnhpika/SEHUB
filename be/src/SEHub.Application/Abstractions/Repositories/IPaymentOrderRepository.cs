@@ -12,6 +12,7 @@ public interface IPaymentOrderRepository
         CancellationToken cancellationToken = default);
     Task<PaymentOrder?> GetLatestPaidByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<(IReadOnlyList<PaymentOrder> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PaymentOrder>> GetStaleWaitingConfirmationAsync(DateTime waitingSinceBeforeUtc, CancellationToken cancellationToken = default);
     Task AddAsync(PaymentOrder order, CancellationToken cancellationToken = default);
     Task UpdateAsync(PaymentOrder order, CancellationToken cancellationToken = default);
     Task<decimal> GetTotalRevenueAsync(CancellationToken cancellationToken = default);

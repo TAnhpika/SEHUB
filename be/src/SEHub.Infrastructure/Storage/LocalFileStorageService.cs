@@ -10,7 +10,9 @@ public class LocalFileStorageService : IFileStorageService
 
     public LocalFileStorageService(IConfiguration configuration)
     {
-        _basePath = configuration["FileStorage:LocalPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+        _basePath = configuration["FileStorage:LocalPath"]
+            ?? configuration["FileStorage:LocalRootPath"]
+            ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
         _publicBaseUrl = configuration["FileStorage:PublicBaseUrl"] ?? "/uploads";
         Directory.CreateDirectory(_basePath);
     }

@@ -20,7 +20,10 @@ import {
   filterContentQueue,
   SORT_OPTIONS,
 } from "@/features/moderator/content/contentModerationData";
-import { useContentModerationItems } from "@/features/moderator/content/contentModerationStore";
+import {
+  useContentModerationDetail,
+  useContentModerationQueue,
+} from "@/features/moderator/content/contentModerationStore";
 import styles from "./ContentModerationPage.module.css";
 
 const CONTENT_CRUMBS = [
@@ -31,11 +34,21 @@ const CONTENT_CRUMBS = [
 
 function ContentModerationPage() {
   const { showToast } = useToast();
-  const { items, loading, error, approveItems, rejectItems, reload } = useContentModerationItems();
-  const [sort, setSort] = useState("newest");
+  const {
+    items,
+    loading,
+    error,
+    sort,
+    setSort,
+    refresh,
+    approveItems,
+    rejectItems,
+  } = useContentModerationQueue();
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [focusedId, setFocusedId] = useState(null);
+  const [acting, setActing] = useState(false);
+  const { item: focusedItem, loading: detailLoading } = useContentModerationDetail(focusedId);
 
   const filtered = useMemo(() => filterContentQueue(items, { sort }), [items, sort]);
 
@@ -46,11 +59,6 @@ function ContentModerationPage() {
     const start = (safePage - 1) * CONTENT_QUEUE_PAGE_SIZE;
     return filtered.slice(start, start + CONTENT_QUEUE_PAGE_SIZE);
   }, [filtered, safePage]);
-
-  const focusedItem = useMemo(
-    () => filtered.find((item) => item.id === focusedId) ?? null,
-    [filtered, focusedId],
-  );
 
   const pageIds = pageItems.map((item) => item.id);
   const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
@@ -111,39 +119,44 @@ function ContentModerationPage() {
     }
   }
 
-  function handleApprove(ids) {
-    approveItems(ids)
-      .then(() => {
-        clearSelection(ids);
-        showToast(`Đã duyệt ${ids.length} bài viết. Xem tại Lịch sử duyệt bài.`);
-      })
-      .catch((err) => {
-        showToast(err.message ?? "Không duyệt được bài viết.", "error");
-      });
+  async function handleApprove(ids) {
+    if (acting || ids.length === 0) return;
+    setActing(true);
+    try {
+      await approveItems(ids);
+      clearSelection(ids);
+      showToast(`Đã duyệt ${ids.length} bài viết. Bài sẽ hiển thị trên feed.`);
+    } catch (err) {
+      showToast(err.message ?? "Không duyệt được bài viết.");
+    } finally {
+      setActing(false);
+    }
   }
 
-  function handleReject(ids) {
-    rejectItems(ids)
-      .then(() => {
-        clearSelection(ids);
-        showToast(`Đã từ chối ${ids.length} bài viết. Sinh viên có thể chỉnh sửa và gửi lại.`);
-      })
-      .catch((err) => {
-        showToast(err.message ?? "Không từ chối được bài viết.", "error");
-      });
+  async function handleReject(ids) {
+    if (acting || ids.length === 0) return;
+    setActing(true);
+    try {
+      await rejectItems(ids);
+      clearSelection(ids);
+      showToast(`Đã từ chối ${ids.length} bài viết. Sinh viên có thể chỉnh sửa và gửi lại.`);
+    } catch (err) {
+      showToast(err.message ?? "Không từ chối được bài viết.");
+    } finally {
+      setActing(false);
+    }
   }
 
-  function handleRefresh() {
-    reload()
-      .then(() => {
-        setSelectedIds(new Set());
-        setFocusedId(null);
-        setPage(1);
-        showToast("Đã làm mới dữ liệu duyệt bài viết.");
-      })
-      .catch((err) => {
-        showToast(err.message ?? "Không tải được dữ liệu.", "error");
-      });
+  async function handleRefresh() {
+    setSelectedIds(new Set());
+    setFocusedId(null);
+    setPage(1);
+    try {
+      await refresh(sort);
+      showToast("Đã làm mới hàng đợi duyệt bài viết.");
+    } catch (err) {
+      showToast(err.message ?? "Không làm mới được dữ liệu.");
+    }
   }
 
   function focusItem(id) {
@@ -156,8 +169,6 @@ function ContentModerationPage() {
       description="Duyệt bài viết sinh viên gửi trước khi hiển thị trên cộng đồng. Bài Rejected có thể được gửi duyệt lại."
       crumbs={CONTENT_CRUMBS}
     >
-      {error ? <p role="alert">{error}</p> : null}
-      {loading ? <p>Đang tải hàng đợi…</p> : null}
       <section className={styles.card}>
         <div className={styles.toolbarBlock}>
           <ModeratorToolbar
@@ -199,6 +210,7 @@ function ContentModerationPage() {
               <button
                 type="button"
                 className={styles.bulkReject}
+                disabled={acting}
                 onClick={() => handleReject([...selectedIds])}
               >
                 <FontAwesomeIcon icon={faXmark} />
@@ -207,6 +219,7 @@ function ContentModerationPage() {
               <button
                 type="button"
                 className={styles.bulkApprove}
+                disabled={acting}
                 onClick={() => handleApprove([...selectedIds])}
               >
                 <FontAwesomeIcon icon={faCheck} />
@@ -240,7 +253,19 @@ function ContentModerationPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {pageItems.length === 0 ? (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={4} className={styles.empty}>
+                        Đang tải hàng đợi duyệt...
+                      </td>
+                    </tr>
+                  ) : error ? (
+                    <tr>
+                      <td colSpan={4} className={styles.empty} role="alert">
+                        {error}
+                      </td>
+                    </tr>
+                  ) : pageItems.length === 0 ? (
                     <tr>
                       <td colSpan={4} className={styles.empty}>
                         Không có bài viết chờ duyệt.{" "}
@@ -340,12 +365,16 @@ function ContentModerationPage() {
           </div>
 
           <aside className={styles.detailCol} aria-label="Chi tiết bài viết">
-            <ContentPostDetailPanel
-              item={focusedItem}
-              mode="queue"
-              onApprove={(id) => handleApprove([id])}
-              onReject={(id) => handleReject([id])}
-            />
+            {detailLoading && focusedId ? (
+              <div className={styles.empty}>Đang tải chi tiết bài viết...</div>
+            ) : (
+              <ContentPostDetailPanel
+                item={focusedItem}
+                mode="queue"
+                onApprove={(id) => handleApprove([id])}
+                onReject={(id) => handleReject([id])}
+              />
+            )}
           </aside>
         </div>
       </section>

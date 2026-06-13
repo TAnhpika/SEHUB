@@ -188,7 +188,14 @@ function formatReportedAt(dateStr) {
 function mapResolutionFromAdminReport(adminReport) {
   if (adminReport.status !== "resolved") return undefined;
   const action = String(adminReport.resolution?.action ?? "").toLowerCase();
-  return action === "rejected" ? "ignored" : "deleted";
+  if (action === "rejected") return "ignored";
+  if (action === "approved") return "deleted";
+  return action.includes("reject") ? "ignored" : "deleted";
+}
+
+function mergeResolvedCommunityReport(reports, resolvedReport) {
+  const next = reports.filter((report) => report.id !== resolvedReport.id);
+  return [resolvedReport, ...next];
 }
 
 export function mapAdminReportToModeratorCommunityReport(adminReport) {
@@ -238,16 +245,22 @@ export async function loadModeratorCommunityReports() {
 }
 
 export async function reloadModeratorCommunityReportsAfterResolve(id, action) {
-  if (!USE_MOCK && isValidGuid(String(id ?? ""))) {
-    if (action === "delete") {
-      await resolveReportDeleteViaApi(id);
-    } else {
-      await resolveReportDismissViaApi(id);
-    }
-    return loadModeratorCommunityReports();
+  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+    return null;
   }
 
-  return null;
+  const dto =
+    action === "delete"
+      ? await resolveReportDeleteViaApi(id)
+      : await resolveReportDismissViaApi(id);
+
+  if (!dto) {
+    return null;
+  }
+
+  const resolvedReport = mapAdminReportToModeratorCommunityReport(mapAdminReportListItem(dto));
+  const list = await loadModeratorCommunityReports();
+  return mergeResolvedCommunityReport(list, resolvedReport);
 }
 
 export function getCommunityReportsPendingCount() {

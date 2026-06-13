@@ -1,6 +1,7 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
+using SEHub.Contracts.Common;
 using SEHub.Contracts.Profiles;
 using SEHub.Domain.Exceptions;
 
@@ -8,12 +9,26 @@ namespace SEHub.Application.Profiles;
 
 public sealed class ProfileService : IProfileService
 {
+    private const int MaxAvatarSizeBytes = 5 * 1024 * 1024;
+
+    private static readonly HashSet<string> AllowedAvatarContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif"
+    };
+
     private readonly IUserRepository _userRepository;
     private readonly IUserProfileRepository _profileRepository;
     private readonly IUserBadgeRepository _badgeRepository;
+    private readonly IPostRepository _postRepository;
+    private readonly IPostLikeRepository _likeRepository;
+    private readonly ICommentRepository _commentRepository;
     private readonly IGamificationService _gamificationService;
     private readonly ILevelConfigRepository _levelConfigRepository;
     private readonly IUserFollowRepository _followRepository;
+    private readonly IFileStorageService _fileStorage;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -21,18 +36,26 @@ public sealed class ProfileService : IProfileService
         IUserRepository userRepository,
         IUserProfileRepository profileRepository,
         IUserBadgeRepository badgeRepository,
+        IPostRepository postRepository,
+        IPostLikeRepository likeRepository,
+        ICommentRepository commentRepository,
         IGamificationService gamificationService,
         ILevelConfigRepository levelConfigRepository,
         IUserFollowRepository followRepository,
+        IFileStorageService fileStorage,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _profileRepository = profileRepository;
         _badgeRepository = badgeRepository;
+        _postRepository = postRepository;
+        _likeRepository = likeRepository;
+        _commentRepository = commentRepository;
         _gamificationService = gamificationService;
         _levelConfigRepository = levelConfigRepository;
         _followRepository = followRepository;
+        _fileStorage = fileStorage;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -75,6 +98,17 @@ public sealed class ProfileService : IProfileService
         }
 
         if (request.AvatarUrl is not null) profile.AvatarUrl = request.AvatarUrl;
+        if (request.Gender is not null) profile.Gender = request.Gender;
+        if (request.Phone is not null) profile.Phone = request.Phone;
+        if (request.Address is not null) profile.Address = request.Address;
+
+        if (request.DateOfBirth is not null)
+        {
+            profile.DateOfBirth = string.IsNullOrWhiteSpace(request.DateOfBirth)
+                ? null
+                : DateOnly.Parse(request.DateOfBirth);
+        }
+
         profile.UpdatedAt = DateTime.UtcNow;
 
         await _profileRepository.UpdateAsync(profile, cancellationToken);
@@ -82,6 +116,114 @@ public sealed class ProfileService : IProfileService
 
         user = await _userRepository.GetByIdAsync(userId, cancellationToken) ?? user;
         return await BuildProfileAsync(userId, user, cancellationToken);
+    }
+
+    public async Task<ProfileAvatarUploadDto> UploadMyAvatarAsync(
+        Stream fileContent,
+        string fileName,
+        string contentType,
+        long fileSizeBytes,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+
+        if (fileSizeBytes <= 0)
+        {
+            throw new DomainException("File is required.");
+        }
+
+        if (fileSizeBytes > MaxAvatarSizeBytes)
+        {
+            throw new DomainException("Avatar size cannot exceed 5 MB.");
+        }
+
+        var normalizedContentType = contentType?.Trim() ?? string.Empty;
+        if (!AllowedAvatarContentTypes.Contains(normalizedContentType))
+        {
+            throw new DomainException("Avatar must be JPEG, PNG, WEBP, or GIF.");
+        }
+
+        var safeFileName = Path.GetFileName(fileName);
+        if (string.IsNullOrWhiteSpace(safeFileName))
+        {
+            throw new DomainException("File name is required.");
+        }
+
+        var profile = await _profileRepository.GetByUserIdAsync(userId, cancellationToken)
+            ?? throw new NotFoundException("UserProfile", userId);
+
+        var previousAvatarPath = profile.AvatarUrl;
+        var storedPath = await _fileStorage.UploadAsync(
+            fileContent,
+            safeFileName,
+            normalizedContentType,
+            "avatars",
+            cancellationToken);
+
+        profile.AvatarUrl = storedPath;
+        profile.UpdatedAt = DateTime.UtcNow;
+
+        await _profileRepository.UpdateAsync(profile, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (ShouldDeleteStoredAvatar(previousAvatarPath))
+        {
+            try
+            {
+                await _fileStorage.DeleteAsync(previousAvatarPath!, cancellationToken);
+            }
+            catch (FileNotFoundException)
+            {
+                /* previous avatar already removed */
+            }
+        }
+
+        return new ProfileAvatarUploadDto
+        {
+            AvatarUrl = await ResolveAvatarUrlAsync(storedPath, cancellationToken)
+                ?? string.Empty
+        };
+    }
+
+    public async Task<PagedResult<ProfileRecentPostDto>> GetRecentPostsByUsernameAsync(
+        string username,
+        int page = 1,
+        int pageSize = 5,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_currentUser.IsAuthenticated)
+        {
+            throw new ForbiddenException("Authentication required.");
+        }
+
+        var user = await _userRepository.GetByUsernameAsync(username, cancellationToken)
+            ?? throw new NotFoundException($"User '{username}' was not found.");
+
+        var safePage = Math.Max(1, page);
+        var safePageSize = Math.Clamp(pageSize, 1, 50);
+        var (items, total) = await _postRepository.GetPagedByAuthorIdAsync(
+            user.Id, safePage, safePageSize, cancellationToken);
+
+        var dtos = new List<ProfileRecentPostDto>();
+        foreach (var post in items)
+        {
+            dtos.Add(new ProfileRecentPostDto
+            {
+                Id = post.Id,
+                Title = post.Title,
+                LikeCount = await _likeRepository.CountByPostIdAsync(post.Id, cancellationToken),
+                CommentCount = await _commentRepository.CountByPostIdAsync(post.Id, cancellationToken),
+                CreatedAt = post.CreatedAt
+            });
+        }
+
+        return new PagedResult<ProfileRecentPostDto>
+        {
+            Items = dtos,
+            Page = safePage,
+            PageSize = safePageSize,
+            TotalCount = total
+        };
     }
 
     private async Task<ProfileDto> BuildProfileAsync(Guid userId, Models.UserAccount user, CancellationToken cancellationToken)
@@ -107,7 +249,11 @@ public sealed class ProfileService : IProfileService
             Username = user.Username,
             DisplayName = user.DisplayName,
             Bio = profile?.Bio,
-            AvatarUrl = profile?.AvatarUrl,
+            AvatarUrl = await ResolveAvatarUrlAsync(profile?.AvatarUrl, cancellationToken),
+            Gender = profile?.Gender,
+            DateOfBirth = profile?.DateOfBirth?.ToString("yyyy-MM-dd"),
+            Phone = profile?.Phone,
+            Address = profile?.Address,
             Major = profile?.Major,
             Semester = profile?.Semester?.ToString(),
             Points = points,
@@ -122,7 +268,29 @@ public sealed class ProfileService : IProfileService
             }).ToList(),
             FollowersCount = followersCount,
             FollowingCount = followingCount,
-            IsFollowing = isFollowing
+            IsFollowing = isFollowing,
+            MemberSince = user.CreatedAt,
+            ProfileUpdatedAt = profile?.UpdatedAt ?? profile?.CreatedAt
         };
     }
+
+    private async Task<string?> ResolveAvatarUrlAsync(string? avatarUrl, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(avatarUrl))
+        {
+            return null;
+        }
+
+        if (avatarUrl.StartsWith('/') || avatarUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        {
+            return avatarUrl;
+        }
+
+        return await _fileStorage.GetSignedUrlAsync(avatarUrl, TimeSpan.FromHours(24), cancellationToken);
+    }
+
+    private static bool ShouldDeleteStoredAvatar(string? avatarUrl) =>
+        !string.IsNullOrWhiteSpace(avatarUrl)
+        && !avatarUrl.StartsWith('/')
+        && !avatarUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase);
 }

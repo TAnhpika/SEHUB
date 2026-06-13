@@ -51,7 +51,12 @@ export const PAYMENT_STATUS_META = {
   pending_payment: {
     status: "pending",
     label: "Chờ thanh toán",
-    desc: "Đơn PayOS đã tạo — SV chưa chuyển khoản",
+    desc: "Đơn PayOS đã tạo — sinh viên chưa hoàn tất thanh toán",
+  },
+  waiting_confirmation: {
+    status: "pending",
+    label: "Chờ Admin xác nhận",
+    desc: "Sinh viên đã thanh toán — Admin đối chiếu ngân hàng rồi xác nhận thủ công",
   },
   webhook_ok: {
     status: "pending",
@@ -67,6 +72,11 @@ export const PAYMENT_STATUS_META = {
     status: "banned",
     label: "Thất bại",
     desc: "Hết hạn / lỗi callback PayOS",
+  },
+  expired: {
+    status: "banned",
+    label: "Hết hạn xác nhận",
+    desc: "Quá 24 giờ chờ Admin xác nhận — không kích hoạt Premium",
   },
   refunded: {
     status: "refunded",
@@ -84,6 +94,10 @@ export const PAYMENT_STATUS_META = {
     desc: "Admin đã duyệt — chờ PayOS / n8n hoàn tiền",
   },
 };
+
+export function canAdminConfirmPayment(status) {
+  return status === "waiting_confirmation" || status === "webhook_ok";
+}
 
 export function formatVnd(amount) {
   return `${Number(amount).toLocaleString("vi-VN")} đ`;

@@ -48,4 +48,12 @@ public sealed class DocumentsController : ControllerBase
         var url = await _documentService.GetDownloadUrlAsync(id, cancellationToken);
         return Ok(new { downloadUrl = url });
     }
+
+    [HttpGet("{id:guid}/content")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> GetContent(Guid id, [FromQuery] int? page, CancellationToken cancellationToken)
+    {
+        var content = await _documentService.GetContentAsync(id, page, cancellationToken);
+        return File(content.Stream, content.ContentType, content.FileName, enableRangeProcessing: true);
+    }
 }

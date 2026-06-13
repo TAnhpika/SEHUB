@@ -14,6 +14,7 @@ public class PaymentOrderConfiguration : IEntityTypeConfiguration<PaymentOrder>
         builder.Property(o => o.PayOsOrderCode).HasMaxLength(50).IsRequired();
         builder.Property(o => o.Amount).HasPrecision(18, 2);
         builder.Property(o => o.QrUrl).HasMaxLength(500);
+        builder.Property(o => o.VerificationMethod).HasMaxLength(50);
 
         builder.HasOne(o => o.Plan)
             .WithMany(p => p.PaymentOrders)

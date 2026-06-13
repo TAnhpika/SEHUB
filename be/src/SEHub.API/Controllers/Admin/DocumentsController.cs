@@ -33,14 +33,17 @@ public sealed class DocumentsController : ControllerBase
             return BadRequest(new { message = "File is required" });
         }
 
+        if (request.CategoryId == Guid.Empty && string.IsNullOrWhiteSpace(request.SubjectCode))
+        {
+            return BadRequest(new { message = "SubjectCode or CategoryId is required." });
+        }
+
         await using var stream = file.OpenReadStream();
-        var pageCount = request.PageCount is > 0 ? request.PageCount.Value : 1;
         var result = await _adminDocumentService.UploadAsync(
             request,
             stream,
             file.FileName,
             file.ContentType,
-            pageCount,
             cancellationToken);
 
         return Ok(result);

@@ -22,7 +22,7 @@ public class PostReportRepository : IPostReportRepository
     public async Task<(IReadOnlyList<PostReport> Items, int TotalCount)> GetPagedAsync(
         int page, int pageSize, ReportStatus? status, CancellationToken cancellationToken = default)
     {
-        var query = _context.PostReports.Include(r => r.Post).AsQueryable();
+        var query = _context.PostReports.AsQueryable();
         if (status.HasValue) query = query.Where(r => r.Status == status.Value);
 
         var total = await query.CountAsync(cancellationToken);

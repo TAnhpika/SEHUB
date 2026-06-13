@@ -59,6 +59,9 @@ public class PracticeSubmissionRepository : IPracticeSubmissionRepository
             s => s.IsLatest && s.Status == status,
             cancellationToken);
 
+    public Task<int> CountByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        _context.PracticeSubmissions.CountAsync(s => s.UserId == userId, cancellationToken);
+
     public async Task AddAsync(PracticeSubmission submission, CancellationToken cancellationToken = default) =>
         await _context.PracticeSubmissions.AddAsync(submission, cancellationToken);
 

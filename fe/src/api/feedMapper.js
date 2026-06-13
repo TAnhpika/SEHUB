@@ -1,4 +1,8 @@
-import { formatRelativeTime, parseApiDate } from "@/utils/dateTime";
+import { formatRelativeTimeFromApi, parseApiDate } from "@/utils/parseApiDate";
+
+function formatRelativeTime(dateStr) {
+  return formatRelativeTimeFromApi(dateStr);
+}
 
 function formatPublishedAt(dateStr) {
   const date = parseApiDate(dateStr);

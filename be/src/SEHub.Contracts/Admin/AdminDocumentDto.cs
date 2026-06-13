@@ -6,6 +6,7 @@ public sealed class AdminDocumentDto
     public string Title { get; init; } = string.Empty;
     public Guid CategoryId { get; init; }
     public string Category { get; init; } = string.Empty;
+    public int Semester { get; init; }
     public int PageCount { get; init; }
     public string AccessTier { get; init; } = string.Empty;
     public string? MimeType { get; init; }

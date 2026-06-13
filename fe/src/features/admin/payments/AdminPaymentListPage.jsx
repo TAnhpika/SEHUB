@@ -52,6 +52,8 @@ import {
 
   PREMIUM_PLANS,
 
+  canAdminConfirmPayment,
+
 } from "@/features/admin/payments/adminPaymentPolicy";
 
 import payStyles from "@/features/admin/payments/AdminPayments.module.css";
@@ -67,13 +69,17 @@ const STATUS_FILTER_OPTIONS = [
 
   { value: "all", label: "Tất cả trạng thái" },
 
-  { value: "webhook_ok", label: "Chờ Admin xác nhận" },
+  { value: "waiting_confirmation", label: "Chờ Admin xác nhận" },
+
+  { value: "webhook_ok", label: "Chờ Admin xác nhận (legacy)" },
 
   { value: "pending_payment", label: "Chờ thanh toán" },
 
   { value: "activated", label: "Đã kích hoạt" },
 
   { value: "failed", label: "Thất bại" },
+
+  { value: "expired", label: "Hết hạn xác nhận" },
 
   { value: "refund_requested", label: "Chờ duyệt hoàn tiền" },
 
@@ -475,8 +481,8 @@ function AdminPaymentListPage() {
 
             <p className={styles.panelDesc}>
 
-              Bước 5: xác nhận đơn「Chờ Admin xác nhận」. Đơn「Đã kích hoạt」→ cột Thao tác →{" "}
-
+              Bước 5: đối chiếu ngân hàng — đơn「Chờ thanh toán」hoặc「Chờ Admin xác nhận」→{" "}
+              <strong>Xác nhận &amp; kích hoạt</strong>. Đơn「Đã kích hoạt」→ cột Thao tác →{" "}
               <strong>Hoàn tiền</strong>.
 
             </p>
@@ -680,7 +686,7 @@ function AdminPaymentListPage() {
 
                         <div className={payStyles.actionCell}>
 
-                          {payment.status === "webhook_ok" ? (
+                          {canAdminConfirmPayment(payment.status) ? (
 
                             <button
 

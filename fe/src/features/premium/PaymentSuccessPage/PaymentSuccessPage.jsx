@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context";
 import { Link, Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faCopy, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faCircleInfo, faCopy, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import {
@@ -49,6 +49,7 @@ function PaymentSuccessPage() {
     [location.state?.orderId, planId, searchParams],
   );
   const paidThisSession = Boolean(location.state?.activated);
+  const manualConfirmRequired = Boolean(location.state?.manualConfirmRequired);
   const mockConfirm = USE_MOCK && Boolean(location.state?.mockConfirm);
   const transactionId =
     resolveCheckoutTransactionId(planId, {
@@ -108,7 +109,10 @@ function PaymentSuccessPage() {
     setActivationState("pending");
 
     try {
-      const activated = await pollPremiumActivation(orderId);
+      const pollOptions = manualConfirmRequired
+        ? { maxAttempts: 3, intervalMs: 2000, markWaitingConfirmation: true }
+        : { markWaitingConfirmation: true };
+      const activated = await pollPremiumActivation(orderId, pollOptions);
       if (activated) {
         await activatePremium();
         const status = await refreshSubscriptionInfo();
@@ -120,12 +124,15 @@ function PaymentSuccessPage() {
       setActivationState("waiting");
     } catch (error) {
       setActivationState("waiting");
-      showToast(error?.message ?? "Không xác nhận được Premium.");
+      if (!manualConfirmRequired) {
+        showToast(error?.message ?? "Không xác nhận được Premium.");
+      }
     }
 
     return null;
   }, [
     activatePremium,
+    manualConfirmRequired,
     mockConfirm,
     orderId,
     paidThisSession,
@@ -158,6 +165,7 @@ function PaymentSuccessPage() {
   const checkout = plan.checkout;
   const isActive = activationState === "active";
   const isWaiting = activationState === "waiting";
+  const needsManualConfirm = isWaiting && (manualConfirmRequired || Boolean(orderId));
   const expiresAt = subscriptionInfo?.expiresAt ?? null;
   const daysRemaining = getPremiumDaysRemaining(expiresAt);
   const isRenewal = isPremium && paidThisSession;
@@ -165,9 +173,14 @@ function PaymentSuccessPage() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <div className={styles.icon} aria-hidden="true">
+        <div
+          className={`${styles.icon} ${isWaiting ? styles.iconWaiting : ""}`}
+          aria-hidden="true"
+        >
           {activationState === "pending" ? (
             <FontAwesomeIcon icon={faSpinner} spin />
+          ) : isWaiting ? (
+            <FontAwesomeIcon icon={faCircleInfo} />
           ) : (
             <FontAwesomeIcon icon={faCheck} />
           )}
@@ -178,7 +191,9 @@ function PaymentSuccessPage() {
             ? isRenewal
               ? "Gia hạn Premium thành công!"
               : "Thanh toán thành công!"
-            : "Đang xác nhận thanh toán"}
+            : isWaiting
+              ? "Thanh toán đã ghi nhận — chờ kích hoạt"
+              : "Đang xác nhận thanh toán"}
         </h1>
         <p className={styles.desc}>
           {isActive
@@ -186,9 +201,27 @@ function PaymentSuccessPage() {
               ? `Premium của bạn ${daysRemaining === 0 ? "hết hạn hôm nay" : `còn ${daysRemaining} ngày`} · hết hạn ${formatPremiumExpiryDate(expiresAt)}.`
               : "Cảm ơn bạn đã tin tưởng nâng cấp gói Premium. Tài khoản đã được kích hoạt đầy đủ các tính năng đặc quyền."
             : isWaiting
-              ? "PayOS đang xác nhận giao dịch. Premium sẽ kích hoạt sau khi webhook được xử lý — thử kiểm tra lại sau vài phút."
+              ? needsManualConfirm
+                ? "PayOS chưa gửi xác nhận tự động về hệ thống. Giao dịch của bạn sẽ được Admin xác nhận thủ công trước khi Premium được kích hoạt."
+                : "PayOS đang xác nhận giao dịch. Premium sẽ kích hoạt sau khi webhook được xử lý — thử kiểm tra lại sau vài phút."
               : "Đang xác nhận trạng thái thanh toán với máy chủ..."}
         </p>
+
+        {needsManualConfirm ? (
+          <div className={styles.alert} role="status">
+            <p className={styles.alertTitle}>Cần xác nhận PayOS thủ công</p>
+            <p className={styles.alertText}>
+              Nếu bạn đã chuyển khoản thành công nhưng Premium chưa kích hoạt, có thể do
+              webhook PayOS chưa tới máy chủ (ví dụ môi trường dev chưa bật ngrok). Admin
+              sẽ đối chiếu và xác nhận giao dịch trên trang quản trị thanh toán.
+            </p>
+            {orderId ? (
+              <p className={styles.alertMeta}>
+                Mã đơn cần Admin duyệt: <strong>{orderId}</strong>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className={styles.details}>
           <h2 className={styles["details-title"]}>Chi tiết giao dịch</h2>

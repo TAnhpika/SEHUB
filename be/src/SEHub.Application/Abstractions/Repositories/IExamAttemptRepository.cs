@@ -10,4 +10,6 @@ public interface IExamAttemptRepository
     Task AddAsync(ExamAttempt attempt, CancellationToken cancellationToken = default);
     Task UpdateAsync(ExamAttempt attempt, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ExamAttempt>> GetByUserAndExamAsync(Guid userId, Guid examId, ExamAttemptStatus? status, CancellationToken cancellationToken = default);
+    Task<int> CountSubmittedByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<int> CountSubmittedWithMinScoreAsync(Guid userId, decimal minScore, CancellationToken cancellationToken = default);
 }

@@ -1,6 +1,9 @@
 using System.Text.Json;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Feed;
+using SEHub.Application.Gamification;
+using SEHub.Application.Profiles;
 using SEHub.Contracts.Exams;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
@@ -14,6 +17,8 @@ public sealed class ExamAttemptService : IExamAttemptService
     private readonly IExamRepository _examRepository;
     private readonly IExamAttemptRepository _attemptRepository;
     private readonly IExamGradingService _gradingService;
+    private readonly IBadgeCheckService _badgeCheckService;
+    private readonly IUserActivityService _userActivityService;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -21,12 +26,16 @@ public sealed class ExamAttemptService : IExamAttemptService
         IExamRepository examRepository,
         IExamAttemptRepository attemptRepository,
         IExamGradingService gradingService,
+        IBadgeCheckService badgeCheckService,
+        IUserActivityService userActivityService,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
         _examRepository = examRepository;
         _attemptRepository = attemptRepository;
         _gradingService = gradingService;
+        _badgeCheckService = badgeCheckService;
+        _userActivityService = userActivityService;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -109,6 +118,19 @@ public sealed class ExamAttemptService : IExamAttemptService
 
         await _attemptRepository.UpdateAsync(attempt, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _badgeCheckService.EvaluateForTriggerAsync(attempt.UserId, BadgeCheckService.TriggerExamsCompleted, cancellationToken);
+        if (result.Score >= 100m)
+        {
+            await _badgeCheckService.EvaluateForTriggerAsync(attempt.UserId, BadgeCheckService.TriggerPerfectExams, cancellationToken);
+        }
+
+        if (result.Score >= 80m)
+        {
+            await _badgeCheckService.EvaluateForTriggerAsync(attempt.UserId, BadgeCheckService.TriggerHighScoreExams, cancellationToken);
+        }
+
+        await _userActivityService.RecordActivityAsync(attempt.UserId, cancellationToken);
 
         return result;
     }

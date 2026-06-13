@@ -82,8 +82,8 @@ function CreatePostPage() {
         content: content.trim(),
         tags,
       });
-      showToast("Đăng bài thành công!");
-      navigate("/home");
+      showToast("Đã gửi bài viết — chờ moderator duyệt trước khi hiển thị.", 5500);
+      window.setTimeout(() => navigate("/home"), 1200);
     } catch (err) {
       showToast(err.message ?? "Không đăng được bài viết.");
     } finally {
@@ -101,8 +101,8 @@ function CreatePostPage() {
       <header className={styles.header}>
         <h1 className={styles.title}>Tạo bài viết mới</h1>
         <p className={styles.subtitle}>
-          Chia sẻ kiến thức của bạn với cộng đồng. Bài viết sẽ được admin xem xét trước khi xuất
-          bản.
+          Chia sẻ kiến thức của bạn với cộng đồng. Bài viết sẽ được moderator xem xét trước khi
+          xuất bản.
         </p>
       </header>
 
@@ -361,8 +361,8 @@ function CreatePostPage() {
           <div>
             <p className={styles["notice-title"]}>Chờ phê duyệt</p>
             <p className={styles["notice-text"]}>
-              Bài viết của bạn sẽ được admin xem xét trước khi xuất bản. Bạn sẽ nhận được thông
-              báo khi bài viết được duyệt.
+              Bài viết của bạn sẽ được moderator duyệt trước khi hiển thị trên feed. Bạn sẽ nhận
+              được thông báo khi bài viết được duyệt.
             </p>
           </div>
         </div>
