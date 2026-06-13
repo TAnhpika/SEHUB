@@ -2,6 +2,7 @@
 
 import * as adminApi from "@/api/adminApi";
 import { mapAdminDocumentListItem } from "@/api/adminMapper";
+import { isValidGuid } from "@/features/feed/postUtils";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
@@ -346,6 +347,37 @@ export function addAdminDocument(payload) {
   return entry;
 }
 
+export function mapUploadAccessTier(accessKey) {
+  return accessKey === "premium" ? "PremiumFull" : "FreePreview";
+}
+
+export async function uploadAdminDocument(payload) {
+  const semester = payload.semester ?? "1";
+  const pages = payload.pages ?? 1;
+
+  if (USE_MOCK) {
+    return addAdminDocument({
+      ...payload,
+      access: payload.access === "premium" ? "Premium" : "Free (3 trang)",
+      semester,
+      pages,
+    });
+  }
+
+  const dto = await adminApi.uploadDocument({
+    file: payload.file,
+    title: payload.name,
+    subjectCode: payload.subject,
+    semester: Number(semester) || 1,
+    accessTier: mapUploadAccessTier(payload.access),
+    pageCount: pages,
+  });
+
+  const entry = mapAdminDocumentListItem(dto);
+  documentsStore = [entry, ...documentsStore.filter((doc) => doc.id !== entry.id)];
+  return entry;
+}
+
 export function parseDocumentAccessKey(access) {
   return access?.includes("Premium") ? "premium" : "free";
 }
@@ -388,7 +420,17 @@ export function updateAdminDocument(id, payload) {
   return { ok: true, document: next };
 }
 
-export function removeAdminDocument(id) {
+export async function removeAdminDocument(id) {
+  if (USE_MOCK) {
+    const before = documentsStore.length;
+    documentsStore = documentsStore.filter((d) => d.id !== id);
+    return documentsStore.length < before;
+  }
+
+  if (isValidGuid(String(id ?? ""))) {
+    await adminApi.deleteDocument(id);
+  }
+
   const before = documentsStore.length;
   documentsStore = documentsStore.filter((d) => d.id !== id);
   return documentsStore.length < before;
@@ -402,10 +444,8 @@ export async function loadAdminDocuments() {
   try {
     const page = await adminApi.listDocuments({ pageSize: 100 });
     const apiDocs = (page.items ?? []).map(mapAdminDocumentListItem);
-    if (apiDocs.length > 0) {
-      documentsStore = apiDocs.map((doc) => ({ ...doc }));
-      return apiDocs;
-    }
+    documentsStore = apiDocs.map((doc) => ({ ...doc }));
+    return apiDocs;
   } catch {
     /* fallback below */
   }

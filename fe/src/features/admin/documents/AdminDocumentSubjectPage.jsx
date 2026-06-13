@@ -8,11 +8,11 @@ import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import StatusBadge from "@/features/admin/shared/StatusBadge";
 import { getSemesterLabel } from "@/features/admin/exams/adminExamData";
 import {
-  addAdminDocument,
   getAdminDocumentsBySubject,
   loadAdminDocuments,
   removeAdminDocument,
   updateAdminDocument,
+  uploadAdminDocument,
 } from "@/features/admin/documents/adminDocumentData";
 import DocumentEditModal from "@/features/admin/documents/DocumentEditModal";
 import { getAdminDocumentsCatalogUrl } from "@/features/admin/documents/adminDocumentPaths";
@@ -38,6 +38,7 @@ function AdminDocumentSubjectPage() {
   const [uploadAccess, setUploadAccess] = useState("free");
   const [uploadPages, setUploadPages] = useState(String(DEFAULT_UPLOAD_PAGES));
   const [uploadFileName, setUploadFileName] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [editingDoc, setEditingDoc] = useState(null);
 
   useEffect(() => {
@@ -59,7 +60,7 @@ function AdminDocumentSubjectPage() {
     semester: semester !== "all" ? semester : undefined,
   });
 
-  function handleUpload(event) {
+  async function handleUpload(event) {
     event.preventDefault();
     const form = event.currentTarget;
     const fileInput = form.elements.namedItem("file");
@@ -72,22 +73,30 @@ function AdminDocumentSubjectPage() {
       pagesInput instanceof HTMLInputElement ? Number(pagesInput.value) : DEFAULT_UPLOAD_PAGES;
     const pages = Number.isFinite(pagesRaw) && pagesRaw > 0 ? pagesRaw : DEFAULT_UPLOAD_PAGES;
 
-    if (!file) return;
+    if (!file || uploading) return;
 
-    addAdminDocument({
-      name: file.name,
-      subject: code,
-      semester: semester !== "all" ? semester : "1",
-      access: access === "free" ? "Free (3 trang)" : "Premium",
-      pages,
-    });
-    setRefreshKey((k) => k + 1);
-    showToast("Đã upload tài liệu.");
-    setShowUpload(false);
-    setUploadAccess("free");
-    setUploadPages(String(DEFAULT_UPLOAD_PAGES));
-    setUploadFileName("");
-    form.reset();
+    setUploading(true);
+    try {
+      await uploadAdminDocument({
+        file,
+        name: file.name,
+        subject: code,
+        semester: semester !== "all" ? semester : "1",
+        access,
+        pages,
+      });
+      setRefreshKey((k) => k + 1);
+      showToast("Đã upload tài liệu.");
+      setShowUpload(false);
+      setUploadAccess("free");
+      setUploadPages(String(DEFAULT_UPLOAD_PAGES));
+      setUploadFileName("");
+      form.reset();
+    } catch (error) {
+      showToast(error?.message ?? "Upload thất bại.");
+    } finally {
+      setUploading(false);
+    }
   }
 
   const uploadPreviewDoc = useMemo(
@@ -99,11 +108,16 @@ function AdminDocumentSubjectPage() {
     [uploadAccess, uploadPages, uploadFileName],
   );
 
-  function handleDelete(id) {
-    if (removeAdminDocument(id)) {
-      if (editingDoc?.id === id) setEditingDoc(null);
-      setRefreshKey((k) => k + 1);
-      showToast("Đã xóa tài liệu.");
+  async function handleDelete(id) {
+    try {
+      const removed = await removeAdminDocument(id);
+      if (removed) {
+        if (editingDoc?.id === id) setEditingDoc(null);
+        setRefreshKey((k) => k + 1);
+        showToast("Đã xóa tài liệu.");
+      }
+    } catch (error) {
+      showToast(error?.message ?? "Không thể xóa tài liệu.");
     }
   }
 
@@ -245,7 +259,9 @@ function AdminDocumentSubjectPage() {
             <DocumentAccessCompare doc={uploadPreviewDoc} showMeta={false} />
           </section>
           <div className={docStyles.formSubmit}>
-            <Button type="submit">Tải lên</Button>
+            <Button type="submit" disabled={uploading}>
+              {uploading ? "Đang tải lên…" : "Tải lên"}
+            </Button>
           </div>
         </form>
       ) : null}
