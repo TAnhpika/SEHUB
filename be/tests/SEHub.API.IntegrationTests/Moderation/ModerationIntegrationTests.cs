@@ -82,27 +82,16 @@ public sealed class ModerationIntegrationTests : IClassFixture<CustomWebApplicat
     [Fact]
     public async Task Moderator_RejectPendingPost_RequiresNote()
     {
-        var studentToken = await _factory.LoginAndGetTokenAsync(_client);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", studentToken);
-
-        var createResponse = await _client.PostAsJsonAsync("/api/v1/posts", new CreatePostRequest
-        {
-            Title = "Reject Me",
-            Content = "Content to reject in moderation test.",
-            Tags = ["reject-test"]
-        });
-        var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<PostDetailDto>>();
-
         var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
 
         var rejectWithoutNote = await _client.PatchAsJsonAsync(
-            $"/api/v1/admin/moderation/posts/{created!.Data!.Id}",
+            $"/api/v1/admin/moderation/posts/{CustomWebApplicationFactory.RejectModerationPostId}",
             new ModeratePostRequest { Action = "reject" });
         rejectWithoutNote.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var rejectResponse = await _client.PatchAsJsonAsync(
-            $"/api/v1/admin/moderation/posts/{created.Data.Id}",
+            $"/api/v1/admin/moderation/posts/{CustomWebApplicationFactory.RejectModerationPostId}",
             new ModeratePostRequest
             {
                 Action = "reject",
