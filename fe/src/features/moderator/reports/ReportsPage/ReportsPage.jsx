@@ -68,7 +68,9 @@ function TrustScore({ score }) {
         <div className={styles.trustTrack} aria-hidden>
           <span className={`${styles.trustFill} ${tone}`} style={{ width: `${clamped}%` }} />
         </div>
-        <span className={`${styles.trustValue} ${tone}`}>{clamped}/100</span>
+        <span className={`${styles.trustValue} ${tone}`} aria-label={`Trust score ${clamped} trên 100`}>
+          {clamped}/100
+        </span>
       </div>
     </div>
   );
@@ -189,44 +191,54 @@ function ReportsPage() {
     }
   }
 
+  function finishCommunityResolve(id, resolution, reloaded) {
+    const target = reports.find((report) => report.id === id);
+    if (reloaded) {
+      setCommunityReports(reloaded);
+      const resolved =
+        reloaded.find((report) => report.id === id) ??
+        (target ? { ...target, status: "resolved", resolution } : null);
+      if (resolved) {
+        setLastResolved(resolved);
+      }
+      setTab("resolved");
+      setSelectedId(id);
+      return;
+    }
+
+    resolveReportLocal(id, resolution);
+    setTab("resolved");
+    setSelectedId(id);
+  }
+
   async function handleDismiss(id) {
     const target = reports.find((report) => report.id === id);
     if (target?.category === "exam_question") {
       resolveReportLocal(id, "ignored");
+      setTab("resolved");
+      setSelectedId(id);
     } else {
       const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "dismiss");
-      if (reloaded) {
-        setCommunityReports(reloaded);
-        if (target) {
-          setLastResolved({ ...target, status: "resolved", resolution: "ignored" });
-        }
-      } else {
-        resolveReportLocal(id, "ignored");
-      }
+      finishCommunityResolve(id, "ignored", reloaded);
     }
     showToast(
       target?.category === "exam_question"
         ? "Đã bỏ qua — giữ nguyên câu hỏi trong ngân hàng đề."
         : "Đã bỏ qua báo cáo — giữ nguyên nội dung.",
     );
-    const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
-    setSelectedId(nextPending[0]?.id ?? null);
   }
 
   async function handleDelete(id) {
     const target = reports.find((report) => report.id === id);
-    const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "delete");
-    if (reloaded) {
-      setCommunityReports(reloaded);
-      if (target) {
-        setLastResolved({ ...target, status: "resolved", resolution: "deleted" });
-      }
-    } else {
+    if (target?.category === "exam_question") {
       resolveReportLocal(id, "deleted");
+      setTab("resolved");
+      setSelectedId(id);
+    } else {
+      const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "delete");
+      finishCommunityResolve(id, "deleted", reloaded);
     }
     showToast("Đã xóa nội dung vi phạm.");
-    const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
-    setSelectedId(nextPending[0]?.id ?? null);
   }
 
   function handleForwardExamReport(id) {
