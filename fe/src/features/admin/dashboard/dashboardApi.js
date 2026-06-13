@@ -379,16 +379,18 @@ export async function fetchDashboardData(period) {
     return mockPayload;
   }
 
-  const [stats, moderationStats, activityPreview] = await Promise.all([
-    adminApi.getDashboardStats(),
-    adminApi.getModerationStats(),
+  const [overview, activityPreview] = await Promise.all([
+    adminApi.getAdminOverview(),
     loadAdminActivityPreview(4),
   ]);
+
+  const stats = overview?.dashboard ?? overview?.Dashboard;
+  const moderationStats = overview?.moderation ?? overview?.Moderation;
 
   await delay(120);
   return {
     ...mergeDashboardStats(mockPayload, stats, {
-      pendingReports: moderationStats.pendingReports ?? stats.pendingReports,
+      pendingReports: moderationStats?.pendingReports ?? stats?.pendingReports,
     }),
     activity: activityPreview,
   };
