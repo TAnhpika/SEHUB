@@ -3,7 +3,6 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import logoSrc from "@/img/logo.png";
 import { useModeratorPage } from "@/features/moderator/context/ModeratorPageContext";
-import { refreshPendingContentCount } from "@/features/moderator/content/contentModerationService";
 import {
   getModeratorNavBadgeCounts,
   isModeratorNavActive,
@@ -56,27 +55,24 @@ function ModeratorSidebar() {
     let cancelled = false;
 
     function refreshBadges() {
-      loadModeratorNavBadgeCounts().then((counts) => {
-        if (!cancelled) setBadgeCounts(counts);
-      });
-      refreshPendingContentCount()
-        .then(() => {
-          if (!cancelled) setBadgeCounts(getModeratorNavBadgeCounts());
+      loadModeratorNavBadgeCounts()
+        .then((counts) => {
+          if (!cancelled) setBadgeCounts(counts);
         })
-        .catch(() => {});
+        .catch(() => {
+          if (!cancelled) setBadgeCounts(getModeratorNavBadgeCounts());
+        });
     }
 
     refreshBadges();
     window.addEventListener(STATS_EVENT, refreshBadges);
     window.addEventListener(EXAM_REPORTS_EVENT, refreshBadges);
-    window.addEventListener("sehub-content-moderation-updated", refreshBadges);
     window.addEventListener("storage", refreshBadges);
 
     return () => {
       cancelled = true;
       window.removeEventListener(STATS_EVENT, refreshBadges);
       window.removeEventListener(EXAM_REPORTS_EVENT, refreshBadges);
-      window.removeEventListener("sehub-content-moderation-updated", refreshBadges);
       window.removeEventListener("storage", refreshBadges);
     };
   }, []);
