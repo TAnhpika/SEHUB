@@ -20,14 +20,14 @@ public sealed class AdminOverviewService : IAdminOverviewService
 
     public async Task<AdminOverviewDto> GetOverviewAsync(CancellationToken cancellationToken = default)
     {
-        var dashboardTask = _dashboardService.GetStatsAsync(cancellationToken);
-        var moderationTask = _moderationService.GetStatsAsync(cancellationToken);
-        await Task.WhenAll(dashboardTask, moderationTask);
+        // Sequential: dashboard + moderation share scoped DbContext — parallel calls cause EF errors.
+        var dashboard = await _dashboardService.GetStatsAsync(cancellationToken);
+        var moderation = await _moderationService.GetStatsAsync(cancellationToken);
 
         return new AdminOverviewDto
         {
-            Dashboard = await dashboardTask,
-            Moderation = await moderationTask,
+            Dashboard = dashboard,
+            Moderation = moderation,
         };
     }
 }
