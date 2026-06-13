@@ -4,6 +4,8 @@ using Moq;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Auth;
+using SEHub.Application.Gamification;
+using SEHub.Application.Profiles;
 using SEHub.Application.Models;
 using SEHub.Contracts.Auth;
 using SEHub.Domain.Entities;
@@ -24,6 +26,8 @@ public sealed class AuthServiceTests
     private readonly Mock<IGoogleTokenValidator> _googleTokenValidator = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    private readonly Mock<IBadgeCheckService> _badgeCheckService = new();
+    private readonly Mock<IUserActivityService> _userActivityService = new();
     private readonly IMapper _mapper;
 
     private static readonly Guid UserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -45,7 +49,9 @@ public sealed class AuthServiceTests
         _unitOfWork.Object,
         _mapper,
         Options.Create(authSettings ?? new AuthSettings()),
-        Options.Create(jwtSettings ?? new JwtSettings { RefreshExpirationDays = 7 }));
+        Options.Create(jwtSettings ?? new JwtSettings { RefreshExpirationDays = 7 }),
+        _badgeCheckService.Object,
+        _userActivityService.Object);
 
     private void SetupSuccessfulLoginMocks(UserAccount user)
     {
@@ -56,7 +62,10 @@ public sealed class AuthServiceTests
             .Setup(r => r.IsCurrentlyBannedAsync(user.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         _userRepository
-            .Setup(r => r.UpdateStreakOnLoginAsync(user.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.UpdateStreakOnActivityAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StreakUpdateResult(false, user.StreakCount));
+        _userActivityService
+            .Setup(s => s.RecordActivityAsync(user.Id, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         _subscriptionRepository
             .Setup(r => r.GetActiveByUserIdAsync(user.Id, It.IsAny<CancellationToken>()))
