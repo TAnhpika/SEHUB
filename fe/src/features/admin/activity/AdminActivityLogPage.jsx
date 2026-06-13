@@ -12,10 +12,8 @@ import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import AdminTableFooter from "@/features/admin/shared/AdminTableFooter";
 import DashboardBadge from "@/features/admin/dashboard/DashboardBadge";
 import { ACTIVITY_BADGE_VARIANT } from "@/features/admin/dashboard/dashboardConstants";
-import {
-  ADMIN_ACTIVITY_PAGE_SIZE,
-  getMergedActivityLog,
-} from "@/features/admin/adminMockData";
+import { ADMIN_ACTIVITY_PAGE_SIZE } from "@/features/admin/adminMockData";
+import { loadAdminActivityLog } from "@/features/admin/activity/adminActivityData";
 import logStyles from "./AdminActivityLogPage.module.css";
 import styles from "@/features/admin/shared/adminPage.module.css";
 
@@ -131,8 +129,17 @@ function AdminActivityLogPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [periodFilter, setPeriodFilter] = useState("all");
   const [query, setQuery] = useState("");
+  const [activityLog, setActivityLog] = useState([]);
 
-  const activityLog = getMergedActivityLog();
+  useEffect(() => {
+    let cancelled = false;
+    loadAdminActivityLog().then((items) => {
+      if (!cancelled) setActivityLog(items);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const stats = useMemo(() => {
     const counts = { all: activityLog.length, exam: 0, report: 0, payment: 0, user: 0 };
