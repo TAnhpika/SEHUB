@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import logoSrc from "@/img/logo.png";
 import { useModeratorPage } from "@/features/moderator/context/ModeratorPageContext";
+import { refreshPendingContentCount } from "@/features/moderator/content/contentModerationService";
 import {
   getModeratorNavBadgeCounts,
   isModeratorNavActive,
@@ -45,7 +46,17 @@ function NavItemLink({ item, pathname, badgeCounts, onNavigate }) {
 function ModeratorSidebar() {
   const { pathname } = useLocation();
   const { sidebarOpen, setSidebarOpen } = useModeratorPage();
-  const badgeCounts = getModeratorNavBadgeCounts();
+  const [badgeCounts, setBadgeCounts] = useState(() => getModeratorNavBadgeCounts());
+
+  useEffect(() => {
+    function syncBadges() {
+      setBadgeCounts(getModeratorNavBadgeCounts());
+    }
+
+    refreshPendingContentCount().then(syncBadges).catch(syncBadges);
+    window.addEventListener("sehub-content-moderation-updated", syncBadges);
+    return () => window.removeEventListener("sehub-content-moderation-updated", syncBadges);
+  }, []);
 
   function handleNavClick() {
     if (window.innerWidth <= 1024) {
