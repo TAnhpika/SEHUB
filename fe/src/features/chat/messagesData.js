@@ -29,6 +29,11 @@ export async function sendConversationMessage(conversationId, content) {
   return mapMessages([dto])[0];
 }
 
+export async function sendConversationAttachment(conversationId, file, content = "") {
+  const dto = await messagesApi.sendMessageAttachment(conversationId, file, content);
+  return mapMessages([dto])[0];
+}
+
 export async function markConversationAsRead(conversationId) {
   await messagesApi.markConversationRead(conversationId);
 }

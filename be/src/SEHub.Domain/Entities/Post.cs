@@ -12,6 +12,9 @@ public class Post : BaseEntity, ISoftDeletable
     public PostStatus Status { get; set; }
     public int ViewCount { get; set; }
     public bool IsFeatured { get; set; }
+    public Guid? ModeratedById { get; set; }
+    public DateTime? ModeratedAt { get; set; }
+    public string? ModerationNote { get; set; }
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAt { get; set; }
     public Guid? DeletedById { get; set; }

@@ -15,6 +15,29 @@ public sealed class MessagingService : IMessagingService
     private const int MaxPageSize = 100;
     private const int MaxContentLength = 4000;
     private const int MaxMessagesPerMinute = 30;
+    private const long MaxImageSizeBytes = 5 * 1024 * 1024;
+    private const long MaxFileSizeBytes = 10 * 1024 * 1024;
+
+    private static readonly HashSet<string> AllowedImageMimeTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp"
+    };
+
+    private static readonly HashSet<string> AllowedFileMimeTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/zip",
+        "text/plain"
+    };
 
     private readonly IConversationRepository _conversationRepository;
     private readonly IMessageRepository _messageRepository;
@@ -23,6 +46,7 @@ public sealed class MessagingService : IMessagingService
     private readonly IUserBlockRepository _blockRepository;
     private readonly INotificationService _notificationService;
     private readonly IChatNotifier _chatNotifier;
+    private readonly IFileStorageService _fileStorage;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -34,6 +58,7 @@ public sealed class MessagingService : IMessagingService
         IUserBlockRepository blockRepository,
         INotificationService notificationService,
         IChatNotifier chatNotifier,
+        IFileStorageService fileStorage,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
@@ -44,6 +69,7 @@ public sealed class MessagingService : IMessagingService
         _blockRepository = blockRepository;
         _notificationService = notificationService;
         _chatNotifier = chatNotifier;
+        _fileStorage = fileStorage;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -121,7 +147,7 @@ public sealed class MessagingService : IMessagingService
 
         return new PagedResult<MessageDto>
         {
-            Items = messages.Select(m => MapMessage(m, userId)).ToList(),
+            Items = (await Task.WhenAll(messages.Select(m => MapMessageAsync(m, userId, cancellationToken)))).ToList(),
             Page = page,
             PageSize = pageSize,
             TotalCount = total
@@ -136,16 +162,7 @@ public sealed class MessagingService : IMessagingService
         var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
         await EnsureParticipantAsync(conversationId, userId, cancellationToken);
         await EnsureNotBlockedInConversationAsync(conversationId, userId, cancellationToken);
-
-        var sentRecently = await _messageRepository.CountSentByUserSinceAsync(
-            userId,
-            DateTime.UtcNow.AddMinutes(-1),
-            cancellationToken);
-
-        if (sentRecently >= MaxMessagesPerMinute)
-        {
-            throw new ForbiddenException(ErrorCodes.MessageRateLimitExceeded);
-        }
+        await EnsureWithinRateLimitAsync(userId, cancellationToken);
 
         var trimmed = content.Trim();
         if (string.IsNullOrWhiteSpace(trimmed))
@@ -165,6 +182,7 @@ public sealed class MessagingService : IMessagingService
             ConversationId = conversationId,
             SenderId = userId,
             Content = trimmed,
+            MessageType = MessageType.Text,
             SentAt = now,
             CreatedAt = now
         };
@@ -180,7 +198,99 @@ public sealed class MessagingService : IMessagingService
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var dto = MapMessage(message, userId);
+        return await NotifyMessageSentAsync(message, userId, trimmed, cancellationToken);
+    }
+
+    public async Task<MessageDto> SendAttachmentMessageAsync(
+        Guid conversationId,
+        Stream fileContent,
+        string fileName,
+        string mimeType,
+        long fileSizeBytes,
+        string? caption,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+        await EnsureParticipantAsync(conversationId, userId, cancellationToken);
+        await EnsureNotBlockedInConversationAsync(conversationId, userId, cancellationToken);
+        await EnsureWithinRateLimitAsync(userId, cancellationToken);
+
+        var normalizedMimeType = string.IsNullOrWhiteSpace(mimeType) ? "application/octet-stream" : mimeType.Trim();
+        var messageType = ResolveAttachmentMessageType(normalizedMimeType);
+        EnsureAttachmentAllowed(normalizedMimeType, messageType);
+        var maxSize = messageType == MessageType.Image ? MaxImageSizeBytes : MaxFileSizeBytes;
+
+        if (fileSizeBytes <= 0)
+        {
+            throw new DomainException("File is required.");
+        }
+
+        if (fileSizeBytes > maxSize)
+        {
+            throw new DomainException(
+                messageType == MessageType.Image
+                    ? "Image size cannot exceed 5 MB."
+                    : "File size cannot exceed 10 MB.");
+        }
+
+        var trimmedCaption = caption?.Trim() ?? string.Empty;
+        if (trimmedCaption.Length > MaxContentLength)
+        {
+            throw new DomainException($"Caption cannot exceed {MaxContentLength} characters.");
+        }
+
+        var safeFileName = Path.GetFileName(fileName);
+        if (string.IsNullOrWhiteSpace(safeFileName))
+        {
+            throw new DomainException("File name is required.");
+        }
+
+        var attachmentPath = await _fileStorage.UploadAsync(
+            fileContent,
+            safeFileName,
+            normalizedMimeType,
+            "chat",
+            cancellationToken);
+
+        var now = DateTime.UtcNow;
+        var preview = BuildAttachmentPreview(messageType, trimmedCaption, safeFileName);
+        var message = new Message
+        {
+            Id = Guid.NewGuid(),
+            ConversationId = conversationId,
+            SenderId = userId,
+            Content = trimmedCaption,
+            MessageType = messageType,
+            AttachmentPath = attachmentPath,
+            AttachmentFileName = safeFileName,
+            AttachmentMimeType = normalizedMimeType,
+            AttachmentSizeBytes = fileSizeBytes,
+            SentAt = now,
+            CreatedAt = now
+        };
+
+        await _messageRepository.AddAsync(message, cancellationToken);
+        await _conversationRepository.UpdateConversationPreviewAsync(conversationId, preview, now, cancellationToken);
+
+        var participant = await _conversationRepository.GetParticipantAsync(conversationId, userId, cancellationToken);
+        if (participant is not null)
+        {
+            participant.LastReadAt = now;
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return await NotifyMessageSentAsync(message, userId, preview, cancellationToken);
+    }
+
+    private async Task<MessageDto> NotifyMessageSentAsync(
+        Message message,
+        Guid userId,
+        string preview,
+        CancellationToken cancellationToken)
+    {
+        var dto = await MapMessageAsync(message, userId, cancellationToken);
+        var conversationId = message.ConversationId;
         var conversation = await _conversationRepository.GetByIdAsync(conversationId, cancellationToken)
             ?? throw new NotFoundException("Conversation", conversationId);
         var participantIds = conversation.Participants.Select(p => p.UserId).ToList();
@@ -198,13 +308,13 @@ public sealed class MessagingService : IMessagingService
         {
             var senderSummary = (await _searchRepository.GetByIdsAsync([userId], cancellationToken)).FirstOrDefault();
             var senderName = senderSummary?.FullName ?? senderSummary?.Username ?? "Ai đó";
-            var preview = trimmed.Length > 80 ? $"{trimmed[..77]}..." : trimmed;
+            var notificationPreview = preview.Length > 80 ? $"{preview[..77]}..." : preview;
 
             await _notificationService.CreateAsync(
                 recipientId,
                 NotificationType.Message,
                 $"{senderName} đã gửi tin nhắn cho bạn",
-                preview,
+                notificationPreview,
                 $"/home/messages?conversation={conversationId}",
                 userId,
                 conversationId,
@@ -263,16 +373,84 @@ public sealed class MessagingService : IMessagingService
         };
     }
 
-    private static MessageDto MapMessage(Message message, Guid currentUserId) =>
-        new()
+    private async Task EnsureWithinRateLimitAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var sentRecently = await _messageRepository.CountSentByUserSinceAsync(
+            userId,
+            DateTime.UtcNow.AddMinutes(-1),
+            cancellationToken);
+
+        if (sentRecently >= MaxMessagesPerMinute)
+        {
+            throw new ForbiddenException(ErrorCodes.MessageRateLimitExceeded);
+        }
+    }
+
+    private static MessageType ResolveAttachmentMessageType(string mimeType) =>
+        mimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ||
+        AllowedImageMimeTypes.Contains(mimeType)
+            ? MessageType.Image
+            : MessageType.File;
+
+    private static void EnsureAttachmentAllowed(string mimeType, MessageType messageType)
+    {
+        if (messageType == MessageType.Image)
+        {
+            if (!AllowedImageMimeTypes.Contains(mimeType))
+            {
+                throw new DomainException("Unsupported image type. Allowed: JPG, PNG, GIF, WEBP.");
+            }
+
+            return;
+        }
+
+        if (!AllowedFileMimeTypes.Contains(mimeType))
+        {
+            throw new DomainException("Unsupported file type. Allowed: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, ZIP, TXT.");
+        }
+    }
+
+    private static string BuildAttachmentPreview(MessageType messageType, string caption, string fileName)
+    {
+        if (!string.IsNullOrWhiteSpace(caption))
+        {
+            return caption;
+        }
+
+        return messageType == MessageType.Image
+            ? "[Ảnh]"
+            : $"[Tệp] {fileName}";
+    }
+
+    private async Task<MessageDto> MapMessageAsync(
+        Message message,
+        Guid currentUserId,
+        CancellationToken cancellationToken)
+    {
+        string? attachmentUrl = null;
+        if (!string.IsNullOrWhiteSpace(message.AttachmentPath))
+        {
+            attachmentUrl = await _fileStorage.GetSignedUrlAsync(
+                message.AttachmentPath,
+                TimeSpan.FromHours(24),
+                cancellationToken);
+        }
+
+        return new MessageDto
         {
             Id = message.Id,
             ConversationId = message.ConversationId,
             SenderId = message.SenderId,
             Content = message.Content,
+            MessageType = message.MessageType.ToString(),
+            AttachmentUrl = attachmentUrl,
+            AttachmentFileName = message.AttachmentFileName,
+            AttachmentMimeType = message.AttachmentMimeType,
+            AttachmentSizeBytes = message.AttachmentSizeBytes,
             SentAt = message.SentAt,
             IsMine = message.SenderId == currentUserId
         };
+    }
 
     private async Task EnsureParticipantAsync(
         Guid conversationId,

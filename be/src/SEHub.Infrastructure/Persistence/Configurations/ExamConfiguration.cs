@@ -17,6 +17,7 @@ public class ExamConfiguration : IEntityTypeConfiguration<Exam>
         builder.Property(e => e.ContentHash).HasMaxLength(64).IsRequired();
         builder.Property(e => e.Description).HasMaxLength(4000);
         builder.Property(e => e.AssetUrl).HasMaxLength(500);
+        builder.HasIndex(e => e.SubmittedById);
 
         builder.HasMany(e => e.Questions)
             .WithOne(q => q.Exam)

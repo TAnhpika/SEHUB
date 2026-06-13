@@ -9,6 +9,7 @@ function WizardBottomActions({
   backLabel = "Quay lại",
   continueLabel = "Tiếp tục",
   showBack = true,
+  continueDisabled = false,
 }) {
   return (
     <div className={styles.bar}>
@@ -21,7 +22,12 @@ function WizardBottomActions({
             {backLabel}
           </button>
         )}
-        <button type="button" className={styles.continue} onClick={onContinue}>
+        <button
+          type="button"
+          className={styles.continue}
+          onClick={onContinue}
+          disabled={continueDisabled}
+        >
           {continueLabel}
           <FontAwesomeIcon icon={faArrowRight} />
         </button>

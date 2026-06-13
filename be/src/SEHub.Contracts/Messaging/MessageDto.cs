@@ -6,6 +6,11 @@ public sealed class MessageDto
     public Guid ConversationId { get; init; }
     public Guid SenderId { get; init; }
     public string Content { get; init; } = string.Empty;
+    public string MessageType { get; init; } = "Text";
+    public string? AttachmentUrl { get; init; }
+    public string? AttachmentFileName { get; init; }
+    public string? AttachmentMimeType { get; init; }
+    public long? AttachmentSizeBytes { get; init; }
     public DateTime SentAt { get; init; }
     public bool IsMine { get; init; }
 }

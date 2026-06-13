@@ -10,10 +10,11 @@ import {
   loadConversationMessages,
   loadConversations,
   markConversationAsRead,
+  sendConversationAttachment,
   sendConversationMessage,
 } from "@/features/chat/messagesData";
 import { blockUser, getBlockStatus, unblockUser } from "@/api/blockApi";
-import { mapMessageItem } from "@/api/messagesMapper";
+import { mapMessageItem, appendMessageIfNew, getMessagePreview } from "@/api/messagesMapper";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useChatHub } from "@/hooks/useChatHub";
 import styles from "./MessagesPage.module.css";
@@ -38,13 +39,14 @@ function MessagesPage() {
 
   const handleReceiveMessage = useCallback((messageDto) => {
     const mapped = mapMessageItem(messageDto);
+    const preview = getMessagePreview(mapped);
 
     setConversations((current) =>
       current.map((item) =>
         item.conversationId === messageDto.conversationId
           ? {
               ...item,
-              preview: messageDto.content,
+              preview,
               time: "Vừa xong",
               unread:
                 selectedId === item.conversationId && messageDto.isMine
@@ -58,12 +60,7 @@ function MessagesPage() {
     );
 
     if (selectedId === messageDto.conversationId) {
-      setMessages((current) => {
-        if (current.some((item) => item.id === mapped.id)) {
-          return current;
-        }
-        return [...current, mapped];
-      });
+      setMessages((current) => appendMessageIfNew(current, mapped));
     }
   }, [selectedId]);
 
@@ -234,17 +231,22 @@ function MessagesPage() {
     }
   }
 
-  async function handleSend(text) {
-    if (!selectedId || !text.trim()) return;
+  async function handleSend({ text = "", file = null } = {}) {
+    if (!selectedId) return;
+
+    const trimmed = text.trim();
+    if (!file && !trimmed) return;
 
     setSending(true);
     try {
-      const mapped = await sendConversationMessage(selectedId, text);
-      setMessages((current) => [...current, mapped]);
+      const mapped = file
+        ? await sendConversationAttachment(selectedId, file, trimmed)
+        : await sendConversationMessage(selectedId, trimmed);
+      setMessages((current) => appendMessageIfNew(current, mapped));
       setConversations((current) =>
         current.map((item) =>
           item.conversationId === selectedId
-            ? { ...item, preview: mapped.text, time: "Vừa xong" }
+            ? { ...item, preview: mapped.previewText, time: "Vừa xong" }
             : item,
         ),
       );

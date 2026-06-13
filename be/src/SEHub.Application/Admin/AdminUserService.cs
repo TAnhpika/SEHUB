@@ -204,7 +204,7 @@ public sealed class AdminUserService : IAdminUserService
 
                 request.BanUntil,
 
-                user.BanReason,
+                request.BanReason ?? user.BanReason,
 
                 request.BanType,
 
@@ -230,7 +230,7 @@ public sealed class AdminUserService : IAdminUserService
 
                     Until = request.BanUntil,
 
-                    Reason = user.BanReason ?? string.Empty,
+                    Reason = request.BanReason ?? user.BanReason ?? string.Empty,
 
                     CreatedAt = DateTime.UtcNow
 

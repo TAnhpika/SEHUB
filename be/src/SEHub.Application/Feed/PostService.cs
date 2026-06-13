@@ -87,6 +87,8 @@ public sealed class PostService : IPostService
         var post = await _postRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException("Post", id);
 
+        EnsureCanViewPost(post);
+
         post.ViewCount++;
         await _postRepository.UpdateAsync(post, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -105,13 +107,12 @@ public sealed class PostService : IPostService
             Title = request.Title,
             Content = request.Content,
             Tags = string.Join(',', request.Tags ?? []),
-            Status = PostStatus.Published,
+            Status = PostStatus.Pending,
             CreatedAt = DateTime.UtcNow
         };
 
         await _postRepository.AddAsync(post, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        await _gamificationService.AwardPostPublishedAsync(userId, cancellationToken);
 
         return await MapDetailAsync(post, cancellationToken);
     }
@@ -126,6 +127,11 @@ public sealed class PostService : IPostService
         post.Title = request.Title;
         post.Content = request.Content;
         post.Tags = string.Join(',', request.Tags ?? []);
+        if (post.Status == PostStatus.Rejected)
+        {
+            post.Status = PostStatus.Pending;
+        }
+
         post.UpdatedAt = DateTime.UtcNow;
 
         await _postRepository.UpdateAsync(post, cancellationToken);
@@ -153,6 +159,11 @@ public sealed class PostService : IPostService
 
         var post = await _postRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException("Post", id);
+
+        if (post.Status != PostStatus.Published)
+        {
+            throw new ForbiddenException("Only published posts can be featured.");
+        }
 
         post.IsFeatured = request.IsFeatured;
         post.UpdatedAt = DateTime.UtcNow;
@@ -226,6 +237,26 @@ public sealed class PostService : IPostService
 
     private Guid RequireUserId() =>
         _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+
+    private void EnsureCanViewPost(Post post)
+    {
+        if (post.Status == PostStatus.Published)
+        {
+            return;
+        }
+
+        if (_currentUser.IsModeratorOrAdmin)
+        {
+            return;
+        }
+
+        if (_currentUser.UserId == post.AuthorId)
+        {
+            return;
+        }
+
+        throw new NotFoundException("Post", post.Id);
+    }
 
     private void EnsureAuthorOrModerator(Guid authorId)
     {

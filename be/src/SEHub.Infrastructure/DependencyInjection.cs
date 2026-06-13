@@ -76,7 +76,6 @@ public static class DependencyInjection
         services.AddScoped<IUserBanRepository, UserBanRepository>();
         services.AddScoped<IUserSearchRepository, UserSearchRepository>();
         services.AddScoped<IUserFollowRepository, UserFollowRepository>();
-        services.AddScoped<IFriendRequestRepository, FriendRequestRepository>();
         services.AddScoped<IConversationRepository, ConversationRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();

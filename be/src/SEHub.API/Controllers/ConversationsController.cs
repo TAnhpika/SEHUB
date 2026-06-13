@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SEHub.Application.Messaging;
 using SEHub.Contracts.Messaging;
@@ -65,6 +66,33 @@ public sealed class ConversationsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _messagingService.SendMessageAsync(conversationId, request.Content, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("{conversationId:guid}/messages/attachment")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> SendAttachmentMessage(
+        Guid conversationId,
+        IFormFile file,
+        [FromForm] string? content,
+        CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest(new { message = "File is required." });
+        }
+
+        await using var stream = file.OpenReadStream();
+        var result = await _messagingService.SendAttachmentMessageAsync(
+            conversationId,
+            stream,
+            file.FileName,
+            file.ContentType,
+            file.Length,
+            content,
+            cancellationToken);
         return Ok(result);
     }
 

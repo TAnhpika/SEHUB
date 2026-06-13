@@ -10,6 +10,8 @@ public sealed class PracticeSubmissionListItemDto
     public string? ReviewerComment { get; init; }
     public DateTime? ReviewedAt { get; init; }
     public PracticeSubmissionUserSummaryDto User { get; init; } = null!;
+    public string? ExamTitle { get; init; }
+    public string? ExamCode { get; init; }
 }
 
 public sealed class PracticeSubmissionUserSummaryDto

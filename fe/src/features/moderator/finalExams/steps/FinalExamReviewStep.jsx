@@ -134,6 +134,7 @@ function FinalExamReviewStep() {
         onBack={() => navigate("/moderator/final-exams/add/questions")}
         onContinue={handlePublish}
         continueLabel={submitting ? "Đang gửi..." : "Gửi duyệt"}
+        continueDisabled={submitting}
       />
     </div>
   );

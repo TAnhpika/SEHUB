@@ -17,7 +17,6 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/api/notificationsApi";
-import { getFriendRequests } from "@/api/friendsApi";
 import { mapNotificationItem, mapNotificationPage } from "@/api/notificationsMapper";
 import { useChatHub } from "@/hooks/useChatHub";
 import { NOTIFICATION_META } from "./notificationData";
@@ -126,32 +125,6 @@ function NotificationDropdown() {
     }
   }
 
-  async function resolveFriendRequestProfileUrl(item) {
-    if (item.actorUsername) {
-      return `/profile/${item.actorUsername}`;
-    }
-
-    if (item.linkUrl?.startsWith("/profile/")) {
-      return item.linkUrl;
-    }
-
-    if (!item.referenceId) {
-      return null;
-    }
-
-    try {
-      const requests = await getFriendRequests("incoming");
-      const match = (requests ?? []).find((request) => request.id === item.referenceId);
-      if (match?.senderUsername) {
-        return `/profile/${match.senderUsername}`;
-      }
-    } catch {
-      /* ignore */
-    }
-
-    return null;
-  }
-
   async function handleItemClick(item) {
     if (!item.read) {
       try {
@@ -164,19 +137,9 @@ function NotificationDropdown() {
       );
     }
 
-    let targetUrl = item.linkUrl;
-
-    if (item.type === "friendrequest") {
-      targetUrl = (await resolveFriendRequestProfileUrl(item)) ?? targetUrl;
-    }
-
-    if (targetUrl) {
+    if (item.linkUrl) {
       setOpen(false);
-      const navigationState =
-        item.type === "friendrequest" && item.referenceId
-          ? { friendRequestId: item.referenceId }
-          : undefined;
-      navigate(targetUrl, { state: navigationState });
+      navigate(item.linkUrl);
     }
   }
 

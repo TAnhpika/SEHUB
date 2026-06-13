@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faDownload,
@@ -8,6 +8,7 @@ import {
   faTriangleExclamation,
   faTrophy,
 } from "@fortawesome/free-solid-svg-icons";
+import { ApiError } from "@/api/httpClient";
 import FilterDropdown from "@/common/FilterDropdown/FilterDropdown";
 import Pagination from "@/common/Pagination/Pagination";
 import { useToast } from "@/common/Toast/ToastProvider";
@@ -15,20 +16,23 @@ import ModeratorBadge from "@/features/moderator/components/ModeratorBadge/Moder
 import ModeratorConfirmDialog from "@/features/moderator/components/ModeratorConfirmDialog/ModeratorConfirmDialog";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import ModeratorToolbar from "@/features/moderator/components/ModeratorToolbar/ModeratorToolbar";
+import ViolatingAccountDetailPanel from "@/features/moderator/violations/components/ViolatingAccountDetailPanel/ViolatingAccountDetailPanel";
 import {
-  buildLockUpdate,
-  buildWarningUpdate,
-  filterViolatingAccounts,
+  DEFAULT_BAN_REASON,
   getAccountLockInfo,
   getLockSeverityMeta,
   getLockSeverityTone,
+  loadViolatingAccountDetail,
+  loadViolatingAccounts,
   LOCK_DURATION_OPTIONS,
   RANK_META,
   RANK_OPTIONS,
   SORT_OPTIONS,
   STATUS_META,
   STATUS_OPTIONS,
-  VIOLATING_ACCOUNTS_MOCK,
+  submitViolatingAccountBan,
+  submitViolatingAccountUnban,
+  submitViolatingAccountWarning,
   VIOLATIONS_PAGE_SIZE,
 } from "@/features/moderator/violations/violationsData";
 import styles from "./ViolatingAccountsPage.module.css";
@@ -38,6 +42,8 @@ const VIOLATIONS_CRUMBS = [
   { label: "Quản lý" },
   { label: "Tài khoản vi phạm" },
 ];
+
+const SEARCH_DEBOUNCE_MS = 350;
 
 function StatusBadge({ account }) {
   const lockInfo = getAccountLockInfo(account);
@@ -69,7 +75,7 @@ function StatusBadge({ account }) {
 }
 
 function RankBadge({ rank }) {
-  const meta = RANK_META[rank];
+  const meta = RANK_META[rank] ?? RANK_META.bronze;
   return (
     <span className={`${styles.rank} ${styles[`rank-${meta.tone}`]}`}>
       <FontAwesomeIcon icon={faTrophy} className={styles["rank-icon"]} />
@@ -80,37 +86,101 @@ function RankBadge({ rank }) {
 
 function ViolatingAccountsPage() {
   const { showToast } = useToast();
-  const [accounts, setAccounts] = useState(VIOLATING_ACCOUNTS_MOCK);
+  const [accounts, setAccounts] = useState([]);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [rankFilter, setRankFilter] = useState("all");
   const [sort, setSort] = useState("violations-desc");
   const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [lockTarget, setLockTarget] = useState(null);
   const [lockDays, setLockDays] = useState(7);
+  const [lockReason, setLockReason] = useState(DEFAULT_BAN_REASON);
   const [warnTarget, setWarnTarget] = useState(null);
+  const [detailId, setDetailId] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [unbanLoading, setUnbanLoading] = useState(false);
 
-  const filtered = useMemo(
-    () =>
-      filterViolatingAccounts(accounts, {
-        query,
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedQuery(query.trim());
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [query]);
+
+  const refreshList = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await loadViolatingAccounts({
+        page,
+        pageSize: VIOLATIONS_PAGE_SIZE,
+        search: debouncedQuery,
         status: statusFilter,
         rank: rankFilter,
         sort,
-      }),
-    [accounts, query, statusFilter, rankFilter, sort],
-  );
+      });
+      setAccounts(result.items);
+      setTotalCount(result.totalCount);
+      setTotalPages(result.totalPages);
+      if (result.page !== page) {
+        setPage(result.page);
+      }
+    } catch (error) {
+      const message =
+        error instanceof ApiError ? error.message : "Không tải được danh sách tài khoản vi phạm.";
+      showToast(message);
+      setAccounts([]);
+      setTotalCount(0);
+      setTotalPages(1);
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedQuery, page, rankFilter, showToast, sort, statusFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / VIOLATIONS_PAGE_SIZE));
+  useEffect(() => {
+    refreshList();
+  }, [refreshList]);
+
+  useEffect(() => {
+    if (!detailId) {
+      setDetail(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setDetailLoading(true);
+
+    loadViolatingAccountDetail(detailId)
+      .then((data) => {
+        if (!cancelled) setDetail(data);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          const message =
+            error instanceof ApiError ? error.message : "Không tải được chi tiết tài khoản.";
+          showToast(message);
+          setDetailId(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [detailId, showToast]);
+
   const safePage = Math.min(page, totalPages);
-
-  const pageItems = useMemo(() => {
-    const start = (safePage - 1) * VIOLATIONS_PAGE_SIZE;
-    return filtered.slice(start, start + VIOLATIONS_PAGE_SIZE);
-  }, [filtered, safePage]);
-
-  const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * VIOLATIONS_PAGE_SIZE + 1;
-  const rangeEnd = Math.min(safePage * VIOLATIONS_PAGE_SIZE, filtered.length);
+  const rangeStart = totalCount === 0 ? 0 : (safePage - 1) * VIOLATIONS_PAGE_SIZE + 1;
+  const rangeEnd = Math.min(safePage * VIOLATIONS_PAGE_SIZE, totalCount);
 
   function handleFilterChange(setter) {
     return (value) => {
@@ -120,20 +190,30 @@ function ViolatingAccountsPage() {
   }
 
   function handleExport() {
-    showToast("Đang xuất báo cáo tài khoản vi phạm (mock).");
+    showToast("Xuất báo cáo sẽ được bổ sung ở phiên bản sau.");
   }
 
   function handleAddWarning() {
-    showToast("Chọn tài khoản trong bảng để gửi cảnh báo.");
+    setStatusFilter("normal");
+    setPage(1);
+    showToast(
+      "Đã lọc tài khoản Bình thường — bấm Cảnh báo trên từng dòng (§2.4: Mod cảnh báo tài khoản vi phạm).",
+    );
   }
 
   function handleDetail(account) {
-    showToast(`Xem chi tiết: ${account.displayName} (${account.studentId})`);
+    setDetailId(account.id);
+  }
+
+  function closeDetail() {
+    setDetailId(null);
+    setDetail(null);
   }
 
   function openLockModal(account, days = 7) {
     setLockTarget(account);
     setLockDays(days);
+    setLockReason(DEFAULT_BAN_REASON);
   }
 
   function closeLockModal() {
@@ -148,30 +228,63 @@ function ViolatingAccountsPage() {
     setWarnTarget(null);
   }
 
-  function confirmLock() {
-    if (!lockTarget) return;
+  async function confirmLock() {
+    if (!lockTarget || actionLoading) return;
 
-    setAccounts((prev) =>
-      prev.map((account) =>
-        account.id === lockTarget.id ? { ...account, ...buildLockUpdate(lockDays) } : account,
-      ),
-    );
-    showToast(
-      `Đã khóa tạm tài khoản ${lockTarget.username} trong ${lockDays} ngày (${getLockSeverityMeta(lockDays).severityLabel}).`,
-    );
-    closeLockModal();
+    setActionLoading(true);
+    try {
+      await submitViolatingAccountBan(lockTarget.id, lockDays, lockReason);
+      showToast(
+        `Đã khóa tạm tài khoản ${lockTarget.username} trong ${lockDays} ngày (${getLockSeverityMeta(lockDays).severityLabel}).`,
+      );
+      closeLockModal();
+      await refreshList();
+      if (detailId === lockTarget.id) {
+        setDetailId(lockTarget.id);
+      }
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Không thể khóa tài khoản.";
+      showToast(message);
+    } finally {
+      setActionLoading(false);
+    }
   }
 
-  function confirmWarn() {
-    if (!warnTarget) return;
+  async function confirmWarn() {
+    if (!warnTarget || actionLoading) return;
 
-    setAccounts((prev) =>
-      prev.map((account) =>
-        account.id === warnTarget.id ? { ...account, ...buildWarningUpdate() } : account,
-      ),
-    );
-    showToast(`Đã gửi cảnh báo cho tài khoản ${warnTarget.username} (mock).`);
-    closeWarnModal();
+    setActionLoading(true);
+    try {
+      await submitViolatingAccountWarning(warnTarget.id);
+      showToast(`Đã gửi cảnh báo cho tài khoản ${warnTarget.username}.`);
+      closeWarnModal();
+      await refreshList();
+      if (detailId === warnTarget.id) {
+        setDetailId(warnTarget.id);
+      }
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Không thể gửi cảnh báo.";
+      showToast(message);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleUnban() {
+    if (!detailId || unbanLoading) return;
+
+    setUnbanLoading(true);
+    try {
+      await submitViolatingAccountUnban(detailId);
+      showToast("Đã gỡ khóa tạm cho tài khoản.");
+      await refreshList();
+      setDetailId(detailId);
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Không thể gỡ khóa.";
+      showToast(message);
+    } finally {
+      setUnbanLoading(false);
+    }
   }
 
   const headerActions = (
@@ -194,159 +307,176 @@ function ViolatingAccountsPage() {
       crumbs={VIOLATIONS_CRUMBS}
       actions={headerActions}
     >
-      <section className={styles.card}>
-        <ModeratorToolbar
-          searchValue={query}
-          onSearchChange={(value) => {
-            setQuery(value);
-            setPage(1);
-          }}
-          searchPlaceholder="Tìm kiếm theo Tên, Email hoặc MSSV..."
-        >
-          <FilterDropdown
-            options={STATUS_OPTIONS}
-            value={statusFilter}
-            onChange={handleFilterChange(setStatusFilter)}
-            ariaLabel="Lọc trạng thái"
-          />
-          <FilterDropdown
-            options={RANK_OPTIONS}
-            value={rankFilter}
-            onChange={handleFilterChange(setRankFilter)}
-            ariaLabel="Lọc hạng thành viên"
-          />
-          <FilterDropdown
-            options={SORT_OPTIONS}
-            value={sort}
-            onChange={handleFilterChange(setSort)}
-            ariaLabel="Sắp xếp"
-          />
-        </ModeratorToolbar>
+      <div className={styles.layout}>
+        <section className={styles.card}>
+          <ModeratorToolbar
+            searchValue={query}
+            onSearchChange={setQuery}
+            searchPlaceholder="Tìm kiếm theo Tên, Email hoặc username..."
+          >
+            <FilterDropdown
+              options={STATUS_OPTIONS}
+              value={statusFilter}
+              onChange={handleFilterChange(setStatusFilter)}
+              ariaLabel="Lọc trạng thái"
+            />
+            <FilterDropdown
+              options={RANK_OPTIONS}
+              value={rankFilter}
+              onChange={handleFilterChange(setRankFilter)}
+              ariaLabel="Lọc hạng thành viên"
+            />
+            <FilterDropdown
+              options={SORT_OPTIONS}
+              value={sort}
+              onChange={handleFilterChange(setSort)}
+              ariaLabel="Sắp xếp"
+            />
+          </ModeratorToolbar>
 
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Tài khoản</th>
-                <th>Email / Liên hệ</th>
-                <th>Hạng thành viên</th>
-                <th>Số vi phạm</th>
-                <th>Trạng thái</th>
-                <th>Cảnh báo / khóa tạm</th>
-                <th aria-label="Thao tác khác" />
-              </tr>
-            </thead>
-            <tbody>
-              {pageItems.length === 0 ? (
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
                 <tr>
-                  <td colSpan={7} className={styles.empty}>
-                    Không tìm thấy tài khoản phù hợp.
-                  </td>
+                  <th>Tài khoản</th>
+                  <th>Email / Liên hệ</th>
+                  <th>Hạng thành viên</th>
+                  <th>Số vi phạm</th>
+                  <th>Trạng thái</th>
+                  <th>Cảnh báo / khóa tạm</th>
+                  <th aria-label="Thao tác khác" />
                 </tr>
-              ) : (
-                pageItems.map((account) => {
-                  const lockInfo = getAccountLockInfo(account);
-                  const lockDisabled = lockInfo.isActive;
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className={styles.empty}>
+                      Đang tải danh sách...
+                    </td>
+                  </tr>
+                ) : accounts.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className={styles.empty}>
+                      Không có tài khoản vi phạm nào. Chỉ hiển thị user đã từng bị cảnh báo hoặc
+                      khóa tạm.
+                    </td>
+                  </tr>
+                ) : (
+                  accounts.map((account) => {
+                    const lockInfo = getAccountLockInfo(account);
+                    const lockDisabled = lockInfo.isActive;
+                    const isSelected = detailId === account.id;
 
-                  return (
-                    <tr key={account.id}>
-                      <td>
-                        <div className={styles.account}>
-                          <div className={styles.avatar} aria-hidden>
-                            {account.initial}
+                    return (
+                      <tr key={account.id} className={isSelected ? styles.rowSelected : undefined}>
+                        <td>
+                          <div className={styles.account}>
+                            <div className={styles.avatar} aria-hidden>
+                              {account.initial}
+                            </div>
+                            <div>
+                              <p className={styles.accountName}>{account.displayName}</p>
+                              <p className={styles.accountId}>@{account.username}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className={styles.accountName}>{account.username}</p>
-                            <p className={styles.accountId}>{account.studentId}</p>
+                        </td>
+                        <td>
+                          <p className={styles.email}>{account.email}</p>
+                          <p className={styles.dept}>{account.studentId}</p>
+                        </td>
+                        <td>
+                          <RankBadge rank={account.rank} />
+                        </td>
+                        <td>
+                          <span className={styles.violations}>{account.violations}</span>
+                        </td>
+                        <td>
+                          <StatusBadge account={account} />
+                        </td>
+                        <td>
+                          <div className={styles.sanctionActions}>
+                            <button
+                              type="button"
+                              className={styles.warnBtn}
+                              onClick={() => openWarnModal(account)}
+                              disabled={lockDisabled || actionLoading}
+                            >
+                              <FontAwesomeIcon icon={faTriangleExclamation} />
+                              Cảnh báo
+                            </button>
+                            <div className={styles.lockGroup} role="group" aria-label="Khóa tạm">
+                              {LOCK_DURATION_OPTIONS.map((option) => (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  className={`${styles.lockChip} ${styles[`lockChip-${option.severity}`]}`}
+                                  onClick={() => openLockModal(account, option.value)}
+                                  disabled={lockDisabled || actionLoading}
+                                  title={`Khóa tạm ${option.label} — ${option.severityLabel}`}
+                                >
+                                  <FontAwesomeIcon icon={faLock} />
+                                  {option.label}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td>
-                        <p className={styles.email}>{account.email}</p>
-                        <p className={styles.dept}>{account.department}</p>
-                      </td>
-                      <td>
-                        <RankBadge rank={account.rank} />
-                      </td>
-                      <td>
-                        <span className={styles.violations}>{account.violations}</span>
-                      </td>
-                      <td>
-                        <StatusBadge account={account} />
-                      </td>
-                      <td>
-                        <div className={styles.sanctionActions}>
+                        </td>
+                        <td>
                           <button
                             type="button"
-                            className={styles.warnBtn}
-                            onClick={() => openWarnModal(account)}
-                            disabled={lockDisabled}
+                            className={styles.detailBtn}
+                            onClick={() => handleDetail(account)}
                           >
-                            <FontAwesomeIcon icon={faTriangleExclamation} />
-                            Cảnh báo
+                            <FontAwesomeIcon icon={faEye} />
+                            Chi tiết
                           </button>
-                          <div className={styles.lockGroup} role="group" aria-label="Khóa tạm">
-                            {LOCK_DURATION_OPTIONS.map((option) => (
-                              <button
-                                key={option.value}
-                                type="button"
-                                className={`${styles.lockChip} ${styles[`lockChip-${option.severity}`]}`}
-                                onClick={() => openLockModal(account, option.value)}
-                                disabled={lockDisabled}
-                                title={`Khóa tạm ${option.label} — ${option.severityLabel}`}
-                              >
-                                <FontAwesomeIcon icon={faLock} />
-                                {option.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className={styles.detailBtn}
-                          onClick={() => handleDetail(account)}
-                        >
-                          <FontAwesomeIcon icon={faEye} />
-                          Chi tiết
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
 
-        <footer className={styles.tableFooter}>
-          <p className={styles.summary}>
-            Hiển thị <strong>{rangeStart}–{rangeEnd}</strong> / {filtered.length} tài khoản
-          </p>
-          <Pagination
-            currentPage={safePage}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            ariaLabel="Phân trang tài khoản vi phạm"
-            alwaysShow
-            flush
+          <footer className={styles.tableFooter}>
+            <p className={styles.summary}>
+              Hiển thị <strong>{rangeStart}–{rangeEnd}</strong> / {totalCount} tài khoản
+            </p>
+            <Pagination
+              currentPage={safePage}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              ariaLabel="Phân trang tài khoản vi phạm"
+              alwaysShow
+              flush
+            />
+            <p className={styles.footerBalance} aria-hidden="true">
+              Hiển thị <strong>{rangeStart}–{rangeEnd}</strong> / {totalCount} tài khoản
+            </p>
+          </footer>
+        </section>
+
+        {detailId ? (
+          <ViolatingAccountDetailPanel
+            detail={detail}
+            loading={detailLoading}
+            onClose={closeDetail}
+            onUnban={handleUnban}
+            unbanLoading={unbanLoading}
           />
-          <p className={styles.footerBalance} aria-hidden="true">
-            Hiển thị <strong>{rangeStart}–{rangeEnd}</strong> / {filtered.length} tài khoản
-          </p>
-        </footer>
-      </section>
+        ) : null}
+      </div>
 
       <ModeratorConfirmDialog
         open={Boolean(lockTarget)}
         title="Khóa tạm tài khoản"
         description={
           lockTarget
-            ? `Xác nhận khóa tạm tài khoản ${lockTarget.username} (${lockTarget.studentId}).`
+            ? `Xác nhận khóa tạm tài khoản ${lockTarget.username} (${lockTarget.displayName}).`
             : ""
         }
-        confirmLabel="Xác nhận khóa"
+        confirmLabel={actionLoading ? "Đang xử lý..." : "Xác nhận khóa"}
         variant="danger"
         onConfirm={confirmLock}
         onCancel={closeLockModal}
@@ -380,6 +510,16 @@ function ViolatingAccountsPage() {
             </label>
           ))}
         </div>
+        <label className={styles.reasonField}>
+          <span className={styles.reasonLabel}>Lý do khóa</span>
+          <textarea
+            className={styles.reasonInput}
+            rows={3}
+            value={lockReason}
+            onChange={(event) => setLockReason(event.target.value)}
+            placeholder={DEFAULT_BAN_REASON}
+          />
+        </label>
         <p className={styles.lockHint}>
           Moderator chỉ được khóa tạm 1 / 7 / 30 ngày. Khóa vĩnh viễn thuộc quyền Admin.
         </p>
@@ -390,10 +530,10 @@ function ViolatingAccountsPage() {
         title="Gửi cảnh báo"
         description={
           warnTarget
-            ? `Gửi cảnh báo vi phạm tiêu chuẩn cộng đồng cho ${warnTarget.username} (${warnTarget.studentId}).`
+            ? `Gửi cảnh báo vi phạm tiêu chuẩn cộng đồng cho ${warnTarget.username} (${warnTarget.displayName}).`
             : ""
         }
-        confirmLabel="Gửi cảnh báo"
+        confirmLabel={actionLoading ? "Đang gửi..." : "Gửi cảnh báo"}
         variant="primary"
         onConfirm={confirmWarn}
         onCancel={closeWarnModal}

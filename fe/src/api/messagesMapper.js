@@ -1,3 +1,4 @@
+import { resolveAssetUrl } from "@/api/assetUrl";
 import { parseApiDate } from "@/utils/dateTime";
 
 function formatRelativeTime(isoDate) {
@@ -58,14 +59,59 @@ export function mapConversationListItem(dto) {
 }
 
 export function mapMessageItem(dto) {
-  return {
-    id: dto.id,
-    type: dto.isMine ? "sent" : "received",
-    text: dto.content,
-    time: formatMessageTime(dto.sentAt),
-    sentAt: dto.sentAt,
-    senderId: dto.senderId,
+  const id = dto.id ?? dto.Id;
+  const sentAt = dto.sentAt ?? dto.SentAt;
+  const content = dto.content ?? dto.Content ?? "";
+  const isMine = dto.isMine ?? dto.IsMine ?? false;
+  const senderId = dto.senderId ?? dto.SenderId;
+  const messageType = String(dto.messageType ?? dto.MessageType ?? "Text").toLowerCase();
+  const attachmentUrl = resolveAssetUrl(dto.attachmentUrl ?? dto.AttachmentUrl);
+  const attachmentFileName = dto.attachmentFileName ?? dto.AttachmentFileName ?? null;
+  const attachmentMimeType = dto.attachmentMimeType ?? dto.AttachmentMimeType ?? null;
+  const attachmentSizeBytes = dto.attachmentSizeBytes ?? dto.AttachmentSizeBytes ?? null;
+
+  const mapped = {
+    id,
+    type: isMine ? "sent" : "received",
+    messageType,
+    text: content,
+    time: formatMessageTime(sentAt),
+    sentAt,
+    senderId,
+    attachmentUrl,
+    attachmentFileName,
+    attachmentMimeType,
+    attachmentSizeBytes,
   };
+
+  return {
+    ...mapped,
+    previewText: getMessagePreview(mapped),
+  };
+}
+
+export function getMessagePreview(message) {
+  if (message.messageType === "image") {
+    return message.text?.trim() || "[Ảnh]";
+  }
+
+  if (message.messageType === "file") {
+    return message.text?.trim() || `[Tệp] ${message.attachmentFileName || "đính kèm"}`;
+  }
+
+  return message.text ?? "";
+}
+
+export function appendMessageIfNew(messages, message) {
+  if (!message?.id) {
+    return messages;
+  }
+
+  if (messages.some((item) => item.id === message.id)) {
+    return messages;
+  }
+
+  return [...messages, message];
 }
 
 export function mapMessages(items = []) {
