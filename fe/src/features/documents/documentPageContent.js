@@ -1,5 +1,7 @@
 /** Nội dung mock từng trang tài liệu — hiển thị khi SV xem online */
 
+import { loadDocumentPreviewPage } from "@/features/documents/studentDocumentsData";
+
 const PAGE_CONTENT = {
   "doc-prf192-free-lecture": {
     1: {
@@ -132,4 +134,32 @@ export function getDocumentOverview(doc) {
       `Tài liệu học tập môn ${doc.subject ?? "—"}.`,
     topics,
   };
+}
+
+/**
+ * @param {{ id: string, name: string, subject?: string, description?: string, pages?: number }} doc
+ */
+export async function loadDocumentOverview(doc) {
+  return getDocumentOverview(doc);
+}
+
+/**
+ * @param {{ id: string, name: string, subject?: string, description?: string, pages?: number }} doc
+ * @param {number} pageNum
+ */
+export async function loadDocumentPageContent(doc, pageNum) {
+  try {
+    const preview = await loadDocumentPreviewPage(doc, pageNum);
+    if (preview?.contentUrl) {
+      return {
+        title: `${doc.name} · Trang ${preview.page}/${preview.totalPages}`,
+        lines: [`Nội dung trang ${preview.page}.`],
+        contentUrl: preview.contentUrl,
+      };
+    }
+  } catch {
+    /* fallback below */
+  }
+
+  return getDocumentPageContent(doc, pageNum);
 }

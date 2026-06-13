@@ -1,10 +1,14 @@
 import { Link, useLocation } from "react-router-dom";
 import Button from "@/common/Button/Button";
+import HeaderUserActions from "@/common/Header/HeaderUserActions/HeaderUserActions";
+import { useAuth } from "@/context";
 import logoSrc from "@/img/logo.png";
+import mainHeaderStyles from "@/common/Header/MainHeader/MainHeader.module.css";
 import styles from "./GuestHeader.module.css";
 
 function GuestHeader() {
   const { pathname } = useLocation();
+  const { isAuthenticated, isBootstrapping } = useAuth();
   const isHome = pathname === "/";
   const isCommunity = pathname.startsWith("/community");
   const isSupport = pathname.startsWith("/support");
@@ -38,17 +42,23 @@ function GuestHeader() {
           </Link>
         </nav>
 
-        <div className={styles.actions}>
-          <Link
-            to="/login"
-            className={styles["login-link"]}
-            state={{ from: pathname }}
-          >
-            Đăng nhập
-          </Link>
-          <Button to="/register" size="sm" className={styles["signup-btn"]}>
-            Đăng ký
-          </Button>
+        <div className={`${styles.actions} ${mainHeaderStyles.actions}`}>
+          {isBootstrapping ? null : isAuthenticated ? (
+            <HeaderUserActions />
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className={styles["login-link"]}
+                state={{ from: pathname }}
+              >
+                Đăng nhập
+              </Link>
+              <Button to="/register" size="sm" className={styles["signup-btn"]}>
+                Đăng ký
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </header>

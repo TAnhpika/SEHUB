@@ -31,7 +31,7 @@ public sealed class SubscriptionServiceTests
             Code = "1m",
             Name = "1 Month",
             DurationDays = 30,
-            PriceVnd = 99000
+            PriceVnd = 48000
         };
 
         _planRepository
@@ -61,6 +61,54 @@ public sealed class SubscriptionServiceTests
         addedSubscription.IsActive.Should().BeTrue();
         addedSubscription.EndAt.Should().BeCloseTo(
             addedSubscription.StartAt.AddDays(plan.DurationDays),
+            TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public async Task ActivateSubscriptionAsync_ExtendsFromExistingEndAt_WhenAlreadyActive()
+    {
+        var plan = new SubscriptionPlan
+        {
+            Id = PlanId,
+            Code = "1m",
+            Name = "1 Month",
+            DurationDays = 30,
+            PriceVnd = 48000
+        };
+
+        var existingEnd = DateTime.UtcNow.AddDays(10);
+        var existing = new Subscription
+        {
+            Id = Guid.NewGuid(),
+            UserId = UserId,
+            PlanId = PlanId,
+            StartAt = DateTime.UtcNow.AddDays(-20),
+            EndAt = existingEnd,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow.AddDays(-20)
+        };
+
+        _planRepository
+            .Setup(r => r.GetByIdAsync(PlanId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(plan);
+
+        _subscriptionRepository
+            .Setup(r => r.GetActiveByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+
+        Subscription? addedSubscription = null;
+        _subscriptionRepository
+            .Setup(r => r.AddAsync(It.IsAny<Subscription>(), It.IsAny<CancellationToken>()))
+            .Callback<Subscription, CancellationToken>((subscription, _) => addedSubscription = subscription)
+            .Returns(Task.CompletedTask);
+
+        var sut = CreateSut();
+        await sut.ActivateSubscriptionAsync(UserId, PlanId);
+
+        addedSubscription.Should().NotBeNull();
+        addedSubscription!.StartAt.Should().BeCloseTo(existing.StartAt, TimeSpan.FromSeconds(1));
+        addedSubscription.EndAt.Should().BeCloseTo(
+            existingEnd.AddDays(plan.DurationDays),
             TimeSpan.FromSeconds(1));
     }
 

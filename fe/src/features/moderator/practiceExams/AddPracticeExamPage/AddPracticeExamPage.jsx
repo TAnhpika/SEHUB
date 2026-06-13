@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -21,8 +21,9 @@ import { useAuth } from "@/context";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import ExamContributionAuditList from "@/features/moderator/exams/components/ExamContributionAuditList/ExamContributionAuditList";
 import {
-  getExamContributionAudit,
-  getPendingContributionCount,
+  ApiError,
+  loadExamContributionAudit,
+  loadPendingContributionCount,
   recordExamDraft,
   submitExamForApproval,
 } from "@/features/moderator/exams/moderatorExamContributionStore";
@@ -57,6 +58,8 @@ function AddPracticeExamPage() {
 
   const [activeTab, setActiveTab] = useState("create");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [auditLog, setAuditLog] = useState([]);
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
   const [subject, setSubject] = useState(DEMO_DRAFT.subject);
   const [semester, setSemester] = useState(DEMO_DRAFT.semester);
   const [title, setTitle] = useState(DEMO_DRAFT.title);
@@ -65,9 +68,31 @@ function AddPracticeExamPage() {
   const [allowDiscussion, setAllowDiscussion] = useState(DEMO_DRAFT.allowDiscussion);
   const [pinExam, setPinExam] = useState(DEMO_DRAFT.pinExam);
   const [isDragging, setIsDragging] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const auditLog = getExamContributionAudit(moderator, { examType: "practice" });
-  const pendingApprovalCount = getPendingContributionCount(moderator, "practice");
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all([
+      loadExamContributionAudit(moderator, { examType: "practice" }),
+      loadPendingContributionCount(moderator, "practice"),
+    ])
+      .then(([items, pendingCount]) => {
+        if (cancelled) return;
+        setAuditLog(items);
+        setPendingApprovalCount(pendingCount);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAuditLog([]);
+          setPendingApprovalCount(0);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [moderator, refreshKey]);
 
   function buildPayload() {
     return {
@@ -93,16 +118,45 @@ function AddPracticeExamPage() {
     showToast("Đã lưu nháp đề thi thực hành.");
   }
 
-  function handlePublish(event) {
+  async function handlePublish(event) {
     event?.preventDefault?.();
     if (!subject || !semester || !title.trim() || !description.trim()) {
       showToast("Vui lòng điền đầy đủ các trường bắt buộc.");
       return;
     }
-    submitExamForApproval(buildPayload());
-    setRefreshKey((k) => k + 1);
-    setActiveTab("audit");
-    showToast("Đề thi đã gửi chờ Admin duyệt trước khi xuất bản.");
+
+    const payload = buildPayload();
+
+    async function send(confirmDuplicate = false) {
+      await submitExamForApproval(payload, { confirmDuplicate });
+      setRefreshKey((k) => k + 1);
+      setActiveTab("audit");
+      showToast("Đề thi đã gửi chờ Admin duyệt trước khi xuất bản.");
+    }
+
+    setSubmitting(true);
+    try {
+      await send(false);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        const confirmed = window.confirm(
+          "Đề trùng metadata với đề đã có. Gửi duyệt anyway?",
+        );
+        if (confirmed) {
+          try {
+            await send(true);
+            return;
+          } catch (retryError) {
+            showToast(retryError?.message ?? "Không gửi được đề.");
+            return;
+          }
+        }
+        return;
+      }
+      showToast(error?.message ?? "Không gửi được đề.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function addFiles(fileList) {
@@ -139,9 +193,9 @@ function AddPracticeExamPage() {
       <button type="button" className={styles["btn-draft"]} onClick={handleSaveDraft}>
         Lưu nháp
       </button>
-      <Button type="button" className={styles["btn-publish"]} onClick={handlePublish}>
+      <Button type="button" className={styles["btn-publish"]} onClick={handlePublish} disabled={submitting}>
         <FontAwesomeIcon icon={faArrowUpFromBracket} />
-        Lưu &amp; Xuất bản
+        {submitting ? "Đang gửi..." : "Lưu & Xuất bản"}
       </Button>
     </div>
   );
@@ -393,6 +447,11 @@ function AddPracticeExamPage() {
               items={auditLog}
               title="Nhật ký đóng góp đề thực hành"
               description="Mod lưu nháp hoặc gửi Admin duyệt trước khi public (§2.4). Bài nộp GitHub của sinh viên xem tại trang chấm bài riêng (§3.4)."
+              emptyMessage={
+                user?.role === "admin"
+                  ? "Đăng nhập Moderator (moderator@sehub.local) để xem demo đóng góp, hoặc bấm Lưu & Xuất bản để tạo đề mới."
+                  : "Chưa có bản ghi. Gửi đề mới hoặc xem Lịch sử đóng góp đề trên menu bên trái."
+              }
               showHistoryLink
             />
           </div>

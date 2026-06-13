@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import Button from "@/common/Button/Button";
@@ -18,19 +18,23 @@ import RefundedPaymentsPanel from "@/features/admin/payments/RefundedPaymentsPan
 
 import {
 
-  confirmPayOsPayment,
+  approveRefundViaApi,
 
-  getAdminPayments,
-
-  getRefundedPayments,
+  confirmPayOsPaymentViaApi,
 
   getPaidStudentsForTokenGrant,
 
   getPaymentAuditLog,
 
-  getPaymentStats,
+  getPaymentStatsFromList,
+
+  getRefundedPaymentsFromList,
+
+  getPendingRefundRequestsFromList,
 
   grantManualTokens,
+
+  loadAdminPayments,
 
   processPayOsRefund,
 
@@ -70,6 +74,10 @@ const STATUS_FILTER_OPTIONS = [
   { value: "activated", label: "Đã kích hoạt" },
 
   { value: "failed", label: "Thất bại" },
+
+  { value: "refund_requested", label: "Chờ duyệt hoàn tiền" },
+
+  { value: "processing_refund", label: "Đang xử lý hoàn tiền" },
 
   { value: "refunded", label: "Đã hoàn tiền" },
 
@@ -112,17 +120,37 @@ function AdminPaymentListPage() {
   const [statusFilter, setStatusFilter] = useState("all");
 
   const [search, setSearch] = useState("");
+  const [payments, setPayments] = useState([]);
+  const [loadError, setLoadError] = useState("");
 
+  useEffect(() => {
+    let cancelled = false;
+    setLoadError("");
+    loadAdminPayments()
+      .then((items) => {
+        if (!cancelled) setPayments(items);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setPayments([]);
+          setLoadError(error?.message ?? "Không tải được danh sách thanh toán.");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
 
-
-  const payments = useMemo(() => getAdminPayments(), [refreshKey]);
-
-  const stats = useMemo(() => getPaymentStats(), [refreshKey]);
+  const stats = useMemo(() => getPaymentStatsFromList(payments), [payments]);
 
   const auditLog = useMemo(() => getPaymentAuditLog(), [refreshKey]);
 
   const paidStudents = useMemo(() => getPaidStudentsForTokenGrant(), [refreshKey]);
-  const refundedPayments = useMemo(() => getRefundedPayments(), [refreshKey]);
+  const refundedPayments = useMemo(() => getRefundedPaymentsFromList(payments), [payments]);
+  const pendingRefundRequests = useMemo(
+    () => getPendingRefundRequestsFromList(payments),
+    [payments],
+  );
   const refundPayment = useMemo(
     () => payments.find((p) => p.id === refundPaymentId) ?? null,
     [payments, refundPaymentId],
@@ -130,6 +158,17 @@ function AdminPaymentListPage() {
 
   function focusRefundsInTable() {
     setStatusFilter("refunded");
+    setSearch("");
+    requestAnimationFrame(() => {
+      document.getElementById("admin-payments-table")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }
+
+  function focusPendingRefunds() {
+    setStatusFilter("refund_requested");
     setSearch("");
     requestAnimationFrame(() => {
       document.getElementById("admin-payments-table")?.scrollIntoView({
@@ -166,6 +205,8 @@ function AdminPaymentListPage() {
 
         payment.username.toLowerCase().includes(q) ||
 
+        (payment.userEmail ?? "").toLowerCase().includes(q) ||
+
         payment.payosOrderId.toLowerCase().includes(q) ||
 
         payment.transferContent.toLowerCase().includes(q);
@@ -197,19 +238,21 @@ function AdminPaymentListPage() {
 
   function handleConfirmPayment(paymentId) {
 
-    const result = confirmPayOsPayment(paymentId, user?.username ?? "admin_sehub");
+    confirmPayOsPaymentViaApi(paymentId, user?.username ?? "admin_sehub").then((result) => {
 
-    if (result.ok) {
+      if (result.ok) {
 
-      showToast(result.message);
+        showToast(result.message);
 
-      bump();
+        bump();
 
-    } else {
+      } else {
 
-      showToast(result.message);
+        showToast(result.message);
 
-    }
+      }
+
+    });
 
   }
 
@@ -225,21 +268,43 @@ function AdminPaymentListPage() {
     if (!refundPaymentId) return;
     setRefundError("");
 
-    const result = processPayOsRefund({
-      paymentId: refundPaymentId,
-      reason,
-      adminUsername: user?.username ?? "admin_sehub",
+    const payment = payments.find((p) => p.id === refundPaymentId);
+    const approvePending = payment?.status === "refund_requested";
+
+    const submit = approvePending
+      ? approveRefundViaApi(refundPaymentId, reason)
+      : Promise.resolve(
+          processPayOsRefund({
+            paymentId: refundPaymentId,
+            reason,
+            adminUsername: user?.username ?? "admin_sehub",
+          }),
+        );
+
+    submit.then((result) => {
+      if (!result.ok) {
+        setRefundError(result.message);
+        return;
+      }
+
+      showToast(result.message);
+      setRefundOpen(false);
+      setRefundPaymentId(null);
+      bump();
     });
+  }
 
-    if (!result.ok) {
-      setRefundError(result.message);
-      return;
-    }
-
-    showToast(result.message);
-    setRefundOpen(false);
-    setRefundPaymentId(null);
-    bump();
+  function handleQuickApproveRefund(paymentId) {
+    approveRefundViaApi(paymentId, "Admin duyệt yêu cầu hoàn tiền của sinh viên").then(
+      (result) => {
+        if (result.ok) {
+          showToast(result.message);
+          bump();
+        } else {
+          showToast(result.message);
+        }
+      },
+    );
   }
 
   function handleGrantTokens({ username, amount, reason }) {
@@ -367,16 +432,37 @@ function AdminPaymentListPage() {
         onFilter={(value) => {
           setStatusFilter(value);
           if (value === "refunded") focusRefundsInTable();
+          if (value === "refund_requested") focusPendingRefunds();
           if (value === "activated") focusActivatedForRefund();
         }}
         eligibleTokenCount={paidStudents.length}
       />
 
+      {loadError ? (
+        <div className={payStyles.refundHintBanner}>{loadError}</div>
+      ) : null}
+
+      {pendingRefundRequests.length > 0 ? (
+        <div className={payStyles.refundHintBanner}>
+          <span>
+            Có <strong>{pendingRefundRequests.length}</strong> yêu cầu hoàn tiền từ sinh viên
+            đang chờ duyệt.
+          </span>
+          <button
+            type="button"
+            className={payStyles.refundHintAction}
+            onClick={focusPendingRefunds}
+          >
+            Xem yêu cầu chờ duyệt
+          </button>
+        </div>
+      ) : null}
+
       <RefundedPaymentsPanel
         refunds={refundedPayments}
-        refundableCount={stats.activated}
+        refundableCount={stats.pendingRefund ?? pendingRefundRequests.length}
         onViewInTable={focusRefundsInTable}
-        onStartRefund={focusActivatedForRefund}
+        onStartRefund={focusPendingRefunds}
       />
 
       <section id="admin-payments-table" className={styles.panel}>
@@ -607,6 +693,22 @@ function AdminPaymentListPage() {
                             >
 
                               Xác nhận & kích hoạt
+
+                            </button>
+
+                          ) : payment.status === "refund_requested" ? (
+
+                            <button
+
+                              type="button"
+
+                              className={payStyles.confirmBtn}
+
+                              onClick={() => handleQuickApproveRefund(payment.id)}
+
+                            >
+
+                              Duyệt hoàn tiền
 
                             </button>
 

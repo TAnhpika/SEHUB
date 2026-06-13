@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SEHub.Application\SEHub.Application.csproj" />
     <ProjectReference Include="..\..\src\SEHub.Domain\SEHub.Domain.csproj" />
+    <ProjectReference Include="..\..\src\SEHub.Infrastructure\SEHub.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

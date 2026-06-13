@@ -1,42 +1,136 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDownload, faLock } from "@fortawesome/free-solid-svg-icons";
+import {
+  faChevronLeft,
+  faChevronRight,
+  faDownload,
+  faLock,
+} from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import {
+  buildMockPageLabels,
   getDocumentAccessState,
 } from "@/features/documents/documentAccessPolicy";
 import {
   downloadStudentDocument,
   isSlideDocument,
 } from "@/features/documents/documentDownload";
-import { getDocumentOverview } from "@/features/documents/documentPageContent";
+import {
+  getDocumentOverview,
+  loadDocumentOverview,
+  loadDocumentPageContent,
+} from "@/features/documents/documentPageContent";
+import { loadDocumentDetail } from "@/features/documents/studentDocumentsData";
 import styles from "./StudentDocumentViewer.module.css";
 
 function StudentDocumentViewer({ document: doc }) {
   const { pathname, search } = useLocation();
   const { isPremium, isAuthenticated } = useAuth();
   const { showToast } = useToast();
-  const access = getDocumentAccessState(doc, { isPremium, isAuthenticated });
-  const isSlide = isSlideDocument(doc);
-  const overview = getDocumentOverview(doc);
+  const [enrichedDoc, setEnrichedDoc] = useState(doc);
+  const [overview, setOverview] = useState(() => getDocumentOverview(doc));
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageContent, setPageContent] = useState(null);
+  const [downloading, setDownloading] = useState(false);
 
-  function handleDownload() {
-    if (!access.canDownload) return;
-    downloadStudentDocument(doc);
-    showToast(`Đã tải ${doc.name} về máy.`);
+  useEffect(() => {
+    setEnrichedDoc(doc);
+    setOverview(getDocumentOverview(doc));
+    setCurrentPage(1);
+  }, [doc]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadDocumentDetail(doc)
+      .then((detail) => {
+        if (cancelled || !detail) return;
+        setEnrichedDoc(detail);
+      })
+      .catch(() => {
+        /* keep prop doc */
+      });
+
+    loadDocumentOverview(doc)
+      .then((nextOverview) => {
+        if (!cancelled && nextOverview) {
+          setOverview(nextOverview);
+        }
+      })
+      .catch(() => {
+        /* keep local overview */
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [doc]);
+
+  const access = getDocumentAccessState(enrichedDoc, { isPremium, isAuthenticated });
+  const isSlide = isSlideDocument(enrichedDoc);
+  const pageLabels = buildMockPageLabels(access.totalPages, access.visiblePages);
+  const activePageLabel = pageLabels[currentPage - 1];
+  const canShowCurrentPage = Boolean(activePageLabel?.visible);
+
+  useEffect(() => {
+    if (!access.canView || !canShowCurrentPage) {
+      setPageContent(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    loadDocumentPageContent(enrichedDoc, currentPage)
+      .then((content) => {
+        if (!cancelled) {
+          setPageContent(content);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPageContent(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [access.canView, canShowCurrentPage, currentPage, enrichedDoc]);
+
+  async function handleDownload() {
+    if (!access.canDownload || downloading) return;
+
+    setDownloading(true);
+    try {
+      await downloadStudentDocument(enrichedDoc);
+      showToast(`Đã tải ${enrichedDoc.name} về máy.`);
+    } catch (error) {
+      showToast(error?.message ?? "Không tải được tài liệu.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  function goToPage(nextPage) {
+    const label = pageLabels[nextPage - 1];
+    if (!label?.visible) return;
+    setCurrentPage(nextPage);
   }
 
   return (
     <section className={styles.viewer} aria-label="Xem tài liệu">
       <header className={styles.header}>
         <div>
-          <h2 className={styles.fileName}>{doc.name}</h2>
+          <h2 className={styles.fileName}>{enrichedDoc.name}</h2>
           <p className={styles.meta}>
             {isSlide ? "Slide · " : ""}
-            {doc.uploadedAt ? `Tải lên ${doc.uploadedAt}` : ""}
+            {enrichedDoc.uploadedAt ? `Tải lên ${enrichedDoc.uploadedAt}` : ""}
           </p>
-          {doc.description ? <p className={styles.description}>{doc.description}</p> : null}
+          {enrichedDoc.description ? (
+            <p className={styles.description}>{enrichedDoc.description}</p>
+          ) : null}
         </div>
         <span
           className={`${styles.planBadge} ${
@@ -92,17 +186,71 @@ function StudentDocumentViewer({ document: doc }) {
             </ul>
             {!isPremium && access.limited ? (
               <p className={styles.overviewHint}>
-                <FontAwesomeIcon icon={faLock} /> Tài khoản Basic xem mô tả —{" "}
+                <FontAwesomeIcon icon={faLock} /> Tài khoản Basic xem tối đa{" "}
+                {access.visiblePages} trang —{" "}
                 <Link to="/home/premium">Premium</Link> để tải file đầy đủ.
               </p>
             ) : null}
           </article>
 
+          {canShowCurrentPage ? (
+            <div className={styles.pageView}>
+              <h4 className={styles.pageTitle}>{pageContent?.title ?? "Đang tải trang..."}</h4>
+              {pageContent?.contentUrl ? (
+                <iframe
+                  title={`${enrichedDoc.name} trang ${currentPage}`}
+                  src={pageContent.contentUrl}
+                  className={styles.previewFrame}
+                />
+              ) : (
+                <div className={styles.pageBody}>
+                  {(pageContent?.lines ?? []).map((line) => (
+                    <p key={line}>{line}</p>
+                  ))}
+                </div>
+              )}
+
+              <div className={styles.pageNav}>
+                <button
+                  type="button"
+                  className={styles.navBtn}
+                  disabled={currentPage <= 1}
+                  onClick={() => goToPage(currentPage - 1)}
+                  aria-label="Trang trước"
+                >
+                  <FontAwesomeIcon icon={faChevronLeft} />
+                </button>
+                <span className={styles.pageIndicator}>
+                  {isSlide ? "Slide" : "Trang"} {currentPage} / {access.totalPages}
+                </span>
+                <button
+                  type="button"
+                  className={styles.navBtn}
+                  disabled={
+                    currentPage >= access.totalPages ||
+                    !pageLabels[currentPage]?.visible
+                  }
+                  onClick={() => goToPage(currentPage + 1)}
+                  aria-label="Trang sau"
+                >
+                  <FontAwesomeIcon icon={faChevronRight} />
+                </button>
+              </div>
+
+              {!isPremium && access.limited ? (
+                <p className={styles.limitBanner}>
+                  Basic chỉ xem được {access.visiblePages} trang đầu.{" "}
+                  <Link to="/home/premium">Nâng cấp Premium</Link> để xem & tải toàn bộ.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <footer className={styles.footer}>
             <button
               type="button"
               className={`${styles.downloadBtn} ${access.canDownload ? styles.downloadBtnActive : ""}`}
-              disabled={!access.canDownload}
+              disabled={!access.canDownload || downloading}
               title={
                 access.canDownload
                   ? "Tải toàn bộ tài liệu về máy"

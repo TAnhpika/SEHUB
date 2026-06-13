@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
@@ -8,9 +8,9 @@ import AdminBackLink from "@/features/admin/shared/AdminBackLink";
 import StatusBadge from "@/features/admin/shared/StatusBadge";
 import AdminRefundModal from "@/features/admin/payments/AdminRefundModal";
 import {
-  confirmPayOsPayment,
-  getPaymentById,
+  confirmPayOsPaymentViaApi,
   getPaymentAuditLog,
+  loadPaymentById,
   processPayOsRefund,
 } from "@/features/admin/payments/adminPaymentData";
 import { PAYMENT_STATUS_META } from "@/features/admin/payments/adminPaymentPolicy";
@@ -25,8 +25,23 @@ function AdminPaymentDetailPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [refundOpen, setRefundOpen] = useState(false);
   const [refundError, setRefundError] = useState("");
+  const [payment, setPayment] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const payment = useMemo(() => getPaymentById(id), [id, refreshKey]);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    loadPaymentById(id).then((item) => {
+      if (!cancelled) {
+        setPayment(item);
+        setLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, refreshKey]);
+
   const auditRows = useMemo(
     () =>
       getPaymentAuditLog().filter(
@@ -34,6 +49,20 @@ function AdminPaymentDetailPage() {
       ),
     [id, payment?.payosOrderId, refreshKey],
   );
+
+  if (loading) {
+    return (
+      <AdminPageLayout
+        title="Đang tải..."
+        breadcrumbs={[
+          { label: "Dashboard", to: "/admin" },
+          { label: "Thanh toán", to: "/admin/payments" },
+        ]}
+      >
+        <p className={styles.empty}>Đang tải giao dịch...</p>
+      </AdminPageLayout>
+    );
+  }
 
   if (!payment) {
     return (
@@ -55,8 +84,8 @@ function AdminPaymentDetailPage() {
   const userDetailUrl = getAdminUserDetailUrl(payment.username);
   const admin = authUser?.username ?? "admin_sehub";
 
-  function handleConfirm() {
-    const result = confirmPayOsPayment(payment.id, admin);
+  async function handleConfirm() {
+    const result = await confirmPayOsPaymentViaApi(payment.id, admin);
     showToast(result.message);
     if (result.ok) setRefreshKey((k) => k + 1);
   }

@@ -24,6 +24,7 @@ import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
+import { submitPost } from "@/features/feed/feedData";
 import { MAJORS, MAX_CONTENT_LENGTH, SEMESTERS } from "@/features/posts/createPostData";
 import styles from "./CreatePostPage.module.css";
 
@@ -70,13 +71,24 @@ function CreatePostPage() {
     setCoverFileName(file.name);
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    if (!title.trim() || !content.trim()) return;
+    if (!title.trim() || !content.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
-    showToast("Bài viết đã được gửi và đang chờ admin phê duyệt.");
-    navigate("/home");
+    try {
+      await submitPost({
+        title: title.trim(),
+        content: content.trim(),
+        tags,
+      });
+      showToast("Đăng bài thành công!");
+      navigate("/home");
+    } catch (err) {
+      showToast(err.message ?? "Không đăng được bài viết.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -13,12 +13,12 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import {
   EXAMS_PER_PAGE,
   filterExamPapers,
-  getDocumentItemsForCourse,
   getExamPapersForCourse,
   getSubjectDetailConfig,
   TERM_OPTIONS,
   YEAR_OPTIONS,
 } from "./subjectDetailData";
+import { loadDocumentItemsForCourse } from "@/features/documents/studentDocumentsData";
 import styles from "./SubjectDetailPage.module.css";
 
 function SubjectDetailPage({ page }) {
@@ -41,14 +41,31 @@ function SubjectDetailPage({ page }) {
       : config.backTo;
   const code = courseCode?.toUpperCase() ?? "";
   const isDocumentsPage = page === "documents";
+  const [allExams, setAllExams] = useState([]);
 
-  const allExams = useMemo(
-    () =>
-      isDocumentsPage
-        ? getDocumentItemsForCourse(code)
-        : getExamPapersForCourse(code, config.examType, config.codePrefix),
-    [code, config.examType, config.codePrefix, isDocumentsPage],
-  );
+  useEffect(() => {
+    let cancelled = false;
+
+    if (isDocumentsPage) {
+      loadDocumentItemsForCourse(code)
+        .then((items) => {
+          if (!cancelled) {
+            setAllExams(items);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setAllExams([]);
+          }
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setAllExams(getExamPapersForCourse(code, config.examType, config.codePrefix));
+    return undefined;
+  }, [code, config.examType, config.codePrefix, isDocumentsPage]);
 
   const exams = useMemo(
     () => filterExamPapers(allExams, yearFilter, termFilter),

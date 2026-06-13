@@ -8,6 +8,7 @@ public sealed class CreateExamRequest
     public string? Semester { get; init; }
     public string? Major { get; init; }
     public string? Description { get; init; }
+    public string? AssetUrl { get; init; }
     public IReadOnlyList<CreateExamQuestionItem> Questions { get; init; } = [];
 }
 

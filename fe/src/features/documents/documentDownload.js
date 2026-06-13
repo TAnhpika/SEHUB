@@ -1,4 +1,5 @@
 import { getDocumentPageContent } from "@/features/documents/documentPageContent";
+import { fetchDocumentDownloadUrl } from "@/features/documents/studentDocumentsData";
 
 const MIME_BY_EXT = {
   pdf: "application/pdf",
@@ -74,7 +75,29 @@ function buildFullDocumentContent(doc) {
 }
 
 /** @param {{ name: string, subject?: string, pages?: number, description?: string }} doc */
-export function downloadStudentDocument(doc) {
+export async function downloadStudentDocument(doc) {
+  try {
+    const downloadUrl = await fetchDocumentDownloadUrl(doc);
+    if (downloadUrl) {
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      link.download = doc.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+  } catch {
+    /* fallback to mock blob below */
+  }
+
+  downloadStudentDocumentMock(doc);
+}
+
+/** @param {{ name: string, subject?: string, pages?: number, description?: string }} doc */
+function downloadStudentDocumentMock(doc) {
   const ext = getExtension(doc.name);
   const mimeType = MIME_BY_EXT[ext] ?? "application/octet-stream";
   const content = buildFullDocumentContent(doc);

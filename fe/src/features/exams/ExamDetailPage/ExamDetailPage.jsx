@@ -25,8 +25,13 @@ import {
   buildExamQuestions,
   EXAM_PREVIEW_LABELS,
   EXAM_TYPE_LABELS,
+  loadExamMeta,
+  loadQuestionWithAnswer,
+  loadReviewQuestions,
+  resolveExamApiId,
 } from "@/features/exams/examDetailData";
 import StudentDocumentViewer from "@/features/documents/StudentDocumentViewer/StudentDocumentViewer";
+import { loadDocumentExamItem } from "@/features/documents/studentDocumentsData";
 import PracticeExamSubmitPanel from "@/features/exams/PracticeExamSubmitPanel/PracticeExamSubmitPanel";
 import PracticeBriefPanel from "@/features/exams/PracticeBriefPanel/PracticeBriefPanel";
 import { getPracticeBrief } from "@/features/exams/practiceBriefData";
@@ -69,15 +74,116 @@ function ExamDetailPage({ page }) {
   const config = getSubjectDetailConfig(page, scope);
   const decodedExamId = decodeURIComponent(examId ?? "");
 
-  const exam = useMemo(
-    () => getExamById(courseCode, decodedExamId, page, scope),
-    [courseCode, decodedExamId, page, scope],
-  );
+  const [exam, setExam] = useState(null);
+  const [examReady, setExamReady] = useState(false);
+  const [apiExamId, setApiExamId] = useState(null);
+  const [questions, setQuestions] = useState([]);
 
-  const questions = useMemo(
-    () => (exam ? buildExamQuestions(exam.questionCount, page) : []),
-    [exam, page],
-  );
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchExam() {
+      setExamReady(false);
+      const mockExam = getExamById(courseCode, decodedExamId, page, scope);
+      if (mockExam) {
+        if (!cancelled) {
+          setExam(mockExam);
+          setApiExamId(null);
+          setExamReady(true);
+        }
+        return;
+      }
+
+      if (page === "documents") {
+        try {
+          const apiDoc = await loadDocumentExamItem(courseCode, decodedExamId, scope);
+          if (!cancelled) {
+            setExam(apiDoc);
+            setApiExamId(null);
+          }
+        } catch {
+          if (!cancelled) {
+            setExam(null);
+          }
+        } finally {
+          if (!cancelled) {
+            setExamReady(true);
+          }
+        }
+        return;
+      }
+
+      try {
+        const meta = await loadExamMeta(courseCode, decodedExamId, page, scope);
+        if (!cancelled) {
+          setExam(meta?.exam ?? null);
+          setApiExamId(meta?.apiExamId ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setExam(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setExamReady(true);
+        }
+      }
+    }
+
+    fetchExam();
+    return () => {
+      cancelled = true;
+    };
+  }, [courseCode, decodedExamId, page, scope]);
+
+  useEffect(() => {
+    if (!exam) return undefined;
+
+    let cancelled = false;
+
+    async function fetchQuestions() {
+      const fallback = buildExamQuestions(exam.questionCount, page);
+
+      if (page !== "review") {
+        setQuestions(fallback);
+        return;
+      }
+
+      if (!isAuthenticated && !apiExamId) {
+        setQuestions(fallback);
+        return;
+      }
+
+      try {
+        let resolvedApiId = apiExamId;
+        if (!resolvedApiId) {
+          resolvedApiId = await resolveExamApiId(exam.id);
+        }
+
+        if (resolvedApiId) {
+          const loaded = await loadReviewQuestions(resolvedApiId, exam.questionCount, page);
+          if (!cancelled && loaded.length > 0) {
+            setQuestions(loaded);
+            if (!apiExamId) {
+              setApiExamId(resolvedApiId);
+            }
+            return;
+          }
+        }
+      } catch {
+        /* fallback below */
+      }
+
+      if (!cancelled) {
+        setQuestions(fallback);
+      }
+    }
+
+    fetchQuestions();
+    return () => {
+      cancelled = true;
+    };
+  }, [exam, page, isAuthenticated, apiExamId]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sessionTick, setSessionTick] = useState(0);
@@ -107,11 +213,53 @@ function ExamDetailPage({ page }) {
     return getOrderedReviewQuestions(questions, reviewSession);
   }, [exam, isReviewExam, questions, reviewSession]);
 
+  const showCorrectAnswer = isReviewExam && canViewExamAnswers(user);
+  const correctAnswerRevealed = isReviewExam
+    ? isReviewCorrectAnswerRevealed(reviewSession)
+    : false;
+
   useEffect(() => {
     if (currentIndex >= orderedQuestions.length && orderedQuestions.length > 0) {
       setCurrentIndex(orderedQuestions.length - 1);
     }
   }, [orderedQuestions.length, currentIndex]);
+
+  useEffect(() => {
+    if (!apiExamId || !showCorrectAnswer || !correctAnswerRevealed) {
+      return undefined;
+    }
+
+    const question = orderedQuestions[currentIndex];
+    if (!question) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    async function fetchCorrectAnswer() {
+      try {
+        const answered = await loadQuestionWithAnswer(apiExamId, question.id);
+        if (cancelled || !answered) return;
+
+        setQuestions((prev) =>
+          prev.map((item) => (item.id === answered.id ? answered : item)),
+        );
+      } catch {
+        /* keep public question shape */
+      }
+    }
+
+    fetchCorrectAnswer();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    apiExamId,
+    orderedQuestions,
+    currentIndex,
+    correctAnswerRevealed,
+    showCorrectAnswer,
+  ]);
 
   if (scope === "community" && !isAuthenticated) {
     return (
@@ -120,6 +268,14 @@ function ExamDetailPage({ page }) {
         state={{ from: `${pathname}${search}` }}
         replace
       />
+    );
+  }
+
+  if (!examReady) {
+    return (
+      <div className={styles.page}>
+        <p>Đang tải đề thi...</p>
+      </div>
     );
   }
 
@@ -133,10 +289,6 @@ function ExamDetailPage({ page }) {
   const isPracticeExam = page === "practice";
   const isDocumentsRoute = page === "documents";
   const isDocumentPage = isDocumentsRoute && exam.document;
-  const showCorrectAnswer = isReviewExam && canViewExamAnswers(user);
-  const correctAnswerRevealed = isReviewExam
-    ? isReviewCorrectAnswerRevealed(reviewSession)
-    : false;
   const revealCorrectAnswer = showCorrectAnswer && correctAnswerRevealed;
   const canTakeExam = isReviewExam
     ? canTakeReviewExam(user)

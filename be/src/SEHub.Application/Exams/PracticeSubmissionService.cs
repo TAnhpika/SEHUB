@@ -134,9 +134,12 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
         }
 
         if (!Enum.TryParse<PracticeSubmissionStatus>(request.Status, true, out var status)
-            || status is not (PracticeSubmissionStatus.Passed or PracticeSubmissionStatus.Failed))
+            || status is not (
+                PracticeSubmissionStatus.Reviewed
+                or PracticeSubmissionStatus.Passed
+                or PracticeSubmissionStatus.Failed))
         {
-            throw new ForbiddenException("Review status must be Passed or Failed.");
+            throw new ForbiddenException("Review status must be Reviewed, Passed, or Failed.");
         }
 
         submission.Status = status;

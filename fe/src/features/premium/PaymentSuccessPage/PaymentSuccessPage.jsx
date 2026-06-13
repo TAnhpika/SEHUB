@@ -1,31 +1,147 @@
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context";
-import { Link, Navigate, useLocation, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faCopy } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faCopy, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import {
   buildTransactionId,
   formatVnd,
-  getPlanById,
+  loadPlanById,
+  loadSubscriptionStatus,
+  pollPremiumActivation,
   PRICING_PLANS,
 } from "@/features/landing/PricingModal/pricingData";
+import {
+  clearCheckoutSession,
+  readCheckoutSession,
+  resolveCheckoutOrderId,
+  resolveCheckoutTransactionId,
+} from "@/features/premium/premiumCheckoutSession";
+import {
+  formatPremiumExpiryDate,
+  getPremiumDaysRemaining,
+} from "@/utils/premiumSubscription";
 import styles from "./PaymentSuccessPage.module.css";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 function PaymentSuccessPage() {
   const { planId } = useParams();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { showToast } = useToast();
-  const { activatePremium } = useAuth();
-  const plan = useMemo(() => getPlanById(planId), [planId]);
-  const transactionId = location.state?.transactionId ?? buildTransactionId();
+  const { activatePremium, isPremium } = useAuth();
+  const [plan, setPlan] = useState(null);
+  const [planReady, setPlanReady] = useState(false);
+  const [activationState, setActivationState] = useState("pending");
+  const [pollAttempt, setPollAttempt] = useState(0);
+  const [subscriptionInfo, setSubscriptionInfo] = useState(null);
+
+  const session = useMemo(() => readCheckoutSession(planId), [planId, pollAttempt]);
+  const orderId = useMemo(
+    () =>
+      resolveCheckoutOrderId(planId, {
+        stateOrderId: location.state?.orderId,
+        queryOrderId: searchParams.get("orderId"),
+      }),
+    [location.state?.orderId, planId, searchParams],
+  );
+  const paidThisSession = Boolean(location.state?.activated);
+  const mockConfirm = USE_MOCK && Boolean(location.state?.mockConfirm);
+  const transactionId =
+    resolveCheckoutTransactionId(planId, {
+      stateTransactionId: location.state?.transactionId,
+      session,
+    }) ?? buildTransactionId();
 
   useEffect(() => {
-    activatePremium();
-  }, [activatePremium]);
+    let cancelled = false;
+    setPlanReady(false);
 
-  if (!planId || !PRICING_PLANS.some((item) => item.id === planId)) {
+    loadPlanById(planId)
+      .then((loadedPlan) => {
+        if (!cancelled) {
+          setPlan(loadedPlan);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPlanReady(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [planId]);
+
+  const refreshSubscriptionInfo = useCallback(async () => {
+    try {
+      const status = await loadSubscriptionStatus();
+      setSubscriptionInfo(status);
+      return status;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const confirmPremium = useCallback(async () => {
+    if (paidThisSession || mockConfirm) {
+      await activatePremium();
+      const status = await refreshSubscriptionInfo();
+      setActivationState("active");
+      clearCheckoutSession();
+      if (mockConfirm && !paidThisSession) {
+        showToast("Mock: Premium đã kích hoạt (dev).");
+      }
+      return status;
+    }
+
+    if (!orderId) {
+      setActivationState("waiting");
+      showToast("Thiếu mã đơn thanh toán. Kiểm tra lại sau khi PayOS xác nhận.");
+      return null;
+    }
+
+    setActivationState("pending");
+
+    try {
+      const activated = await pollPremiumActivation(orderId);
+      if (activated) {
+        await activatePremium();
+        const status = await refreshSubscriptionInfo();
+        setActivationState("active");
+        clearCheckoutSession();
+        return status;
+      }
+
+      setActivationState("waiting");
+    } catch (error) {
+      setActivationState("waiting");
+      showToast(error?.message ?? "Không xác nhận được Premium.");
+    }
+
+    return null;
+  }, [
+    activatePremium,
+    mockConfirm,
+    orderId,
+    paidThisSession,
+    refreshSubscriptionInfo,
+    showToast,
+  ]);
+
+  useEffect(() => {
+    confirmPremium();
+  }, [confirmPremium, pollAttempt]);
+
+  if (!planReady) {
+    return null;
+  }
+
+  if (!planId || !plan || !PRICING_PLANS.some((item) => item.id === planId)) {
     return <Navigate to="/home/premium" replace />;
   }
 
@@ -35,17 +151,43 @@ function PaymentSuccessPage() {
     });
   }
 
+  function handleRetryActivation() {
+    setPollAttempt((value) => value + 1);
+  }
+
+  const checkout = plan.checkout;
+  const isActive = activationState === "active";
+  const isWaiting = activationState === "waiting";
+  const expiresAt = subscriptionInfo?.expiresAt ?? null;
+  const daysRemaining = getPremiumDaysRemaining(expiresAt);
+  const isRenewal = isPremium && paidThisSession;
+
   return (
     <div className={styles.page}>
       <div className={styles.card}>
         <div className={styles.icon} aria-hidden="true">
-          <FontAwesomeIcon icon={faCheck} />
+          {activationState === "pending" ? (
+            <FontAwesomeIcon icon={faSpinner} spin />
+          ) : (
+            <FontAwesomeIcon icon={faCheck} />
+          )}
         </div>
 
-        <h1 className={styles.title}>Thanh toán thành công!</h1>
+        <h1 className={styles.title}>
+          {isActive
+            ? isRenewal
+              ? "Gia hạn Premium thành công!"
+              : "Thanh toán thành công!"
+            : "Đang xác nhận thanh toán"}
+        </h1>
         <p className={styles.desc}>
-          Cảm ơn bạn đã tin tưởng nâng cấp gói Premium. Tài khoản của bạn đã được kích hoạt đầy đủ
-          các tính năng đặc quyền.
+          {isActive
+            ? expiresAt
+              ? `Premium của bạn ${daysRemaining === 0 ? "hết hạn hôm nay" : `còn ${daysRemaining} ngày`} · hết hạn ${formatPremiumExpiryDate(expiresAt)}.`
+              : "Cảm ơn bạn đã tin tưởng nâng cấp gói Premium. Tài khoản đã được kích hoạt đầy đủ các tính năng đặc quyền."
+            : isWaiting
+              ? "PayOS đang xác nhận giao dịch. Premium sẽ kích hoạt sau khi webhook được xử lý — thử kiểm tra lại sau vài phút."
+              : "Đang xác nhận trạng thái thanh toán với máy chủ..."}
         </p>
 
         <div className={styles.details}>
@@ -53,13 +195,23 @@ function PaymentSuccessPage() {
 
           <div className={styles.row}>
             <span className={styles.label}>Gói đăng ký</span>
-            <span className={styles.value}>{plan.checkout.packageTitle}</span>
+            <span className={styles.value}>{checkout.packageTitle}</span>
           </div>
 
           <div className={styles.row}>
             <span className={styles.label}>Tổng thanh toán</span>
-            <span className={styles.price}>{formatVnd(plan.checkout.totalPrice)}</span>
+            <span className={styles.price}>{formatVnd(checkout.totalPrice)}</span>
           </div>
+
+          {expiresAt && isActive ? (
+            <div className={styles.row}>
+              <span className={styles.label}>Hết hạn Premium</span>
+              <span className={styles.value}>
+                {formatPremiumExpiryDate(expiresAt)}
+                {daysRemaining !== null ? ` (${daysRemaining} ngày)` : ""}
+              </span>
+            </div>
+          ) : null}
 
           <div className={styles.row}>
             <span className={styles.label}>Mã giao dịch</span>
@@ -76,6 +228,13 @@ function PaymentSuccessPage() {
             </div>
           </div>
 
+          {orderId && (
+            <div className={styles.row}>
+              <span className={styles.label}>Mã đơn</span>
+              <span className={styles.value}>{orderId}</span>
+            </div>
+          )}
+
           <div className={styles.row}>
             <span className={styles.label}>Phương thức</span>
             <span className={styles.method}>
@@ -88,6 +247,11 @@ function PaymentSuccessPage() {
         </div>
 
         <div className={styles.actions}>
+          {isWaiting && (
+            <Button fullWidth onClick={handleRetryActivation}>
+              Kiểm tra lại thanh toán
+            </Button>
+          )}
           <Button to="/home" fullWidth>
             Về trang chủ
           </Button>

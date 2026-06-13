@@ -36,6 +36,13 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<UserBadge> UserBadges => Set<UserBadge>();
     public DbSet<AiTokenDailyUsage> AiTokenDailyUsages => Set<AiTokenDailyUsage>();
     public DbSet<UserBan> UserBans => Set<UserBan>();
+    public DbSet<UserFollow> UserFollows => Set<UserFollow>();
+    public DbSet<Conversation> Conversations => Set<Conversation>();
+    public DbSet<ConversationParticipant> ConversationParticipants => Set<ConversationParticipant>();
+    public DbSet<Message> Messages => Set<Message>();
+    public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
+    public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
+    public DbSet<ConversationReport> ConversationReports => Set<ConversationReport>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

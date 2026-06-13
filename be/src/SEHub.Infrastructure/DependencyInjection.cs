@@ -4,12 +4,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
-using SEHub.Application.Abstractions;
 using SEHub.Application.Auth;
 using SEHub.Infrastructure.Ai;
 using SEHub.Infrastructure.Auth;
 using SEHub.Infrastructure.Email;
 using SEHub.Infrastructure.Identity;
+using SEHub.Infrastructure.Notifications;
 using SEHub.Infrastructure.Payments;
 using SEHub.Infrastructure.Persistence;
 using SEHub.Infrastructure.Persistence.Interceptors;
@@ -74,6 +74,15 @@ public static class DependencyInjection
         services.AddScoped<IBadgeRepository, BadgeRepository>();
         services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
         services.AddScoped<IUserBanRepository, UserBanRepository>();
+        services.AddScoped<IUserSearchRepository, UserSearchRepository>();
+        services.AddScoped<IUserFollowRepository, UserFollowRepository>();
+        services.AddScoped<IConversationRepository, ConversationRepository>();
+        services.AddScoped<IMessageRepository, MessageRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<IUserBlockRepository, UserBlockRepository>();
+        services.AddScoped<IConversationReportRepository, ConversationReportRepository>();
+        services.AddScoped<IChatNotifier, NullChatNotifier>();
+        services.AddScoped<INotificationNotifier, NullNotificationNotifier>();
 
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
 
@@ -81,6 +90,7 @@ public static class DependencyInjection
         services.Configure<OtpSettings>(configuration.GetSection(OtpSettings.SectionName));
         services.Configure<AuthSettings>(configuration.GetSection(AuthSettings.SectionName));
         services.Configure<GoogleAuthSettings>(configuration.GetSection(GoogleAuthSettings.SectionName));
+        services.Configure<N8nSettings>(configuration.GetSection(N8nSettings.SectionName));
         services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
 
         var emailProvider = configuration.GetSection($"{EmailSettings.SectionName}:Provider").Get<string>() ?? "Logging";
@@ -94,8 +104,26 @@ public static class DependencyInjection
         }
 
         services.AddScoped<ISmsService, MockSmsService>();
+        services.AddHttpClient(nameof(PayOsService), client =>
+        {
+            client.BaseAddress = new Uri("https://api-merchant.payos.vn/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
         services.AddScoped<IPayOsService, PayOsService>();
         services.AddScoped<IPayOsWebhookHandler, PayOsWebhookHandler>();
+        services.AddHttpClient<IPaymentNotificationWebhook, N8nPaymentNotificationWebhook>((sp, client) =>
+        {
+            var settings = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<N8nSettings>>().Value;
+            var timeoutSeconds = Math.Clamp(settings.TimeoutSeconds, 3, 60);
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        });
+        services.AddHttpClient<IPaymentRefundNotificationWebhook, N8nPaymentRefundWebhook>((sp, client) =>
+        {
+            var settings = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<N8nSettings>>().Value;
+            var timeoutSeconds = Math.Clamp(settings.TimeoutSeconds, 3, 60);
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        });
+        services.AddScoped<IPaymentConfirmationNotifier, PaymentConfirmationNotifier>();
         services.AddScoped<IAiExplanationService, MockAiExplanationService>();
 
         return services;

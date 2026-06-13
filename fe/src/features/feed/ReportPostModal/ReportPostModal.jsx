@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFlag, faXmark } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { submitReport } from "@/features/feed/feedData";
 import { MIN_REPORT_DETAIL_LENGTH, REPORT_REASONS } from "./reportData";
 import styles from "./ReportPostModal.module.css";
 
@@ -11,6 +12,7 @@ function ReportPostModal({ open, onClose, postId, postTitle }) {
   const [reason, setReason] = useState("");
   const [detail, setDetail] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -45,7 +47,7 @@ function ReportPostModal({ open, onClose, postId, postTitle }) {
 
   if (!open) return null;
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     if (!reason) {
@@ -59,8 +61,19 @@ function ReportPostModal({ open, onClose, postId, postTitle }) {
       return;
     }
 
-    showToast("Đã gửi báo cáo bài viết. SEHub sẽ xem xét trong thời gian sớm nhất.");
-    onClose();
+    const reasonLabel = REPORT_REASONS.find((item) => item.id === reason)?.label ?? reason;
+    const fullReason = `${reasonLabel}: ${trimmedDetail}`;
+
+    setSubmitting(true);
+    try {
+      await submitReport(postId, fullReason);
+      showToast("Đã gửi báo cáo bài viết. SEHub sẽ xem xét trong thời gian sớm nhất.");
+      onClose();
+    } catch (err) {
+      setError(err.message ?? "Không gửi được báo cáo.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -150,7 +163,7 @@ function ReportPostModal({ open, onClose, postId, postTitle }) {
             <Button look="outline" onClick={onClose}>
               Hủy
             </Button>
-            <Button type="submit" look="solid">
+            <Button type="submit" look="solid" disabled={submitting}>
               Gửi báo cáo
             </Button>
           </div>

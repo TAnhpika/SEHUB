@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as authApi from "@/api/authApi";
 import { deriveUsernameFromEmail, mapApiUser } from "@/api/authMapper";
+import { mapProfileStatsToAuthUser } from "@/api/profileMapper";
+import * as profilesApi from "@/api/profilesApi";
 import {
   clearAuthTokens,
   getAccessToken,
@@ -10,11 +12,13 @@ import {
   setRefreshToken,
 } from "@/api/httpClient";
 import { resolveIsPremium, STUDENT_PLAN } from "@/utils/studentPlan";
+import { loadSubscriptionStatus } from "@/features/landing/PricingModal/pricingData";
 import { consumeAiExplainTokens, getAiTokenSnapshot } from "@/utils/aiTokens";
 import { AuthContext } from "./authContextValue";
 
 const STORAGE_KEY = "sehubs_user";
 const REMEMBER_KEY = "sehubs_remember_login";
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 function purgeLegacyMockSession() {
   try {
@@ -98,7 +102,54 @@ function applyAuthSession(setUser, setIsBootstrapping, loginResponse) {
   persistUser(nextUser);
   setUser(nextUser);
   setIsBootstrapping(false);
+
+  if (!USE_MOCK) {
+    syncUserFromApi(nextUser).then((merged) => {
+      persistUser(merged);
+      setUser(merged);
+    });
+  }
+
   return nextUser;
+}
+
+async function syncProfileStats(user) {
+  if (!user || USE_MOCK) {
+    return user;
+  }
+
+  try {
+    const stats = await profilesApi.getMyStats();
+    return mapProfileStatsToAuthUser(user, stats);
+  } catch {
+    return user;
+  }
+}
+
+async function syncPremiumSubscription(user) {
+  if (!user || USE_MOCK) {
+    return user;
+  }
+
+  try {
+    const status = await loadSubscriptionStatus();
+    const isPremium = Boolean(status.isActive);
+
+    return enrichUser({
+      ...user,
+      isPremium,
+      plan: isPremium ? STUDENT_PLAN.PREMIUM : STUDENT_PLAN.FREE,
+      premiumExpiresAt: status.expiresAt ?? null,
+      premiumPlanName: status.planName ?? null,
+    });
+  } catch {
+    return user;
+  }
+}
+
+async function syncUserFromApi(user) {
+  const withStats = await syncProfileStats(user);
+  return syncPremiumSubscription(withStats);
 }
 
 function clearAuthSession(setUser) {
@@ -133,7 +184,7 @@ export function AuthProvider({ children }) {
       try {
         const me = await authApi.getMe();
         if (cancelled) return;
-        const nextUser = mapAndEnrichUser(me);
+        const nextUser = await syncUserFromApi(mapAndEnrichUser(me));
         persistUser(nextUser);
         setUser(nextUser);
       } catch {
@@ -143,7 +194,7 @@ export function AuthProvider({ children }) {
             const refreshed = await refreshSession();
             if (cancelled) return;
             const me = await authApi.getMe();
-            const nextUser = mapAndEnrichUser(me ?? refreshed.user);
+            const nextUser = await syncUserFromApi(mapAndEnrichUser(me ?? refreshed.user));
             persistUser(nextUser);
             setUser(nextUser);
             return;
@@ -206,7 +257,19 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const activatePremium = useCallback(() => {
+  const activatePremium = useCallback(async () => {
+    try {
+      if (getAccessToken()) {
+        const me = await authApi.getMe();
+        const nextUser = await syncUserFromApi(mapAndEnrichUser(me));
+        persistUser(nextUser);
+        setUser(nextUser);
+        return nextUser;
+      }
+    } catch {
+      /* fallback below */
+    }
+
     setUser((prev) => {
       if (!prev || resolveIsPremium(prev)) {
         return prev;

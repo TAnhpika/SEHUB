@@ -5,7 +5,6 @@ import { useAuth } from "@/context";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import PracticeSubmissionGrader from "@/features/exams/PracticeSubmissionGrader/PracticeSubmissionGrader";
 import {
-  getPendingPracticeSubmissionCount,
   getSubmissionStatusLabel,
 } from "@/features/exams/practiceExamSubmissions";
 import {
@@ -27,7 +26,6 @@ function resolveAdminExamLink(courseCode) {
 function AdminPracticeSubmissionsPage() {
   const { user } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
-  const pendingCount = getPendingPracticeSubmissionCount();
 
   const {
     query,
@@ -48,6 +46,7 @@ function AdminPracticeSubmissionsPage() {
     hasActiveFilters,
     resetFilters,
     handlePageChange,
+    pendingCount,
   } = usePracticeSubmissionsList(refreshKey);
 
   function handleGraded() {

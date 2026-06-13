@@ -89,6 +89,11 @@ public sealed class ExceptionHandlingMiddleware
                 domain.Message,
                 [new ApiError(string.Empty, domain.Message)]),
 
+            EmailDeliveryException emailDelivery => (
+                StatusCodes.Status503ServiceUnavailable,
+                emailDelivery.Message,
+                [new ApiError("email", ErrorCodes.EmailDeliveryFailed)]),
+
             _ => (
                 StatusCodes.Status500InternalServerError,
                 "Đã xảy ra lỗi hệ thống",
@@ -170,6 +175,22 @@ public sealed class ExceptionHandlingMiddleware
                 StatusCodes.Status403Forbidden,
                 "Google token không hợp lệ hoặc đã hết hạn",
                 [new ApiError("google", ErrorCodes.GoogleTokenInvalid)]);
+        }
+
+        if (code == ErrorCodes.MessageRateLimitExceeded)
+        {
+            return (
+                StatusCodes.Status429TooManyRequests,
+                "Bạn đã gửi quá nhiều tin nhắn. Vui lòng thử lại sau.",
+                [new ApiError("message", ErrorCodes.MessageRateLimitExceeded)]);
+        }
+
+        if (code == ErrorCodes.UserBlocked || code == UserBlockedException.Code)
+        {
+            return (
+                StatusCodes.Status403Forbidden,
+                "Bạn không thể tương tác với người dùng này.",
+                [new ApiError("user", ErrorCodes.UserBlocked)]);
         }
 
         return (

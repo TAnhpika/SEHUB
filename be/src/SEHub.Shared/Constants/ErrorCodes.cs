@@ -21,4 +21,7 @@ public static class ErrorCodes
     public const string RefreshTokenReuseDetected = "REFRESH_TOKEN_REUSE_DETECTED";
     public const string AuthRateLimitExceeded = "AUTH_RATE_LIMIT_EXCEEDED";
     public const string GoogleTokenInvalid = "GOOGLE_TOKEN_INVALID";
+    public const string EmailDeliveryFailed = "EMAIL_DELIVERY_FAILED";
+    public const string UserBlocked = "USER_BLOCKED";
+    public const string MessageRateLimitExceeded = "MESSAGE_RATE_LIMIT_EXCEEDED";
 }

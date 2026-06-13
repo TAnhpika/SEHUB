@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ToastProvider } from "@/common/Toast/ToastProvider";
 import PrivateRoute from "@/common/guards/PrivateRoute";
+import GuestRoute from "@/common/guards/GuestRoute";
 import AuthLayout from "@/common/Layout/AuthLayout/AuthLayout";
 import CommunityLayout from "@/common/Layout/CommunityLayout/CommunityLayout";
 import GuestLayout from "@/common/Layout/GuestLayout/GuestLayout";
@@ -34,6 +35,7 @@ import EditProfilePage from "@/features/profile/EditProfilePage/EditProfilePage"
 import PremiumPage from "@/features/premium/PremiumPage/PremiumPage";
 import CheckoutPage from "@/features/premium/CheckoutPage/CheckoutPage";
 import PaymentSuccessPage from "@/features/premium/PaymentSuccessPage/PaymentSuccessPage";
+import PaymentReturnPage from "@/features/premium/PaymentReturnPage/PaymentReturnPage";
 import SupportPage from "@/features/support/SupportPage/SupportPage";
 import AdminRoute from "@/common/guards/AdminRoute";
 import ModeratorRoute from "@/common/guards/ModeratorRoute";
@@ -84,10 +86,12 @@ function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/support" element={<SupportPage />} />
             </Route>
-            <Route element={<AuthLayout />}>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route element={<GuestRoute />}>
+              <Route element={<AuthLayout />}>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              </Route>
             </Route>
             <Route element={<PrivateRoute />}>
               <Route element={<MainLayout />}>
@@ -99,6 +103,7 @@ function App() {
                 <Route path="/home/messages" element={<MessagesPage />} />
                 <Route path="/home/premium" element={<PremiumPage />} />
                 <Route path="/home/premium/checkout/:planId" element={<CheckoutPage />} />
+                <Route path="/home/premium/payment-return" element={<PaymentReturnPage />} />
                 <Route path="/home/premium/success/:planId" element={<PaymentSuccessPage />} />
                 <Route path="/home/friends" element={<FriendsPage />} />
                 <Route path="/home/friends/:username" element={<FriendProfilePage />} />

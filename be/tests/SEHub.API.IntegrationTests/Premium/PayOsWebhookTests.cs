@@ -29,7 +29,7 @@ public sealed class PayOsWebhookTests : IClassFixture<CustomWebApplicationFactor
             data = new
             {
                 orderCode = long.Parse(CustomWebApplicationFactory.PayOsOrderCode),
-                amount = 99000,
+                amount = 48000,
                 description = "SEHub Premium",
                 reference = CustomWebApplicationFactory.WebhookReference
             },
@@ -62,5 +62,67 @@ public sealed class PayOsWebhookTests : IClassFixture<CustomWebApplicationFactor
             .Where(l => l.OrderId == CustomWebApplicationFactory.PendingPaymentOrderId && l.Action == "WEBHOOK_PAID")
             .ToListAsync();
         paidAuditLogs.Should().HaveCount(1);
+
+        var emailCapture = _factory.EmailCapture;
+        emailCapture.LastPaymentConfirmation.Should().NotBeNull();
+        emailCapture.LastPaymentConfirmation!.ToEmail.Should().Be(CustomWebApplicationFactory.FreeUserEmail);
+        emailCapture.LastPaymentConfirmation.OrderCode.Should().Be(CustomWebApplicationFactory.PayOsOrderCode);
+    }
+
+    [Fact]
+    public async Task PayOsWebhook_WhenOrderNotFound_ReturnsOkForUrlVerification()
+    {
+        var payload = new
+        {
+            code = "00",
+            desc = "success",
+            data = new
+            {
+                orderCode = 1234567890L,
+                amount = 48000,
+                description = "PayOS URL verification",
+                reference = "payos-url-verify-test"
+            },
+            signature = "mock-mock-checksum-key-dev"
+        };
+
+        var json = JsonSerializer.Serialize(payload);
+        var response = await _client.PostAsync(
+            "/api/v1/premium/webhooks/payos",
+            new StringContent(json, Encoding.UTF8, "application/json"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task PayOsWebhook_WhenCodeIsNotSuccess_ReturnsOkAndIgnoresPayload()
+    {
+        var payload = new
+        {
+            code = "01",
+            desc = "pending",
+            data = new
+            {
+                orderCode = long.Parse(CustomWebApplicationFactory.PayOsOrderCode),
+                amount = 48000,
+                description = "SEHub Premium",
+                reference = "payos-pending-ref"
+            },
+            signature = "mock-mock-checksum-key-dev"
+        };
+
+        var json = JsonSerializer.Serialize(payload);
+        var response = await _client.PostAsync(
+            "/api/v1/premium/webhooks/payos",
+            new StringContent(json, Encoding.UTF8, "application/json"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<SEHubDbContext>();
+
+        var order = await context.PaymentOrders
+            .SingleAsync(o => o.Id == CustomWebApplicationFactory.PendingPaymentOrderId);
+        order.Status.Should().Be(PaymentOrderStatus.Pending);
     }
 }

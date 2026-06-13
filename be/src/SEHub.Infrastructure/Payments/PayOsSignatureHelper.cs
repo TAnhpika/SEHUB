@@ -48,6 +48,18 @@ internal static class PayOsSignatureHelper
 
 
 
+    public static string CreatePaymentRequestSignature(
+        long orderCode,
+        long amount,
+        string description,
+        string cancelUrl,
+        string returnUrl,
+        string checksumKey)
+    {
+        var data = $"amount={amount}&cancelUrl={cancelUrl}&description={description}&orderCode={orderCode}&returnUrl={returnUrl}";
+        return ComputeHmacSha256Hex(data, checksumKey);
+    }
+
     public static bool VerifySignature(JsonElement root, string providedSignature, string checksumKey)
 
     {
@@ -69,6 +81,32 @@ internal static class PayOsSignatureHelper
             Encoding.UTF8.GetBytes(expected),
 
             Encoding.UTF8.GetBytes(providedSignature));
+
+    }
+
+
+
+    public static string CreatePaymentRequestSignature(
+
+        long orderCode,
+
+        int amount,
+
+        string description,
+
+        string returnUrl,
+
+        string cancelUrl,
+
+        string checksumKey)
+
+    {
+
+        var dataString =
+
+            $"amount={amount}&cancelUrl={cancelUrl}&description={description}&orderCode={orderCode}&returnUrl={returnUrl}";
+
+        return ComputeHmacSha256Hex(dataString, checksumKey);
 
     }
 

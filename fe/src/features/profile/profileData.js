@@ -1,3 +1,19 @@
+import * as profilesApi from "@/api/profilesApi";
+import {
+  mapBadgesForSection,
+  mapFormToUpdateRequest,
+  mapProfileCard,
+  mapProfileRecentPost,
+  mapProfileToForm,
+} from "@/api/profileMapper";
+import { loadPosts } from "@/features/feed/feedData";
+import {
+  getProfileFormData,
+  saveProfileFormData,
+} from "@/features/profile/profileFormData";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+
 export const PROFILE_MOCK = {
   username: "anhcoding12345",
   displayName: "Anhpika",
@@ -19,68 +35,81 @@ export const PROFILE_MOCK = {
   totalActivities: 10,
 };
 
-export const BADGES = [
+export const BADGE_CATALOG = [
   {
     id: 1,
+    code: "first-blogger",
     title: "First Blogger",
     description: "Viết bài blog đầu tiên",
     unlocked: true,
   },
   {
     id: 2,
+    code: "fresh-dev",
     title: "Fresh Dev",
     description: "Hoàn thành bài thi đầu tiên",
     unlocked: false,
   },
   {
     id: 3,
+    code: "active-learner",
     title: "Active Learner",
     description: "Tham gia thảo luận tích cực",
     unlocked: false,
   },
   {
     id: 4,
+    code: "advanced-contributor",
     title: "Advanced Contributor",
     description: "Đóng góp 10 bài viết chất lượng",
     unlocked: false,
   },
   {
     id: 5,
+    code: "elite-engineer",
     title: "Elite Engineer",
     description: "Đạt điểm cao trong 5 bài thi",
     unlocked: false,
   },
   {
     id: 6,
+    code: "first-challenger",
     title: "First Challenger",
     description: "Hoàn thành thử thách đầu tiên",
     unlocked: false,
   },
   {
     id: 7,
+    code: "hardworking-coder",
     title: "Hardworking Coder",
     description: "Duy trì streak 7 ngày",
     unlocked: false,
   },
   {
     id: 8,
+    code: "exam-grinder",
     title: "Exam Grinder",
     description: "Làm 20 bài thi trắc nghiệm",
     unlocked: false,
   },
   {
     id: 9,
+    code: "test-grandmaster",
     title: "Test Grandmaster",
     description: "Đạt điểm tuyệt đối 3 lần",
     unlocked: false,
   },
   {
     id: 10,
+    code: "discussion-starter",
     title: "Discussion Starter",
     description: "Mở 5 chủ đề thảo luận mới",
     unlocked: false,
   },
 ];
+
+/** @deprecated Use BADGE_CATALOG — kept for mock compatibility */
+export const BADGES = BADGE_CATALOG;
 
 export const RECENT_POSTS = [
   {
@@ -134,4 +163,89 @@ export function getProfileByUsername(username) {
     displayName: PROFILE_MOCK.displayName,
     initial: PROFILE_MOCK.displayName.charAt(0).toUpperCase(),
   };
+}
+
+export function loadProfileBadges(profileDto) {
+  if (USE_MOCK) {
+    return BADGE_CATALOG;
+  }
+
+  return mapBadgesForSection(BADGE_CATALOG, profileDto?.badges ?? []);
+}
+
+export async function loadRecentPostsByUsername(username, { limit = 5 } = {}) {
+  const resolvedUsername = (username || PROFILE_MOCK.username).trim();
+
+  if (USE_MOCK) {
+    return RECENT_POSTS;
+  }
+
+  try {
+    const { items } = await loadPosts({ page: 1, pageSize: 50 });
+    return items
+      .filter((post) => post.author?.username === resolvedUsername)
+      .slice(0, limit)
+      .map(mapProfileRecentPost);
+  } catch {
+    return [];
+  }
+}
+
+export async function loadProfileByUsername(
+  username,
+  { includeMyStats = false, profileDto = null, postsCount = 0 } = {},
+) {
+  const resolvedUsername = (username || PROFILE_MOCK.username).trim();
+
+  if (USE_MOCK) {
+    return getProfileByUsername(resolvedUsername);
+  }
+
+  const dto = profileDto ?? (await profilesApi.getProfileByUsername(resolvedUsername));
+  let statsDto = null;
+
+  if (includeMyStats) {
+    try {
+      statsDto = await profilesApi.getMyStats();
+    } catch {
+      /* stats optional for profile card */
+    }
+  }
+
+  return mapProfileCard(dto, statsDto, { postsCount });
+}
+
+export async function loadProfileForm(username, authUser) {
+  const localForm = getProfileFormData(username, { email: authUser?.email });
+
+  if (USE_MOCK) {
+    return localForm;
+  }
+
+  try {
+    const dto = await profilesApi.getProfileByUsername(username);
+    return mapProfileToForm(dto, authUser, localForm);
+  } catch {
+    return localForm;
+  }
+}
+
+export async function saveMyProfile(form) {
+  if (USE_MOCK) {
+    saveProfileFormData(form.username, form);
+    return getProfileByUsername(form.username);
+  }
+
+  const body = mapFormToUpdateRequest(form);
+  const dto = await profilesApi.updateMyProfile(body);
+  saveProfileFormData(form.username, form);
+
+  let statsDto = null;
+  try {
+    statsDto = await profilesApi.getMyStats();
+  } catch {
+    /* stats optional */
+  }
+
+  return mapProfileCard(dto, statsDto);
 }

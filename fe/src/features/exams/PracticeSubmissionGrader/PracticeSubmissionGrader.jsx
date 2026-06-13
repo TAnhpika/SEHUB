@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
-import { gradePracticeSubmission } from "@/features/exams/practiceExamSubmissions";
+import {
+  getSubmissionStatusLabel,
+  savePracticeSubmissionReview,
+} from "@/features/exams/practiceExamSubmissions";
 import styles from "./PracticeSubmissionGrader.module.css";
 
 const STATUS_OPTIONS = [
@@ -27,6 +30,7 @@ function PracticeSubmissionGrader({ submission, gradedBy, onGraded, compact = fa
   const [status, setStatus] = useState(() => resolveFormStatus(submission.status));
   const [grade, setGrade] = useState(submission.grade ?? "");
   const [feedback, setFeedback] = useState(submission.feedback ?? "");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setStatus(resolveFormStatus(submission.status));
@@ -40,22 +44,30 @@ function PracticeSubmissionGrader({ submission, gradedBy, onGraded, compact = fa
     grade !== (submission.grade ?? "") ||
     feedback !== (submission.feedback ?? "");
 
-  function handleSave() {
+  async function handleSave() {
     if ((status === "pass" || status === "fail") && !grade.trim()) {
       showToast("Nhập điểm khi chấm Đạt / Không đạt.");
       return;
     }
 
-    const updated = gradePracticeSubmission(submission.id, {
-      status,
-      grade: grade.trim() || null,
-      feedback: feedback.trim(),
-      gradedBy,
-    });
+    setSaving(true);
 
-    if (updated) {
-      showToast("Đã cập nhật kết quả chấm.");
-      onGraded?.(updated);
+    try {
+      const updated = await savePracticeSubmissionReview(submission, {
+        status,
+        grade: grade.trim() || null,
+        feedback: feedback.trim(),
+        gradedBy,
+      });
+
+      if (updated) {
+        showToast("Đã cập nhật kết quả chấm.");
+        onGraded?.(updated);
+      }
+    } catch (error) {
+      showToast(error?.message ?? "Không lưu được kết quả chấm.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -77,6 +89,7 @@ function PracticeSubmissionGrader({ submission, gradedBy, onGraded, compact = fa
             className={styles.select}
             value={status}
             onChange={(e) => setStatus(e.target.value)}
+            disabled={saving}
           >
             {STATUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -94,6 +107,7 @@ function PracticeSubmissionGrader({ submission, gradedBy, onGraded, compact = fa
             placeholder="VD: 8.5"
             value={grade}
             onChange={(e) => setGrade(e.target.value)}
+            disabled={saving}
           />
         </label>
       </div>
@@ -106,10 +120,11 @@ function PracticeSubmissionGrader({ submission, gradedBy, onGraded, compact = fa
           placeholder="Nhận xét ngắn cho sinh viên..."
           value={feedback}
           onChange={(e) => setFeedback(e.target.value)}
+          disabled={saving}
         />
       </label>
 
-      <Button type="button" onClick={handleSave}>
+      <Button type="button" onClick={handleSave} disabled={saving || !hasUnsavedChanges}>
         Lưu kết quả chấm
       </Button>
     </div>

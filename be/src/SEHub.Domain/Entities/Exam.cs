@@ -15,6 +15,7 @@ public class Exam : BaseEntity
     public string ContentHash { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string? AssetUrl { get; set; }
+    public Guid? SubmittedById { get; set; }
 
     public ICollection<Question> Questions { get; set; } = [];
     public ICollection<ExamAttempt> Attempts { get; set; } = [];

@@ -1,7 +1,6 @@
 /**
  * Nhật ký đóng góp đề — Moderator (§2.4).
- * Mod thêm đề cuối kỳ / thực hành → gửi Admin duyệt trước khi public.
- * Tách biệt với bài nộp GitHub của sinh viên (§3.4).
+ * Gửi duyệt qua API; lưu nháp giữ local cho đến khi gửi.
  */
 
 import {
@@ -11,39 +10,33 @@ import {
   submitModeratorFinalExam,
   submitModeratorPracticeExam,
 } from "@/features/admin/exams/adminExamData";
+import {
+  mapFinalExamWizardToCreateRequest,
+  mapPracticeExamFormToCreateRequest,
+} from "@/api/adminMapper";
+import { ApiError } from "@/api/httpClient";
+import {
+  CONTRIBUTION_STATUS_FILTERS,
+  CONTRIBUTION_STATUS_LABELS,
+  CONTRIBUTION_TYPE_FILTERS,
+  EXAM_CONTRIBUTION_TYPE_LABELS,
+} from "@/features/moderator/exams/moderatorExamConstants";
+import {
+  fetchModeratorExamContributions,
+  mapApiExamToContributionEntry,
+} from "@/features/moderator/exams/moderatorExamService";
+
+export {
+  CONTRIBUTION_STATUS_FILTERS,
+  CONTRIBUTION_STATUS_LABELS,
+  CONTRIBUTION_TYPE_FILTERS,
+  EXAM_CONTRIBUTION_TYPE_LABELS,
+};
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 const STORAGE_KEY = "sehubs_moderator_exam_contribution_audit";
 const LEGACY_PRACTICE_KEY = "sehubs_practice_exam_contribution_audit";
-
-/** @typedef {'practice' | 'final'} ExamContributionType */
-/** @typedef {'draft_saved' | 'submitted'} ModContributionAction */
-/** @typedef {'draft_saved' | 'pending_admin' | 'approved' | 'rejected'} ContributionDisplayStatus */
-
-export const EXAM_CONTRIBUTION_TYPE_LABELS = {
-  practice: "Thực hành",
-  final: "Cuối kỳ",
-};
-
-export const CONTRIBUTION_STATUS_LABELS = {
-  draft_saved: "Lưu nháp",
-  pending_admin: "Chờ Admin duyệt",
-  approved: "Admin đã duyệt",
-  rejected: "Admin từ chối",
-};
-
-export const CONTRIBUTION_TYPE_FILTERS = [
-  { id: "all", label: "Tất cả loại đề" },
-  { id: "final", label: "Cuối kỳ" },
-  { id: "practice", label: "Thực hành" },
-];
-
-export const CONTRIBUTION_STATUS_FILTERS = [
-  { id: "all", label: "Mọi trạng thái" },
-  { id: "draft_saved", label: "Lưu nháp" },
-  { id: "pending_admin", label: "Chờ Admin duyệt" },
-  { id: "approved", label: "Đã duyệt" },
-  { id: "rejected", label: "Từ chối" },
-];
 
 function loadStore() {
   try {
@@ -86,20 +79,20 @@ function appendEntry(entry) {
 
 /**
  * @param {string | null | undefined} pendingId
- * @returns {ContributionDisplayStatus}
  */
 export function resolvePendingStatus(pendingId) {
   if (!pendingId) return "draft_saved";
-  if (getAdminPendingExams().some((p) => p.id === pendingId)) return "pending_admin";
-  if (getAdminApprovedExams().some((p) => p.id === pendingId)) return "approved";
-  if (getAdminRejectedExams().some((p) => p.id === pendingId)) return "rejected";
+  if (getAdminPendingExams().some((item) => item.id === pendingId)) return "pending_admin";
+  if (getAdminApprovedExams().some((item) => item.id === pendingId)) return "approved";
+  if (getAdminRejectedExams().some((item) => item.id === pendingId)) return "rejected";
   return "pending_admin";
 }
 
-function enrichEntry(entry) {
-  const status = entry.pendingId ? resolvePendingStatus(entry.pendingId) : "draft_saved";
+function enrichLocalEntry(entry) {
+  const status = entry.resolvedStatus
+    ?? (entry.pendingId ? resolvePendingStatus(entry.pendingId) : "draft_saved");
   const rejected = entry.pendingId
-    ? getAdminRejectedExams().find((p) => p.id === entry.pendingId)
+    ? getAdminRejectedExams().find((item) => item.id === entry.pendingId)
     : null;
 
   return {
@@ -112,9 +105,23 @@ function enrichEntry(entry) {
   };
 }
 
+function getLocalDraftEntries(moderator, filters = {}) {
+  let entries = loadStore().map(enrichLocalEntry);
+  if (moderator) {
+    entries = entries.filter((entry) => entry.moderator === moderator);
+  }
+  if (filters.examType && filters.examType !== "all") {
+    entries = entries.filter((entry) => entry.examType === filters.examType);
+  }
+  if (filters.status && filters.status !== "all") {
+    entries = entries.filter((entry) => entry.status === filters.status);
+  }
+  return entries.sort((a, b) => (a.at < b.at ? 1 : -1));
+}
+
 /**
  * @param {{
- *   examType: ExamContributionType;
+ *   examType: import("@/features/moderator/exams/moderatorExamConstants").ExamContributionType;
  *   moderator: string;
  *   subjectCode: string;
  *   semester: string;
@@ -140,48 +147,50 @@ export function recordExamDraft(payload) {
 }
 
 /**
- * @param {{
- *   examType: ExamContributionType;
- *   moderator: string;
- *   subjectCode: string;
- *   semester: string;
- *   title: string;
- *   description?: string;
- *   attachments?: Array<{ name?: string }>;
- *   allowDiscussion?: boolean;
- *   pinExam?: boolean;
- *   examCode?: string;
- *   durationMinutes?: number;
- *   questionCount?: number;
- *   fileName?: string;
- * }} payload
+ * @param {object} payload
+ * @param {{ examInfo?: object; questions?: object[]; confirmDuplicate?: boolean }} [options]
  */
-export function submitExamForApproval(payload) {
+export async function submitExamForApproval(payload, options = {}) {
+  const { examInfo, questions, confirmDuplicate = false } = options;
   const semesterId = parseSemesterId(payload.semester);
+
   const pending =
     payload.examType === "final"
-      ? submitModeratorFinalExam({
-          subjectCode: payload.subjectCode,
-          subjectName: payload.title,
-          semesterId,
-          title: payload.title,
-          description: payload.description,
-          submittedBy: payload.moderator,
-          examCode: payload.examCode,
-          durationMinutes: payload.durationMinutes,
-          questionCount: payload.questionCount,
-          fileName: payload.fileName,
-        })
-      : submitModeratorPracticeExam({
-          subject: payload.subjectCode,
-          semesterId,
-          title: payload.title,
-          description: payload.description ?? "",
-          submittedBy: payload.moderator,
-          attachments: payload.attachments,
-          allowDiscussion: payload.allowDiscussion,
-          pinExam: payload.pinExam,
-        });
+      ? await submitModeratorFinalExam(
+          {
+            subjectCode: payload.subjectCode,
+            subjectName: payload.title,
+            semesterId,
+            title: payload.title,
+            description: payload.description,
+            submittedBy: payload.moderator,
+            examCode: payload.examCode,
+            durationMinutes: payload.durationMinutes,
+            questionCount: payload.questionCount,
+            fileName: payload.fileName,
+          },
+          examInfo && questions ? mapFinalExamWizardToCreateRequest(examInfo, questions) : null,
+          { confirmDuplicate },
+        )
+      : await submitModeratorPracticeExam(
+          {
+            subject: payload.subjectCode,
+            semesterId,
+            title: payload.title,
+            description: payload.description ?? "",
+            submittedBy: payload.moderator,
+            attachments: payload.attachments,
+            allowDiscussion: payload.allowDiscussion,
+            pinExam: payload.pinExam,
+          },
+          mapPracticeExamFormToCreateRequest({
+            subjectCode: payload.subjectCode,
+            semester: payload.semester,
+            title: payload.title,
+            description: payload.description,
+          }),
+          { confirmDuplicate },
+        );
 
   const audit = appendEntry({
     id: `audit-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
@@ -194,6 +203,8 @@ export function submitExamForApproval(payload) {
     title: payload.title.trim(),
     description: payload.description?.trim() ?? "",
     pendingId: pending.id,
+    examApiId: pending.apiId ?? pending.id,
+    resolvedStatus: USE_MOCK ? undefined : "pending_admin",
     examCode: payload.examCode ?? null,
     questionCount: payload.questionCount ?? null,
   });
@@ -201,34 +212,39 @@ export function submitExamForApproval(payload) {
   return { pending, audit };
 }
 
+export { ApiError };
+
 /**
  * @param {string | undefined} moderator
- * @param {{ examType?: 'all' | ExamContributionType; status?: string }} [filters]
+ * @param {{ examType?: 'all' | import("@/features/moderator/exams/moderatorExamConstants").ExamContributionType; status?: string }} [filters]
  */
-export function getExamContributionAudit(moderator, filters = {}) {
-  let entries = loadStore();
-  if (moderator) {
-    entries = entries.filter((e) => e.moderator === moderator);
-  }
-  if (filters.examType && filters.examType !== "all") {
-    entries = entries.filter((e) => e.examType === filters.examType);
-  }
+export async function loadExamContributionAudit(moderator, filters = {}) {
+  const localDrafts = getLocalDraftEntries(moderator, filters);
+  const apiEntries = await fetchModeratorExamContributions(moderator, filters);
 
-  const enriched = entries.map(enrichEntry);
-
-  if (filters.status && filters.status !== "all") {
-    return enriched
-      .filter((e) => e.status === filters.status)
-      .sort((a, b) => (a.at < b.at ? 1 : -1));
+  if (apiEntries === null) {
+    return localDrafts;
   }
 
-  return enriched.sort((a, b) => (a.at < b.at ? 1 : -1));
+  const merged = [...localDrafts, ...apiEntries];
+  return merged.sort((a, b) => (a.at < b.at ? 1 : -1));
 }
 
-/** @param {string | undefined} moderator @param {ExamContributionType | 'all'} [examType] */
+/** @deprecated Prefer loadExamContributionAudit */
+export function getExamContributionAudit(moderator, filters = {}) {
+  return getLocalDraftEntries(moderator, filters);
+}
+
+/** @param {string | undefined} moderator @param {import("@/features/moderator/exams/moderatorExamConstants").ExamContributionType | 'all'} [examType] */
+export async function loadPendingContributionCount(moderator, examType = "all") {
+  const entries = await loadExamContributionAudit(moderator, { examType });
+  return entries.filter((entry) => entry.status === "pending_admin").length;
+}
+
+/** @deprecated Prefer loadPendingContributionCount */
 export function getPendingContributionCount(moderator, examType = "all") {
-  return getExamContributionAudit(moderator, { examType }).filter(
-    (e) => e.status === "pending_admin",
+  return getLocalDraftEntries(moderator, { examType }).filter(
+    (entry) => entry.status === "pending_admin",
   ).length;
 }
 
@@ -241,21 +257,6 @@ export function recordPracticeExamDraft(payload) {
     semester: payload.semester,
     title: payload.title,
     description: payload.description,
-  });
-}
-
-/** @deprecated — dùng submitExamForApproval với examType: 'practice' */
-export function submitPracticeExamForApproval(payload) {
-  return submitExamForApproval({
-    examType: "practice",
-    moderator: payload.moderator,
-    subjectCode: payload.subject,
-    semester: payload.semester,
-    title: payload.title,
-    description: payload.description,
-    attachments: payload.attachments,
-    allowDiscussion: payload.allowDiscussion,
-    pinExam: payload.pinExam,
   });
 }
 
@@ -285,3 +286,5 @@ export function buildFinalExamContributionPayload(moderator, examInfo, completeC
     fileName: `${examInfo.subjectCode}-final.pdf`,
   };
 }
+
+export { mapApiExamToContributionEntry };

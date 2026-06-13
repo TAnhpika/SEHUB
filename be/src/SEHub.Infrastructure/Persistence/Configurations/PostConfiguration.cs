@@ -14,6 +14,7 @@ public class PostConfiguration : IEntityTypeConfiguration<Post>
         builder.Property(p => p.Title).HasMaxLength(200).IsRequired();
         builder.Property(p => p.Content).HasMaxLength(10000).IsRequired();
         builder.Property(p => p.Tags).HasMaxLength(2000);
+        builder.Property(p => p.ModerationNote).HasMaxLength(1000);
 
         builder.HasMany(p => p.Comments)
             .WithOne(c => c.Post)

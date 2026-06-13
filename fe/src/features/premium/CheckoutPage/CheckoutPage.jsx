@@ -5,27 +5,41 @@ import {
   faArrowLeft,
   faCopy,
   faLock,
-  faQrcode,
   faShieldHalved,
 } from "@fortawesome/free-solid-svg-icons";
+import PaymentQrCode from "./PaymentQrCode";
 import Button from "@/common/Button/Button";
+import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
+import {
+  clearCheckoutSession,
+  saveCheckoutSession,
+} from "@/features/premium/premiumCheckoutSession";
 import {
   buildTransactionId,
   buildTransferContent,
+  createCheckoutOrder,
   formatVnd,
-  getPlanById,
+  getCheckoutOrder,
+  loadPlanById,
   PAYMENT_INFO,
   PRICING_PLANS,
 } from "@/features/landing/PricingModal/pricingData";
 import styles from "./CheckoutPage.module.css";
 
 const COUNTDOWN_SECONDS = 15 * 60;
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 function formatTimer(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function resolveSecondsUntil(expiredAt) {
+  if (!expiredAt) return COUNTDOWN_SECONDS;
+  const diffMs = new Date(expiredAt).getTime() - Date.now();
+  return Math.max(0, Math.floor(diffMs / 1000));
 }
 
 function CopyField({ label, value }) {
@@ -53,11 +67,109 @@ function CopyField({ label, value }) {
 function CheckoutPage() {
   const { planId } = useParams();
   const navigate = useNavigate();
-  const plan = useMemo(() => getPlanById(planId), [planId]);
+  const { showToast } = useToast();
+  const { activatePremium } = useAuth();
+  const [plan, setPlan] = useState(null);
+  const [order, setOrder] = useState(null);
   const [secondsLeft, setSecondsLeft] = useState(COUNTDOWN_SECONDS);
+  const [planReady, setPlanReady] = useState(false);
 
-  const transferContent = useMemo(() => buildTransferContent(plan.id), [plan.id]);
-  const checkout = plan.checkout;
+  useEffect(() => {
+    let cancelled = false;
+    setPlanReady(false);
+
+    loadPlanById(planId)
+      .then((loadedPlan) => {
+        if (!cancelled) {
+          setPlan(loadedPlan);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPlan(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPlanReady(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [planId]);
+
+  useEffect(() => {
+    if (!plan) return undefined;
+
+    let cancelled = false;
+
+    createCheckoutOrder(plan.id)
+      .then((createdOrder) => {
+        if (!cancelled) {
+          setOrder(createdOrder);
+          if (createdOrder?.orderId) {
+            saveCheckoutSession({
+              planId: plan.id,
+              orderId: createdOrder.orderId,
+              payOsOrderCode: createdOrder.payOsOrderCode,
+              checkoutUrl: createdOrder.checkoutUrl,
+            });
+          }
+          if (createdOrder?.expiredAt) {
+            setSecondsLeft(resolveSecondsUntil(createdOrder.expiredAt));
+          }
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          showToast(error?.message ?? "Không tạo được đơn thanh toán.");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [plan, showToast]);
+
+  useEffect(() => {
+    if (!order?.orderId || order.status === "Paid") {
+      return undefined;
+    }
+
+    const interval = window.setInterval(async () => {
+      try {
+        const updated = await getCheckoutOrder(order.orderId);
+        if (!updated) return;
+
+        setOrder((prev) => ({
+          ...updated,
+          checkoutUrl: updated.checkoutUrl ?? prev?.checkoutUrl ?? null,
+        }));
+        if (updated.expiredAt) {
+          setSecondsLeft(resolveSecondsUntil(updated.expiredAt));
+        }
+
+        if (updated.status === "Paid") {
+          await activatePremium();
+          clearCheckoutSession();
+          navigate(`/home/premium/success/${plan.id}`, {
+            replace: true,
+            state: {
+              orderId: updated.orderId,
+              transactionId: updated.payOsOrderCode,
+              activated: true,
+            },
+          });
+        }
+      } catch {
+        /* keep polling */
+      }
+    }, 3000);
+
+    return () => window.clearInterval(interval);
+  }, [activatePremium, navigate, order?.orderId, order?.status, plan?.id]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -67,15 +179,42 @@ function CheckoutPage() {
     return () => window.clearInterval(timer);
   }, []);
 
+  const transferContent = useMemo(
+    () => (order?.payOsOrderCode ? order.payOsOrderCode : buildTransferContent(plan?.id ?? planId)),
+    [order?.payOsOrderCode, plan?.id, planId],
+  );
+  const checkout = plan?.checkout;
+
   function handleOpenBankApp() {
-    navigate(`/home/premium/success/${plan.id}`, {
-      state: { transactionId: buildTransactionId() },
-    });
+    if (order?.checkoutUrl) {
+      window.open(order.checkoutUrl, "_blank", "noreferrer");
+      showToast("Hoàn tất thanh toán trên PayOS. Premium kích hoạt sau khi webhook xác nhận.");
+      return;
+    }
+
+    if (USE_MOCK) {
+      navigate(`/home/premium/success/${plan.id}`, {
+        state: {
+          orderId: order?.orderId ?? null,
+          transactionId: order?.payOsOrderCode ?? buildTransactionId(),
+          mockConfirm: !order?.orderId,
+        },
+      });
+      return;
+    }
+
+    showToast("Chưa có link PayOS. Vui lòng quét mã QR hoặc chuyển khoản theo thông tin đơn.");
   }
 
-  if (!planId || !PRICING_PLANS.some((item) => item.id === planId)) {
+  if (!planReady) {
+    return null;
+  }
+
+  if (!planId || !plan || !PRICING_PLANS.some((item) => item.id === planId)) {
     return <Navigate to="/home/premium" replace />;
   }
+
+  const displayAmount = order?.amount ?? checkout.totalPrice;
 
   return (
     <div className={styles.page}>
@@ -134,7 +273,7 @@ function CheckoutPage() {
 
             <div className={styles.total}>
               <span>Tổng thanh toán</span>
-              <strong>{formatVnd(checkout.totalPrice)}</strong>
+              <strong>{formatVnd(displayAmount)}</strong>
             </div>
           </div>
 
@@ -154,7 +293,7 @@ function CheckoutPage() {
             <div className={styles.qr}>
               <div className={styles.phone}>
                 <div className={styles["qr-box"]}>
-                  <FontAwesomeIcon icon={faQrcode} className={styles["qr-icon"]} />
+                  <PaymentQrCode qrValue={order?.qrUrl} checkoutUrl={order?.checkoutUrl} />
                 </div>
               </div>
               <p>Quét mã QR bằng ứng dụng Ngân hàng hoặc Ví điện tử</p>

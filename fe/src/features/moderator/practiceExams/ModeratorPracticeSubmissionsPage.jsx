@@ -6,7 +6,6 @@ import Pagination from "@/common/Pagination/Pagination";
 import { useAuth } from "@/context";
 import PracticeSubmissionGrader from "@/features/exams/PracticeSubmissionGrader/PracticeSubmissionGrader";
 import {
-  getPendingPracticeSubmissionCount,
   getSubmissionStatusLabel,
 } from "@/features/exams/practiceExamSubmissions";
 import {
@@ -20,7 +19,6 @@ import pageStyles from "./ModeratorPracticeSubmissionsPage.module.css";
 function ModeratorPracticeSubmissionsPage() {
   const { user } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
-  const pendingCount = getPendingPracticeSubmissionCount();
 
   const {
     query,
@@ -41,6 +39,7 @@ function ModeratorPracticeSubmissionsPage() {
     hasActiveFilters,
     resetFilters,
     handlePageChange,
+    pendingCount,
   } = usePracticeSubmissionsList(refreshKey);
 
   function handleGraded() {

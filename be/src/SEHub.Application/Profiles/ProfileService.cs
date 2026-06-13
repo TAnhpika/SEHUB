@@ -12,6 +12,7 @@ public sealed class ProfileService : IProfileService
     private readonly IUserProfileRepository _profileRepository;
     private readonly IUserBadgeRepository _badgeRepository;
     private readonly IGamificationService _gamificationService;
+    private readonly IUserFollowRepository _followRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -20,6 +21,7 @@ public sealed class ProfileService : IProfileService
         IUserProfileRepository profileRepository,
         IUserBadgeRepository badgeRepository,
         IGamificationService gamificationService,
+        IUserFollowRepository followRepository,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
@@ -27,6 +29,7 @@ public sealed class ProfileService : IProfileService
         _profileRepository = profileRepository;
         _badgeRepository = badgeRepository;
         _gamificationService = gamificationService;
+        _followRepository = followRepository;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -83,9 +86,19 @@ public sealed class ProfileService : IProfileService
         var profile = await _profileRepository.GetByUserIdAsync(userId, cancellationToken);
         var (points, levelName, _) = await _gamificationService.GetUserGamificationAsync(userId, cancellationToken);
         var badges = await _badgeRepository.GetByUserIdAsync(userId, cancellationToken);
+        var followersCount = await _followRepository.CountFollowersAsync(userId, cancellationToken);
+        var followingCount = await _followRepository.CountFollowingAsync(userId, cancellationToken);
+
+        bool? isFollowing = null;
+        var viewerId = _currentUser.UserId;
+        if (viewerId.HasValue && viewerId.Value != userId)
+        {
+            isFollowing = await _followRepository.ExistsAsync(viewerId.Value, userId, cancellationToken);
+        }
 
         return new ProfileDto
         {
+            UserId = userId,
             Username = user.Username,
             DisplayName = user.DisplayName,
             Bio = profile?.Bio,
@@ -99,7 +112,10 @@ public sealed class ProfileService : IProfileService
                 Code = b.Badge.Code,
                 Name = b.Badge.Name,
                 EarnedAt = b.EarnedAt
-            }).ToList()
+            }).ToList(),
+            FollowersCount = followersCount,
+            FollowingCount = followingCount,
+            IsFollowing = isFollowing
         };
     }
 }

@@ -32,6 +32,24 @@
 
     "ClientSecret": "your-google-oauth-client-secret"
 
+  },
+
+  "PayOS": {
+
+    "ClientId": "35aacbc0-31a4-4b05-94c6-302d709a85e8",
+
+    "ApiKey": "ea038bfd-cce6-4a6a-885e-9cb142628101",
+
+    "ChecksumKey": "0effdd76606c6cf79ddd82c08f5479bfcf53008644c9dd00029a38ed46395dca",
+
+    "ReturnUrl": "http://localhost:5173/home/premium/success/trial",
+
+    "CancelUrl": "http://localhost:5173/home/premium",
+
+    "FrontendBaseUrl": "http://localhost:5173",
+
+    "WebhookUrl": "https://YOUR-NGROK-SUBDOMAIN.ngrok-free.app/api/v1/premium/webhooks/payos"
+
   }
 
 }
