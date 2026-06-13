@@ -7,9 +7,12 @@ import {
 import * as adminApi from "@/api/adminApi";
 import {
   mapBadgeAdminDto,
+  mapBadgeToCreateRequest,
+  mapBadgeToUpdateRequest,
   mapLevelConfigToRankTier,
   mapRankTiersToUpdateLevelsRequest,
 } from "@/api/adminMapper";
+import { isValidGuid } from "@/features/feed/postUtils";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
@@ -334,52 +337,99 @@ export function getBadgeById(id) {
   return badgesStore.find((b) => b.id === id) ?? null;
 }
 
-export function createBadge(payload) {
+export async function createBadge(payload) {
   const validation = validateBadgePayload(payload, badgesStore);
   if (!validation.ok) return validation;
 
   const now = nowIso();
-  const entry = {
-    id: `badge-${Date.now()}`,
-    ...validation.data,
-    unlockCount: 0,
-    createdAt: now,
-    updatedAt: now,
-  };
-  badgesStore = [entry, ...badgesStore];
-  return { ok: true, item: entry };
+  if (USE_MOCK) {
+    const entry = {
+      id: `badge-${Date.now()}`,
+      ...validation.data,
+      unlockCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    badgesStore = [entry, ...badgesStore];
+    return { ok: true, item: entry };
+  }
+
+  try {
+    const dto = await adminApi.createGamificationBadge(mapBadgeToCreateRequest(validation.data));
+    const mapped = mapBadgeAdminDto(dto);
+    badgesStore = [mapped, ...badgesStore];
+    return { ok: true, item: mapped };
+  } catch (error) {
+    return { ok: false, message: error?.message ?? "Không tạo được danh hiệu." };
+  }
 }
 
-export function updateBadge(id, payload) {
+export async function updateBadge(id, payload) {
   const index = badgesStore.findIndex((b) => b.id === id);
   if (index < 0) return { ok: false, message: "Không tìm thấy danh hiệu." };
 
   const validation = validateBadgePayload(payload, badgesStore, id);
   if (!validation.ok) return validation;
 
-  const updated = {
-    ...badgesStore[index],
-    ...validation.data,
-    updatedAt: nowIso(),
-  };
-  badgesStore = badgesStore.map((b, i) => (i === index ? updated : b));
-  return { ok: true, item: updated };
+  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+    const updated = {
+      ...badgesStore[index],
+      ...validation.data,
+      updatedAt: nowIso(),
+    };
+    badgesStore = badgesStore.map((b, i) => (i === index ? updated : b));
+    return { ok: true, item: updated };
+  }
+
+  try {
+    const merged = { ...badgesStore[index], ...validation.data };
+    const dto = await adminApi.updateGamificationBadge(id, mapBadgeToUpdateRequest(merged));
+    const mapped = mapBadgeAdminDto(dto);
+    badgesStore = badgesStore.map((b) => (b.id === id ? mapped : b));
+    return { ok: true, item: mapped };
+  } catch (error) {
+    return { ok: false, message: error?.message ?? "Không cập nhật được danh hiệu." };
+  }
 }
 
-export function deleteBadge(id) {
+export async function deleteBadge(id) {
   const target = badgesStore.find((b) => b.id === id);
   if (!target) return { ok: false, message: "Không tìm thấy danh hiệu." };
-  badgesStore = badgesStore.filter((b) => b.id !== id);
-  return { ok: true, item: target };
+
+  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+    badgesStore = badgesStore.filter((b) => b.id !== id);
+    return { ok: true, item: target };
+  }
+
+  try {
+    await adminApi.deleteGamificationBadge(id);
+    badgesStore = badgesStore.filter((b) => b.id !== id);
+    return { ok: true, item: target };
+  } catch (error) {
+    return { ok: false, message: error?.message ?? "Không xóa được danh hiệu." };
+  }
 }
 
-export function toggleBadgeActive(id) {
+export async function toggleBadgeActive(id) {
   const index = badgesStore.findIndex((b) => b.id === id);
   if (index < 0) return { ok: false, message: "Không tìm thấy danh hiệu." };
-  badgesStore = badgesStore.map((b, i) =>
-    i === index ? { ...b, active: !b.active, updatedAt: nowIso() } : b,
-  );
-  return { ok: true };
+
+  const current = badgesStore[index];
+  const next = { ...current, active: !current.active, updatedAt: nowIso() };
+
+  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+    badgesStore = badgesStore.map((b, i) => (i === index ? next : b));
+    return { ok: true };
+  }
+
+  try {
+    const dto = await adminApi.updateGamificationBadge(id, mapBadgeToUpdateRequest(next));
+    const mapped = mapBadgeAdminDto(dto);
+    badgesStore = badgesStore.map((b) => (b.id === id ? mapped : b));
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: error?.message ?? "Không đổi trạng thái danh hiệu." };
+  }
 }
 
 export function getPointRules() {
