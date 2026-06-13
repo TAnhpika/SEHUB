@@ -80,18 +80,27 @@ public sealed class AdminPaymentService : IAdminPaymentService
             return;
         }
 
+        if (order.Status != PaymentOrderStatus.WaitingConfirmation)
+        {
+            throw new ConflictException("Chỉ xác nhận đơn ở trạng thái WaitingConfirmation.");
+        }
+
+        var now = DateTime.UtcNow;
         order.Status = PaymentOrderStatus.Paid;
-        order.UpdatedAt = DateTime.UtcNow;
+        order.PaidAt = now;
+        order.VerifiedAt = now;
+        order.VerificationMethod = PaymentVerificationMethods.ManualVerification;
+        order.UpdatedAt = now;
         await _orderRepository.UpdateAsync(order, cancellationToken);
 
         await _auditLogRepository.AddAsync(new PaymentAuditLog
         {
             Id = Guid.NewGuid(),
             OrderId = orderId,
-            Action = "ADMIN_CONFIRM",
+            Action = "ManualVerification",
             ActorId = actorId,
             PayloadJson = JsonSerializer.Serialize(new { request.Note }),
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = now
         }, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -110,7 +119,7 @@ public sealed class AdminPaymentService : IAdminPaymentService
                 PlanId = order.PlanId,
                 PlanName = subscription.PlanName ?? order.Plan?.Name ?? string.Empty,
                 AmountVnd = order.Amount,
-                PaidAt = DateTime.UtcNow,
+                PaidAt = order.PaidAt ?? now,
                 ExpiresAt = subscription.ExpiresAt,
             },
             cancellationToken);
@@ -147,11 +156,12 @@ public sealed class AdminPaymentService : IAdminPaymentService
     {
         var user = await _userRepository.GetByIdAsync(order.UserId, cancellationToken);
         var auditLogs = await _auditLogRepository.GetByOrderIdAsync(order.Id, cancellationToken);
-        var paidAt = auditLogs
-            .Where(l => l.Action is "WEBHOOK_PAID" or "N8N_ACTIVATE" or "ADMIN_CONFIRM")
-            .OrderBy(l => l.CreatedAt)
-            .Select(l => (DateTime?)l.CreatedAt)
-            .FirstOrDefault()
+        var paidAt = order.PaidAt
+            ?? auditLogs
+                .Where(l => l.Action is "WEBHOOK_PAID" or "N8N_ACTIVATE" or "ADMIN_CONFIRM" or "ManualVerification")
+                .OrderBy(l => l.CreatedAt)
+                .Select(l => (DateTime?)l.CreatedAt)
+                .FirstOrDefault()
             ?? order.UpdatedAt
             ?? order.CreatedAt;
 
