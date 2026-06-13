@@ -2,8 +2,8 @@ using Moq;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
-using SEHub.Contracts.Feed;
 using SEHub.Application.Models;
+using SEHub.Contracts.Feed;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 
@@ -33,6 +33,41 @@ public sealed class PostServiceTests
         _gamificationService.Object,
         _unitOfWork.Object,
         AutoMapperFactory.Create());
+
+    [Fact]
+    public async Task CreateAsync_StartsAsPending()
+    {
+        _currentUser.SetupGet(u => u.UserId).Returns(AuthorId);
+        _likeRepository.Setup(r => r.CountByPostIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+        _commentRepository.Setup(r => r.CountByPostIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+        _userRepository.Setup(r => r.GetByIdAsync(AuthorId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserAccount { Id = AuthorId, Username = "author", DisplayName = "Author" });
+        _profileRepository.Setup(r => r.GetByUserIdAsync(AuthorId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserProfile?)null);
+
+        Post? captured = null;
+        _postRepository
+            .Setup(r => r.AddAsync(It.IsAny<Post>(), It.IsAny<CancellationToken>()))
+            .Callback<Post, CancellationToken>((post, _) => captured = post)
+            .Returns(Task.CompletedTask);
+
+        var sut = CreateSut();
+        var result = await sut.CreateAsync(new CreatePostRequest
+        {
+            Title = "Pending Post",
+            Content = "Awaiting moderator approval.",
+            Tags = ["sehub"]
+        });
+
+        captured.Should().NotBeNull();
+        captured!.Status.Should().Be(PostStatus.Pending);
+        result.Status.Should().Be(nameof(PostStatus.Pending));
+        _gamificationService.Verify(
+            g => g.AwardPostPublishedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 
     [Fact]
     public async Task UpdateAsync_WhenRejected_MovesStatusToPending()

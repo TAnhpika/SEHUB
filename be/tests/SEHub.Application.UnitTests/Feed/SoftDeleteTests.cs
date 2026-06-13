@@ -2,6 +2,8 @@ using Moq;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
+using SEHub.Application.Gamification;
+using SEHub.Application.Profiles;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 
@@ -16,6 +18,8 @@ public sealed class SoftDeleteTests
     private readonly Mock<IUserProfileRepository> _profileRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IGamificationService> _gamificationService = new();
+    private readonly Mock<IBadgeCheckService> _badgeCheckService = new();
+    private readonly Mock<IUserActivityService> _userActivityService = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
     private static readonly Guid PostId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
@@ -38,6 +42,8 @@ public sealed class SoftDeleteTests
         _postRepository.Object,
         _userRepository.Object,
         _profileRepository.Object,
+        _badgeCheckService.Object,
+        _userActivityService.Object,
         _currentUser.Object,
         _unitOfWork.Object);
 
