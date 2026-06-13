@@ -1,4 +1,4 @@
-import { apiRequest } from "./httpClient";
+import { apiRequest, apiUploadRequest } from "./httpClient";
 
 function buildQuery(params = {}) {
   const search = new URLSearchParams();
@@ -84,6 +84,17 @@ export function getDocument(id) {
 
 export function deleteDocument(id) {
   return apiRequest(`/api/v1/admin/documents/${id}`, { method: "DELETE" });
+}
+
+export function uploadDocument({ file, title, subjectCode, semester, accessTier, pageCount }) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("Title", title);
+  formData.append("SubjectCode", subjectCode);
+  formData.append("Semester", String(semester));
+  formData.append("AccessTier", accessTier);
+  formData.append("PageCount", String(pageCount));
+  return apiUploadRequest("/api/v1/admin/documents", formData);
 }
 
 export function listPayments(params = {}) {
@@ -177,4 +188,23 @@ export function getGamificationBadges() {
 
 export function listModerationPracticeSubmissions(params = {}) {
   return apiRequest(`/api/v1/admin/moderation/practice-submissions${buildQuery(params)}`);
+}
+
+export function getModerationStats() {
+  return apiRequest("/api/v1/admin/moderation/stats");
+}
+
+export function listModerationPosts(params = {}) {
+  return apiRequest(`/api/v1/admin/moderation/posts${buildQuery(params)}`);
+}
+
+export function getModerationPost(id) {
+  return apiRequest(`/api/v1/admin/moderation/posts/${id}`);
+}
+
+export function moderatePost(id, body) {
+  return apiRequest(`/api/v1/admin/moderation/posts/${id}`, {
+    method: "PATCH",
+    body,
+  });
 }
