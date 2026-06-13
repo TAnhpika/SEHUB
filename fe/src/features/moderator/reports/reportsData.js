@@ -118,6 +118,22 @@ export function filterReports(reports, statusTab) {
   return reports.filter((report) => report.status === statusTab);
 }
 
+function getReportSortTimestamp(report) {
+  const raw = report.createdAtIso ?? report.reportedAt;
+  const ms = new Date(raw).getTime();
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
+/** Pending: FIFO (cũ trước). Resolved/all: mới trước. */
+export function sortModeratorReports(reports, tab = "all") {
+  return [...reports].sort((a, b) => {
+    const aMs = getReportSortTimestamp(a);
+    const bMs = getReportSortTimestamp(b);
+    if (tab === "pending") return aMs - bMs;
+    return bMs - aMs;
+  });
+}
+
 function formatReportCode(id) {
   const short = String(id ?? "")
     .replace(/-/g, "")
@@ -178,6 +194,7 @@ function mapResolutionFromAdminReport(adminReport) {
 export function mapAdminReportToModeratorCommunityReport(adminReport) {
   const reporter = adminReport.reporter ?? "unknown";
   const reportedUser = adminReport.reportedUser ?? reporter;
+  const createdAtIso = adminReport.createdAtIso ?? adminReport.createdAt;
 
   return {
     id: adminReport.id,
@@ -188,8 +205,9 @@ export function mapAdminReportToModeratorCommunityReport(adminReport) {
     reason: inferReasonId(adminReport.reason),
     reporterUsername: `@${reporter}`,
     reporterInitial: toInitials(reporter),
-    timeLabel: formatTimeLabel(adminReport.createdAt),
-    reportedAt: formatReportedAt(adminReport.createdAt),
+    timeLabel: formatTimeLabel(createdAtIso),
+    reportedAt: formatReportedAt(createdAtIso),
+    createdAtIso,
     snippet: adminReport.post?.excerpt ?? adminReport.post?.title ?? adminReport.reason,
     reportedUser: {
       username: `@${reportedUser}`,
@@ -213,19 +231,10 @@ export async function loadModeratorCommunityReports() {
     return getCommunityReportsMock();
   }
 
-  try {
-    const page = await adminApi.listReports({ pageSize: 100 });
-    const apiReports = (page.items ?? [])
-      .map(mapAdminReportListItem)
-      .map(mapAdminReportToModeratorCommunityReport);
-    if (apiReports.length > 0) {
-      return apiReports;
-    }
-  } catch {
-    /* fallback below */
-  }
-
-  return getCommunityReportsMock();
+  const page = await adminApi.listReports({ pageSize: 100 });
+  return (page.items ?? [])
+    .map(mapAdminReportListItem)
+    .map(mapAdminReportToModeratorCommunityReport);
 }
 
 export async function reloadModeratorCommunityReportsAfterResolve(id, action) {
@@ -243,4 +252,13 @@ export async function reloadModeratorCommunityReportsAfterResolve(id, action) {
 
 export function getCommunityReportsPendingCount() {
   return REPORTS_MOCK.filter((report) => report.status === "pending").length;
+}
+
+export async function loadCommunityReportsPendingCount() {
+  if (USE_MOCK) {
+    return getCommunityReportsPendingCount();
+  }
+
+  const stats = await adminApi.getModerationStats();
+  return stats.pendingReports ?? 0;
 }
