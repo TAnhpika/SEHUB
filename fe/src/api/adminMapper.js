@@ -224,13 +224,16 @@ export function mapPracticeExamFormToCreateRequest(form) {
   const githubGuide =
     form.githubGuide ??
     "Nộp link repository GitHub công khai. README ghi rõ MSSV, họ tên và hướng dẫn chạy project.";
+  const subjectCode = form.subjectCode.trim();
+  const examCode =
+    form.examCode?.trim() || `${subjectCode}-PRAC-${Date.now()}`;
 
   return {
-    code: form.subjectCode.trim(),
+    code: examCode,
     title: form.title.trim(),
     examType: "Practice",
     semester: parseSemesterNumber(form.semester),
-    major: "SE",
+    major: subjectCode,
     description: [form.description, githubGuide].filter(Boolean).join("\n\n"),
     assetUrl: form.assetUrl ?? null,
     questions: [],
@@ -278,6 +281,7 @@ export function mapAdminDocumentListItem(dto) {
   return {
     id: dto.id,
     apiId: dto.id,
+    categoryId: dto.categoryId,
     name: dto.title,
     subject,
     semester: "1",
@@ -289,6 +293,19 @@ export function mapAdminDocumentListItem(dto) {
     description: dto.category ?? dto.title ?? "",
     mimeType: dto.mimeType ?? null,
     isDeleted: Boolean(dto.isDeleted),
+  };
+}
+
+export function mapPaymentAuditLogItem(dto) {
+  return {
+    id: dto.id,
+    at: dto.createdAt,
+    admin: dto.actorUsername ?? "admin",
+    action: String(dto.action ?? "").toLowerCase(),
+    username: dto.actorUsername ?? "—",
+    detail: dto.payloadJson ?? dto.action ?? "—",
+    sortKey: dto.createdAt,
+    type: "payment",
   };
 }
 
@@ -331,6 +348,75 @@ function mapReportStatus(status) {
   return value === "pending" ? "pending" : "resolved";
 }
 
+function mapModerationPostStatus(status) {
+  const value = String(status ?? "Pending").toLowerCase();
+  if (value === "published") return "approved";
+  if (value === "rejected") return "rejected";
+  return "pending";
+}
+
+function toModerationInitials(name) {
+  const parts = String(name ?? "")
+    .trim()
+    .split(/\s+/);
+  if (parts.length >= 2) {
+    return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+  }
+  return String(name ?? "?").slice(0, 2).toUpperCase() || "?";
+}
+
+export function mapModerationPostListItem(dto) {
+  const status = mapModerationPostStatus(dto.status);
+  const createdMs = new Date(dto.createdAt).getTime();
+
+  return {
+    id: dto.id,
+    apiId: dto.id,
+    type: "post",
+    title: dto.title,
+    excerpt: dto.excerpt ?? dto.title,
+    content: dto.excerpt ?? "",
+    semester: dto.semester ? `Học kỳ ${dto.semester}` : "—",
+    major: dto.major ?? "SE",
+    tags: dto.tags ?? [],
+    authorName: dto.author?.displayName || dto.author?.username || "—",
+    authorInitial: toModerationInitials(dto.author?.displayName || dto.author?.username),
+    studentId: dto.author?.username ?? "—",
+    submittedAtLabel: formatAdminDateTime(dto.createdAt),
+    timeLabel: formatAdminDateTime(dto.createdAt),
+    status,
+    sortOrder: Number.isNaN(createdMs) ? 0 : createdMs,
+    createdAt: dto.createdAt,
+    allowComments: true,
+    anonymous: false,
+    attachments: [],
+    coverImage: null,
+    inlineImages: [],
+    resubmission: status === "pending" && Boolean(dto.moderatedAt),
+    moderation: dto.moderatedAt
+      ? {
+          moderatorName: dto.moderatorUsername ?? "Moderator",
+          moderatorId: "—",
+          actionAtLabel: formatAdminDateTime(dto.moderatedAt),
+          note: status === "approved" ? dto.moderationNote ?? "Đã duyệt — hiển thị trên feed cộng đồng." : undefined,
+          reason: status === "rejected" ? dto.moderationNote ?? "—" : undefined,
+          resubmitHint:
+            status === "rejected"
+              ? "Tác giả có thể chỉnh sửa bài Rejected rồi gửi duyệt lại (Pending)."
+              : undefined,
+        }
+      : null,
+  };
+}
+
+export function mapModerationPostDetail(dto) {
+  const base = mapModerationPostListItem(dto);
+  return {
+    ...base,
+    content: dto.content ?? base.excerpt,
+  };
+}
+
 export function mapAdminReportListItem(dto) {
   const status = mapReportStatus(dto.status);
 
@@ -341,15 +427,18 @@ export function mapAdminReportListItem(dto) {
     reasonId: "other",
     reason: dto.reason,
     reporter: dto.reporter?.username ?? "unknown",
-    reportedUser: dto.reportedUser?.username ?? dto.postAuthor?.username ?? "unknown",
+    reporterId: dto.reporter?.id ?? null,
+    reportedUser: dto.reportedUser?.username ?? "unknown",
+    reportedUserId: dto.reportedUser?.id ?? null,
     status,
     urgent: false,
     createdAt: formatAdminDateTime(dto.createdAt),
+    createdAtIso: dto.createdAt,
     post: {
-      author: dto.reporter?.username ?? "unknown",
+      author: dto.reportedUser?.username ?? dto.reporter?.username ?? "unknown",
       postedAt: formatAdminDateTime(dto.createdAt),
       title: dto.postTitle,
-      excerpt: dto.postTitle,
+      excerpt: dto.postExcerpt ?? dto.postTitle,
     },
     resolution: dto.resolvedAt
       ? {
@@ -472,23 +561,70 @@ export function mapLevelConfigToRankTier(dto, index) {
 }
 
 export function mapBadgeAdminDto(dto) {
-  const slug = slugify(dto.code || dto.name);
+  let meta = {};
+  if (dto.conditionJson) {
+    try {
+      const parsed = JSON.parse(dto.conditionJson);
+      if (parsed && typeof parsed === "object") meta = parsed;
+    } catch {
+      meta = { description: dto.conditionJson };
+    }
+  }
+
+  const slug = meta.slug ?? slugify(dto.code || dto.name);
 
   return {
     id: dto.id,
     apiId: dto.id,
     slug,
     name: dto.name,
-    description: dto.conditionJson ?? dto.name,
-    category: "community",
-    triggerType: "custom",
-    triggerValue: 1,
-    pointsReward: 0,
-    icon: "🏅",
-    active: true,
+    description: meta.description ?? dto.name,
+    category: meta.category ?? "community",
+    triggerType: meta.triggerType ?? "custom",
+    triggerValue: meta.triggerValue ?? 1,
+    pointsReward: meta.pointsReward ?? 0,
+    icon: meta.icon ?? "🏅",
+    active: meta.active !== false,
     unlockCount: dto.earnedCount ?? 0,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: meta.createdAt ?? new Date().toISOString(),
+    updatedAt: meta.updatedAt ?? new Date().toISOString(),
+  };
+}
+
+export function mapBadgeToCreateRequest(data) {
+  const now = new Date().toISOString();
+  return {
+    code: data.slug,
+    name: data.name,
+    conditionJson: JSON.stringify({
+      slug: data.slug,
+      description: data.description,
+      category: data.category,
+      triggerType: data.triggerType,
+      triggerValue: data.triggerValue,
+      pointsReward: data.pointsReward,
+      icon: data.icon,
+      active: data.active !== false,
+      createdAt: now,
+      updatedAt: now,
+    }),
+  };
+}
+
+export function mapBadgeToUpdateRequest(badge) {
+  return {
+    name: badge.name,
+    conditionJson: JSON.stringify({
+      slug: badge.slug,
+      description: badge.description,
+      category: badge.category,
+      triggerType: badge.triggerType,
+      triggerValue: badge.triggerValue,
+      pointsReward: badge.pointsReward,
+      icon: badge.icon,
+      active: badge.active !== false,
+      updatedAt: new Date().toISOString(),
+    }),
   };
 }
 
@@ -502,12 +638,18 @@ export function mapRankTiersToUpdateLevelsRequest(ranks) {
   };
 }
 
-export function mergeDashboardStats(mockPayload, stats) {
+export function mergeDashboardStats(mockPayload, stats, extras = {}) {
   if (!stats) return mockPayload;
 
   const revenueM = Math.round(Number(stats.totalRevenue ?? 0) / 1_000_000 * 10) / 10;
   const premiumCount = stats.activeSubscriptions ?? 0;
   const usersTotal = stats.totalUsers ?? mockPayload.studentPlan?.totalStudents ?? 0;
+  const studentsFree = Math.max(0, usersTotal - premiumCount);
+  const premiumPct = usersTotal
+    ? Math.round((premiumCount / usersTotal) * 1000) / 10
+    : 0;
+  const documentCount = stats.totalDocuments ?? extras.documentCount ?? mockPayload.stats?.find((s) => s.id === "documents")?.value ?? 0;
+  const pendingReports = extras.pendingReports ?? stats.pendingReports ?? 0;
 
   return {
     ...mockPayload,
@@ -517,27 +659,30 @@ export function mergeDashboardStats(mockPayload, stats) {
           ...item,
           value: usersTotal.toLocaleString("vi-VN"),
           change: `${usersTotal} tài khoản`,
+          changeDetail: "tổng tài khoản trong hệ thống",
         };
       }
       if (item.id === "revenue") {
         return {
           ...item,
           value: revenueM > 0 ? `${revenueM.toLocaleString("vi-VN")} tr` : "0 tr",
+          changeDetail: "PayOS · dữ liệu API",
         };
       }
       if (item.id === "premium") {
         return {
           ...item,
-          value: usersTotal
-            ? `${Math.round((premiumCount / usersTotal) * 1000) / 10}%`
-            : "0%",
+          value: `${premiumPct}%`,
           change: `${premiumCount} subscription`,
+          changeDetail: "tỉ lệ trên tổng user",
         };
       }
       if (item.id === "reports") {
         return {
           ...item,
-          value: String(stats.pendingReports ?? item.value),
+          value: String(pendingReports),
+          urgent: pendingReports > 0,
+          trend: pendingReports > 0 ? "down" : "up",
         };
       }
       if (item.id === "exams") {
@@ -546,14 +691,34 @@ export function mergeDashboardStats(mockPayload, stats) {
           value: String(stats.totalExams ?? item.value),
         };
       }
+      if (item.id === "documents") {
+        return {
+          ...item,
+          value: String(documentCount),
+        };
+      }
+      if (item.id === "posts") {
+        return {
+          ...item,
+          value: String(stats.totalPosts ?? "—"),
+          change: stats.totalPosts ? `${stats.totalPosts} bài` : "—",
+          changeDetail: "bài viết đã publish",
+        };
+      }
       return item;
     }),
     studentPlan: {
       ...mockPayload.studentPlan,
       totalStudents: usersTotal,
+      basic: {
+        ...mockPayload.studentPlan.basic,
+        count: studentsFree,
+        percent: usersTotal ? Math.round((studentsFree / usersTotal) * 1000) / 10 : 0,
+      },
       premium: {
         ...mockPayload.studentPlan.premium,
         count: premiumCount,
+        percent: premiumPct,
       },
     },
   };
