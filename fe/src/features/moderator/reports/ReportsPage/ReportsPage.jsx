@@ -17,6 +17,7 @@ import {
   loadModeratorCommunityReports,
   REASON_META,
   reloadModeratorCommunityReportsAfterResolve,
+  sortModeratorReports,
 } from "@/features/moderator/reports/reportsData";
 import {
   getExamQuestionReports,
@@ -87,13 +88,19 @@ function ReportsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    loadModeratorCommunityReports().then((items) => {
-      if (!cancelled) setCommunityReports(items);
-    });
+    loadModeratorCommunityReports()
+      .then((items) => {
+        if (!cancelled) setCommunityReports(items);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          showToast(err.message ?? "Không tải được báo cáo cộng đồng.", "error");
+        }
+      });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     function refreshExamReports() {
@@ -124,17 +131,19 @@ function ReportsPage() {
         ? statusFiltered
         : statusFiltered.filter((report) => report.category === category);
     const q = query.trim().toLowerCase();
-    if (!q) return categoryFiltered;
+    const searched = !q
+      ? categoryFiltered
+      : categoryFiltered.filter(
+          (report) =>
+            report.code.toLowerCase().includes(q) ||
+            report.reporterUsername.toLowerCase().includes(q) ||
+            (report.reportedUser?.username ?? "").toLowerCase().includes(q) ||
+            (report.examId ?? "").toLowerCase().includes(q) ||
+            (REASON_META[report.reason]?.label ?? report.reason).toLowerCase().includes(q) ||
+            report.snippet.toLowerCase().includes(q),
+        );
 
-    return categoryFiltered.filter(
-      (report) =>
-        report.code.toLowerCase().includes(q) ||
-        report.reporterUsername.toLowerCase().includes(q) ||
-        (report.reportedUser?.username ?? "").toLowerCase().includes(q) ||
-        (report.examId ?? "").toLowerCase().includes(q) ||
-        (REASON_META[report.reason]?.label ?? report.reason).toLowerCase().includes(q) ||
-        report.snippet.toLowerCase().includes(q),
-    );
+    return sortModeratorReports(searched, tab);
   }, [reports, tab, category, query]);
 
   useEffect(() => {
@@ -194,14 +203,19 @@ function ReportsPage() {
     if (target?.category === "exam_question") {
       resolveReportLocal(id, "ignored");
     } else {
-      const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "dismiss");
-      if (reloaded) {
-        setCommunityReports(reloaded);
-        if (target) {
-          setLastResolved({ ...target, status: "resolved", resolution: "ignored" });
+      try {
+        const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "dismiss");
+        if (reloaded) {
+          setCommunityReports(reloaded);
+          if (target) {
+            setLastResolved({ ...target, status: "resolved", resolution: "ignored" });
+          }
+        } else {
+          resolveReportLocal(id, "ignored");
         }
-      } else {
-        resolveReportLocal(id, "ignored");
+      } catch (err) {
+        showToast(err.message ?? "Không xử lý được báo cáo.", "error");
+        return;
       }
     }
     showToast(
@@ -209,22 +223,29 @@ function ReportsPage() {
         ? "Đã bỏ qua — giữ nguyên câu hỏi trong ngân hàng đề."
         : "Đã bỏ qua báo cáo — giữ nguyên nội dung.",
     );
+    window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
     const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
     setSelectedId(nextPending[0]?.id ?? null);
   }
 
   async function handleDelete(id) {
     const target = reports.find((report) => report.id === id);
-    const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "delete");
-    if (reloaded) {
-      setCommunityReports(reloaded);
-      if (target) {
-        setLastResolved({ ...target, status: "resolved", resolution: "deleted" });
+    try {
+      const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "delete");
+      if (reloaded) {
+        setCommunityReports(reloaded);
+        if (target) {
+          setLastResolved({ ...target, status: "resolved", resolution: "deleted" });
+        }
+      } else {
+        resolveReportLocal(id, "deleted");
       }
-    } else {
-      resolveReportLocal(id, "deleted");
+    } catch (err) {
+      showToast(err.message ?? "Không xóa được nội dung.", "error");
+      return;
     }
     showToast("Đã xóa nội dung vi phạm.");
+    window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
     const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
     setSelectedId(nextPending[0]?.id ?? null);
   }
