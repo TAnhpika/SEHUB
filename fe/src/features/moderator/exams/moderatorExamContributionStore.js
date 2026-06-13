@@ -119,6 +119,31 @@ function getLocalDraftEntries(moderator, filters = {}) {
   return entries.sort((a, b) => (a.at < b.at ? 1 : -1));
 }
 
+function getContributionExamId(entry) {
+  return entry?.examApiId ?? entry?.pendingId ?? entry?.id ?? null;
+}
+
+function mergeContributionEntries(localEntries, apiEntries) {
+  if (!apiEntries) {
+    return localEntries;
+  }
+
+  const apiExamIds = new Set(
+    apiEntries.map((entry) => getContributionExamId(entry)).filter(Boolean),
+  );
+
+  const localOnly = localEntries.filter((entry) => {
+    if (entry.action === "draft_saved" && !entry.pendingId) {
+      return true;
+    }
+
+    const examId = getContributionExamId(entry);
+    return !examId || !apiExamIds.has(examId);
+  });
+
+  return [...localOnly, ...apiEntries].sort((a, b) => (a.at < b.at ? 1 : -1));
+}
+
 /**
  * @param {{
  *   examType: import("@/features/moderator/exams/moderatorExamConstants").ExamContributionType;
@@ -193,22 +218,34 @@ export async function submitExamForApproval(payload, options = {}) {
           { confirmDuplicate },
         );
 
-  const audit = appendEntry({
-    id: `audit-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
-    at: new Date().toISOString(),
-    moderator: payload.moderator,
-    examType: payload.examType,
-    action: "submitted",
-    subjectCode: payload.subjectCode,
-    semester: payload.semester,
-    title: payload.title.trim(),
-    description: payload.description?.trim() ?? "",
-    pendingId: pending.id,
-    examApiId: pending.apiId ?? pending.id,
-    resolvedStatus: USE_MOCK ? undefined : "pending_admin",
-    examCode: payload.examCode ?? null,
-    questionCount: payload.questionCount ?? null,
-  });
+  const audit = USE_MOCK
+    ? appendEntry({
+        id: `audit-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+        at: new Date().toISOString(),
+        moderator: payload.moderator,
+        examType: payload.examType,
+        action: "submitted",
+        subjectCode: payload.subjectCode,
+        semester: payload.semester,
+        title: payload.title.trim(),
+        description: payload.description?.trim() ?? "",
+        pendingId: pending.id,
+        examApiId: pending.apiId ?? pending.id,
+        examCode: payload.examCode ?? null,
+        questionCount: payload.questionCount ?? null,
+      })
+    : {
+        id: pending.apiId ?? pending.id,
+        at: pending.submittedAt ?? new Date().toISOString(),
+        moderator: payload.moderator,
+        examType: payload.examType,
+        action: "submitted",
+        subjectCode: payload.subjectCode,
+        semester: payload.semester,
+        title: payload.title.trim(),
+        pendingId: pending.id,
+        examApiId: pending.apiId ?? pending.id,
+      };
 
   return { pending, audit };
 }
@@ -220,15 +257,22 @@ export { ApiError };
  * @param {{ examType?: 'all' | import("@/features/moderator/exams/moderatorExamConstants").ExamContributionType; status?: string }} [filters]
  */
 export async function loadExamContributionAudit(moderator, filters = {}) {
-  const localDrafts = getLocalDraftEntries(moderator, filters);
-  const apiEntries = await fetchModeratorExamContributions(moderator, filters);
+  const { status, ...baseFilters } = filters;
+  const localDrafts = getLocalDraftEntries(moderator, baseFilters);
+  const apiEntries = await fetchModeratorExamContributions(moderator, baseFilters);
 
   if (apiEntries === null) {
+    if (status && status !== "all") {
+      return localDrafts.filter((entry) => entry.status === status);
+    }
     return localDrafts;
   }
 
-  const merged = [...localDrafts, ...apiEntries];
-  return merged.sort((a, b) => (a.at < b.at ? 1 : -1));
+  let merged = mergeContributionEntries(localDrafts, apiEntries);
+  if (status && status !== "all") {
+    merged = merged.filter((entry) => entry.status === status);
+  }
+  return merged;
 }
 
 /** @deprecated Prefer loadExamContributionAudit */
