@@ -94,6 +94,7 @@ export function mapProfileCard(dto, statsDto = null) {
   const displayName = dto.displayName?.trim() || dto.username || "User";
   const points = statsDto?.points ?? dto.points ?? 0;
   const streakCount = statsDto?.streakCount ?? dto.streakCount ?? 0;
+  const levelName = statsDto?.levelName ?? dto.levelName ?? "Bronze";
   const nextLevelName = statsDto?.nextLevelName ?? deriveNextLevelLabel(levelName);
   const nextLevelPoints = statsDto?.nextLevelPoints ?? dto.nextLevelPoints;
   const { pointsToNext, levelProgress } = computeProgress(points, nextLevelPoints);
