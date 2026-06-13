@@ -28,6 +28,7 @@ public static class DbSeeder
             await SeedRolesAsync(roleManager, logger);
             await SeedLevelConfigsAsync(context, logger);
             await SeedSubscriptionPlansAsync(context, logger);
+            await BadgeSeedData.SeedAsync(context, logger);
             await SeedAdminUserAsync(userManager, context, logger);
         }
         catch (Exception ex)
