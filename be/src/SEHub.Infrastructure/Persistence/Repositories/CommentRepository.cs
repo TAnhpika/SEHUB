@@ -25,6 +25,9 @@ public class CommentRepository : ICommentRepository
     public Task<int> CountByPostIdAsync(Guid postId, CancellationToken cancellationToken = default) =>
         _context.Comments.CountAsync(c => c.PostId == postId, cancellationToken);
 
+    public Task<int> CountByAuthorIdAsync(Guid authorId, CancellationToken cancellationToken = default) =>
+        _context.Comments.CountAsync(c => c.AuthorId == authorId && !c.IsDeleted, cancellationToken);
+
     public async Task AddAsync(Comment comment, CancellationToken cancellationToken = default) =>
         await _context.Comments.AddAsync(comment, cancellationToken);
 
