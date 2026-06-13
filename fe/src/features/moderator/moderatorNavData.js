@@ -7,9 +7,14 @@ import {
   faStar,
   faUserSlash,
 } from "@fortawesome/free-solid-svg-icons";
+import * as adminApi from "@/api/adminApi";
 import { getPendingContentCount } from "@/features/moderator/content/contentModerationStore";
 import { getPendingExamQuestionReportCount } from "@/features/exams/examQuestionReportStore";
-import { getCommunityReportsPendingCount } from "@/features/moderator/reports/reportsData";
+import {
+  getCommunityReportsPendingCount,
+} from "@/features/moderator/reports/reportsData";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 /** Sau đăng nhập — hàng đợi báo cáo ưu tiên nghiệp vụ */
 export const MODERATOR_HOME_PATH = "/moderator/reports";
@@ -143,4 +148,21 @@ export function getModeratorNavBadgeCounts() {
     reports: communityPending + examPending,
     content: getPendingContentCount(),
   };
+}
+
+export async function loadModeratorNavBadgeCounts() {
+  if (USE_MOCK) {
+    return getModeratorNavBadgeCounts();
+  }
+
+  try {
+    const stats = await adminApi.getModerationStats();
+    const examPending = getPendingExamQuestionReportCount();
+    return {
+      reports: (stats.pendingReports ?? 0) + examPending,
+      content: stats.pendingPosts ?? 0,
+    };
+  } catch {
+    return getModeratorNavBadgeCounts();
+  }
 }
