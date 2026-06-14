@@ -309,8 +309,10 @@ export function mapPracticeExamFormToCreateRequest(form) {
 
 export function mapPendingExamListItem(dto, meta = {}) {
   const base = mapAdminExamListItem(dto);
+  const primaryAttachment = base.attachments?.[0];
   const fileName =
     meta.fileName ??
+    primaryAttachment?.name ??
     (base.assetUrl ? getExamAssetFileName(base.assetUrl) : null) ??
     "Chưa có file đính kèm";
 
@@ -320,7 +322,7 @@ export function mapPendingExamListItem(dto, meta = {}) {
     submittedAt: base.createdAt,
     urgent: Boolean(meta.urgent),
     fileName,
-    assetUrl: base.assetUrl ?? null,
+    assetUrl: base.assetUrl ?? primaryAttachment?.viewUrl ?? primaryAttachment?.viewPath ?? null,
     githubGuide: meta.githubGuide ?? (base.typeKey === "practice" ? githubGuideFromDescription(base.description) : ""),
     allowDiscussion: meta.allowDiscussion ?? false,
     pinExam: meta.pinExam ?? false,
