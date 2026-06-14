@@ -20,7 +20,7 @@ public sealed class AdminOverviewService : IAdminOverviewService
 
     public async Task<AdminOverviewDto> GetOverviewAsync(CancellationToken cancellationToken = default)
     {
-        // DbContext is scoped per request and not thread-safe — do not query in parallel.
+        // Sequential: dashboard + moderation share scoped DbContext — parallel calls cause EF errors.
         var dashboard = await _dashboardService.GetStatsAsync(cancellationToken);
         var moderation = await _moderationService.GetStatsAsync(cancellationToken);
 
