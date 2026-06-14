@@ -31,6 +31,7 @@ public sealed class ProfileService : IProfileService
     private readonly IUserFollowRepository _followRepository;
     private readonly IFileStorageService _fileStorage;
     private readonly IImageCdnStorageService _cdnStorage;
+    private readonly ICdnFolderSettings _cdnFolders;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -46,6 +47,7 @@ public sealed class ProfileService : IProfileService
         IUserFollowRepository followRepository,
         IFileStorageService fileStorage,
         IImageCdnStorageService cdnStorage,
+        ICdnFolderSettings cdnFolders,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
@@ -60,6 +62,7 @@ public sealed class ProfileService : IProfileService
         _followRepository = followRepository;
         _fileStorage = fileStorage;
         _cdnStorage = cdnStorage;
+        _cdnFolders = cdnFolders;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -161,7 +164,7 @@ public sealed class ProfileService : IProfileService
             fileContent,
             safeFileName,
             normalizedContentType,
-            CdnFolders.Avatars,
+            _cdnFolders.Avatars,
             cancellationToken);
 
         profile.AvatarUrl = upload.Url;

@@ -43,6 +43,7 @@ public sealed class PostImageService : IPostImageService
     private readonly IPostRepository _postRepository;
     private readonly IPostImageRepository _imageRepository;
     private readonly IImageCdnStorageService _cdnStorage;
+    private readonly ICdnFolderSettings _cdnFolders;
     private readonly ICloudFileStorageService _driveStorage;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
@@ -51,6 +52,7 @@ public sealed class PostImageService : IPostImageService
         IPostRepository postRepository,
         IPostImageRepository imageRepository,
         IImageCdnStorageService cdnStorage,
+        ICdnFolderSettings cdnFolders,
         ICloudFileStorageService driveStorage,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
@@ -58,6 +60,7 @@ public sealed class PostImageService : IPostImageService
         _postRepository = postRepository;
         _imageRepository = imageRepository;
         _cdnStorage = cdnStorage;
+        _cdnFolders = cdnFolders;
         _driveStorage = driveStorage;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
@@ -93,7 +96,7 @@ public sealed class PostImageService : IPostImageService
                     upload.Content,
                     upload.FileName,
                     upload.ContentType,
-                    CdnFolders.Posts,
+                    _cdnFolders.Posts,
                     cancellationToken);
             }
             catch (Exception ex) when (ex is not DomainException and not NotFoundException and not ForbiddenException)

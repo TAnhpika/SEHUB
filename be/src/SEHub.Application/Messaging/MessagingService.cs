@@ -49,6 +49,7 @@ public sealed class MessagingService : IMessagingService
     private readonly IChatNotifier _chatNotifier;
     private readonly IFileStorageService _fileStorage;
     private readonly IImageCdnStorageService _cdnStorage;
+    private readonly ICdnFolderSettings _cdnFolders;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -62,6 +63,7 @@ public sealed class MessagingService : IMessagingService
         IChatNotifier chatNotifier,
         IFileStorageService fileStorage,
         IImageCdnStorageService cdnStorage,
+        ICdnFolderSettings cdnFolders,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
@@ -74,6 +76,7 @@ public sealed class MessagingService : IMessagingService
         _chatNotifier = chatNotifier;
         _fileStorage = fileStorage;
         _cdnStorage = cdnStorage;
+        _cdnFolders = cdnFolders;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -254,13 +257,13 @@ public sealed class MessagingService : IMessagingService
                 fileContent,
                 safeFileName,
                 normalizedMimeType,
-                CdnFolders.Chat,
+                _cdnFolders.Chat,
                 cancellationToken)
             : await _cdnStorage.UploadRawAsync(
                 fileContent,
                 safeFileName,
                 normalizedMimeType,
-                CdnFolders.Chat,
+                _cdnFolders.Chat,
                 cancellationToken);
 
         var now = DateTime.UtcNow;
