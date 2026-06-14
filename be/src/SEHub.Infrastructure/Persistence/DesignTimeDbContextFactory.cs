@@ -15,6 +15,7 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<SEHubDbCon
             .SetBasePath(basePath)
             .AddJsonFile("appsettings.json", optional: false)
             .AddJsonFile($"appsettings.{environment}.json", optional: true)
+            .AddJsonFile("appsettings.Development.Local.json", optional: true)
             .AddEnvironmentVariables()
             .Build();
 
