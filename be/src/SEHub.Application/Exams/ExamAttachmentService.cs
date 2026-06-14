@@ -70,7 +70,7 @@ public sealed class ExamAttachmentService : IExamAttachmentService
         CancellationToken cancellationToken = default)
     {
         EnsureModeratorOrAdmin();
-        CloudFileValidation.EnsureValidPdf(contentType, fileSizeBytes, fileName);
+        CloudFileValidation.EnsureValidExamAttachment(contentType, fileSizeBytes, fileName);
 
         var exam = await _examRepository.GetByIdAsync(examId, cancellationToken: cancellationToken)
             ?? throw new NotFoundException("Exam", examId);
