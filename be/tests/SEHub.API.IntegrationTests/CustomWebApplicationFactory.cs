@@ -131,6 +131,17 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             services.AddSingleton<FakeCloudFileStorageService>();
             services.AddScoped<ICloudFileStorageService>(sp => sp.GetRequiredService<FakeCloudFileStorageService>());
 
+            var cdnStorageDescriptors = services
+                .Where(d => d.ServiceType == typeof(IImageCdnStorageService))
+                .ToList();
+            foreach (var descriptor in cdnStorageDescriptors)
+            {
+                services.Remove(descriptor);
+            }
+
+            services.AddSingleton<FakeImageCdnStorageService>();
+            services.AddScoped<IImageCdnStorageService>(sp => sp.GetRequiredService<FakeImageCdnStorageService>());
+
             services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
