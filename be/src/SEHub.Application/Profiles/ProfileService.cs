@@ -1,6 +1,7 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
+using SEHub.Application.Storage;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Profiles;
 using SEHub.Domain.Exceptions;
@@ -29,6 +30,7 @@ public sealed class ProfileService : IProfileService
     private readonly ILevelConfigRepository _levelConfigRepository;
     private readonly IUserFollowRepository _followRepository;
     private readonly IFileStorageService _fileStorage;
+    private readonly IImageCdnStorageService _cdnStorage;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -43,6 +45,7 @@ public sealed class ProfileService : IProfileService
         ILevelConfigRepository levelConfigRepository,
         IUserFollowRepository followRepository,
         IFileStorageService fileStorage,
+        IImageCdnStorageService cdnStorage,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
@@ -56,6 +59,7 @@ public sealed class ProfileService : IProfileService
         _levelConfigRepository = levelConfigRepository;
         _followRepository = followRepository;
         _fileStorage = fileStorage;
+        _cdnStorage = cdnStorage;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -153,35 +157,24 @@ public sealed class ProfileService : IProfileService
             ?? throw new NotFoundException("UserProfile", userId);
 
         var previousAvatarPath = profile.AvatarUrl;
-        var storedPath = await _fileStorage.UploadAsync(
+        var upload = await _cdnStorage.UploadImageAsync(
             fileContent,
             safeFileName,
             normalizedContentType,
-            "avatars",
+            CdnFolders.Avatars,
             cancellationToken);
 
-        profile.AvatarUrl = storedPath;
+        profile.AvatarUrl = upload.Url;
         profile.UpdatedAt = DateTime.UtcNow;
 
         await _profileRepository.UpdateAsync(profile, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        if (ShouldDeleteStoredAvatar(previousAvatarPath))
-        {
-            try
-            {
-                await _fileStorage.DeleteAsync(previousAvatarPath!, cancellationToken);
-            }
-            catch (FileNotFoundException)
-            {
-                /* previous avatar already removed */
-            }
-        }
+        await DeletePreviousAvatarAsync(previousAvatarPath, cancellationToken);
 
         return new ProfileAvatarUploadDto
         {
-            AvatarUrl = await ResolveAvatarUrlAsync(storedPath, cancellationToken)
-                ?? string.Empty
+            AvatarUrl = upload.Url
         };
     }
 
@@ -287,6 +280,32 @@ public sealed class ProfileService : IProfileService
         }
 
         return await _fileStorage.GetSignedUrlAsync(avatarUrl, TimeSpan.FromHours(24), cancellationToken);
+    }
+
+    private async Task DeletePreviousAvatarAsync(string? avatarUrl, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(avatarUrl))
+        {
+            return;
+        }
+
+        if (CdnUrlHelper.TryGetPublicId(avatarUrl, out var publicId, out var isRaw))
+        {
+            await _cdnStorage.DeleteAsync(publicId, isRaw, cancellationToken);
+            return;
+        }
+
+        if (ShouldDeleteStoredAvatar(avatarUrl))
+        {
+            try
+            {
+                await _fileStorage.DeleteAsync(avatarUrl, cancellationToken);
+            }
+            catch (FileNotFoundException)
+            {
+                /* previous avatar already removed */
+            }
+        }
     }
 
     private static bool ShouldDeleteStoredAvatar(string? avatarUrl) =>

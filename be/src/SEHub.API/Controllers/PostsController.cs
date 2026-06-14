@@ -51,6 +51,11 @@ public sealed class PostsController : ControllerBase
     public async Task<IActionResult> GetImage(Guid imageId, CancellationToken cancellationToken)
     {
         var content = await _postImageService.OpenImageAsync(imageId, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(content.ExternalUrl))
+        {
+            return Redirect(content.ExternalUrl);
+        }
+
         return File(content.Stream, content.ContentType, enableRangeProcessing: true);
     }
 
