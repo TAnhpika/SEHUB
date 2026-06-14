@@ -24,25 +24,31 @@ public sealed class ProfileServiceTests
     private readonly Mock<IUserFollowRepository> _followRepository = new();
     private readonly Mock<IFileStorageService> _fileStorage = new();
     private readonly Mock<IImageCdnStorageService> _cdnStorage = new();
+    private readonly Mock<ICdnFolderSettings> _cdnFolders = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
     private static readonly Guid UserId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
 
-    private ProfileService CreateSut() => new(
-        _userRepository.Object,
-        _profileRepository.Object,
-        _badgeRepository.Object,
-        _postRepository.Object,
-        _likeRepository.Object,
-        _commentRepository.Object,
-        _gamificationService.Object,
-        _levelConfigRepository.Object,
-        _followRepository.Object,
-        _fileStorage.Object,
-        _cdnStorage.Object,
-        _currentUser.Object,
-        _unitOfWork.Object);
+    private ProfileService CreateSut()
+    {
+        _cdnFolders.SetupGet(f => f.Avatars).Returns(CdnFolders.Avatars);
+        return new(
+            _userRepository.Object,
+            _profileRepository.Object,
+            _badgeRepository.Object,
+            _postRepository.Object,
+            _likeRepository.Object,
+            _commentRepository.Object,
+            _gamificationService.Object,
+            _levelConfigRepository.Object,
+            _followRepository.Object,
+            _fileStorage.Object,
+            _cdnStorage.Object,
+            _cdnFolders.Object,
+            _currentUser.Object,
+            _unitOfWork.Object);
+    }
 
     [Fact]
     public async Task UploadMyAvatarAsync_StoresFileAndReturnsPublicUrl()

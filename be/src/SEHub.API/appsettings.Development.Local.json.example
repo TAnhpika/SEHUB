@@ -62,7 +62,13 @@
 
     "ApiSecret": "your_api_secret",
 
-    "Secure": true
+    "Secure": true,
+
+    "AvatarFolder": "sehub/avatars",
+
+    "PostFolder": "sehub/posts",
+
+    "ChatFolder": "sehub/chat"
 
   },
 
