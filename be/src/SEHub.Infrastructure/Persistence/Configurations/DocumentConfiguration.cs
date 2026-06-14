@@ -10,7 +10,9 @@ public class DocumentConfiguration : IEntityTypeConfiguration<Document>
     {
         builder.HasKey(d => d.Id);
         builder.Property(d => d.Title).HasMaxLength(200).IsRequired();
-        builder.Property(d => d.FilePath).HasMaxLength(500).IsRequired();
+        builder.Property(d => d.FilePath).HasMaxLength(500);
+        builder.Property(d => d.DriveFileId).HasMaxLength(128);
+        builder.Property(d => d.OriginalFileName).HasMaxLength(260);
         builder.Property(d => d.MimeType).HasMaxLength(100).IsRequired();
 
         builder.HasOne(d => d.Category)
