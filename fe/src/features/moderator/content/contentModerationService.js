@@ -30,7 +30,7 @@ export async function refreshPendingContentCount() {
 
   const stats = await adminApi.getModerationStats();
   cachedPendingCount = stats?.pendingPosts ?? 0;
-  notifyUpdated();
+  window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
   return cachedPendingCount;
 }
 

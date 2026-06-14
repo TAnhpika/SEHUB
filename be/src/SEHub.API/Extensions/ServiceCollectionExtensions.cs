@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using SEHub.API.Filters;
+using SEHub.API.Json;
 using SEHub.API.Services;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Auth;
@@ -21,6 +22,11 @@ public static class ServiceCollectionExtensions
         services.AddControllers(options =>
         {
             options.Filters.Add<ApiResponseWrapperFilter>();
+        })
+        .AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.Converters.Add(new UtcDateTimeConverter());
+            options.JsonSerializerOptions.Converters.Add(new NullableUtcDateTimeConverter());
         });
 
         services.AddFluentValidationAutoValidation();
@@ -157,7 +163,12 @@ public static class ServiceCollectionExtensions
         services.AddAuthorizationPolicies();
         services.AddAuthRateLimiting(configuration);
 
-        services.AddSignalR();
+        services.AddSignalR()
+            .AddJsonProtocol(options =>
+            {
+                options.PayloadSerializerOptions.Converters.Add(new UtcDateTimeConverter());
+                options.PayloadSerializerOptions.Converters.Add(new NullableUtcDateTimeConverter());
+            });
         services.AddScoped<IChatNotifier, ChatHubNotifier>();
         services.AddScoped<INotificationNotifier, ChatHubNotifier>();
 

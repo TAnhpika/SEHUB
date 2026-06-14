@@ -8,6 +8,9 @@ import { isValidGuid } from "@/features/feed/postUtils";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
+/** Số báo cáo chờ từ API — tránh fallback mock (3) làm badge nhấp nháy. */
+let cachedPendingReportsCount = null;
+
 export const REPORT_STATUS_TABS = [
   { value: "all", label: "Tất cả" },
   { value: "pending", label: "Chờ xử lý" },
@@ -118,6 +121,22 @@ export function filterReports(reports, statusTab) {
   return reports.filter((report) => report.status === statusTab);
 }
 
+function getReportSortTimestamp(report) {
+  const raw = report.createdAtIso ?? report.reportedAt;
+  const ms = new Date(raw).getTime();
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
+/** Pending: FIFO (cũ trước). Resolved/all: mới trước. */
+export function sortModeratorReports(reports, tab = "all") {
+  return [...reports].sort((a, b) => {
+    const aMs = getReportSortTimestamp(a);
+    const bMs = getReportSortTimestamp(b);
+    if (tab === "pending") return aMs - bMs;
+    return bMs - aMs;
+  });
+}
+
 function formatReportCode(id) {
   const short = String(id ?? "")
     .replace(/-/g, "")
@@ -185,6 +204,7 @@ function mergeResolvedCommunityReport(reports, resolvedReport) {
 export function mapAdminReportToModeratorCommunityReport(adminReport) {
   const reporter = adminReport.reporter ?? "unknown";
   const reportedUser = adminReport.reportedUser ?? reporter;
+  const createdAtIso = adminReport.createdAtIso ?? adminReport.createdAt;
 
   return {
     id: adminReport.id,
@@ -195,8 +215,9 @@ export function mapAdminReportToModeratorCommunityReport(adminReport) {
     reason: inferReasonId(adminReport.reason),
     reporterUsername: `@${reporter}`,
     reporterInitial: toInitials(reporter),
-    timeLabel: formatTimeLabel(adminReport.createdAt),
-    reportedAt: formatReportedAt(adminReport.createdAt),
+    timeLabel: formatTimeLabel(createdAtIso),
+    reportedAt: formatReportedAt(createdAtIso),
+    createdAtIso,
     snippet: adminReport.post?.excerpt ?? adminReport.post?.title ?? adminReport.reason,
     reportedUser: {
       username: `@${reportedUser}`,
@@ -220,14 +241,12 @@ export async function loadModeratorCommunityReports() {
     return getCommunityReportsMock();
   }
 
-  try {
-    const page = await adminApi.listReports({ pageSize: 100 });
-    return (page.items ?? [])
-      .map(mapAdminReportListItem)
-      .map(mapAdminReportToModeratorCommunityReport);
-  } catch {
-    return getCommunityReportsMock();
-  }
+  const page = await adminApi.listReports({ pageSize: 100 });
+  const items = (page.items ?? [])
+    .map(mapAdminReportListItem)
+    .map(mapAdminReportToModeratorCommunityReport);
+  cachedPendingReportsCount = items.filter((report) => report.status === "pending").length;
+  return items;
 }
 
 export async function reloadModeratorCommunityReportsAfterResolve(id, action) {
@@ -249,6 +268,25 @@ export async function reloadModeratorCommunityReportsAfterResolve(id, action) {
   return mergeResolvedCommunityReport(list, resolvedReport);
 }
 
+export function syncCachedPendingReportsCount(count) {
+  if (!USE_MOCK) {
+    cachedPendingReportsCount = count;
+  }
+}
+
 export function getCommunityReportsPendingCount() {
-  return REPORTS_MOCK.filter((report) => report.status === "pending").length;
+  if (USE_MOCK) {
+    return REPORTS_MOCK.filter((report) => report.status === "pending").length;
+  }
+  return cachedPendingReportsCount ?? 0;
+}
+
+export async function loadCommunityReportsPendingCount() {
+  if (USE_MOCK) {
+    return getCommunityReportsPendingCount();
+  }
+
+  const stats = await adminApi.getModerationStats();
+  cachedPendingReportsCount = stats.pendingReports ?? 0;
+  return cachedPendingReportsCount;
 }

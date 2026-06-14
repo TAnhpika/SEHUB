@@ -42,6 +42,26 @@ public sealed class ExamsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("upload-asset")]
+    [Authorize(Policy = PolicyNames.RequireModerator)]
+    [RequestSizeLimit(52_428_800)]
+    public async Task<IActionResult> UploadAsset(IFormFile file, CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest(new { message = "File is required" });
+        }
+
+        await using var stream = file.OpenReadStream();
+        var result = await _adminExamService.UploadAssetAsync(
+            stream,
+            file.FileName,
+            file.ContentType,
+            cancellationToken);
+
+        return Ok(result);
+    }
+
     [HttpGet("{id:guid}")]
     [Authorize(Policy = PolicyNames.RequireModerator)]
     public async Task<IActionResult> GetExam(Guid id, CancellationToken cancellationToken)

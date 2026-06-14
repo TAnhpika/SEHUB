@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.FileProviders;
 using SEHub.API.Extensions;
 using SEHub.API.Hubs;
 using SEHub.API.Middleware;
@@ -41,6 +42,15 @@ app.UseAuthentication();
 app.UseMiddleware<BannedUserMiddleware>();
 app.UseAuthorization();
 app.UseRateLimiter();
+
+var uploadsRoot = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads");
+Directory.CreateDirectory(uploadsRoot);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadsRoot),
+    RequestPath = "/uploads",
+});
+
 app.MapControllers();
 app.MapHub<ChatHub>("/hubs/chat");
 

@@ -2,6 +2,7 @@ import * as premiumApi from "@/api/premiumApi";
 import {
   mapApiPlansToFePlans,
   mapPaymentOrderDto,
+  mapRankVoucherPreviewDto,
   mapSubscriptionStatusDto,
   resolvePlanCodeFromFeId,
 } from "@/api/premiumMapper";
@@ -227,6 +228,24 @@ export async function loadPricingPlans() {
 export async function loadPlanById(planId) {
   const plans = await loadPricingPlans();
   return plans.find((plan) => plan.id === planId) ?? getPlanById(planId);
+}
+
+export async function loadRankVoucherPreview(planId) {
+  if (USE_MOCK) {
+    return null;
+  }
+
+  const planCode = resolvePlanCode(planId);
+  if (!planCode) {
+    return null;
+  }
+
+  try {
+    const dto = await premiumApi.getRankVoucherPreview({ planCode });
+    return mapRankVoucherPreviewDto(dto);
+  } catch {
+    return null;
+  }
 }
 
 export async function createCheckoutOrder(planId) {

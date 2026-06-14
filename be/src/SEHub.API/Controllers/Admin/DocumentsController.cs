@@ -56,6 +56,13 @@ public sealed class DocumentsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateDocumentRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _adminDocumentService.UpdateAsync(id, request, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {

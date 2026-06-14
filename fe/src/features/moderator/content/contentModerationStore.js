@@ -81,6 +81,7 @@ function rejectMockItems(items, ids, reason = DEFAULT_REJECT_REASON, actor = MOD
 
 function notifyUpdated() {
   window.dispatchEvent(new CustomEvent("sehub-content-moderation-updated"));
+  window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
 }
 
 export function getPendingContentCount() {

@@ -9,6 +9,9 @@ public class PaymentOrder : BaseEntity
     public Guid PlanId { get; set; }
     public string PayOsOrderCode { get; set; } = string.Empty;
     public decimal Amount { get; set; }
+    public decimal OriginalAmount { get; set; }
+    public int? DiscountPercent { get; set; }
+    public string? DiscountSource { get; set; }
     public PaymentOrderStatus Status { get; set; }
     public string? QrUrl { get; set; }
     public DateTime ExpiredAt { get; set; }

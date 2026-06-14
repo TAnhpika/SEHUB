@@ -70,10 +70,16 @@ export function mapApiPlansToFePlans(apiPlans, templates) {
 }
 
 export function mapPaymentOrderDto(dto) {
+  const originalAmount = Number(dto.originalAmount ?? dto.amount ?? 0);
+  const finalAmount = Number(dto.amount ?? 0);
+
   return {
     orderId: dto.orderId,
     payOsOrderCode: dto.payOsOrderCode,
-    amount: Number(dto.amount ?? 0),
+    amount: finalAmount,
+    originalAmount,
+    discountPercent: dto.discountPercent ?? null,
+    discountSource: dto.discountSource ?? null,
     status: dto.status,
     qrUrl: dto.qrUrl ?? null,
     checkoutUrl: dto.checkoutUrl ?? null,
@@ -83,6 +89,16 @@ export function mapPaymentOrderDto(dto) {
     verifiedAt: dto.verifiedAt ?? null,
     verificationMethod: dto.verificationMethod ?? null,
     message: dto.message ?? null,
+  };
+}
+
+export function mapRankVoucherPreviewDto(dto) {
+  return {
+    levelName: dto.levelName ?? null,
+    points: dto.points ?? 0,
+    discountPercent: dto.discountPercent ?? null,
+    eligible: Boolean(dto.eligible),
+    message: dto.message ?? "",
   };
 }
 

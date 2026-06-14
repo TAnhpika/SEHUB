@@ -8,6 +8,7 @@ import {
   faChevronUp,
   faClipboardList,
   faClock,
+  faDownload,
   faFileLines,
   faInbox,
   faMousePointer,
@@ -31,6 +32,7 @@ import {
   rejectPendingExam,
 } from "@/features/admin/exams/adminExamData";
 import { getAdminDocumentsSubjectUrl } from "@/features/admin/documents/adminDocumentPaths";
+import { getExamAssetFileName, resolveExamAssetUrl } from "@/utils/examAssetUrl";
 import pendingStyles from "@/features/admin/exams/AdminExamPendingPage.module.css";
 import AdminTableFooter from "@/features/admin/shared/AdminTableFooter";
 import { ADMIN_PAGE_SIZES } from "@/features/admin/shared/adminPaginationConstants";
@@ -502,10 +504,30 @@ function AdminExamPendingPage() {
                     <span className={pendingStyles.fileIcon}>
                       <FontAwesomeIcon icon={faFileLines} />
                     </span>
-                    <div>
-                      <p className={pendingStyles.fileName}>{selected.fileName}</p>
-                      <p className={pendingStyles.fileHint}>File đính kèm từ Mod</p>
+                    <div className={pendingStyles.fileBody}>
+                      <p className={pendingStyles.fileName}>
+                        {selected.assetUrl
+                          ? getExamAssetFileName(selected.assetUrl, selected.fileName)
+                          : "Chưa có file đính kèm"}
+                      </p>
+                      <p className={pendingStyles.fileHint}>
+                        {selected.assetUrl
+                          ? "File đính kèm từ Mod — bấm Tải xuống để xem đúng file đã upload"
+                          : "Mod chưa upload file hoặc đề gửi trước bản cập nhật — yêu cầu Mod gửi lại."}
+                      </p>
                     </div>
+                    {selected.assetUrl ? (
+                      <a
+                        href={resolveExamAssetUrl(selected.assetUrl)}
+                        className={pendingStyles.fileDownload}
+                        download
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <FontAwesomeIcon icon={faDownload} />
+                        Tải xuống
+                      </a>
+                    ) : null}
                   </div>
                 </div>
 

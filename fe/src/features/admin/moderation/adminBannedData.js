@@ -186,16 +186,8 @@ export async function loadAdminBannedUsers() {
     return getAdminBannedUsers();
   }
 
-  try {
-    const items = await adminApi.listBannedUsers();
-    const apiBanned = (items ?? []).map(mapAdminBannedUser);
-    if (apiBanned.length > 0) {
-      bannedStore = apiBanned.map((row) => ({ ...row }));
-      return apiBanned;
-    }
-  } catch {
-    /* fallback below */
-  }
-
-  return getAdminBannedUsers();
+  const items = await adminApi.listBannedUsers();
+  const apiBanned = (items ?? []).map(mapAdminBannedUser);
+  bannedStore = apiBanned.map((row) => ({ ...row }));
+  return apiBanned;
 }

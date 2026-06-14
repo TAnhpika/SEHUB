@@ -28,7 +28,8 @@ public static class DbSeeder
             await SeedRolesAsync(roleManager, logger);
             await SeedLevelConfigsAsync(context, logger);
             await SeedSubscriptionPlansAsync(context, logger);
-            await BadgeSeedData.SeedAsync(context, logger);
+            await BadgeSeedData.SyncAsync(context, logger);
+            await SyncLevelVoucherPercentsAsync(context, logger);
             await SeedAdminUserAsync(userManager, context, logger);
         }
         catch (Exception ex)
@@ -62,7 +63,7 @@ public static class DbSeeder
             new LevelConfig { Id = Guid.NewGuid(), Name = "Bronze", MinPoints = 0, VoucherPercent = null, CreatedAt = DateTime.UtcNow },
             new LevelConfig { Id = Guid.NewGuid(), Name = "Silver", MinPoints = 100, VoucherPercent = 5, CreatedAt = DateTime.UtcNow },
             new LevelConfig { Id = Guid.NewGuid(), Name = "Gold", MinPoints = 500, VoucherPercent = 10, CreatedAt = DateTime.UtcNow },
-            new LevelConfig { Id = Guid.NewGuid(), Name = "Platinum", MinPoints = 2000, VoucherPercent = 15, CreatedAt = DateTime.UtcNow }
+            new LevelConfig { Id = Guid.NewGuid(), Name = "Platinum", MinPoints = 2000, VoucherPercent = 20, CreatedAt = DateTime.UtcNow }
         };
 
         context.LevelConfigs.AddRange(levels);
@@ -136,5 +137,42 @@ public static class DbSeeder
 
         await context.SaveChangesAsync();
         logger.LogInformation("Seeded admin user {Email}", AdminEmail);
+    }
+
+    private static async Task SyncLevelVoucherPercentsAsync(SEHubDbContext context, ILogger logger)
+    {
+        var expected = new Dictionary<string, int?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Bronze"] = null,
+            ["Silver"] = 5,
+            ["Gold"] = 10,
+            ["Platinum"] = 20,
+        };
+
+        var levels = await context.LevelConfigs.ToListAsync();
+        var updated = 0;
+
+        foreach (var level in levels)
+        {
+            if (!expected.TryGetValue(level.Name, out var voucherPercent))
+            {
+                continue;
+            }
+
+            if (level.VoucherPercent == voucherPercent)
+            {
+                continue;
+            }
+
+            level.VoucherPercent = voucherPercent;
+            level.UpdatedAt = DateTime.UtcNow;
+            updated++;
+        }
+
+        if (updated > 0)
+        {
+            await context.SaveChangesAsync();
+            logger.LogInformation("Synced voucher percents for {Count} level configs", updated);
+        }
     }
 }

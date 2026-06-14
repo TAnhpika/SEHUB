@@ -1,11 +1,13 @@
 using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Feed;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
+using SEHub.Shared.Constants;
 
 namespace SEHub.Application.Feed;
 
@@ -86,6 +88,38 @@ public sealed class PostService : IPostService
         }
 
         return result;
+    }
+
+    public async Task<FeaturedPostsStateDto> GetFeaturedModeratorStateAsync(
+        string? search,
+        int candidatePageSize = 100,
+        CancellationToken cancellationToken = default)
+    {
+        var pinnedPosts = await _postRepository.GetFeaturedAsync(GamificationConstants.MaxFeaturedPosts, cancellationToken);
+        var (candidatePosts, _) = await _postRepository.GetPublishedCandidatesForFeaturingAsync(
+            search,
+            1,
+            Math.Clamp(candidatePageSize, 1, 100),
+            cancellationToken);
+
+        var pinned = new List<FeaturedPostModeratorItemDto>();
+        foreach (var post in pinnedPosts)
+        {
+            pinned.Add(await MapFeaturedModeratorItemAsync(post, cancellationToken));
+        }
+
+        var candidates = new List<FeaturedPostModeratorItemDto>();
+        foreach (var post in candidatePosts)
+        {
+            candidates.Add(await MapFeaturedModeratorItemAsync(post, cancellationToken));
+        }
+
+        return new FeaturedPostsStateDto
+        {
+            Pinned = pinned,
+            Candidates = candidates,
+            MaxPinned = GamificationConstants.MaxFeaturedPosts,
+        };
     }
 
     public async Task<PostDetailDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -172,12 +206,41 @@ public sealed class PostService : IPostService
             throw new ForbiddenException("Only published posts can be featured.");
         }
 
+        if (request.IsFeatured)
+        {
+            var featuredCount = await _postRepository.CountFeaturedAsync(cancellationToken);
+            if (!post.IsFeatured && featuredCount >= GamificationConstants.MaxFeaturedPosts)
+            {
+                throw new ConflictException(
+                    $"Chỉ được ghim tối đa {GamificationConstants.MaxFeaturedPosts} bài viết.");
+            }
+        }
+
         post.IsFeatured = request.IsFeatured;
         post.UpdatedAt = DateTime.UtcNow;
         await _postRepository.UpdateAsync(post, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return await MapDetailAsync(post, cancellationToken);
+    }
+
+    private async Task<FeaturedPostModeratorItemDto> MapFeaturedModeratorItemAsync(
+        Post post,
+        CancellationToken cancellationToken)
+    {
+        var author = await BuildAuthorAsync(post.AuthorId, cancellationToken);
+        return new FeaturedPostModeratorItemDto
+        {
+            Id = post.Id,
+            Title = post.Title,
+            Excerpt = BuildExcerpt(post.Content),
+            AuthorUsername = author.Username,
+            AuthorDisplayName = author.DisplayName,
+            IsFeatured = post.IsFeatured,
+            LikeCount = await _likeRepository.CountByPostIdAsync(post.Id, cancellationToken),
+            CommentCount = await _commentRepository.CountByPostIdAsync(post.Id, cancellationToken),
+            CreatedAt = post.CreatedAt,
+        };
     }
 
     private async Task<PostListItemDto> MapListItemAsync(Post post, CancellationToken cancellationToken)

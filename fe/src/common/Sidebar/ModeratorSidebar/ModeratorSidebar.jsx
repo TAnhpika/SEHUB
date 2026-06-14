@@ -3,14 +3,17 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import logoSrc from "@/img/logo.png";
 import { useModeratorPage } from "@/features/moderator/context/ModeratorPageContext";
-import { refreshPendingContentCount } from "@/features/moderator/content/contentModerationService";
 import {
   getModeratorNavBadgeCounts,
   isModeratorNavActive,
+  loadModeratorNavBadgeCounts,
   MODERATOR_HOME_PATH,
   MODERATOR_NAV_SECTIONS,
 } from "@/features/moderator/moderatorNavData";
 import styles from "./ModeratorSidebar.module.css";
+
+const STATS_EVENT = "sehub-moderator-stats-updated";
+const EXAM_REPORTS_EVENT = "sehubs-exam-reports-changed";
 
 function NavItemLink({ item, pathname, badgeCounts, onNavigate }) {
   const active = isModeratorNavActive(item, pathname);
@@ -49,13 +52,29 @@ function ModeratorSidebar() {
   const [badgeCounts, setBadgeCounts] = useState(() => getModeratorNavBadgeCounts());
 
   useEffect(() => {
-    function syncBadges() {
-      setBadgeCounts(getModeratorNavBadgeCounts());
+    let cancelled = false;
+
+    function refreshBadges() {
+      loadModeratorNavBadgeCounts()
+        .then((counts) => {
+          if (!cancelled) setBadgeCounts(counts);
+        })
+        .catch(() => {
+          if (!cancelled) setBadgeCounts(getModeratorNavBadgeCounts());
+        });
     }
 
-    refreshPendingContentCount().then(syncBadges).catch(syncBadges);
-    window.addEventListener("sehub-content-moderation-updated", syncBadges);
-    return () => window.removeEventListener("sehub-content-moderation-updated", syncBadges);
+    refreshBadges();
+    window.addEventListener(STATS_EVENT, refreshBadges);
+    window.addEventListener(EXAM_REPORTS_EVENT, refreshBadges);
+    window.addEventListener("storage", refreshBadges);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener(STATS_EVENT, refreshBadges);
+      window.removeEventListener(EXAM_REPORTS_EVENT, refreshBadges);
+      window.removeEventListener("storage", refreshBadges);
+    };
   }, []);
 
   function handleNavClick() {

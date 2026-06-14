@@ -26,6 +26,7 @@ public sealed class ProfileService : IProfileService
     private readonly IPostLikeRepository _likeRepository;
     private readonly ICommentRepository _commentRepository;
     private readonly IGamificationService _gamificationService;
+    private readonly ILevelConfigRepository _levelConfigRepository;
     private readonly IUserFollowRepository _followRepository;
     private readonly IFileStorageService _fileStorage;
     private readonly ICurrentUserService _currentUser;
@@ -39,6 +40,7 @@ public sealed class ProfileService : IProfileService
         IPostLikeRepository likeRepository,
         ICommentRepository commentRepository,
         IGamificationService gamificationService,
+        ILevelConfigRepository levelConfigRepository,
         IUserFollowRepository followRepository,
         IFileStorageService fileStorage,
         ICurrentUserService currentUser,
@@ -51,6 +53,7 @@ public sealed class ProfileService : IProfileService
         _likeRepository = likeRepository;
         _commentRepository = commentRepository;
         _gamificationService = gamificationService;
+        _levelConfigRepository = levelConfigRepository;
         _followRepository = followRepository;
         _fileStorage = fileStorage;
         _currentUser = currentUser;
@@ -226,7 +229,9 @@ public sealed class ProfileService : IProfileService
     private async Task<ProfileDto> BuildProfileAsync(Guid userId, Models.UserAccount user, CancellationToken cancellationToken)
     {
         var profile = await _profileRepository.GetByUserIdAsync(userId, cancellationToken);
-        var (points, levelName, _) = await _gamificationService.GetUserGamificationAsync(userId, cancellationToken);
+        var (points, levelName, streakCount) = await _gamificationService.GetUserGamificationAsync(userId, cancellationToken);
+        var levels = await _levelConfigRepository.GetAllOrderedAsync(cancellationToken);
+        var nextLevel = levels.FirstOrDefault(level => level.MinPoints > points);
         var badges = await _badgeRepository.GetByUserIdAsync(userId, cancellationToken);
         var followersCount = await _followRepository.CountFollowersAsync(userId, cancellationToken);
         var followingCount = await _followRepository.CountFollowingAsync(userId, cancellationToken);
@@ -253,6 +258,8 @@ public sealed class ProfileService : IProfileService
             Semester = profile?.Semester?.ToString(),
             Points = points,
             LevelName = levelName,
+            StreakCount = streakCount,
+            NextLevelPoints = nextLevel?.MinPoints,
             Badges = badges.Select(b => new BadgeDto
             {
                 Code = b.Badge.Code,

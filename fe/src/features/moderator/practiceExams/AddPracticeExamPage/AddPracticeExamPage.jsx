@@ -13,6 +13,7 @@ import {
   faLink,
   faListOl,
   faListUl,
+  faTrash,
   faUnderline,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
@@ -32,6 +33,12 @@ import {
   PRACTICE_SEMESTER_OPTIONS,
   PRACTICE_SUBJECT_OPTIONS,
 } from "@/features/moderator/practiceExams/practiceExamData";
+import {
+  createPracticeAttachmentEntry,
+  PRACTICE_UPLOAD_ACCEPT,
+  uploadPracticeAttachment,
+  validatePracticeUploadFile,
+} from "@/features/moderator/practiceExams/practiceExamUpload";
 import styles from "./AddPracticeExamPage.module.css";
 
 const PRACTICE_CRUMBS = [
@@ -40,7 +47,7 @@ const PRACTICE_CRUMBS = [
   { label: "Thêm đề thực hành" },
 ];
 
-const ACCEPTED_TYPES = ".pdf,.zip,.rar,.docx";
+const ACCEPTED_TYPES = PRACTICE_UPLOAD_ACCEPT;
 const MAX_FILE_MB = 50;
 
 function FileTypeIcon({ type }) {
@@ -64,7 +71,7 @@ function AddPracticeExamPage() {
   const [semester, setSemester] = useState(DEMO_DRAFT.semester);
   const [title, setTitle] = useState(DEMO_DRAFT.title);
   const [description, setDescription] = useState(DEMO_DRAFT.description);
-  const [attachments, setAttachments] = useState(DEMO_DRAFT.attachments);
+  const [attachments, setAttachments] = useState([]);
   const [allowDiscussion, setAllowDiscussion] = useState(DEMO_DRAFT.allowDiscussion);
   const [pinExam, setPinExam] = useState(DEMO_DRAFT.pinExam);
   const [isDragging, setIsDragging] = useState(false);
@@ -124,6 +131,14 @@ function AddPracticeExamPage() {
       showToast("Vui lòng điền đầy đủ các trường bắt buộc.");
       return;
     }
+    if (attachments.some((file) => file.status === "uploading")) {
+      showToast("Đợi file đính kèm tải lên xong trước khi gửi.");
+      return;
+    }
+    if (!attachments.some((file) => file.status === "done" && file.assetUrl)) {
+      showToast("Upload ít nhất một file đề (PDF/ZIP/RAR/DOCX).");
+      return;
+    }
 
     const payload = buildPayload();
 
@@ -159,22 +174,57 @@ function AddPracticeExamPage() {
     }
   }
 
-  function addFiles(fileList) {
+  function removeAttachment(id) {
+    setAttachments((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  async function addFiles(fileList) {
     if (!fileList?.length) return;
 
-    const next = [...attachments];
-    Array.from(fileList).forEach((file, index) => {
-      const ext = file.name.split(".").pop()?.toLowerCase() ?? "file";
-      next.push({
-        id: `upload-${Date.now()}-${index}`,
-        name: file.name,
-        sizeLabel: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-        type: ext === "pdf" ? "pdf" : "zip",
-        status: "uploading",
-        progress: 10,
-      });
-    });
-    setAttachments(next);
+    for (const file of Array.from(fileList)) {
+      const validationError = validatePracticeUploadFile(file);
+      if (validationError) {
+        showToast(validationError);
+        continue;
+      }
+
+      const entry = createPracticeAttachmentEntry(file);
+      setAttachments((prev) => [...prev, entry]);
+
+      try {
+        setAttachments((prev) =>
+          prev.map((item) => (item.id === entry.id ? { ...item, progress: 40 } : item)),
+        );
+        const result = await uploadPracticeAttachment(file);
+        setAttachments((prev) =>
+          prev.map((item) =>
+            item.id === entry.id
+              ? {
+                  ...item,
+                  status: "done",
+                  progress: 100,
+                  assetUrl: result.url,
+                  name: result.fileName ?? file.name,
+                }
+              : item,
+          ),
+        );
+      } catch (error) {
+        setAttachments((prev) =>
+          prev.map((item) =>
+            item.id === entry.id
+              ? {
+                  ...item,
+                  status: "error",
+                  progress: 0,
+                  error: error instanceof ApiError ? error.message : error?.message ?? "Không tải được file.",
+                }
+              : item,
+          ),
+        );
+        showToast(error instanceof ApiError ? error.message : error?.message ?? "Không tải được file.");
+      }
+    }
   }
 
   function handleFileInput(event) {
@@ -385,9 +435,20 @@ function AddPracticeExamPage() {
                             {file.sizeLabel}
                             {file.status === "done"
                               ? " • Tải lên xong"
-                              : ` • Đang tải... ${file.progress}%`}
+                              : file.status === "error"
+                                ? ` • ${file.error ?? "Lỗi tải lên"}`
+                                : ` • Đang tải... ${file.progress}%`}
                           </p>
                         </div>
+                        <button
+                          type="button"
+                          className={styles.removeFile}
+                          onClick={() => removeAttachment(file.id)}
+                          aria-label={`Xóa ${file.name}`}
+                          disabled={file.status === "uploading"}
+                        >
+                          <FontAwesomeIcon icon={faTrash} />
+                        </button>
                         {file.status === "uploading" && (
                           <div
                             className={styles.spinner}

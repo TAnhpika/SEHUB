@@ -123,11 +123,10 @@ function injectBadges(items, counts) {
 }
 
 /** Nav sections với badge động từ store */
-export function getAdminNavSections() {
-  const counts = getAdminNavBadgeCounts();
+export function getAdminNavSections(badgeCounts = getAdminNavBadgeCounts()) {
   return ADMIN_NAV_TEMPLATE.map((section) => ({
     ...section,
-    items: injectBadges(section.items, counts),
+    items: injectBadges(section.items, badgeCounts),
   }));
 }
 

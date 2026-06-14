@@ -8,4 +8,5 @@ public sealed class DashboardStatsDto
     public int PendingReports { get; init; }
     public decimal TotalRevenue { get; init; }
     public int ActiveSubscriptions { get; init; }
+    public int TotalDocuments { get; init; }
 }

@@ -1,16 +1,23 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import {
   buildFinalExamContributionPayload,
   recordExamDraft,
 } from "@/features/moderator/exams/moderatorExamContributionStore";
+import { ANSWER_KEYS } from "@/features/moderator/finalExams/finalExamData";
 import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
 import QuestionEditorCard from "@/features/moderator/finalExams/components/QuestionEditorCard";
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
 import styles from "./FinalExamQuestionsStep.module.css";
+
+function isQuestionComplete(question) {
+  return (
+    question.content.trim() &&
+    ANSWER_KEYS.every((key) => question.answers[key]?.trim())
+  );
+}
 
 function FinalExamQuestionsStep() {
   const navigate = useNavigate();
@@ -21,16 +28,18 @@ function FinalExamQuestionsStep() {
     examInfo,
     questions,
     activeQuestionIndex,
-    enteredCount,
     completeCount,
     totalQuestions,
     progressPercent,
+    ensureQuestionSlots,
     updateActiveQuestion,
     updateActiveAnswer,
-    addQuestion,
-    removeActiveQuestion,
     setActiveQuestionIndex,
   } = useFinalExamWizard();
+
+  useEffect(() => {
+    ensureQuestionSlots(totalQuestions);
+  }, [ensureQuestionSlots, totalQuestions]);
 
   const activeQuestion = questions[activeQuestionIndex];
   const questionNumber = activeQuestionIndex + 1;
@@ -46,15 +55,6 @@ function FinalExamQuestionsStep() {
       ),
     );
     showToast("Đã lưu nháp danh sách câu hỏi.");
-  }
-
-  function handleAddQuestion() {
-    const added = addQuestion();
-    if (!added) {
-      showToast(`Đề thi đã đạt tối đa ${totalQuestions} câu.`);
-      return;
-    }
-    showToast(`Đã thêm câu ${questions.length + 1}.`);
   }
 
   function handleContinue() {
@@ -78,7 +78,7 @@ function FinalExamQuestionsStep() {
             <p className={styles.subtitle}>{examSubtitle}</p>
           </div>
           <p className={styles.count}>
-            Hoàn thiện: {completeCount}/{totalQuestions} câu · {enteredCount} câu trong đề
+            Hoàn thiện: {completeCount}/{totalQuestions} câu
           </p>
         </div>
         <div
@@ -101,22 +101,12 @@ function FinalExamQuestionsStep() {
         onToggleExplanation={() =>
           updateActiveQuestion({ showExplanation: !activeQuestion.showExplanation })
         }
-        onRemove={removeActiveQuestion}
       />
 
-      <button
-        type="button"
-        className={styles.addQuestion}
-        onClick={handleAddQuestion}
-        disabled={questions.length >= totalQuestions}
-      >
-        <FontAwesomeIcon icon={faPlus} />
-        Thêm câu hỏi
-      </button>
 
       {questions.length > 1 && (
         <div className={styles.picker}>
-          <span className={styles.pickerLabel}>Chuyển câu:</span>
+          <span className={styles.pickerLabel}>Chuyển câu ({questions.length} câu):</span>
           <div className={styles.pickerList}>
             {questions.map((item, index) => (
               <button
@@ -124,7 +114,7 @@ function FinalExamQuestionsStep() {
                 type="button"
                 className={`${styles.pickerBtn} ${
                   index === activeQuestionIndex ? styles["pickerBtn-active"] : ""
-                }`}
+                } ${isQuestionComplete(item) ? styles["pickerBtn-complete"] : ""}`}
                 onClick={() => setActiveQuestionIndex(index)}
               >
                 {index + 1}

@@ -45,19 +45,10 @@ export async function loadAdminUsers() {
     return getAdminUsers();
   }
 
-  try {
-    const page = await adminApi.listUsers({ pageSize: 100 });
-    const apiUsers = (page.items ?? []).map(mapAdminUserListItem);
-    if (apiUsers.length > 0) {
-      usersStore = [
-        ...apiUsers,
-        ...usersStore.filter((user) => !apiUsers.some((apiUser) => apiUser.id === user.id)),
-      ];
-      return apiUsers;
-    }
-  } catch {
-    return getAdminUsers();
-  }
+  const page = await adminApi.listUsers({ pageSize: 200 });
+  const apiUsers = (page.items ?? []).map(mapAdminUserListItem);
+  usersStore = apiUsers.map((user) => ({ ...user }));
+  return apiUsers;
 }
 
 export async function loadAdminUserById(id) {
@@ -302,7 +293,7 @@ export function grantTokenManual(userId, { amount, reason, adminUsername }) {
   return { ok: true, message: result.message ?? `Đã cộng token cho @${user.username}.` };
 }
 
-export function promoteToModerator(userId, { reason, adminUsername }) {
+export async function promoteToModerator(userId, { reason, adminUsername }) {
   const user = getAdminUserById(userId);
   if (!user) return { ok: false, message: "Không tìm thấy tài khoản." };
   if (user.role !== "student") {
@@ -312,6 +303,14 @@ export function promoteToModerator(userId, { reason, adminUsername }) {
   const trimmed = reason?.trim() ?? "";
   if (trimmed.length < 10) {
     return { ok: false, message: "Lý do gán Mod phải có ít nhất 10 ký tự." };
+  }
+
+  if (!USE_MOCK && isValidGuid(String(userId ?? ""))) {
+    try {
+      await patchAdminUserViaApi(userId, { role: "Moderator" });
+    } catch (error) {
+      return { ok: false, message: error?.message ?? "Không gán được quyền Moderator." };
+    }
   }
 
   const modResult = addModeratorDirect(

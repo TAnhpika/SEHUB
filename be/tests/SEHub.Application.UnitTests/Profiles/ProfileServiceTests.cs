@@ -19,6 +19,7 @@ public sealed class ProfileServiceTests
     private readonly Mock<IPostLikeRepository> _likeRepository = new();
     private readonly Mock<ICommentRepository> _commentRepository = new();
     private readonly Mock<IGamificationService> _gamificationService = new();
+    private readonly Mock<ILevelConfigRepository> _levelConfigRepository = new();
     private readonly Mock<IUserFollowRepository> _followRepository = new();
     private readonly Mock<IFileStorageService> _fileStorage = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
@@ -34,6 +35,7 @@ public sealed class ProfileServiceTests
         _likeRepository.Object,
         _commentRepository.Object,
         _gamificationService.Object,
+        _levelConfigRepository.Object,
         _followRepository.Object,
         _fileStorage.Object,
         _currentUser.Object,
@@ -109,6 +111,8 @@ public sealed class ProfileServiceTests
             .ReturnsAsync([]);
         _gamificationService.Setup(g => g.GetUserGamificationAsync(UserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((10, "Bronze", 0));
+        _levelConfigRepository.Setup(r => r.GetAllOrderedAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
         _followRepository.Setup(r => r.CountFollowersAsync(UserId, It.IsAny<CancellationToken>())).ReturnsAsync(0);
         _followRepository.Setup(r => r.CountFollowingAsync(UserId, It.IsAny<CancellationToken>())).ReturnsAsync(0);
 

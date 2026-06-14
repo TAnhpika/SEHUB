@@ -1,6 +1,7 @@
 using Moq;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Gamification;
 using SEHub.Application.Models;
 using SEHub.Application.Notifications;
 using SEHub.Application.Profiles;
@@ -13,6 +14,7 @@ public sealed class UserActivityServiceTests
     private readonly Mock<IUserDailyActivityRepository> _activityRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<INotificationService> _notificationService = new();
+    private readonly Mock<IBadgeCheckService> _badgeCheckService = new();
     private readonly Mock<IProfileActivityCache> _activityCache = new();
     private readonly Mock<IProfileSnapshotCache> _snapshotCache = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
@@ -24,6 +26,7 @@ public sealed class UserActivityServiceTests
         _activityRepository.Object,
         _userRepository.Object,
         _notificationService.Object,
+        _badgeCheckService.Object,
         _activityCache.Object,
         _snapshotCache.Object,
         _unitOfWork.Object,

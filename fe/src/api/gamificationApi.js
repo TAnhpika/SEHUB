@@ -1,7 +1,7 @@
 import { apiRequest } from "./httpClient";
 
 export function getBadges() {
-  return apiRequest("/api/v1/gamification/badges");
+  return apiRequest("/api/v1/gamification/badges", { auth: false });
 }
 
 export function mapBadgeCatalogItem(dto) {

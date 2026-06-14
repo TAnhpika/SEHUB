@@ -100,6 +100,56 @@ public sealed class AdminDocumentService : IAdminDocumentService
         return _mapper.Map<AdminDocumentDto>(document);
     }
 
+    public async Task<AdminDocumentDto> UpdateAsync(
+        Guid id,
+        UpdateDocumentRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var document = await _documentRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Document", id);
+
+        if (document.IsDeleted)
+        {
+            throw new NotFoundException("Document", id);
+        }
+
+        if (request.CategoryId is Guid categoryId)
+        {
+            _ = await _categoryRepository.GetByIdAsync(categoryId, cancellationToken)
+                ?? throw new NotFoundException("DocumentCategory", categoryId);
+            document.CategoryId = categoryId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Title))
+        {
+            document.Title = request.Title.Trim();
+        }
+
+        if (request.PageCount is int pageCount)
+        {
+            document.PageCount = pageCount;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.AccessTier))
+        {
+            if (!Enum.TryParse<AccessTier>(request.AccessTier, true, out var accessTier))
+            {
+                throw new ForbiddenException("AccessTier must be FreePreview or PremiumFull.");
+            }
+
+            document.AccessTier = accessTier;
+        }
+
+        document.UpdatedAt = DateTime.UtcNow;
+        await _documentRepository.UpdateAsync(document, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var updated = await _documentRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Document", id);
+
+        return _mapper.Map<AdminDocumentDto>(updated);
+    }
+
     private async Task<DocumentCategory> ResolveCategoryAsync(
         UploadDocumentRequest request,
         CancellationToken cancellationToken)

@@ -14,24 +14,33 @@ namespace SEHub.Application.Admin;
 
 public sealed class AdminExamService : IAdminExamService
 {
+    private const long MaxAssetBytes = 52_428_800;
+    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".pdf", ".zip", ".rar", ".docx",
+    };
+
     private readonly IExamRepository _examRepository;
     private readonly IExamAttachmentRepository _attachmentRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IMapper _mapper;
+    private readonly IFileStorageService _fileStorage;
 
     public AdminExamService(
         IExamRepository examRepository,
         IExamAttachmentRepository attachmentRepository,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
-        IMapper mapper)
+        IMapper mapper,
+        IFileStorageService fileStorage)
     {
         _examRepository = examRepository;
         _attachmentRepository = attachmentRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _mapper = mapper;
+        _fileStorage = fileStorage;
     }
 
     public async Task<PagedResult<ExamListItemDto>> GetExamsAsync(ExamQueryParams query, CancellationToken cancellationToken = default)
@@ -68,11 +77,14 @@ public sealed class AdminExamService : IAdminExamService
 
     public async Task<AdminExamDto> CreateExamAsync(CreateExamRequest request, bool confirmDuplicate = false, CancellationToken cancellationToken = default)
     {
-        var contentSource = request.Questions.Count > 0
-            ? string.Join('|', request.Questions.Select(q => q.Content))
-            : $"{request.Code}|{request.Title}|{request.Description}";
+        var code = request.Code.Trim();
+        if (await _examRepository.GetByCodeAsync(code, cancellationToken) is not null)
+        {
+            throw new ConflictException("Mã đề đã tồn tại. Vui lòng dùng mã khác.");
+        }
+
         var contentHash = OcrExamService.ComputeSha256Hash(
-            OcrExamService.NormalizeText(contentSource));
+            OcrExamService.NormalizeText(BuildContentHashSource(request)));
 
         var duplicate = await _examRepository.GetByContentHashAsync(contentHash, cancellationToken);
         if (duplicate is not null && !confirmDuplicate)
@@ -126,6 +138,49 @@ public sealed class AdminExamService : IAdminExamService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return await MapAdminExamAsync(exam, cancellationToken);
+    }
+
+    public async Task<UploadExamAssetResponse> UploadAssetAsync(
+        Stream fileContent,
+        string fileName,
+        string mimeType,
+        CancellationToken cancellationToken = default)
+    {
+        if (fileContent.CanSeek && fileContent.Length > MaxAssetBytes)
+        {
+            throw new DomainException("File exceeds the 50 MB limit.");
+        }
+
+        var extension = Path.GetExtension(fileName);
+        if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension))
+        {
+            throw new DomainException("Only PDF, ZIP, RAR, and DOCX files are allowed.");
+        }
+
+        var filePath = await _fileStorage.UploadAsync(
+            fileContent,
+            fileName,
+            mimeType,
+            "exams",
+            cancellationToken);
+
+        var url = await _fileStorage.GetSignedUrlAsync(filePath, TimeSpan.FromHours(24), cancellationToken);
+
+        return new UploadExamAssetResponse
+        {
+            Url = url,
+            FileName = Path.GetFileName(fileName),
+        };
+    }
+
+    private static string BuildContentHashSource(CreateExamRequest request)
+    {
+        if (request.Questions.Count > 0)
+        {
+            return string.Join('|', request.Questions.Select(q => q.Content));
+        }
+
+        return $"{request.Code}|{request.Title}|{request.Description}|{request.AssetUrl}";
     }
 
     private static Exam BuildExamFromRequest(CreateExamRequest request, string contentHash, Guid? submittedById)
@@ -223,6 +278,9 @@ public sealed class AdminExamService : IAdminExamService
         Major = exam.Major,
         QuestionCount = exam.QuestionCount,
         Status = exam.Status.ToString(),
+        Description = exam.Description,
+        AssetUrl = exam.AssetUrl,
+        ContentHash = exam.ContentHash,
         CreatedAt = exam.CreatedAt,
         UpdatedAt = exam.UpdatedAt
     };

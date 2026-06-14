@@ -38,4 +38,25 @@ public sealed class GamificationController : ControllerBase
         var result = await _gamificationService.GetBadgesAsync(cancellationToken);
         return Ok(result);
     }
+
+    [HttpPost("badges")]
+    public async Task<IActionResult> CreateBadge([FromBody] CreateBadgeRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _gamificationService.CreateBadgeAsync(request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPut("badges/{id:guid}")]
+    public async Task<IActionResult> UpdateBadge(Guid id, [FromBody] UpdateBadgeRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _gamificationService.UpdateBadgeAsync(id, request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpDelete("badges/{id:guid}")]
+    public async Task<IActionResult> DeleteBadge(Guid id, CancellationToken cancellationToken)
+    {
+        await _gamificationService.DeleteBadgeAsync(id, cancellationToken);
+        return Ok(new { message = "Badge deleted" });
+    }
 }

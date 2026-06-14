@@ -17,7 +17,7 @@ public sealed class GamificationController : ControllerBase
     }
 
     [HttpGet("badges")]
-    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    [AllowAnonymous]
     public async Task<IActionResult> GetBadges(CancellationToken cancellationToken)
     {
         var result = await _catalogService.GetBadgesAsync(cancellationToken);

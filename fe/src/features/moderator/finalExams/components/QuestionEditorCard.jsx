@@ -28,6 +28,8 @@ function QuestionEditorCard({
           className={styles.deleteBtn}
           onClick={onRemove}
           aria-label={`Xóa câu ${questionNumber}`}
+          disabled={!onRemove}
+          style={onRemove ? undefined : { visibility: "hidden" }}
         >
           <FontAwesomeIcon icon={faTrash} />
         </button>

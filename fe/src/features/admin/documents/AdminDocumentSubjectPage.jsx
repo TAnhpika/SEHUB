@@ -11,7 +11,7 @@ import {
   getAdminDocumentsBySubject,
   loadAdminDocuments,
   removeAdminDocument,
-  updateAdminDocument,
+  updateAdminDocumentViaApi,
   uploadAdminDocument,
 } from "@/features/admin/documents/adminDocumentData";
 import DocumentEditModal from "@/features/admin/documents/DocumentEditModal";
@@ -82,7 +82,7 @@ function AdminDocumentSubjectPage() {
         name: file.name,
         subject: code,
         semester: semester !== "all" ? semester : "1",
-        access,
+        access: access === "free" ? "free" : "premium",
         pages,
       });
       setRefreshKey((k) => k + 1);
@@ -115,6 +115,8 @@ function AdminDocumentSubjectPage() {
         if (editingDoc?.id === id) setEditingDoc(null);
         setRefreshKey((k) => k + 1);
         showToast("Đã xóa tài liệu.");
+      } else {
+        showToast("Không xóa được tài liệu.");
       }
     } catch (error) {
       showToast(error?.message ?? "Không thể xóa tài liệu.");
@@ -123,14 +125,19 @@ function AdminDocumentSubjectPage() {
 
   function handleEditSave(payload) {
     if (!editingDoc) return;
-    const result = updateAdminDocument(editingDoc.id, payload);
-    if (!result.ok) {
-      showToast(result.message ?? "Không thể cập nhật tài liệu.");
-      return;
-    }
-    setRefreshKey((k) => k + 1);
-    setEditingDoc(null);
-    showToast("Đã cập nhật tài liệu.");
+    updateAdminDocumentViaApi(editingDoc.id, payload)
+      .then((result) => {
+        if (!result.ok) {
+          showToast(result.message ?? "Không thể cập nhật tài liệu.");
+          return;
+        }
+        setRefreshKey((k) => k + 1);
+        setEditingDoc(null);
+        showToast("Đã cập nhật tài liệu.");
+      })
+      .catch((err) => {
+        showToast(err.message ?? "Không thể cập nhật tài liệu.");
+      });
   }
 
   const semesterLabel =

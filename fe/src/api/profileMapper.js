@@ -93,10 +93,11 @@ export function mapProfileRecentPost(post) {
 export function mapProfileCard(dto, statsDto = null) {
   const displayName = dto.displayName?.trim() || dto.username || "User";
   const points = statsDto?.points ?? dto.points ?? 0;
+  const streakCount = statsDto?.streakCount ?? dto.streakCount ?? 0;
   const levelName = statsDto?.levelName ?? dto.levelName ?? "Bronze";
-  const streakCount = statsDto?.streakCount ?? 0;
   const nextLevelName = statsDto?.nextLevelName ?? deriveNextLevelLabel(levelName);
-  const { pointsToNext, levelProgress } = computeProgress(points, statsDto?.nextLevelPoints);
+  const nextLevelPoints = statsDto?.nextLevelPoints ?? dto.nextLevelPoints;
+  const { pointsToNext, levelProgress } = computeProgress(points, nextLevelPoints);
 
   return {
     userId: dto.userId,

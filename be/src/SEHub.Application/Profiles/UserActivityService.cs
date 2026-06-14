@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Logging;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Gamification;
 using SEHub.Application.Notifications;
 using SEHub.Domain.Enums;
+using SEHub.Shared.Constants;
 
 namespace SEHub.Application.Profiles;
 
@@ -14,6 +16,7 @@ public sealed class UserActivityService : IUserActivityService
     private readonly IUserDailyActivityRepository _activityRepository;
     private readonly IUserRepository _userRepository;
     private readonly INotificationService _notificationService;
+    private readonly IBadgeCheckService _badgeCheckService;
     private readonly IProfileActivityCache _activityCache;
     private readonly IProfileSnapshotCache _snapshotCache;
     private readonly IUnitOfWork _unitOfWork;
@@ -23,6 +26,7 @@ public sealed class UserActivityService : IUserActivityService
         IUserDailyActivityRepository activityRepository,
         IUserRepository userRepository,
         INotificationService notificationService,
+        IBadgeCheckService badgeCheckService,
         IProfileActivityCache activityCache,
         IProfileSnapshotCache snapshotCache,
         IUnitOfWork unitOfWork,
@@ -31,6 +35,7 @@ public sealed class UserActivityService : IUserActivityService
         _activityRepository = activityRepository;
         _userRepository = userRepository;
         _notificationService = notificationService;
+        _badgeCheckService = badgeCheckService;
         _activityCache = activityCache;
         _snapshotCache = snapshotCache;
         _unitOfWork = unitOfWork;
@@ -49,16 +54,21 @@ public sealed class UserActivityService : IUserActivityService
                 streak.StreakCount > 0 &&
                 streak.StreakCount % StreakMilestoneDays == 0)
             {
-                await _userRepository.AddPointsAsync(userId, StreakMilestonePoints, cancellationToken);
+                await _userRepository.AddPointsAsync(userId, GamificationConstants.StreakMilestonePoints, cancellationToken);
 
                 var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
                 await _notificationService.CreateAsync(
                     userId,
                     NotificationType.Token,
                     $"Streak {streak.StreakCount} ngày!",
-                    $"Bạn nhận +{StreakMilestonePoints} điểm vì duy trì streak {streak.StreakCount} ngày.",
+                    $"Bạn nhận +{GamificationConstants.StreakMilestonePoints} điểm vì duy trì streak {streak.StreakCount} ngày.",
                     user is null ? null : $"/profile/{user.Username}",
                     cancellationToken: cancellationToken);
+
+                await _badgeCheckService.EvaluateForTriggerAsync(
+                    userId,
+                    BadgeCheckService.TriggerStreakDays,
+                    cancellationToken);
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

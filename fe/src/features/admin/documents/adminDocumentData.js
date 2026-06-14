@@ -5,6 +5,7 @@ import { mapAdminDocumentListItem } from "@/api/adminMapper";
 import { isValidGuid } from "@/features/feed/postUtils";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+const DEFAULT_DOCUMENT_CATEGORY_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
 
 /** @typedef {'upload' | 'exam'} AdminDocumentSource */
 
@@ -436,19 +437,101 @@ export async function removeAdminDocument(id) {
   return documentsStore.length < before;
 }
 
+function resolveCategoryId(subject) {
+  const normalized = String(subject ?? "").trim().toUpperCase();
+  const existing = documentsStore.find(
+    (doc) => doc.subject === normalized && doc.categoryId,
+  );
+  return existing?.categoryId ?? DEFAULT_DOCUMENT_CATEGORY_ID;
+}
+
+function mapAccessTierForApi(accessLabel) {
+  return String(accessLabel ?? "").includes("Premium") ? "PremiumFull" : "FreePreview";
+}
+
+export async function uploadAdminDocumentViaApi(payload) {
+  const { file, subject, semester, access, pages, description } = payload;
+  if (!file) {
+    return { ok: false, message: "Chọn file để upload." };
+  }
+
+  if (USE_MOCK) {
+    addAdminDocument({
+      name: file.name,
+      subject,
+      semester,
+      access,
+      pages,
+      description,
+    });
+    return { ok: true };
+  }
+
+  const dto = await adminApi.uploadDocument({
+    file,
+    title: file.name,
+    categoryId: resolveCategoryId(subject),
+    accessTier: mapAccessTierForApi(access),
+    pageCount: pages ?? undefined,
+  });
+  const mapped = {
+    ...mapAdminDocumentListItem(dto),
+    semester: semester ?? "1",
+    pages: pages ?? dto.pageCount ?? 0,
+    description: description?.trim() ?? mapAdminDocumentListItem(dto).description,
+  };
+  documentsStore = [mapped, ...documentsStore];
+  return { ok: true, document: mapped };
+}
+
+export async function updateAdminDocumentViaApi(id, payload) {
+  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+    return updateAdminDocument(id, payload);
+  }
+
+  const current = documentsStore.find((doc) => doc.id === id);
+  if (!current) {
+    return { ok: false, message: "Không tìm thấy tài liệu." };
+  }
+
+  const body = {};
+  if (payload.accessKey) {
+    body.accessTier = mapAccessTierForApi(formatDocumentAccessLabel(payload.accessKey));
+  }
+
+  const pagesRaw = Number(payload.pages);
+  if (Number.isFinite(pagesRaw) && pagesRaw > 0) {
+    body.pageCount = pagesRaw;
+  }
+
+  const dto = await adminApi.updateDocument(id, body);
+  const mapped = {
+    ...mapAdminDocumentListItem(dto),
+    semester: payload.semester ?? current.semester ?? "1",
+    description: payload.description?.trim() ?? current.description ?? "",
+  };
+
+  documentsStore = documentsStore.map((doc) => (doc.id === id ? mapped : doc));
+  return { ok: true, document: mapped };
+}
+
+export async function deleteAdminDocumentViaApi(id) {
+  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+    return removeAdminDocument(id) ? { ok: true } : { ok: false, message: "Không tìm thấy tài liệu." };
+  }
+
+  await adminApi.deleteDocument(id);
+  removeAdminDocument(id);
+  return { ok: true };
+}
+
 export async function loadAdminDocuments() {
   if (USE_MOCK) {
     return getAdminDocuments();
   }
 
-  try {
-    const page = await adminApi.listDocuments({ pageSize: 100 });
-    const apiDocs = (page.items ?? []).map(mapAdminDocumentListItem);
-    documentsStore = apiDocs.map((doc) => ({ ...doc }));
-    return apiDocs;
-  } catch {
-    /* fallback below */
-  }
-
-  return getAdminDocuments();
+  const page = await adminApi.listDocuments({ pageSize: 100 });
+  const apiDocs = (page.items ?? []).map(mapAdminDocumentListItem);
+  documentsStore = apiDocs.map((doc) => ({ ...doc }));
+  return apiDocs;
 }

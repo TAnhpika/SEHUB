@@ -216,6 +216,12 @@ public class UserRepository : IUserRepository
         return await query.CountAsync(cancellationToken);
     }
 
+    public async Task<int> CountByRoleAsync(string role, CancellationToken cancellationToken = default)
+    {
+        var usersInRole = await _userManager.GetUsersInRoleAsync(role);
+        return usersInRole.Count;
+    }
+
     public async Task UpdateBanAsync(Guid userId, bool isBanned, DateTime? banUntil, string? banReason, string? banType, CancellationToken cancellationToken = default)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
