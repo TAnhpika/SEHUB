@@ -516,10 +516,9 @@ let rejectedStore = [];
  * }} payload
  */
 export async function submitModeratorPracticeExam(payload, createRequest, { confirmDuplicate = false } = {}) {
-  const uploaded = payload.attachments?.find((file) => file.assetUrl);
-  const fileName =
-    uploaded?.name ?? payload.attachments?.find((f) => f.name)?.name ?? `${payload.subject}-practice-exam.pdf`;
-  const assetUrl = uploaded?.assetUrl ?? null;
+  const readyFiles = (payload.attachments ?? []).filter((file) => file.status === "done" && file.file);
+  const primaryFile = readyFiles[0];
+  const fileName = primaryFile?.name ?? payload.attachments?.find((f) => f.name)?.name ?? `${payload.subject}-practice-exam.pdf`;
 
   if (USE_MOCK) {
     const entry = {
@@ -534,7 +533,9 @@ export async function submitModeratorPracticeExam(payload, createRequest, { conf
       semester: payload.semesterId ?? "5",
       urgent: false,
       fileName,
-      assetUrl,
+      assetUrl: primaryFile
+        ? `/uploads/exams/mock-${encodeURIComponent(primaryFile.name ?? fileName)}`
+        : null,
       description: payload.description?.trim() ?? "",
       githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
       allowDiscussion: payload.allowDiscussion ?? false,
@@ -545,20 +546,24 @@ export async function submitModeratorPracticeExam(payload, createRequest, { conf
     return entry;
   }
 
-  const body = {
-    ...(createRequest ??
-      mapPracticeExamFormToCreateRequest({
-        subjectCode: payload.subject,
-        semester: payload.semesterId,
-        title: payload.title,
-        description: payload.description,
-        githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
-      })),
-    assetUrl,
-  };
+  const body =
+    createRequest ??
+    mapPracticeExamFormToCreateRequest({
+      subjectCode: payload.subject,
+      semester: payload.semesterId,
+      title: payload.title,
+      description: payload.description,
+      githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
+    });
 
   const dto = await createExamViaApi(body, confirmDuplicate);
-  const entry = mapPendingExamFromCreate(dto, {
+
+  for (const attachment of readyFiles) {
+    await adminApi.uploadExamAttachment(dto.id, attachment.file);
+  }
+
+  const refreshed = readyFiles.length > 0 ? await adminApi.getExam(dto.id) : dto;
+  const entry = mapPendingExamFromCreate(refreshed, {
     submittedBy: payload.submittedBy,
     fileName,
     githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
