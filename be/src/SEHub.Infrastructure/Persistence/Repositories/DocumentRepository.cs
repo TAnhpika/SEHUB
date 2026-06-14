@@ -62,6 +62,14 @@ public class DocumentRepository : IDocumentRepository
         return Task.CompletedTask;
     }
 
+    public async Task<IReadOnlyList<Document>> GetLocalStoredAsync(CancellationToken cancellationToken = default) =>
+        await _context.Documents
+            .Where(d => !d.IsDeleted
+                && (d.DriveFileId == null || d.DriveFileId == string.Empty)
+                && d.FilePath != string.Empty)
+            .OrderBy(d => d.CreatedAt)
+            .ToListAsync(cancellationToken);
+
     public Task<int> CountAsync(CancellationToken cancellationToken = default) =>
         _context.Documents.CountAsync(cancellationToken);
 }

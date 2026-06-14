@@ -42,7 +42,9 @@ public sealed class MappingProfile : Profile
         CreateMap<Document, AdminDocumentDto>()
             .ForMember(d => d.Category, o => o.MapFrom(s => s.Category != null ? s.Category.Name : string.Empty))
             .ForMember(d => d.Semester, o => o.MapFrom(s => s.Category != null ? s.Category.Semester : 0))
-            .ForMember(d => d.AccessTier, o => o.MapFrom(s => s.AccessTier.ToString()));
+            .ForMember(d => d.AccessTier, o => o.MapFrom(s => s.AccessTier.ToString()))
+            .ForMember(d => d.FilePath, o => o.MapFrom(s =>
+                !string.IsNullOrWhiteSpace(s.DriveFileId) ? $"drive:{s.DriveFileId}" : s.FilePath));
 
         CreateMap<SubscriptionPlan, SubscriptionPlanDto>();
     }

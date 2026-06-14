@@ -12,6 +12,8 @@ namespace SEHub.Application.UnitTests.Feed;
 public sealed class SoftDeleteTests
 {
     private readonly Mock<IPostRepository> _postRepository = new();
+    private readonly Mock<IPostImageRepository> _imageRepository = new();
+    private readonly Mock<IPostImageService> _postImageService = new();
     private readonly Mock<IPostLikeRepository> _likeRepository = new();
     private readonly Mock<ICommentRepository> _commentRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
@@ -28,6 +30,8 @@ public sealed class SoftDeleteTests
 
     private PostService CreatePostService() => new(
         _postRepository.Object,
+        _imageRepository.Object,
+        _postImageService.Object,
         _likeRepository.Object,
         _commentRepository.Object,
         _userRepository.Object,

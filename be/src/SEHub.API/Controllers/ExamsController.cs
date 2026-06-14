@@ -13,15 +13,18 @@ public sealed class ExamsController : ControllerBase
     private readonly IExamQueryService _examQueryService;
     private readonly IExamAttemptService _examAttemptService;
     private readonly IAiExplanationApplicationService _aiExplanationService;
+    private readonly IExamAttachmentService _examAttachmentService;
 
     public ExamsController(
         IExamQueryService examQueryService,
         IExamAttemptService examAttemptService,
-        IAiExplanationApplicationService aiExplanationService)
+        IAiExplanationApplicationService aiExplanationService,
+        IExamAttachmentService examAttachmentService)
     {
         _examQueryService = examQueryService;
         _examAttemptService = examAttemptService;
         _aiExplanationService = aiExplanationService;
+        _examAttachmentService = examAttachmentService;
     }
 
     [HttpGet]
@@ -110,5 +113,16 @@ public sealed class ExamsController : ControllerBase
     {
         var result = await _examAttemptService.GetResultAsync(id, attemptId, cancellationToken);
         return Ok(result);
+    }
+
+    [HttpGet("{examId:guid}/attachments/{attachmentId:guid}/view")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> ViewAttachment(
+        Guid examId,
+        Guid attachmentId,
+        CancellationToken cancellationToken)
+    {
+        var content = await _examAttachmentService.OpenViewAsync(examId, attachmentId, cancellationToken);
+        return File(content.Stream, content.ContentType, content.FileName, enableRangeProcessing: true);
     }
 }

@@ -11,9 +11,4 @@ public interface IAdminExamService
     Task<AdminExamDto> CreateExamAsync(CreateExamRequest request, bool confirmDuplicate = false, CancellationToken cancellationToken = default);
     Task<AdminExamDto> UpdateExamAsync(Guid id, UpdateExamRequest request, CancellationToken cancellationToken = default);
     Task<AdminExamDto> ApproveExamAsync(Guid id, CancellationToken cancellationToken = default);
-    Task<UploadExamAssetResponse> UploadAssetAsync(
-        Stream fileContent,
-        string fileName,
-        string mimeType,
-        CancellationToken cancellationToken = default);
 }

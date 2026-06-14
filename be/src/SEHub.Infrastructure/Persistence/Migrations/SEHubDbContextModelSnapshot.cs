@@ -374,6 +374,10 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("DeletedById")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("DriveFileId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
                     b.Property<string>("FilePath")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -386,6 +390,10 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("OriginalFileName")
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
 
                     b.Property<int>("PageCount")
                         .HasColumnType("int");
@@ -541,6 +549,46 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.HasIndex("Semester", "Major", "ExamType");
 
                     b.ToTable("Exams");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.ExamAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DriveFileId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("ExamId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExamId");
+
+                    b.ToTable("ExamAttachments");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.ExamAttempt", b =>
@@ -898,6 +946,45 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.HasIndex("Status", "IsFeatured");
 
                     b.ToTable("Posts");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.PostImage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DriveFileId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PublicId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId");
+
+                    b.ToTable("PostImages");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.PostLike", b =>
@@ -1622,6 +1709,17 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Navigation("Document");
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.ExamAttachment", b =>
+                {
+                    b.HasOne("SEHub.Domain.Entities.Exam", "Exam")
+                        .WithMany("Attachments")
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exam");
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.ExamAttempt", b =>
                 {
                     b.HasOne("SEHub.Domain.Entities.Exam", "Exam")
@@ -1670,6 +1768,17 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.PostImage", b =>
+                {
+                    b.HasOne("SEHub.Domain.Entities.Post", "Post")
+                        .WithMany("Images")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.PostLike", b =>
@@ -1831,6 +1940,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("SEHub.Domain.Entities.Exam", b =>
                 {
+                    b.Navigation("Attachments");
+
                     b.Navigation("Attempts");
 
                     b.Navigation("PracticeSubmissions");
@@ -1846,6 +1957,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("SEHub.Domain.Entities.Post", b =>
                 {
                     b.Navigation("Comments");
+
+                    b.Navigation("Images");
 
                     b.Navigation("Likes");
 

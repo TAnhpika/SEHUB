@@ -34,6 +34,44 @@
 
   },
 
+  "GoogleDrive": {
+
+    "_comment": "Option A (recommended for My Drive): OAuth refresh token from your Google account. Option B: service account + Shared drive folder.",
+
+    "FolderId": "your-drive-folder-id",
+
+    "OAuthClientId": "your-oauth-client-id.apps.googleusercontent.com",
+
+    "OAuthClientSecret": "your-oauth-client-secret",
+
+    "RefreshToken": "your-drive-refresh-token",
+
+    "ServiceAccountPath": "../../secrets/sehub-drive-service.json",
+
+    "ImpersonateUser": ""
+
+  },
+
+  "Cloudinary": {
+
+    "_comment": "From Cloudinary Console → Settings → API Keys. Never commit real secrets.",
+
+    "CloudName": "your_cloud_name",
+
+    "ApiKey": "your_api_key",
+
+    "ApiSecret": "your_api_secret",
+
+    "Secure": true,
+
+    "AvatarFolder": "sehub/avatars",
+
+    "PostFolder": "sehub/posts",
+
+    "ChatFolder": "sehub/chat"
+
+  },
+
   "PayOS": {
 
     "ClientId": "35aacbc0-31a4-4b05-94c6-302d709a85e8",

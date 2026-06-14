@@ -96,6 +96,14 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete }) {
       </header>
 
       <h2 className={styles.title}>{post.title}</h2>
+      {post.images?.[0]?.url ? (
+        <img
+          className={styles.cover}
+          src={post.images[0].url}
+          alt=""
+          loading="lazy"
+        />
+      ) : null}
       <p className={styles.excerpt}>{post.excerpt}</p>
 
       <ul className={styles.tags} aria-label="Thẻ bài viết">

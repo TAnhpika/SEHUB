@@ -87,10 +87,19 @@ public static class DependencyInjection
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IUserBlockRepository, UserBlockRepository>();
         services.AddScoped<IConversationReportRepository, ConversationReportRepository>();
+        services.AddScoped<IExamAttachmentRepository, ExamAttachmentRepository>();
+        services.AddScoped<IPostImageRepository, PostImageRepository>();
         services.AddScoped<IChatNotifier, NullChatNotifier>();
         services.AddScoped<INotificationNotifier, NullNotificationNotifier>();
 
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
+
+        services.Configure<GoogleDriveOptions>(configuration.GetSection(GoogleDriveOptions.SectionName));
+        services.AddScoped<ICloudFileStorageService, GoogleDriveStorageService>();
+
+        services.Configure<CloudinaryOptions>(configuration.GetSection(CloudinaryOptions.SectionName));
+        services.AddSingleton<ICdnFolderSettings, CdnFolderSettings>();
+        services.AddScoped<IImageCdnStorageService, CloudinaryStorageService>();
 
         services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
         services.Configure<OtpSettings>(configuration.GetSection(OtpSettings.SectionName));

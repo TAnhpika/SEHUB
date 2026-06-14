@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
@@ -11,14 +11,15 @@ import {
   FINAL_EXAM_DEFAULTS,
   MOCK_OCR_QUESTIONS,
   PRACTICE_EXAM_DEFAULTS,
-  createAdminExam,
   findDuplicateBySha,
-  getAdminExamById,
   getSemesterLabel,
   getTrackLabel,
+  loadAdminExamById,
+  loadAdminExams,
   mockComputeSha256,
   mockComputeSha256Unique,
-  updateAdminExam,
+  saveAdminExamViaApi,
+  updateAdminExamViaApi,
 } from "@/features/admin/exams/adminExamData";
 import examStyles from "@/features/admin/exams/AdminExam.module.css";
 import formStyles from "@/features/admin/exams/AdminExamFormPage.module.css";
@@ -61,17 +62,44 @@ function AdminExamFormPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const isEdit = Boolean(id);
-  const exam = isEdit ? getAdminExamById(id) : null;
+  const [exam, setExam] = useState(null);
+  const [loadingExam, setLoadingExam] = useState(isEdit);
 
-  const [form, setForm] = useState(() => buildInitialForm(exam));
+  const [form, setForm] = useState(() => buildInitialForm(null));
   const [step, setStep] = useState(0);
   const [fileName, setFileName] = useState("");
-  const [sha256, setSha256] = useState(exam?.sha256 ?? "");
-  const [ocrDone, setOcrDone] = useState(Boolean(exam?.questionCount && exam.typeKey === "final"));
-  const [ocrConfirmed, setOcrConfirmed] = useState(
-    Boolean(exam?.ocrConfirmed ?? (exam?.typeKey === "final" && exam?.questionCount > 0)),
-  );
+  const [pdfFile, setPdfFile] = useState(null);
+  const [sha256, setSha256] = useState("");
+  const [ocrDone, setOcrDone] = useState(false);
+  const [ocrConfirmed, setOcrConfirmed] = useState(false);
   const [forceUniqueSha, setForceUniqueSha] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isEdit) {
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingExam(true);
+    loadAdminExamById(id).then((loaded) => {
+      if (cancelled) return;
+      setExam(loaded);
+      if (loaded) {
+        setForm(buildInitialForm(loaded));
+        setSha256(loaded.sha256 ?? "");
+        setOcrDone(Boolean(loaded.questionCount && loaded.typeKey === "final"));
+        setOcrConfirmed(
+          Boolean(loaded.ocrConfirmed ?? (loaded.typeKey === "final" && loaded.questionCount > 0)),
+        );
+      }
+      setLoadingExam(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, isEdit]);
 
   const isFinal = form.typeKey === "final";
   const isPractice = form.typeKey === "practice";
@@ -91,6 +119,7 @@ function AdminExamFormPage() {
     patchForm({ typeKey });
     setStep(0);
     setFileName("");
+    setPdfFile(null);
     setSha256("");
     setOcrDone(false);
     setOcrConfirmed(false);
@@ -129,6 +158,7 @@ function AdminExamFormPage() {
         id: `f-${Date.now()}-${index}`,
         name: file.name,
         size: file.size,
+        file,
       }));
       patchForm({ attachments: [...form.attachments, ...next] });
       event.target.value = "";
@@ -137,6 +167,7 @@ function AdminExamFormPage() {
 
     const file = fileList[0];
     setFileName(file.name);
+    setPdfFile(file);
     const isDupDemo = file.name.toLowerCase().includes("dup");
     setSha256(isDupDemo ? DEMO_DUPLICATE_SHA : mockComputeSha256Unique());
     setForceUniqueSha(false);
@@ -169,40 +200,60 @@ function AdminExamFormPage() {
     setStep((s) => Math.min(s + 1, steps.length - 1));
   }
 
-  function persist(status) {
-    const questionCount = isFinal && ocrDone ? MOCK_OCR_QUESTIONS.length : 0;
-    const payload = {
-      ...form,
+  async function persist(status) {
+    const saveOptions = {
       status,
-      questionCount,
-      sha256: sha256 || mockComputeSha256Unique(),
-      ocrConfirmed: isFinal ? ocrConfirmed : true,
-      attachments: form.attachments,
+      ocrQuestions: isFinal && ocrDone ? MOCK_OCR_QUESTIONS : [],
+      pdfFile,
+      confirmDuplicate: forceUniqueSha,
     };
 
     if (isEdit) {
-      updateAdminExam(id, payload);
-    } else {
-      createAdminExam(payload);
+      return updateAdminExamViaApi(id, form, saveOptions);
     }
+
+    return saveAdminExamViaApi(form, saveOptions);
   }
 
-  function handleDraft() {
+  async function navigateAfterSave(targetPath, result, { published = false } = {}) {
+    const items = await loadAdminExams();
+    navigate(targetPath, {
+      replace: !isEdit,
+      state: {
+        refreshExams: Date.now(),
+        preloadedExams: items.length > 0 ? items : result?.listItem ? [result.listItem] : [],
+        openStatusFilter: published ? "published" : "draft",
+        fromExamSave: true,
+      },
+    });
+  }
+
+  async function handleDraft() {
     if (!form.code.trim() || !form.title.trim()) {
       showToast("Cần ít nhất mã môn và tiêu đề để lưu nháp.");
       return;
     }
-    persist("draft");
-    showToast("Đã lưu nháp.");
-    navigate(isEdit ? `/admin/exams/${id}` : "/admin/exams");
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const result = await persist("draft");
+      showToast("Đã lưu nháp.");
+      navigateAfterSave(isEdit ? `/admin/exams/${id}` : "/admin/exams", result);
+    } catch (err) {
+      showToast(err.message ?? "Không lưu được bản nháp.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     if (blockSave) {
       showToast("Đề trùng SHA-256 — không thể lưu.");
       return;
     }
+    if (isSubmitting) return;
 
     if (isFinal) {
       if (!ocrDone && !(isEdit && exam?.questionCount > 0)) {
@@ -218,9 +269,21 @@ function AdminExamFormPage() {
       return;
     }
 
-    persist("published");
-    showToast(isEdit ? "Đã cập nhật và xuất bản." : "Đã tạo và xuất bản đề.");
-    navigate(isEdit ? `/admin/exams/${id}` : "/admin/exams");
+    setIsSubmitting(true);
+    try {
+      const result = await persist("published");
+      showToast(isEdit ? "Đã cập nhật và xuất bản." : "Đã tạo và xuất bản đề.");
+      if (result?.uploadWarning) {
+        showToast(result.uploadWarning);
+      }
+      navigateAfterSave(isEdit ? `/admin/exams/${id}` : "/admin/exams", result, {
+        published: true,
+      });
+    } catch (err) {
+      showToast(err.message ?? "Không xuất bản được đề thi.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   const summaryItems = useMemo(
@@ -239,6 +302,20 @@ function AdminExamFormPage() {
     ],
     [form, isFinal, ocrDone],
   );
+
+  if (isEdit && loadingExam) {
+    return (
+      <AdminPageLayout
+        title="Đang tải đề..."
+        breadcrumbs={[
+          { label: "Dashboard", to: "/admin" },
+          { label: "Quản lý đề thi", to: "/admin/exams" },
+        ]}
+      >
+        <p className={styles.hint}>Đang tải thông tin đề thi.</p>
+      </AdminPageLayout>
+    );
+  }
 
   if (isEdit && !exam) {
     return (

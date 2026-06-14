@@ -19,7 +19,7 @@ import {
 } from "@/features/admin/exams/adminExamData";
 import examStyles from "@/features/admin/exams/AdminExam.module.css";
 import styles from "@/features/admin/shared/adminPage.module.css";
-import { getExamAssetFileName, resolveExamAssetUrl } from "@/utils/examAssetUrl";
+import { getPrimaryExamAttachment } from "@/utils/examAssetUrl";
 
 function AdminExamDetailPage() {
   const { id } = useParams();
@@ -90,6 +90,8 @@ function AdminExamDetailPage() {
     setRefreshKey((k) => k + 1);
   }
 
+  const practiceAttachment = getPrimaryExamAttachment(exam);
+
   return (
     <AdminPageLayout
       title={`[${exam.code}] ${exam.title}`}
@@ -141,18 +143,15 @@ function AdminExamDetailPage() {
               <div className={styles.detailItem}>
                 <dt>File đính kèm</dt>
                 <dd>
-                  {exam.assetUrl ? (
+                  {practiceAttachment ? (
                     <a
-                      href={resolveExamAssetUrl(exam.assetUrl)}
+                      href={practiceAttachment.url}
                       className={examStyles.linkExternal}
                       download
                       target="_blank"
                       rel="noreferrer"
                     >
-                      {getExamAssetFileName(
-                        exam.assetUrl,
-                        exam.attachments?.[0]?.name ?? "exam-attachment",
-                      )}
+                      {practiceAttachment.name}
                     </a>
                   ) : (
                     "—"

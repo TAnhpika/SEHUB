@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import Button from "@/common/Button/Button";
 import Pagination from "@/common/Pagination/Pagination";
 import { useToast } from "@/common/Toast/ToastProvider";
@@ -69,12 +69,26 @@ function compareExams(a, b, sortBy, sortDir) {
   return mul * String(pair[0]).localeCompare(String(pair[1]), "vi");
 }
 
+function mergeExamLists(primary = [], secondary = []) {
+  const merged = new Map();
+  [...secondary, ...primary].forEach((exam) => {
+    if (exam?.id) {
+      merged.set(exam.id, exam);
+    }
+  });
+  return [...merged.values()];
+}
+
 function AdminExamListPage() {
   const { showToast } = useToast();
-  const [exams, setExams] = useState(getAdminExams);
+  const location = useLocation();
+  const [exams, setExams] = useState([]);
+  const [listLoading, setListLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("published");
+  const [statusFilter, setStatusFilter] = useState(
+    () => location.state?.openStatusFilter ?? "published",
+  );
   const [trackFilter, setTrackFilter] = useState("all");
   const [semesterFilter, setSemesterFilter] = useState("all");
   const [sortBy, setSortBy] = useState("updatedAt");
@@ -85,8 +99,17 @@ function AdminExamListPage() {
 
   useEffect(() => {
     let cancelled = false;
+    setListLoading(true);
+
+    if (location.state?.openStatusFilter) {
+      setStatusFilter(location.state.openStatusFilter);
+    }
+
     loadAdminExams().then((items) => {
-      if (!cancelled) setExams(items);
+      if (cancelled) return;
+      const preloaded = location.state?.preloadedExams ?? [];
+      setExams(mergeExamLists(items, preloaded));
+      setListLoading(false);
     });
     loadAdminPendingExams().then((items) => {
       if (!cancelled) setPendingCount(items.length);
@@ -94,7 +117,7 @@ function AdminExamListPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [location.key, location.state?.refreshExams]);
   const sortPresetValue = `${sortBy}:${sortDir}`;
 
   const hasActiveFilters =

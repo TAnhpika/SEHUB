@@ -90,33 +90,62 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
     }
 
     [Fact]
-    public async Task Admin_ListPendingExams_IncludesAssetUrlAndDescription()
+    public async Task Admin_ListPendingExams_IncludesDescription_AndDriveAttachmentAfterUpload()
     {
         var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
 
-        var uniqueCode = $"INT-LIST-ASSET-{Guid.NewGuid():N}"[..24];
-        const string assetUrl = "/uploads/exams/integration-test-brief.pdf";
-        const string description = "Practice exam with attachment for admin list.";
+        var uniqueCode = $"INT-LIST-ATT-{Guid.NewGuid():N}"[..24];
+        const string description = "Practice exam with Drive attachment for admin list.";
 
         var createResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
         {
             Code = uniqueCode,
-            Title = "List asset metadata test",
+            Title = "List attachment metadata test",
             ExamType = nameof(ExamType.Practice),
             Semester = "5",
             Major = "PRF192",
             Description = description,
-            AssetUrl = assetUrl,
         });
         createResponse.EnsureSuccessStatusCode();
+        var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
+        var examId = created!.Data!.Id;
+
+        using var uploadContent = new MultipartFormDataContent();
+        var pdfBytes = "%PDF-1.4\n%%EOF"u8.ToArray();
+        var fileContent = new ByteArrayContent(pdfBytes);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        uploadContent.Add(fileContent, "file", "integration-test-brief.pdf");
+
+        var uploadResponse = await _client.PostAsync($"/api/v1/admin/exams/{examId}/attachments", uploadContent);
+        uploadResponse.EnsureSuccessStatusCode();
+
+        var detailResponse = await _client.GetAsync($"/api/v1/admin/exams/{examId}");
+        detailResponse.EnsureSuccessStatusCode();
+        var detail = await detailResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
+        detail!.Data!.Attachments.Should().ContainSingle(a => a.OriginalFileName == "integration-test-brief.pdf");
 
         var listResponse = await _client.GetAsync("/api/v1/admin/exams?status=PendingApproval&pageSize=50");
         listResponse.EnsureSuccessStatusCode();
         var list = await listResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResult<ExamListItemDto>>>();
         var item = list!.Data!.Items.Should().ContainSingle(e => e.Code == uniqueCode).Subject;
-        item.AssetUrl.Should().Be(assetUrl);
         item.Description.Should().Be(description);
+        item.AssetUrl.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Moderator_UploadAssetEndpoint_IsRemoved()
+    {
+        var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
+
+        using var uploadContent = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent("%PDF-1.4\n"u8.ToArray());
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        uploadContent.Add(fileContent, "file", "legacy.pdf");
+
+        var response = await _client.PostAsync("/api/v1/admin/exams/upload-asset", uploadContent);
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed);
     }
 
     [Fact]

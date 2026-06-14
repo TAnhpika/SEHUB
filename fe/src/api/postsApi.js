@@ -1,4 +1,4 @@
-import { apiRequest } from "./httpClient";
+import { apiRequest, apiUploadRequest } from "./httpClient";
 
 function buildQuery(params = {}) {
   const search = new URLSearchParams();
@@ -57,6 +57,14 @@ export function deleteComment(postId, commentId) {
 
 export function reportPost(postId, body) {
   return apiRequest(`/api/v1/posts/${postId}/report`, { method: "POST", body });
+}
+
+export function uploadPostImages(postId, files) {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+  return apiUploadRequest(`/api/v1/posts/${postId}/images`, formData);
 }
 
 export function featurePost(id, body) {

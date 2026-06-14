@@ -1,3 +1,5 @@
+using SEHub.Contracts.Exams;
+
 namespace SEHub.Contracts.Admin;
 
 public sealed class AdminExamDto
@@ -13,6 +15,7 @@ public sealed class AdminExamDto
     public string? Description { get; init; }
     public string? AssetUrl { get; init; }
     public string? ContentHash { get; init; }
+    public IReadOnlyList<ExamAttachmentDto> Attachments { get; init; } = [];
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
     public IReadOnlyList<AdminExamQuestionDto> Questions { get; init; } = [];

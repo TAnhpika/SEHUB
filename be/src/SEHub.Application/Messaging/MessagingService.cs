@@ -1,6 +1,7 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Notifications;
+using SEHub.Application.Storage;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Messaging;
 using SEHub.Domain.Entities;
@@ -47,6 +48,8 @@ public sealed class MessagingService : IMessagingService
     private readonly INotificationService _notificationService;
     private readonly IChatNotifier _chatNotifier;
     private readonly IFileStorageService _fileStorage;
+    private readonly IImageCdnStorageService _cdnStorage;
+    private readonly ICdnFolderSettings _cdnFolders;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -59,6 +62,8 @@ public sealed class MessagingService : IMessagingService
         INotificationService notificationService,
         IChatNotifier chatNotifier,
         IFileStorageService fileStorage,
+        IImageCdnStorageService cdnStorage,
+        ICdnFolderSettings cdnFolders,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
@@ -70,6 +75,8 @@ public sealed class MessagingService : IMessagingService
         _notificationService = notificationService;
         _chatNotifier = chatNotifier;
         _fileStorage = fileStorage;
+        _cdnStorage = cdnStorage;
+        _cdnFolders = cdnFolders;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -245,12 +252,19 @@ public sealed class MessagingService : IMessagingService
             throw new DomainException("File name is required.");
         }
 
-        var attachmentPath = await _fileStorage.UploadAsync(
-            fileContent,
-            safeFileName,
-            normalizedMimeType,
-            "chat",
-            cancellationToken);
+        var upload = messageType == MessageType.Image
+            ? await _cdnStorage.UploadImageAsync(
+                fileContent,
+                safeFileName,
+                normalizedMimeType,
+                _cdnFolders.Chat,
+                cancellationToken)
+            : await _cdnStorage.UploadRawAsync(
+                fileContent,
+                safeFileName,
+                normalizedMimeType,
+                _cdnFolders.Chat,
+                cancellationToken);
 
         var now = DateTime.UtcNow;
         var preview = BuildAttachmentPreview(messageType, trimmedCaption, safeFileName);
@@ -261,7 +275,7 @@ public sealed class MessagingService : IMessagingService
             SenderId = userId,
             Content = trimmedCaption,
             MessageType = messageType,
-            AttachmentPath = attachmentPath,
+            AttachmentPath = upload.Url,
             AttachmentFileName = safeFileName,
             AttachmentMimeType = normalizedMimeType,
             AttachmentSizeBytes = fileSizeBytes,
@@ -430,10 +444,12 @@ public sealed class MessagingService : IMessagingService
         string? attachmentUrl = null;
         if (!string.IsNullOrWhiteSpace(message.AttachmentPath))
         {
-            attachmentUrl = await _fileStorage.GetSignedUrlAsync(
-                message.AttachmentPath,
-                TimeSpan.FromHours(24),
-                cancellationToken);
+            attachmentUrl = message.AttachmentPath.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                ? message.AttachmentPath
+                : await _fileStorage.GetSignedUrlAsync(
+                    message.AttachmentPath,
+                    TimeSpan.FromHours(24),
+                    cancellationToken);
         }
 
         return new MessageDto

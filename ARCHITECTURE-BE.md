@@ -82,7 +82,17 @@ Backend SEHUB phục vụ React SPA (Redux Thunk + Axios + JWT). Thiết kế th
 | **Microsoft.AspNetCore.Authentication.JwtBearer** | JWT middleware |
 | **Ardalis.GuardClauses** *(optional)* | Guard clause trong Application services |
 
-**Lưu trữ file (G1):** `IFileStorageService` — triển khai local `wwwroot/uploads` hoặc Azure Blob; interface giữ Application không phụ thuộc cloud.
+**Lưu trữ file (hybrid — cập nhật 2026-06):**
+
+| Abstraction | Implementation | Dùng cho |
+| ----------- | -------------- | -------- |
+| `ICloudFileStorageService` | `GoogleDriveStorageService` | Documents (PDF thư viện), `ExamAttachment` (PDF/ZIP/RAR/DOCX đề thi) |
+| `IImageCdnStorageService` | `CloudinaryStorageService` | Avatar, ảnh Post, file đính kèm Chat |
+| `IFileStorageService` | `LocalFileStorageService` | **Legacy fallback** — tài liệu/avatar/chat cũ còn `FilePath` local; dev-only migrate endpoint |
+
+**Production:** upload mới **không** ghi vào `wwwroot/uploads` (trừ dev). Cấu hình `GoogleDrive:*` và `Cloudinary:*` qua secret manager. Endpoint legacy `POST /admin/exams/upload-asset` đã **gỡ** — dùng `POST /admin/exams/{id}/attachments` (Drive).
+
+**Cũ (G1 doc):** `IFileStorageService` local hoặc Azure Blob — vẫn giữ interface cho đọc/xóa file legacy.
 
 ### 1.4 Nguyên tắc thiết kế
 
@@ -476,7 +486,7 @@ erDiagram
 
 | Entity | Quan hệ | Trường quan trọng |
 | ------ | ------- | ----------------- |
-| **Exam** | 1-N Question | `Code`, `Title`, `ExamType` (Final/Practice), `Semester`, `Major`, `QuestionCount`, `Status` (Draft/PendingApproval/Published), `ContentHash` (SHA-256 sau normalize OCR), `Description`, `AssetUrl?` |
+| **Exam** | 1-N Question | `Code`, `Title`, `ExamType` (Final/Practice), `Semester`, `Major`, `QuestionCount`, `Status` (Draft/PendingApproval/Published), `ContentHash` (SHA-256 sau normalize OCR), `Description`, `AssetUrl?` *(legacy — đề mới dùng `ExamAttachment` trên Drive)* |
 | **Question** | N-1 Exam; 1-N Option | `OrderIndex`, `Content`, `CorrectOptionId` *(không expose API Free)* |
 | **QuestionOption** | N-1 Question | `Label` (A/B/C/D), `Text` |
 | **ExamAttempt** | N-1 User; N-1 Exam | `StartedAt`, `SubmittedAt?`, `Score?`, `AnswersJson`, `Status` (InProgress/Submitted/Expired) |
@@ -679,6 +689,8 @@ public enum PaymentOrderStatus { Pending, Paid, Failed, Cancelled }
 | GET | `/api/v1/admin/exams/{id}` | Admin \| Mod | `/admin/exams/:id` → `AdminExamDetailPage` |
 | PUT | `/api/v1/admin/exams/{id}` | Admin | `/admin/exams/:id` |
 | POST | `/api/v1/admin/exams/{id}/approve` | Admin | `AdminExamDetailPage` |
+| POST | `/api/v1/admin/exams/{id}/attachments` | Admin \| Mod | upload file đề (Drive) |
+| DELETE | `/api/v1/admin/exams/{examId}/attachments/{attachmentId}` | Admin \| Mod | xóa attachment |
 | POST | `/api/v1/admin/exams/ocr` | Admin | `AdminExamCreatePage` / Detail |
 | GET | `/api/v1/admin/documents` | Admin | `/admin/documents` → `AdminDocumentListPage` |
 | POST | `/api/v1/admin/documents` | Admin | `/admin/documents/upload` → `AdminDocumentUploadPage` |

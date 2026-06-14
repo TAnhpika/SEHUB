@@ -26,6 +26,7 @@ artifacts/
 *.db-wal
 migrations-bundle
 wwwroot/uploads/
+secrets/
 
 # Local SMTP credentials (copy from appsettings.Development.Local.json.example)
 appsettings.Development.Local.json

@@ -1,4 +1,3 @@
-import { uploadExamAsset } from "@/api/adminApi";
 import { ApiError } from "@/api/httpClient";
 
 export const PRACTICE_UPLOAD_ACCEPT = ".pdf,.zip,.rar,.docx";
@@ -34,24 +33,20 @@ export function createPracticeAttachmentEntry(file) {
     name: file.name,
     sizeLabel: formatPracticeFileSize(file.size),
     type: getPracticeFileType(file.name),
-    status: "uploading",
-    progress: 15,
+    status: "done",
+    progress: 100,
+    file,
     assetUrl: null,
   };
 }
 
-export async function uploadPracticeAttachment(file) {
+export function preparePracticeAttachment(file) {
   const validationError = validatePracticeUploadFile(file);
   if (validationError) {
     throw new ApiError(validationError, { status: 400 });
   }
 
-  if (import.meta.env.VITE_USE_MOCK === "true") {
-    return {
-      url: `/uploads/exams/mock-${encodeURIComponent(file.name)}`,
-      fileName: file.name,
-    };
-  }
-
-  return uploadExamAsset(file);
+  return {
+    fileName: file.name,
+  };
 }
