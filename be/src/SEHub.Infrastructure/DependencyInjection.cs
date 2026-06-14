@@ -97,6 +97,9 @@ public static class DependencyInjection
         services.Configure<GoogleDriveOptions>(configuration.GetSection(GoogleDriveOptions.SectionName));
         services.AddScoped<ICloudFileStorageService, GoogleDriveStorageService>();
 
+        services.Configure<CloudinaryOptions>(configuration.GetSection(CloudinaryOptions.SectionName));
+        services.AddScoped<IImageCdnStorageService, CloudinaryStorageService>();
+
         services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
         services.Configure<OtpSettings>(configuration.GetSection(OtpSettings.SectionName));
         services.Configure<AuthSettings>(configuration.GetSection(AuthSettings.SectionName));

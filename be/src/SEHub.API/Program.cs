@@ -26,6 +26,7 @@ if (!app.Environment.IsEnvironment("Testing"))
 {
     EmailSmtpStartupValidator.ValidateAndWarn(app.Services);
     GoogleDriveStartupValidator.ValidateAndWarn(app.Services);
+    CloudinaryStartupValidator.ValidateAndWarn(app.Services);
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
