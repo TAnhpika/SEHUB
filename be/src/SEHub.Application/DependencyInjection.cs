@@ -81,6 +81,7 @@ public static class DependencyInjection
         services.AddScoped<IAdminUserService, AdminUserService>();
         services.AddScoped<IAdminExamService, AdminExamService>();
         services.AddScoped<IAdminDocumentService, AdminDocumentService>();
+        services.AddScoped<IDocumentDriveMigrationService, DocumentDriveMigrationService>();
         services.AddScoped<IModerationService, ModerationService>();
         services.AddScoped<IAdminPaymentService, AdminPaymentService>();
         services.AddScoped<IAdminGamificationService, AdminGamificationService>();

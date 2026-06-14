@@ -1,6 +1,7 @@
 using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Documents;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Documents;
@@ -14,6 +15,7 @@ public sealed class AdminDocumentService : IAdminDocumentService
 {
     private readonly IDocumentRepository _documentRepository;
     private readonly IDocumentCategoryRepository _categoryRepository;
+    private readonly ICloudFileStorageService _cloudStorage;
     private readonly IFileStorageService _fileStorage;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
@@ -22,6 +24,7 @@ public sealed class AdminDocumentService : IAdminDocumentService
     public AdminDocumentService(
         IDocumentRepository documentRepository,
         IDocumentCategoryRepository categoryRepository,
+        ICloudFileStorageService cloudStorage,
         IFileStorageService fileStorage,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork,
@@ -29,6 +32,7 @@ public sealed class AdminDocumentService : IAdminDocumentService
     {
         _documentRepository = documentRepository;
         _categoryRepository = categoryRepository;
+        _cloudStorage = cloudStorage;
         _fileStorage = fileStorage;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
@@ -65,15 +69,17 @@ public sealed class AdminDocumentService : IAdminDocumentService
         Stream fileContent,
         string fileName,
         string mimeType,
+        long fileSizeBytes,
         CancellationToken cancellationToken = default)
     {
         var category = await ResolveCategoryAsync(request, cancellationToken);
 
-        var filePath = await _fileStorage.UploadAsync(
+        var upload = await DocumentFileAccess.UploadPdfAsync(
+            _cloudStorage,
             fileContent,
             fileName,
             mimeType,
-            "documents",
+            fileSizeBytes,
             cancellationToken);
 
         Enum.TryParse<AccessTier>(request.AccessTier, true, out var accessTier);
@@ -86,7 +92,9 @@ public sealed class AdminDocumentService : IAdminDocumentService
             Id = Guid.NewGuid(),
             CategoryId = category.Id,
             Title = title,
-            FilePath = filePath,
+            FilePath = string.Empty,
+            DriveFileId = upload.DriveFileId,
+            OriginalFileName = upload.OriginalFileName,
             MimeType = mimeType,
             PageCount = pageCount,
             AccessTier = accessTier,
@@ -193,6 +201,8 @@ public sealed class AdminDocumentService : IAdminDocumentService
     {
         var document = await _documentRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException("Document", id);
+
+        await DocumentFileAccess.DeleteStoredFileAsync(document, _fileStorage, _cloudStorage, cancellationToken);
 
         var actorId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
         await _documentRepository.SoftDeleteAsync(document, actorId, cancellationToken);
