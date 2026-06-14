@@ -12,10 +12,17 @@ namespace SEHub.API.Controllers.Admin;
 public sealed class DocumentsController : ControllerBase
 {
     private readonly IAdminDocumentService _adminDocumentService;
+    private readonly IDocumentDriveMigrationService _documentDriveMigrationService;
+    private readonly IWebHostEnvironment _environment;
 
-    public DocumentsController(IAdminDocumentService adminDocumentService)
+    public DocumentsController(
+        IAdminDocumentService adminDocumentService,
+        IDocumentDriveMigrationService documentDriveMigrationService,
+        IWebHostEnvironment environment)
     {
         _adminDocumentService = adminDocumentService;
+        _documentDriveMigrationService = documentDriveMigrationService;
+        _environment = environment;
     }
 
     [HttpGet]
@@ -44,6 +51,7 @@ public sealed class DocumentsController : ControllerBase
             stream,
             file.FileName,
             file.ContentType,
+            file.Length,
             cancellationToken);
 
         return Ok(result);
@@ -68,5 +76,17 @@ public sealed class DocumentsController : ControllerBase
     {
         await _adminDocumentService.DeleteAsync(id, cancellationToken);
         return Ok(new { message = "Document deleted" });
+    }
+
+    [HttpPost("migrate-local-to-drive")]
+    public async Task<IActionResult> MigrateLocalToDrive(CancellationToken cancellationToken)
+    {
+        if (!_environment.IsDevelopment())
+        {
+            return NotFound();
+        }
+
+        var result = await _documentDriveMigrationService.MigrateLocalDocumentsAsync(cancellationToken);
+        return Ok(result);
     }
 }
