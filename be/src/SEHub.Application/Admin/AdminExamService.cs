@@ -14,33 +14,24 @@ namespace SEHub.Application.Admin;
 
 public sealed class AdminExamService : IAdminExamService
 {
-    private const long MaxAssetBytes = 52_428_800;
-    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".pdf", ".zip", ".rar", ".docx",
-    };
-
     private readonly IExamRepository _examRepository;
     private readonly IExamAttachmentRepository _attachmentRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IMapper _mapper;
-    private readonly IFileStorageService _fileStorage;
 
     public AdminExamService(
         IExamRepository examRepository,
         IExamAttachmentRepository attachmentRepository,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
-        IMapper mapper,
-        IFileStorageService fileStorage)
+        IMapper mapper)
     {
         _examRepository = examRepository;
         _attachmentRepository = attachmentRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _mapper = mapper;
-        _fileStorage = fileStorage;
     }
 
     public async Task<PagedResult<ExamListItemDto>> GetExamsAsync(ExamQueryParams query, CancellationToken cancellationToken = default)
@@ -140,39 +131,6 @@ public sealed class AdminExamService : IAdminExamService
         return await MapAdminExamAsync(exam, cancellationToken);
     }
 
-    public async Task<UploadExamAssetResponse> UploadAssetAsync(
-        Stream fileContent,
-        string fileName,
-        string mimeType,
-        CancellationToken cancellationToken = default)
-    {
-        if (fileContent.CanSeek && fileContent.Length > MaxAssetBytes)
-        {
-            throw new DomainException("File exceeds the 50 MB limit.");
-        }
-
-        var extension = Path.GetExtension(fileName);
-        if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension))
-        {
-            throw new DomainException("Only PDF, ZIP, RAR, and DOCX files are allowed.");
-        }
-
-        var filePath = await _fileStorage.UploadAsync(
-            fileContent,
-            fileName,
-            mimeType,
-            "exams",
-            cancellationToken);
-
-        var url = await _fileStorage.GetSignedUrlAsync(filePath, TimeSpan.FromHours(24), cancellationToken);
-
-        return new UploadExamAssetResponse
-        {
-            Url = url,
-            FileName = Path.GetFileName(fileName),
-        };
-    }
-
     private static string BuildContentHashSource(CreateExamRequest request)
     {
         if (request.Questions.Count > 0)
@@ -180,7 +138,7 @@ public sealed class AdminExamService : IAdminExamService
             return string.Join('|', request.Questions.Select(q => q.Content));
         }
 
-        return $"{request.Code}|{request.Title}|{request.Description}|{request.AssetUrl}";
+        return $"{request.Code}|{request.Title}|{request.Description}";
     }
 
     private static Exam BuildExamFromRequest(CreateExamRequest request, string contentHash, Guid? submittedById)
