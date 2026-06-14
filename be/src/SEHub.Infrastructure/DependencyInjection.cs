@@ -98,6 +98,7 @@ public static class DependencyInjection
         services.AddScoped<ICloudFileStorageService, GoogleDriveStorageService>();
 
         services.Configure<CloudinaryOptions>(configuration.GetSection(CloudinaryOptions.SectionName));
+        services.AddSingleton<ICdnFolderSettings, CdnFolderSettings>();
         services.AddScoped<IImageCdnStorageService, CloudinaryStorageService>();
 
         services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));

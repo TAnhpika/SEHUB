@@ -70,7 +70,7 @@ public sealed class CloudinaryStorageService : IImageCdnStorageService
 
         var cloudinary = GetCloudinary();
         var safeFolder = SanitizeFolder(folder);
-        var publicId = $"{safeFolder}/{Guid.NewGuid():N}";
+        var assetId = Guid.NewGuid().ToString("N");
 
         try
         {
@@ -78,13 +78,15 @@ public sealed class CloudinaryStorageService : IImageCdnStorageService
                 ? cloudinary.Upload(new RawUploadParams
                 {
                     File = new FileDescription(fileName, stream),
-                    PublicId = publicId,
+                    Folder = safeFolder,
+                    PublicId = assetId,
                     Overwrite = false
                 })
                 : cloudinary.Upload(new ImageUploadParams
                 {
                     File = new FileDescription(fileName, stream),
-                    PublicId = publicId,
+                    Folder = safeFolder,
+                    PublicId = assetId,
                     Overwrite = false
                 });
 
@@ -99,7 +101,7 @@ public sealed class CloudinaryStorageService : IImageCdnStorageService
 
             return Task.FromResult(new CdnUploadResult
             {
-                PublicId = result.PublicId ?? publicId,
+                PublicId = result.PublicId ?? $"{safeFolder}/{assetId}",
                 Url = url,
                 ContentType = contentType,
                 FileSize = result.Bytes

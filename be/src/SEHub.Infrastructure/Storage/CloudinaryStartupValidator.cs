@@ -17,6 +17,13 @@ public static class CloudinaryStartupValidator
         {
             logger.LogWarning(
                 "Cloudinary is not fully configured. Avatar, post image, and chat uploads will fail until Cloudinary:CloudName, ApiKey, and ApiSecret are set.");
+            return;
         }
+
+        logger.LogInformation(
+            "Cloudinary folders: avatars={AvatarFolder}, posts={PostFolder}, chat={ChatFolder}",
+            options.AvatarFolder,
+            options.PostFolder,
+            options.ChatFolder);
     }
 }
