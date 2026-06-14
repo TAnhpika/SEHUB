@@ -54,6 +54,8 @@ const TIMES = [
   "1 tuần trước",
 ];
 
+export const FEATURED_POSTS_UPDATED_EVENT = "sehub-featured-posts-updated";
+
 export const FEATURED_POSTS = [
   {
     title: "TOP 5 CÔNG CỤ AI NÊN DÙNG: BÍ QUYẾT BỨT PHÁ CHO DÂN IT 2025",
@@ -235,5 +237,28 @@ export async function removeComment(postId, commentId) {
 export async function submitReport(postId, reason) {
   if (USE_MOCK) return;
   await postsApi.reportPost(postId, { reason });
+}
+
+export async function loadFeaturedSidebarPosts() {
+  if (USE_MOCK) {
+    return FEATURED_POSTS.map((post) => ({
+      id: post.url,
+      title: post.title,
+      href: post.url,
+      external: true,
+    }));
+  }
+
+  try {
+    const items = await postsApi.getFeaturedPosts();
+    return (items ?? []).map((dto) => ({
+      id: dto.id,
+      title: dto.title,
+      href: `/home/posts/${dto.id}`,
+      external: false,
+    }));
+  } catch {
+    return [];
+  }
 }
 

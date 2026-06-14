@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SEHub.Application.Admin;
+using SEHub.Application.Feed;
 using SEHub.Contracts.Admin;
 using SEHub.Shared.Constants;
 
@@ -12,10 +13,34 @@ namespace SEHub.API.Controllers.Admin;
 public sealed class ModerationController : ControllerBase
 {
     private readonly IModerationService _moderationService;
+    private readonly IPostService _postService;
+    private readonly IAdminExportService _exportService;
 
-    public ModerationController(IModerationService moderationService)
+    public ModerationController(
+        IModerationService moderationService,
+        IPostService postService,
+        IAdminExportService exportService)
     {
         _moderationService = moderationService;
+        _postService = postService;
+        _exportService = exportService;
+    }
+
+    [HttpGet("featured-posts")]
+    public async Task<IActionResult> GetFeaturedPosts(
+        [FromQuery] string? search,
+        [FromQuery] int pageSize = 100,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _postService.GetFeaturedModeratorStateAsync(search, pageSize, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("violations/export.csv")]
+    public async Task<IActionResult> ExportViolationsCsv(CancellationToken cancellationToken)
+    {
+        var (content, fileName) = await _exportService.ExportViolationsCsvAsync(cancellationToken);
+        return File(content, "text/csv; charset=utf-8", fileName);
     }
 
     [HttpGet("stats")]

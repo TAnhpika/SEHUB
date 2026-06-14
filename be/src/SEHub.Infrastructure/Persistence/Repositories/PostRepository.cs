@@ -16,6 +16,9 @@ public class PostRepository : IPostRepository
     public Task<Post?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         _context.Posts.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
+    public Task<Post?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default) =>
+        _context.Posts.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+
     public async Task<(IReadOnlyList<Post> Items, int TotalCount)> GetPagedAsync(PostQueryParams query, CancellationToken cancellationToken = default)
     {
         var dbQuery = _context.Posts.Where(p => p.Status == PostStatus.Published);
@@ -43,6 +46,15 @@ public class PostRepository : IPostRepository
         {
             dbQuery = dbQuery.Where(p =>
                 _context.UserProfiles.Any(up => up.UserId == p.AuthorId && up.Semester == semester));
+        }
+
+        if (query.IsFeatured is true)
+        {
+            dbQuery = dbQuery.Where(p => p.IsFeatured);
+        }
+        else if (query.IsFeatured is false)
+        {
+            dbQuery = dbQuery.Where(p => !p.IsFeatured);
         }
 
         var sortDescending = !string.Equals(query.SortDir, "asc", StringComparison.OrdinalIgnoreCase);
@@ -99,12 +111,61 @@ public class PostRepository : IPostRepository
     public Task<int> CountByStatusAsync(PostStatus status, CancellationToken cancellationToken = default) =>
         _context.Posts.CountAsync(p => p.Status == status, cancellationToken);
 
+    public Task<int> CountByAuthorIdAsync(Guid authorId, CancellationToken cancellationToken = default) =>
+        _context.Posts.CountAsync(p => p.AuthorId == authorId && p.Status == PostStatus.Published, cancellationToken);
+
+    public async Task<(IReadOnlyList<Post> Items, int TotalCount)> GetPagedByAuthorIdAsync(
+        Guid authorId, int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var dbQuery = _context.Posts.Where(p => p.AuthorId == authorId && p.Status == PostStatus.Published);
+        var total = await dbQuery.CountAsync(cancellationToken);
+        var items = await dbQuery
+            .OrderByDescending(p => p.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, total);
+    }
+
     public async Task<IReadOnlyList<Post>> GetFeaturedAsync(int limit, CancellationToken cancellationToken = default) =>
         await _context.Posts
             .Where(p => p.IsFeatured && p.Status == PostStatus.Published)
             .OrderByDescending(p => p.CreatedAt)
             .Take(limit)
             .ToListAsync(cancellationToken);
+
+    public Task<int> CountFeaturedAsync(CancellationToken cancellationToken = default) =>
+        _context.Posts.CountAsync(
+            p => p.IsFeatured && p.Status == PostStatus.Published,
+            cancellationToken);
+
+    public async Task<(IReadOnlyList<Post> Items, int TotalCount)> GetPublishedCandidatesForFeaturingAsync(
+        string? search,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var dbQuery = _context.Posts.Where(p => p.Status == PostStatus.Published && !p.IsFeatured);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            dbQuery = dbQuery.Where(p =>
+                p.Title.Contains(term) ||
+                p.Content.Contains(term) ||
+                _context.Users.Any(u => u.Id == p.AuthorId && (u.UserName!.Contains(term) || u.DisplayName.Contains(term))));
+        }
+
+        var total = await dbQuery.CountAsync(cancellationToken);
+        var items = await dbQuery
+            .OrderByDescending(p => p.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, total);
+    }
 
     public async Task AddAsync(Post post, CancellationToken cancellationToken = default) =>
         await _context.Posts.AddAsync(post, cancellationToken);

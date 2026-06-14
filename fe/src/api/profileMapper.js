@@ -1,3 +1,5 @@
+import { resolveAssetUrl } from "@/api/assetUrl";
+
 const LEVEL_TIERS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond"];
 
 function deriveNextLevelLabel(levelName = "") {
@@ -19,6 +21,26 @@ export function computeProgress(points, nextLevelPoints) {
   const levelProgress = Math.min(100, Math.round((safePoints / nextLevelPoints) * 100));
 
   return { pointsToNext, levelProgress };
+}
+
+function formatRelativeTimeVi(isoDate) {
+  if (!isoDate) return "—";
+
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  const diffMs = Date.now() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 0) return "Hôm nay";
+  if (diffDays === 1) return "1 ngày trước";
+  if (diffDays < 30) return `${diffDays} ngày trước`;
+
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) return `${diffMonths} tháng trước`;
+
+  const diffYears = Math.floor(diffMonths / 12);
+  return `${diffYears} năm trước`;
 }
 
 function formatProfilePostDate(publishedAt) {
@@ -62,18 +84,20 @@ export function mapProfileRecentPost(post) {
   return {
     id: post.id,
     title: post.title,
-    date: formatProfilePostDate(post.publishedAt ?? post.timeAgo),
-    comments: post.comments ?? 0,
-    likes: post.likes ?? 0,
+    date: formatProfilePostDate(post.createdAt ?? post.publishedAt ?? post.timeAgo),
+    comments: post.commentCount ?? post.comments ?? 0,
+    likes: post.likeCount ?? post.likes ?? 0,
   };
 }
 
-export function mapProfileCard(dto, statsDto = null, { postsCount = 0 } = {}) {
+export function mapProfileCard(dto, statsDto = null) {
   const displayName = dto.displayName?.trim() || dto.username || "User";
   const points = statsDto?.points ?? dto.points ?? 0;
+  const streakCount = statsDto?.streakCount ?? dto.streakCount ?? 0;
   const levelName = statsDto?.levelName ?? dto.levelName ?? "Bronze";
-  const streakCount = statsDto?.streakCount ?? 0;
-  const { pointsToNext, levelProgress } = computeProgress(points, statsDto?.nextLevelPoints);
+  const nextLevelName = statsDto?.nextLevelName ?? deriveNextLevelLabel(levelName);
+  const nextLevelPoints = statsDto?.nextLevelPoints ?? dto.nextLevelPoints;
+  const { pointsToNext, levelProgress } = computeProgress(points, nextLevelPoints);
 
   return {
     userId: dto.userId,
@@ -81,7 +105,7 @@ export function mapProfileCard(dto, statsDto = null, { postsCount = 0 } = {}) {
     displayName,
     initial: displayName.charAt(0).toUpperCase(),
     level: levelName.toUpperCase(),
-    nextLevel: deriveNextLevelLabel(levelName),
+    nextLevel: nextLevelName,
     pointsToNext,
     levelProgress,
     followers: dto.followersCount ?? 0,
@@ -89,18 +113,18 @@ export function mapProfileCard(dto, statsDto = null, { postsCount = 0 } = {}) {
     isFollowing: dto.isFollowing ?? false,
     stats: {
       points,
-      exams: 0,
-      comments: 0,
-      posts: postsCount,
+      exams: statsDto?.examsCompleted ?? 0,
+      comments: statsDto?.commentsCount ?? 0,
+      posts: statsDto?.postsCount ?? 0,
     },
-    joinedAgo: "—",
-    updatedAgo: "—",
+    joinedAgo: formatRelativeTimeVi(dto.memberSince),
+    updatedAgo: formatRelativeTimeVi(dto.profileUpdatedAt),
     streakCount,
     totalActivities: streakCount,
     bio: dto.bio ?? "",
     major: dto.major ?? "",
     semester: dto.semester ?? "",
-    avatarUrl: dto.avatarUrl ?? null,
+    avatarUrl: resolveAssetUrl(dto.avatarUrl),
   };
 }
 
@@ -125,12 +149,13 @@ export function mapProfileToForm(dto, authUser, localOverrides = {}) {
     email: authUser?.email ?? localOverrides.email ?? "",
     username: dto.username ?? localOverrides.username ?? "",
     fullName: dto.displayName?.trim() || localOverrides.fullName || "",
-    gender: localOverrides.gender ?? "other",
-    dateOfBirth: localOverrides.dateOfBirth ?? "",
-    phone: localOverrides.phone ?? "",
+    gender: dto.gender ?? localOverrides.gender ?? "other",
+    dateOfBirth: dto.dateOfBirth ?? localOverrides.dateOfBirth ?? "",
+    phone: dto.phone ?? localOverrides.phone ?? "",
     major: dto.major ?? localOverrides.major ?? "",
-    address: localOverrides.address ?? "",
+    address: dto.address ?? localOverrides.address ?? "",
     bio: dto.bio ?? localOverrides.bio ?? "",
+    avatarUrl: resolveAssetUrl(dto.avatarUrl) ?? localOverrides.avatarUrl ?? null,
   };
 }
 
@@ -139,5 +164,80 @@ export function mapFormToUpdateRequest(form) {
     displayName: form.fullName?.trim(),
     bio: form.bio ?? "",
     major: form.major ?? "",
+    gender: form.gender ?? "other",
+    dateOfBirth: form.dateOfBirth || null,
+    phone: form.phone?.trim() || null,
+    address: form.address?.trim() || null,
+  };
+}
+
+const HEATMAP_WEEKS = 26;
+const HEATMAP_DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const HEATMAP_MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+function formatIsoDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function mapProfileActivityToHeatmap(activityDto) {
+  if (!activityDto?.days?.length) {
+    return null;
+  }
+
+  const levelByDate = new Map(
+    activityDto.days.map((day) => [day.date, day.level ?? 0]),
+  );
+  const countByDate = new Map(
+    activityDto.days.map((day) => [day.date, day.count ?? 0]),
+  );
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(today);
+  start.setDate(start.getDate() - (HEATMAP_WEEKS * 7 - 1));
+
+  const cells = [];
+  const months = [];
+
+  for (let week = 0; week < HEATMAP_WEEKS; week += 1) {
+    const weekStart = new Date(start);
+    weekStart.setDate(start.getDate() + week * 7);
+    months.push(HEATMAP_MONTHS[weekStart.getMonth()]);
+
+    for (let day = 0; day < 7; day += 1) {
+      const date = new Date(weekStart);
+      date.setDate(weekStart.getDate() + day);
+      const isoDate = formatIsoDate(date);
+      cells.push({
+        week,
+        day,
+        level: levelByDate.get(isoDate) ?? 0,
+        date: isoDate,
+        count: countByDate.get(isoDate) ?? 0,
+      });
+    }
+  }
+
+  return {
+    months,
+    dayLabels: HEATMAP_DAY_LABELS,
+    cells,
+    totalActivities: activityDto.totalActivities ?? 0,
   };
 }

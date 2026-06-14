@@ -1,5 +1,7 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Gamification;
+using SEHub.Application.Profiles;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Feed;
 using SEHub.Domain.Entities;
@@ -13,6 +15,8 @@ public sealed class CommentService : ICommentService
     private readonly IPostRepository _postRepository;
     private readonly IUserRepository _userRepository;
     private readonly IUserProfileRepository _profileRepository;
+    private readonly IBadgeCheckService _badgeCheckService;
+    private readonly IUserActivityService _userActivityService;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -21,6 +25,8 @@ public sealed class CommentService : ICommentService
         IPostRepository postRepository,
         IUserRepository userRepository,
         IUserProfileRepository profileRepository,
+        IBadgeCheckService badgeCheckService,
+        IUserActivityService userActivityService,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
@@ -28,6 +34,8 @@ public sealed class CommentService : ICommentService
         _postRepository = postRepository;
         _userRepository = userRepository;
         _profileRepository = profileRepository;
+        _badgeCheckService = badgeCheckService;
+        _userActivityService = userActivityService;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -80,6 +88,9 @@ public sealed class CommentService : ICommentService
 
         await _commentRepository.AddAsync(comment, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _badgeCheckService.EvaluateForTriggerAsync(userId, BadgeCheckService.TriggerCommentsCreated, cancellationToken);
+        await _userActivityService.RecordActivityAsync(userId, cancellationToken);
 
         return await MapCommentAsync(comment, [comment], cancellationToken);
     }

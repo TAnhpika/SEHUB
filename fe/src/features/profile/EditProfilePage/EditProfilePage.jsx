@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
@@ -6,19 +6,27 @@ import Button from "@/common/Button/Button";
 import { readStoredUser } from "@/context/AuthProvider";
 import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { resolveAssetUrl } from "@/api/assetUrl";
+import * as profilesApi from "@/api/profilesApi";
 import { loadProfileForm, saveMyProfile } from "@/features/profile/profileData";
 import { GENDER_OPTIONS } from "@/features/profile/profileFormData";
 import styles from "./EditProfilePage.module.css";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+const ALLOWED_AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024;
 
 function EditProfilePage() {
   const { username } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { showToast } = useToast();
+  const fileInputRef = useRef(null);
 
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   useEffect(() => {
     if (!user || user.username !== username) return undefined;
@@ -65,6 +73,49 @@ function EditProfilePage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  async function handleAvatarChange(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
+      showToast("Ảnh đại diện phải là JPEG, PNG, WEBP hoặc GIF.");
+      return;
+    }
+
+    if (file.size > MAX_AVATAR_SIZE_BYTES) {
+      showToast("Ảnh đại diện tối đa 5 MB.");
+      return;
+    }
+
+    if (USE_MOCK) {
+      updateField("avatarUrl", URL.createObjectURL(file));
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const result = await profilesApi.uploadMyAvatar(file);
+      const avatarUrl = resolveAssetUrl(result.avatarUrl);
+      updateField("avatarUrl", avatarUrl);
+
+      const stored = readStoredUser();
+      if (stored) {
+        localStorage.setItem(
+          "sehubs_user",
+          JSON.stringify({ ...stored, avatarUrl }),
+        );
+      }
+
+      showToast("Đã cập nhật ảnh đại diện.");
+    } catch (err) {
+      showToast(err.message ?? "Không tải được ảnh đại diện.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -92,7 +143,11 @@ function EditProfilePage() {
       if (stored) {
         localStorage.setItem(
           "sehubs_user",
-          JSON.stringify({ ...stored, displayName: fullName }),
+          JSON.stringify({
+            ...stored,
+            displayName: fullName,
+            avatarUrl: form.avatarUrl ?? stored.avatarUrl ?? null,
+          }),
         );
       }
 
@@ -104,6 +159,9 @@ function EditProfilePage() {
       setSubmitting(false);
     }
   }
+
+  const avatarPreview = form.avatarUrl;
+  const avatarInitial = (form.fullName || user.displayName || user.initial).charAt(0).toUpperCase();
 
   return (
     <div className={styles.page}>
@@ -122,8 +180,29 @@ function EditProfilePage() {
           <h2 className={styles["section-title"]}>Ảnh đại diện</h2>
           <div className={styles["avatar-box"]}>
             <span className={styles.avatar} aria-hidden="true">
-              {(form.fullName || user.displayName || user.initial).charAt(0).toUpperCase()}
+              {avatarPreview ? (
+                <img src={avatarPreview} alt="" className={styles["avatar-image"]} />
+              ) : (
+                avatarInitial
+              )}
             </span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={ALLOWED_AVATAR_TYPES.join(",")}
+              className={styles["avatar-input"]}
+              onChange={handleAvatarChange}
+              disabled={avatarUploading}
+            />
+            <Button
+              type="button"
+              look="outline"
+              disabled={avatarUploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {avatarUploading ? "Đang tải ảnh..." : "Chọn ảnh đại diện"}
+            </Button>
+            <p className={styles.hint}>JPEG, PNG, WEBP hoặc GIF — tối đa 5 MB</p>
           </div>
         </section>
 
@@ -249,7 +328,7 @@ function EditProfilePage() {
         </section>
 
         <div className={styles.actions}>
-          <Button type="submit" disabled={submitting}>
+          <Button type="submit" disabled={submitting || avatarUploading}>
             Lưu thay đổi
           </Button>
           <Link to={`/profile/${username}`} className={styles.cancel}>

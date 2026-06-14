@@ -289,13 +289,9 @@ export async function loadAdminPendingExams() {
     return getAdminPendingExams();
   }
 
-  try {
-    const page = await adminApi.listExams({ status: "PendingApproval", pageSize: 100 });
-    apiPendingCache = (page.items ?? []).map((dto) => mapPendingExamListItem(dto));
-    return apiPendingCache;
-  } catch {
-    return getAdminPendingExams();
-  }
+  const page = await adminApi.listExams({ status: "PendingApproval", pageSize: 100 });
+  apiPendingCache = (page.items ?? []).map((dto) => mapPendingExamListItem(dto));
+  return apiPendingCache;
 }
 
 async function createExamViaApi(body, confirmDuplicate = false) {
@@ -395,8 +391,10 @@ let rejectedStore = [];
  * }} payload
  */
 export async function submitModeratorPracticeExam(payload, createRequest, { confirmDuplicate = false } = {}) {
+  const uploaded = payload.attachments?.find((file) => file.assetUrl);
   const fileName =
-    payload.attachments?.find((f) => f.name)?.name ?? `${payload.subject}-practice-exam.pdf`;
+    uploaded?.name ?? payload.attachments?.find((f) => f.name)?.name ?? `${payload.subject}-practice-exam.pdf`;
+  const assetUrl = uploaded?.assetUrl ?? null;
 
   if (USE_MOCK) {
     const entry = {
@@ -411,6 +409,7 @@ export async function submitModeratorPracticeExam(payload, createRequest, { conf
       semester: payload.semesterId ?? "5",
       urgent: false,
       fileName,
+      assetUrl,
       description: payload.description?.trim() ?? "",
       githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
       allowDiscussion: payload.allowDiscussion ?? false,
@@ -421,15 +420,17 @@ export async function submitModeratorPracticeExam(payload, createRequest, { conf
     return entry;
   }
 
-  const body =
-    createRequest ??
-    mapPracticeExamFormToCreateRequest({
-      subjectCode: payload.subject,
-      semester: payload.semesterId,
-      title: payload.title,
-      description: payload.description,
-      githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
-    });
+  const body = {
+    ...(createRequest ??
+      mapPracticeExamFormToCreateRequest({
+        subjectCode: payload.subject,
+        semester: payload.semesterId,
+        title: payload.title,
+        description: payload.description,
+        githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
+      })),
+    assetUrl,
+  };
 
   const dto = await createExamViaApi(body, confirmDuplicate);
   const entry = mapPendingExamFromCreate(dto, {
@@ -526,7 +527,10 @@ export async function approvePendingExam(pendingId) {
         : item.description || `Duyệt từ Mod — ${item.fileName}`,
       githubGuide: isFinal ? "" : item.githubGuide || PRACTICE_EXAM_DEFAULTS.githubGuide,
       durationMinutes: isFinal ? FINAL_EXAM_DEFAULTS.durationMinutes : undefined,
-      attachments: [{ id: "mod-file", name: item.fileName, size: 0 }],
+      attachments: item.assetUrl
+        ? [{ id: "mod-file", name: item.fileName, size: 0, url: item.assetUrl }]
+        : [{ id: "mod-file", name: item.fileName, size: 0 }],
+      assetUrl: item.assetUrl ?? null,
       ocrConfirmed: isFinal,
     };
     examsStore = [newExam, ...examsStore];
@@ -646,18 +650,10 @@ export async function loadAdminExams() {
     return getAdminExams();
   }
 
-  try {
-    const page = await adminApi.listExams({ pageSize: 100 });
-    const apiExams = (page.items ?? []).map(mapAdminExamListItem);
-    if (apiExams.length > 0) {
-      examsStore = apiExams.map((exam) => ({ ...exam }));
-      return apiExams;
-    }
-  } catch {
-    /* fallback below */
-  }
-
-  return getAdminExams();
+  const page = await adminApi.listExams({ pageSize: 100 });
+  const apiExams = (page.items ?? []).map(mapAdminExamListItem);
+  examsStore = apiExams.map((exam) => ({ ...exam }));
+  return apiExams;
 }
 
 export async function loadAdminExamById(id) {

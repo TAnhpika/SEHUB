@@ -55,6 +55,16 @@ public class PaymentOrderRepository : IPaymentOrderRepository
         return (items, total);
     }
 
+    public async Task<IReadOnlyList<PaymentOrder>> GetStaleWaitingConfirmationAsync(
+        DateTime waitingSinceBeforeUtc,
+        CancellationToken cancellationToken = default) =>
+        await _context.PaymentOrders
+            .Where(o =>
+                o.Status == PaymentOrderStatus.WaitingConfirmation
+                && o.WaitingConfirmationAt != null
+                && o.WaitingConfirmationAt <= waitingSinceBeforeUtc)
+            .ToListAsync(cancellationToken);
+
     public async Task AddAsync(PaymentOrder order, CancellationToken cancellationToken = default) =>
         await _context.PaymentOrders.AddAsync(order, cancellationToken);
 

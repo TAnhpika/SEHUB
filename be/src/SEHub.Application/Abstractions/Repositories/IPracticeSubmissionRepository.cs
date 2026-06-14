@@ -11,6 +11,7 @@ public interface IPracticeSubmissionRepository
     Task<(IReadOnlyList<PracticeSubmission> Items, int TotalCount)> GetPagedAsync(
         int page, int pageSize, PracticeSubmissionStatus? status, CancellationToken cancellationToken = default);
     Task<int> CountByStatusAsync(PracticeSubmissionStatus status, CancellationToken cancellationToken = default);
+    Task<int> CountByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
     Task AddAsync(PracticeSubmission submission, CancellationToken cancellationToken = default);
     Task UpdateAsync(PracticeSubmission submission, CancellationToken cancellationToken = default);
     Task MarkPreviousAsNotLatestAsync(Guid userId, Guid examId, CancellationToken cancellationToken = default);

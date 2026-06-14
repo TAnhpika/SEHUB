@@ -35,4 +35,17 @@ public class ExamAttemptRepository : IExamAttemptRepository
         if (status.HasValue) query = query.Where(a => a.Status == status.Value);
         return await query.OrderByDescending(a => a.StartedAt).ToListAsync(cancellationToken);
     }
+
+    public Task<int> CountSubmittedByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        _context.ExamAttempts.CountAsync(
+            a => a.UserId == userId && a.Status == ExamAttemptStatus.Submitted,
+            cancellationToken);
+
+    public Task<int> CountSubmittedWithMinScoreAsync(Guid userId, decimal minScore, CancellationToken cancellationToken = default) =>
+        _context.ExamAttempts.CountAsync(
+            a => a.UserId == userId &&
+                 a.Status == ExamAttemptStatus.Submitted &&
+                 a.Score.HasValue &&
+                 a.Score.Value >= minScore,
+            cancellationToken);
 }

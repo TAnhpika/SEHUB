@@ -211,17 +211,12 @@ export async function loadAdminReports() {
     return getAdminReports();
   }
 
-  try {
-    const page = await adminApi.listReports({ pageSize: 100 });
-    const apiReports = (page.items ?? []).map(mapAdminReportListItem);
-    if (apiReports.length > 0) {
-      return apiReports.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    }
-  } catch {
-    /* fallback below */
-  }
-
-  return getAdminReports();
+  const page = await adminApi.listReports({ pageSize: 100 });
+  return (page.items ?? [])
+    .map(mapAdminReportListItem)
+    .sort((a, b) =>
+      String(b.createdAtIso ?? b.createdAt).localeCompare(String(a.createdAtIso ?? a.createdAt)),
+    );
 }
 
 export async function loadAdminReportById(id) {

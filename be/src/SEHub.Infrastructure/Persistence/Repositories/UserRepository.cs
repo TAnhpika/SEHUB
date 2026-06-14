@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Models;
+using SEHub.Application.Abstractions.Repositories;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Exceptions;
 using SEHub.Infrastructure.Identity;
@@ -159,7 +159,7 @@ public class UserRepository : IUserRepository
         }
     }
 
-    public async Task UpdateStreakOnLoginAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<StreakUpdateResult> UpdateStreakOnActivityAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
             ?? throw new InvalidOperationException("User not found.");
@@ -167,11 +167,12 @@ public class UserRepository : IUserRepository
         var today = DateTime.UtcNow.Date;
         if (user.LastActivityDate?.Date == today)
         {
-            return;
+            return new StreakUpdateResult(false, user.StreakCount);
         }
 
         user.StreakCount = user.LastActivityDate?.Date == today.AddDays(-1) ? user.StreakCount + 1 : 1;
         user.LastActivityDate = today;
+        return new StreakUpdateResult(true, user.StreakCount);
     }
 
     public async Task<IReadOnlyList<UserAccount>> GetPagedAsync(int page, int pageSize, string? search, CancellationToken cancellationToken = default)
@@ -213,6 +214,12 @@ public class UserRepository : IUserRepository
         }
 
         return await query.CountAsync(cancellationToken);
+    }
+
+    public async Task<int> CountByRoleAsync(string role, CancellationToken cancellationToken = default)
+    {
+        var usersInRole = await _userManager.GetUsersInRoleAsync(role);
+        return usersInRole.Count;
     }
 
     public async Task UpdateBanAsync(Guid userId, bool isBanned, DateTime? banUntil, string? banReason, string? banType, CancellationToken cancellationToken = default)

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faComment,
@@ -16,12 +16,18 @@ import {
   FEATURE_SEARCH_SORT_OPTIONS,
   filterSearchPosts,
   findFeaturedPost,
+  loadFeaturedPostDetail,
+  loadFeaturedPostsState,
   MAX_PINNED_POSTS,
   PINNED_POSTS_INITIAL,
   SEARCH_POSTS_INITIAL,
+  setPostFeatured,
   tagToCategoryLabel,
 } from "@/features/moderator/featured/featuredPostsData";
 import styles from "./FeaturedPostsPage.module.css";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+const STATS_EVENT = "sehub-moderator-stats-updated";
 
 const FEATURED_CRUMBS = [
   { label: "Trang chủ", to: "/home" },
@@ -136,11 +142,66 @@ function SearchResultCard({ post, isSelected, canPin, onSelect, onPin }) {
 
 function FeaturedPostsPage() {
   const { showToast } = useToast();
-  const [pinned, setPinned] = useState(PINNED_POSTS_INITIAL);
-  const [searchPool, setSearchPool] = useState(SEARCH_POSTS_INITIAL);
+  const [pinned, setPinned] = useState(USE_MOCK ? PINNED_POSTS_INITIAL : []);
+  const [searchPool, setSearchPool] = useState(USE_MOCK ? SEARCH_POSTS_INITIAL : []);
+  const [loading, setLoading] = useState(!USE_MOCK);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("newest");
   const [selectedId, setSelectedId] = useState(null);
+  const [selectedPost, setSelectedPost] = useState(null);
+
+  useEffect(() => {
+    if (USE_MOCK) return undefined;
+
+    let cancelled = false;
+    setLoading(true);
+    loadFeaturedPostsState()
+      .then(({ pinned: nextPinned, searchPool: nextPool }) => {
+        if (!cancelled) {
+          setPinned(nextPinned);
+          setSearchPool(nextPool);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          showToast(err.message ?? "Không tải được bài viết nổi bật.", "error");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showToast]);
+
+  useEffect(() => {
+    if (!selectedId) {
+      setSelectedPost(null);
+      return undefined;
+    }
+
+    if (USE_MOCK) {
+      setSelectedPost(findFeaturedPost(selectedId, pinned, searchPool));
+      return undefined;
+    }
+
+    let cancelled = false;
+    loadFeaturedPostDetail(selectedId)
+      .then((post) => {
+        if (!cancelled) setSelectedPost(post);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSelectedPost(findFeaturedPost(selectedId, pinned, searchPool));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, pinned, searchPool]);
 
   const pinnedIds = useMemo(() => new Set(pinned.map((post) => post.id)), [pinned]);
   const canPinMore = pinned.length < MAX_PINNED_POSTS;
@@ -149,11 +210,6 @@ function FeaturedPostsPage() {
     () => filterSearchPosts(searchPool, { query, sort, pinnedIds }),
     [searchPool, query, sort, pinnedIds],
   );
-
-  const selectedPost = useMemo(() => {
-    if (!selectedId) return null;
-    return findFeaturedPost(selectedId, pinned, searchPool);
-  }, [selectedId, pinned, searchPool]);
 
   const pinCounter = (
     <span className={styles.countBadge}>
@@ -165,12 +221,24 @@ function FeaturedPostsPage() {
     const post = pinned.find((item) => item.id === id);
     if (!post) return;
 
-    setPinned((prev) => prev.filter((item) => item.id !== id));
-    setSearchPool((prev) => {
-      if (prev.some((item) => item.id === id)) return prev;
-      return [enrichFeaturedPost({ ...post, excerpt: post.excerpt }), ...prev];
-    });
-    showToast("Đã bỏ ghim bài viết.");
+    const applyLocal = () => {
+      setPinned((prev) => prev.filter((item) => item.id !== id));
+      setSearchPool((prev) => {
+        if (prev.some((item) => item.id === id)) return prev;
+        return [enrichFeaturedPost({ ...post, isFeatured: false }), ...prev];
+      });
+      if (selectedId === id) setSelectedId(null);
+      showToast("Đã bỏ ghim bài viết.");
+    };
+
+    if (USE_MOCK) {
+      applyLocal();
+      return;
+    }
+
+    setPostFeatured(id, false)
+      .then(applyLocal)
+      .catch((err) => showToast(err.message ?? "Không bỏ ghim được bài viết.", "error"));
   }
 
   function handlePin(id) {
@@ -182,16 +250,29 @@ function FeaturedPostsPage() {
     const post = searchPool.find((item) => item.id === id);
     if (!post || pinnedIds.has(id)) return;
 
-    setSearchPool((prev) => prev.filter((item) => item.id !== id));
-    setPinned((prev) => [
-      ...prev,
-      enrichFeaturedPost({
-        ...post,
-        categoryLabel: tagToCategoryLabel(post.tag),
-        comments: post.comments ?? 0,
-      }),
-    ]);
-    showToast("Đã ghim bài viết lên sidebar cộng đồng (mock).");
+    const applyLocal = () => {
+      setSearchPool((prev) => prev.filter((item) => item.id !== id));
+      setPinned((prev) => [
+        ...prev,
+        enrichFeaturedPost({
+          ...post,
+          isFeatured: true,
+          categoryLabel: tagToCategoryLabel(post.tag),
+          comments: post.comments ?? 0,
+        }),
+      ]);
+      showToast("Đã ghim bài viết lên sidebar cộng đồng.");
+      window.dispatchEvent(new CustomEvent(STATS_EVENT));
+    };
+
+    if (USE_MOCK) {
+      applyLocal();
+      return;
+    }
+
+    setPostFeatured(id, true)
+      .then(applyLocal)
+      .catch((err) => showToast(err.message ?? "Không ghim được bài viết.", "error"));
   }
 
   return (
@@ -201,6 +282,7 @@ function FeaturedPostsPage() {
       crumbs={FEATURED_CRUMBS}
       actions={pinCounter}
     >
+      {loading ? <p>Đang tải bài viết…</p> : null}
       <div className={styles.workspace}>
         <div className={styles.mainGrid}>
           <section className={styles.pinnedColumn} aria-labelledby="pinned-heading">

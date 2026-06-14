@@ -10,5 +10,6 @@ public sealed class AdminUserListItemDto
     public bool IsBanned { get; init; }
     public bool IsPremium { get; init; }
     public int Points { get; init; }
+    public string? LevelName { get; init; }
     public DateTime CreatedAt { get; init; }
 }

@@ -90,6 +90,36 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
     }
 
     [Fact]
+    public async Task Admin_ListPendingExams_IncludesAssetUrlAndDescription()
+    {
+        var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
+
+        var uniqueCode = $"INT-LIST-ASSET-{Guid.NewGuid():N}"[..24];
+        const string assetUrl = "/uploads/exams/integration-test-brief.pdf";
+        const string description = "Practice exam with attachment for admin list.";
+
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
+        {
+            Code = uniqueCode,
+            Title = "List asset metadata test",
+            ExamType = nameof(ExamType.Practice),
+            Semester = "5",
+            Major = "PRF192",
+            Description = description,
+            AssetUrl = assetUrl,
+        });
+        createResponse.EnsureSuccessStatusCode();
+
+        var listResponse = await _client.GetAsync("/api/v1/admin/exams?status=PendingApproval&pageSize=50");
+        listResponse.EnsureSuccessStatusCode();
+        var list = await listResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResult<ExamListItemDto>>>();
+        var item = list!.Data!.Items.Should().ContainSingle(e => e.Code == uniqueCode).Subject;
+        item.AssetUrl.Should().Be(assetUrl);
+        item.Description.Should().Be(description);
+    }
+
+    [Fact]
     public async Task Moderator_ReviewPracticeSubmission_AcceptsReviewedStatus()
     {
         var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);

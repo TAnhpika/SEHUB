@@ -88,6 +88,16 @@ public sealed class PremiumController : ControllerBase
 
 
 
+    [HttpGet("rank-voucher")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> GetRankVoucher(
+        [FromQuery] string? planCode,
+        CancellationToken cancellationToken)
+    {
+        var result = await _premiumService.GetRankVoucherPreviewAsync(planCode, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpPost("orders")]
 
     [Authorize(Policy = PolicyNames.RequireAuthenticated)]
@@ -108,11 +118,14 @@ public sealed class PremiumController : ControllerBase
 
     [Authorize(Policy = PolicyNames.RequireAuthenticated)]
 
-    public async Task<IActionResult> GetOrder(Guid orderId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetOrder(
+        Guid orderId,
+        CancellationToken cancellationToken,
+        [FromQuery] bool markWaitingConfirmation = false)
 
     {
 
-        var result = await _premiumService.GetOrderAsync(orderId, cancellationToken);
+        var result = await _premiumService.GetOrderAsync(orderId, markWaitingConfirmation, cancellationToken);
 
         return Ok(result);
 

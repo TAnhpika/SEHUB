@@ -50,8 +50,8 @@ function PaymentStatsStrip({ stats, activeFilter, onFilter, eligibleTokenCount }
       label: "Chờ xác nhận",
       value: stats.awaitingConfirm,
       tone: "warn",
-      filter: "webhook_ok",
-      hint: "Webhook OK — bước 5",
+      filter: "waiting_confirmation",
+      hint: "Sinh viên đã thanh toán — Admin xác nhận thủ công",
     },
     {
       id: "activated",

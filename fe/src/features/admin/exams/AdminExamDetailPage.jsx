@@ -19,6 +19,7 @@ import {
 } from "@/features/admin/exams/adminExamData";
 import examStyles from "@/features/admin/exams/AdminExam.module.css";
 import styles from "@/features/admin/shared/adminPage.module.css";
+import { getExamAssetFileName, resolveExamAssetUrl } from "@/utils/examAssetUrl";
 
 function AdminExamDetailPage() {
   const { id } = useParams();
@@ -139,7 +140,24 @@ function AdminExamDetailPage() {
               </div>
               <div className={styles.detailItem}>
                 <dt>File đính kèm</dt>
-                <dd>{exam.attachments?.length ?? 0} file</dd>
+                <dd>
+                  {exam.assetUrl ? (
+                    <a
+                      href={resolveExamAssetUrl(exam.assetUrl)}
+                      className={examStyles.linkExternal}
+                      download
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {getExamAssetFileName(
+                        exam.assetUrl,
+                        exam.attachments?.[0]?.name ?? "exam-attachment",
+                      )}
+                    </a>
+                  ) : (
+                    "—"
+                  )}
+                </dd>
               </div>
             </>
           )}

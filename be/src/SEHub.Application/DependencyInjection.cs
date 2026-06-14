@@ -9,6 +9,7 @@ using SEHub.Application.Exams;
 using SEHub.Application.Exams.Validators;
 using SEHub.Application.Feed;
 using SEHub.Application.Feed.Validators;
+using SEHub.Application.Gamification;
 using SEHub.Application.Mapping;
 using SEHub.Application.Premium;
 
@@ -42,6 +43,8 @@ public static class DependencyInjection
         services.AddScoped<IPostLikeService, PostLikeService>();
         services.AddScoped<IPostReportService, PostReportService>();
         services.AddScoped<IGamificationService, GamificationService>();
+        services.AddScoped<IBadgeCheckService, BadgeCheckService>();
+        services.AddScoped<IGamificationCatalogService, GamificationCatalogService>();
 
         services.AddScoped<IExamQueryService, ExamQueryService>();
         services.AddScoped<IExamAttemptService, ExamAttemptService>();
@@ -50,8 +53,10 @@ public static class DependencyInjection
         services.AddScoped<IPracticeSubmissionService, PracticeSubmissionService>();
 
         services.AddScoped<IDocumentService, DocumentService>();
+        services.AddScoped<IDocumentAccessService, DocumentAccessService>();
 
         services.AddScoped<IPremiumService, PremiumService>();
+        services.AddScoped<IPaymentOrderMaintenanceService, PaymentOrderMaintenanceService>();
         services.AddScoped<IPremiumRefundService, PremiumRefundService>();
         services.AddScoped<ISubscriptionService, SubscriptionService>();
         services.AddScoped<IN8nPremiumActivationService, N8nPremiumActivationService>();
@@ -60,6 +65,8 @@ public static class DependencyInjection
 
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IProfileStatsService, ProfileStatsService>();
+        services.AddScoped<IProfileActivityService, ProfileActivityService>();
+        services.AddScoped<IUserActivityService, UserActivityService>();
 
         services.AddScoped<IUserSearchService, UserSearchService>();
         services.AddScoped<IFollowService, FollowService>();
@@ -75,6 +82,8 @@ public static class DependencyInjection
         services.AddScoped<IModerationService, ModerationService>();
         services.AddScoped<IAdminPaymentService, AdminPaymentService>();
         services.AddScoped<IAdminGamificationService, AdminGamificationService>();
+        services.AddScoped<IAdminExportService, AdminExportService>();
+        services.AddScoped<IAdminOverviewService, AdminOverviewService>();
         services.AddScoped<IOcrExamService, OcrExamService>();
 
         services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
@@ -94,6 +103,12 @@ public static class DependencyInjection
         services.AddScoped<IValidator<ModeratePostRequest>, ModeratePostRequestValidator>();
         services.AddScoped<IValidator<ModeratorBanUserRequest>, ModeratorBanUserRequestValidator>();
         services.AddScoped<IValidator<ModeratorWarnUserRequest>, ModeratorWarnUserRequestValidator>();
+        services.AddScoped<IValidator<UpdateDocumentRequest>, UpdateDocumentRequestValidator>();
+        services.AddScoped<IValidator<AdminUserPatchRequest>, AdminUserPatchRequestValidator>();
+        services.AddScoped<IValidator<UpdateLevelsRequest>, UpdateLevelsRequestValidator>();
+        services.AddScoped<IValidator<CreateBadgeRequest>, CreateBadgeRequestValidator>();
+        services.AddScoped<IValidator<UpdateBadgeRequest>, UpdateBadgeRequestValidator>();
+        services.AddScoped<IValidator<GrantTokensRequest>, GrantTokensRequestValidator>();
         services.AddScoped<IValidator<SaveAnswersRequest>, SaveAnswersRequestValidator>();
         services.AddScoped<IValidator<SubmitPracticeRequest>, SubmitPracticeRequestValidator>();
         services.AddScoped<IValidator<UpdateProfileRequest>, UpdateProfileRequestValidator>();

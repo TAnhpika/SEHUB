@@ -214,6 +214,24 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
             {
 
+                await _dbContext.PaymentAuditLogs.AddAsync(new PaymentAuditLog
+
+                {
+
+                    Id = Guid.NewGuid(),
+
+                    OrderId = order.Id,
+
+                    Action = "WEBHOOK_DUPLICATE_IGNORED",
+
+                    PayloadJson = payload,
+
+                    CreatedAt = DateTime.UtcNow
+
+                }, cancellationToken);
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+
                 if (transaction is not null)
 
                 {
@@ -230,9 +248,17 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
 
 
+            var paidAt = DateTime.UtcNow;
+
             order.Status = PaymentOrderStatus.Paid;
 
-            order.UpdatedAt = DateTime.UtcNow;
+            order.PaidAt = paidAt;
+
+            order.VerifiedAt = paidAt;
+
+            order.VerificationMethod = PaymentVerificationMethods.Webhook;
+
+            order.UpdatedAt = paidAt;
 
 
 
@@ -336,7 +362,7 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
                     AmountVnd = order.Amount,
 
-                    PaidAt = DateTime.UtcNow,
+                    PaidAt = order.PaidAt ?? DateTime.UtcNow,
 
                     ExpiresAt = subscription.ExpiresAt,
 

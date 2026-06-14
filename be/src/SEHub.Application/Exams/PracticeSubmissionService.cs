@@ -1,6 +1,8 @@
 using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Gamification;
+using SEHub.Application.Profiles;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Exams;
 using SEHub.Domain.Entities;
@@ -14,6 +16,8 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
     private readonly IPracticeSubmissionRepository _submissionRepository;
     private readonly IExamRepository _examRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IBadgeCheckService _badgeCheckService;
+    private readonly IUserActivityService _userActivityService;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
@@ -22,6 +26,8 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
         IPracticeSubmissionRepository submissionRepository,
         IExamRepository examRepository,
         IUserRepository userRepository,
+        IBadgeCheckService badgeCheckService,
+        IUserActivityService userActivityService,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork,
         IMapper mapper)
@@ -29,6 +35,8 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
         _submissionRepository = submissionRepository;
         _examRepository = examRepository;
         _userRepository = userRepository;
+        _badgeCheckService = badgeCheckService;
+        _userActivityService = userActivityService;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -61,6 +69,12 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
 
         await _submissionRepository.AddAsync(submission, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _badgeCheckService.EvaluateForTriggerAsync(
+            userId,
+            BadgeCheckService.TriggerPracticeSubmissions,
+            cancellationToken);
+        await _userActivityService.RecordActivityAsync(userId, cancellationToken);
 
         return _mapper.Map<PracticeSubmissionDto>(submission);
     }

@@ -8,4 +8,5 @@ public interface ILevelConfigRepository
     Task<LevelConfig?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<LevelConfig?> GetForPointsAsync(int points, CancellationToken cancellationToken = default);
     Task UpdateAllAsync(IReadOnlyList<LevelConfig> levels, CancellationToken cancellationToken = default);
+    Task AddAsync(LevelConfig level, CancellationToken cancellationToken = default);
 }

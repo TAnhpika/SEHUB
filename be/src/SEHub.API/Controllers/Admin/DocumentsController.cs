@@ -33,13 +33,17 @@ public sealed class DocumentsController : ControllerBase
             return BadRequest(new { message = "File is required" });
         }
 
+        if (request.CategoryId == Guid.Empty && string.IsNullOrWhiteSpace(request.SubjectCode))
+        {
+            return BadRequest(new { message = "SubjectCode or CategoryId is required." });
+        }
+
         await using var stream = file.OpenReadStream();
         var result = await _adminDocumentService.UploadAsync(
             request,
             stream,
             file.FileName,
             file.ContentType,
-            pageCount: 1,
             cancellationToken);
 
         return Ok(result);
@@ -49,6 +53,13 @@ public sealed class DocumentsController : ControllerBase
     public async Task<IActionResult> GetDocument(Guid id, CancellationToken cancellationToken)
     {
         var result = await _adminDocumentService.GetDocumentAsync(id, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateDocumentRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _adminDocumentService.UpdateAsync(id, request, cancellationToken);
         return Ok(result);
     }
 

@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import {
@@ -6,6 +7,7 @@ import {
   recordExamDraft,
 } from "@/features/moderator/exams/moderatorExamContributionStore";
 import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
+import { parseTotalQuestions } from "@/features/moderator/finalExams/finalExamData";
 import {
   PRACTICE_SEMESTER_OPTIONS,
   PRACTICE_SUBJECT_OPTIONS,
@@ -18,7 +20,12 @@ function FinalExamInfoStep() {
   const { showToast } = useToast();
   const { user } = useAuth();
   const moderator = user?.username ?? "mod_sehub";
-  const { examInfo, setExamInfo } = useFinalExamWizard();
+  const { examInfo, setExamInfo, ensureQuestionSlots } = useFinalExamWizard();
+  const [questionCountInput, setQuestionCountInput] = useState(() =>
+    String(examInfo.totalQuestions ?? ""),
+  );
+
+  const previewQuestionCount = parseTotalQuestions(questionCountInput);
 
   function validateExamInfo() {
     if (!examInfo.subjectCode.trim()) {
@@ -53,7 +60,21 @@ function FinalExamInfoStep() {
   }
 
   function handleContinue() {
-    if (!validateExamInfo()) return;
+    if (!examInfo.subjectCode.trim()) {
+      showToast("Vui lòng chọn mã môn học.");
+      return;
+    }
+    if (!examInfo.semesterLabel.trim()) {
+      showToast("Vui lòng chọn học kỳ.");
+      return;
+    }
+    const totalQuestions = parseTotalQuestions(questionCountInput);
+    if (totalQuestions === null) {
+      showToast("Số câu hỏi phải lớn hơn 0.");
+      return;
+    }
+    setExamInfo((prev) => ({ ...prev, totalQuestions }));
+    ensureQuestionSlots(totalQuestions);
     navigate("/moderator/final-exams/add/questions");
   }
 
@@ -63,7 +84,7 @@ function FinalExamInfoStep() {
         <h1 className={styles.title}>Thông tin đề thi</h1>
         <p className={styles.subtitle}>
           Nhập metadata đề trắc nghiệm cuối kỳ. Sinh viên Premium có thể làm bài online (
-          {examInfo.totalQuestions} câu theo nghiệp vụ).
+          {previewQuestionCount ?? "—"} câu theo nghiệp vụ).
         </p>
       </header>
 
@@ -164,17 +185,12 @@ function FinalExamInfoStep() {
           <label className={styles.field}>
             <span className={styles.label}>Số câu hỏi</span>
             <input
-              type="number"
-              min={1}
-              max={100}
+              type="text"
+              inputMode="numeric"
               className={styles.input}
-              value={examInfo.totalQuestions}
-              onChange={(event) =>
-                setExamInfo((prev) => ({
-                  ...prev,
-                  totalQuestions: Math.min(100, Math.max(1, Number(event.target.value) || 50)),
-                }))
-              }
+              value={questionCountInput}
+              onChange={(event) => setQuestionCountInput(event.target.value)}
+              placeholder="VD: 50"
             />
           </label>
         </div>

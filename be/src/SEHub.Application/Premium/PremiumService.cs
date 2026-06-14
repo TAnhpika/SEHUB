@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Abstractions.Repositories;
 using SEHub.Contracts.Premium;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
@@ -19,6 +20,8 @@ public sealed class PremiumService : IPremiumService
     private readonly ISubscriptionService _subscriptionService;
     private readonly IPayOsService _payOsService;
     private readonly IPayOsWebhookHandler _payOsWebhookHandler;
+    private readonly IUserRepository _userRepository;
+    private readonly ILevelConfigRepository _levelConfigRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IConfiguration _configuration;
     private readonly IUnitOfWork _unitOfWork;
@@ -32,6 +35,8 @@ public sealed class PremiumService : IPremiumService
         ISubscriptionService subscriptionService,
         IPayOsService payOsService,
         IPayOsWebhookHandler payOsWebhookHandler,
+        IUserRepository userRepository,
+        ILevelConfigRepository levelConfigRepository,
         ICurrentUserService currentUser,
         IConfiguration configuration,
         IUnitOfWork unitOfWork,
@@ -44,6 +49,8 @@ public sealed class PremiumService : IPremiumService
         _subscriptionService = subscriptionService;
         _payOsService = payOsService;
         _payOsWebhookHandler = payOsWebhookHandler;
+        _userRepository = userRepository;
+        _levelConfigRepository = levelConfigRepository;
         _currentUser = currentUser;
         _configuration = configuration;
         _unitOfWork = unitOfWork;
@@ -63,6 +70,8 @@ public sealed class PremiumService : IPremiumService
         var plan = await _planRepository.GetByCodeAsync(request.PlanCode, cancellationToken)
             ?? throw new NotFoundException($"Plan '{request.PlanCode}' was not found.");
 
+        var pricing = await ResolveRankPricingAsync(userId, plan.PriceVnd, request.ApplyRankDiscount, cancellationToken);
+
         var orderId = Guid.NewGuid();
         var payOsOrderCode = GeneratePayOsOrderCode();
         var checkoutUrls = BuildCheckoutUrls(orderId, plan.Code);
@@ -70,7 +79,7 @@ public sealed class PremiumService : IPremiumService
         var payOsResult = await _payOsService.CreatePaymentLinkAsync(
             orderId,
             payOsOrderCode,
-            plan.PriceVnd,
+            pricing.FinalAmount,
             $"SEHub Premium - {plan.Name}",
             checkoutUrls,
             cancellationToken);
@@ -81,7 +90,10 @@ public sealed class PremiumService : IPremiumService
             UserId = userId,
             PlanId = plan.Id,
             PayOsOrderCode = payOsOrderCode,
-            Amount = plan.PriceVnd,
+            OriginalAmount = pricing.OriginalAmount,
+            DiscountPercent = pricing.DiscountPercent,
+            DiscountSource = pricing.DiscountSource,
+            Amount = pricing.FinalAmount,
             Status = PaymentOrderStatus.Pending,
             QrUrl = payOsResult.QrUrl,
             ExpiredAt = DateTime.UtcNow.AddMinutes(15),
@@ -95,7 +107,14 @@ public sealed class PremiumService : IPremiumService
             OrderId = orderId,
             Action = "ORDER_CREATED",
             ActorId = userId,
-            PayloadJson = JsonSerializer.Serialize(new { request.PlanCode }),
+            PayloadJson = JsonSerializer.Serialize(new
+            {
+                request.PlanCode,
+                pricing.OriginalAmount,
+                pricing.FinalAmount,
+                pricing.DiscountPercent,
+                pricing.DiscountSource,
+            }),
             CreatedAt = DateTime.UtcNow
         }, cancellationToken);
 
@@ -104,7 +123,63 @@ public sealed class PremiumService : IPremiumService
         return MapOrder(order, payOsResult.CheckoutUrl, plan.Code);
     }
 
-    public async Task<PaymentOrderDto> GetOrderAsync(Guid orderId, CancellationToken cancellationToken = default)
+    public async Task<RankVoucherPreviewDto> GetRankVoucherPreviewAsync(
+        string? planCode = null,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken)
+            ?? throw new NotFoundException("User", userId);
+
+        var level = await _levelConfigRepository.GetForPointsAsync(user.Points, cancellationToken);
+        var discountPercent = level?.VoucherPercent;
+
+        decimal? sampleOriginal = null;
+        if (!string.IsNullOrWhiteSpace(planCode))
+        {
+            var plan = await _planRepository.GetByCodeAsync(planCode, cancellationToken);
+            sampleOriginal = plan?.PriceVnd;
+        }
+
+        if (discountPercent is null or <= 0)
+        {
+            return new RankVoucherPreviewDto
+            {
+                LevelName = level?.Name ?? user.LevelName,
+                Points = user.Points,
+                DiscountPercent = null,
+                Eligible = false,
+                Message = "Rank hiện tại chưa có voucher giảm giá Premium.",
+            };
+        }
+
+        var message = level?.Name switch
+        {
+            "Gold" => $"Rank Gold — giảm {discountPercent}% khi mua Premium.",
+            "Platinum" => $"Rank Platinum — giảm {discountPercent}% khi mua Premium.",
+            _ => $"Rank {level?.Name} — giảm {discountPercent}% khi mua Premium.",
+        };
+
+        if (sampleOriginal is > 0)
+        {
+            var finalAmount = ApplyDiscount(sampleOriginal.Value, discountPercent.Value);
+            message += $" Giá sau giảm: {finalAmount:N0}đ.";
+        }
+
+        return new RankVoucherPreviewDto
+        {
+            LevelName = level?.Name ?? user.LevelName,
+            Points = user.Points,
+            DiscountPercent = discountPercent,
+            Eligible = true,
+            Message = message,
+        };
+    }
+
+    public async Task<PaymentOrderDto> GetOrderAsync(
+        Guid orderId,
+        bool markWaitingConfirmation = false,
+        CancellationToken cancellationToken = default)
     {
         var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
         var order = await _orderRepository.GetByIdAsync(orderId, cancellationToken)
@@ -115,7 +190,40 @@ public sealed class PremiumService : IPremiumService
             throw new ForbiddenException("You do not have access to this order.");
         }
 
-        return MapOrder(order, null, order.Plan?.Code);
+        await ExpireIfWaitingTooLongAsync(order, cancellationToken);
+
+        string? message = null;
+        if (markWaitingConfirmation && order.Status == PaymentOrderStatus.Pending)
+        {
+            var now = DateTime.UtcNow;
+            order.Status = PaymentOrderStatus.WaitingConfirmation;
+            order.WaitingConfirmationAt = now;
+            order.UpdatedAt = now;
+
+            await _orderRepository.UpdateAsync(order, cancellationToken);
+            await _auditLogRepository.AddAsync(new PaymentAuditLog
+            {
+                Id = Guid.NewGuid(),
+                OrderId = order.Id,
+                Action = "WAITING_CONFIRMATION",
+                ActorId = userId,
+                PayloadJson = JsonSerializer.Serialize(new { source = "user_poll" }),
+                CreatedAt = now
+            }, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            message = "Thanh toán đang chờ xác nhận từ quản trị viên.";
+        }
+        else if (order.Status == PaymentOrderStatus.WaitingConfirmation)
+        {
+            message = "Thanh toán đang chờ xác nhận từ quản trị viên.";
+        }
+        else if (order.Status == PaymentOrderStatus.Expired)
+        {
+            message = "Đơn thanh toán đã hết hạn xác nhận (24 giờ).";
+        }
+
+        return MapOrder(order, null, order.Plan?.Code, message);
     }
 
     public async Task<SubscriptionStatusDto> GetSubscriptionAsync(CancellationToken cancellationToken = default)
@@ -200,20 +308,90 @@ public sealed class PremiumService : IPremiumService
             throw new InvalidOperationException("Dev payment confirmation failed.");
         }
 
-        return await GetOrderAsync(orderId, cancellationToken);
+        return await GetOrderAsync(orderId, cancellationToken: cancellationToken);
     }
 
-    private PaymentOrderDto MapOrder(PaymentOrder order, string? checkoutUrl, string? planCode) => new()
+    private async Task ExpireIfWaitingTooLongAsync(PaymentOrder order, CancellationToken cancellationToken)
+    {
+        if (order.Status != PaymentOrderStatus.WaitingConfirmation
+            || order.WaitingConfirmationAt is null
+            || order.WaitingConfirmationAt.Value.AddHours(PaymentOrderMaintenanceService.WaitingConfirmationExpiryHours) >= DateTime.UtcNow)
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        order.Status = PaymentOrderStatus.Expired;
+        order.UpdatedAt = now;
+
+        await _orderRepository.UpdateAsync(order, cancellationToken);
+        await _auditLogRepository.AddAsync(new PaymentAuditLog
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            Action = "PAYMENT_EXPIRED",
+            PayloadJson = JsonSerializer.Serialize(new
+            {
+                reason = "WaitingConfirmation exceeded 24 hours",
+                order.WaitingConfirmationAt
+            }),
+            CreatedAt = now
+        }, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    private PaymentOrderDto MapOrder(PaymentOrder order, string? checkoutUrl, string? planCode, string? message = null) => new()
     {
         OrderId = order.Id,
         PayOsOrderCode = order.PayOsOrderCode,
         Amount = order.Amount,
+        OriginalAmount = order.OriginalAmount > 0 ? order.OriginalAmount : order.Amount,
+        DiscountPercent = order.DiscountPercent,
+        DiscountSource = order.DiscountSource,
         Status = order.Status.ToString(),
         QrUrl = order.QrUrl,
         CheckoutUrl = checkoutUrl,
         ExpiredAt = order.ExpiredAt,
-        PlanCode = planCode
+        PlanCode = planCode,
+        PaidAt = order.PaidAt,
+        VerifiedAt = order.VerifiedAt,
+        VerificationMethod = order.VerificationMethod,
+        Message = message
     };
+
+    private async Task<(decimal OriginalAmount, decimal FinalAmount, int? DiscountPercent, string? DiscountSource)> ResolveRankPricingAsync(
+        Guid userId,
+        decimal planPrice,
+        bool applyRankDiscount,
+        CancellationToken cancellationToken)
+    {
+        if (!applyRankDiscount)
+        {
+            return (planPrice, planPrice, null, null);
+        }
+
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+        if (user is null)
+        {
+            return (planPrice, planPrice, null, null);
+        }
+
+        var level = await _levelConfigRepository.GetForPointsAsync(user.Points, cancellationToken);
+        if (level?.VoucherPercent is null or <= 0)
+        {
+            return (planPrice, planPrice, null, null);
+        }
+
+        var finalAmount = ApplyDiscount(planPrice, level.VoucherPercent.Value);
+        return (planPrice, finalAmount, level.VoucherPercent, $"rank-{level.Name.ToLowerInvariant()}");
+    }
+
+    private static decimal ApplyDiscount(decimal amount, int discountPercent)
+    {
+        var discount = Math.Round(amount * discountPercent / 100m, 0, MidpointRounding.AwayFromZero);
+        var finalAmount = amount - discount;
+        return finalAmount < 0 ? 0 : finalAmount;
+    }
 
     private PayOsCheckoutUrls BuildCheckoutUrls(Guid orderId, string planCode)
     {

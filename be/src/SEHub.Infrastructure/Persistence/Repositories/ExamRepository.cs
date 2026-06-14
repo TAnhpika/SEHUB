@@ -23,6 +23,9 @@ public class ExamRepository : IExamRepository
         return await query.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
 
+    public Task<Exam?> GetByCodeAsync(string code, CancellationToken cancellationToken = default) =>
+        _context.Exams.FirstOrDefaultAsync(e => e.Code == code, cancellationToken);
+
     public Task<Exam?> GetByContentHashAsync(string contentHash, CancellationToken cancellationToken = default) =>
         _context.Exams.FirstOrDefaultAsync(e => e.ContentHash == contentHash, cancellationToken);
 

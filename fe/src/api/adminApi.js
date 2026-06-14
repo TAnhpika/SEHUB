@@ -1,4 +1,4 @@
-import { apiRequest } from "./httpClient";
+import { apiFormRequest, apiRequest, apiUploadRequest, downloadCsv } from "./httpClient";
 
 function buildQuery(params = {}) {
   const search = new URLSearchParams();
@@ -56,6 +56,12 @@ export function createExam(body, confirmDuplicate = false) {
   });
 }
 
+export function uploadExamAsset(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiFormRequest("/api/v1/admin/exams/upload-asset", { formData });
+}
+
 export function updateExam(id, body) {
   return apiRequest(`/api/v1/admin/exams/${id}`, {
     method: "PUT",
@@ -84,6 +90,25 @@ export function getDocument(id) {
 
 export function deleteDocument(id) {
   return apiRequest(`/api/v1/admin/documents/${id}`, { method: "DELETE" });
+}
+
+export function updateDocument(id, body) {
+  return apiRequest(`/api/v1/admin/documents/${id}`, {
+    method: "PUT",
+    body,
+  });
+}
+
+export function uploadDocument({ file, title, subjectCode, semester, categoryId, accessTier, pageCount }) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("Title", title);
+  if (subjectCode) formData.append("SubjectCode", subjectCode);
+  if (semester != null && semester !== "") formData.append("Semester", String(semester));
+  if (categoryId) formData.append("CategoryId", categoryId);
+  formData.append("AccessTier", accessTier);
+  if (pageCount != null && pageCount !== "") formData.append("PageCount", String(pageCount));
+  return apiUploadRequest("/api/v1/admin/documents", formData);
 }
 
 export function listPayments(params = {}) {
@@ -122,6 +147,41 @@ export function getReport(id) {
 
 export function resolveReport(id, body) {
   return apiRequest(`/api/v1/admin/moderation/reports/${id}`, {
+    method: "PATCH",
+    body,
+  });
+}
+
+export function getModerationStats() {
+  return apiRequest("/api/v1/admin/moderation/stats");
+}
+
+export function getFeaturedPosts(params = {}) {
+  return apiRequest(`/api/v1/admin/moderation/featured-posts${buildQuery(params)}`);
+}
+
+export function getAdminOverview() {
+  return apiRequest("/api/v1/admin/overview");
+}
+
+export function downloadAdminExport(kind) {
+  return downloadCsv(`/api/v1/admin/export/${kind}.csv`);
+}
+
+export function downloadModerationViolationsExport() {
+  return downloadCsv("/api/v1/admin/moderation/violations/export.csv");
+}
+
+export function listModerationPosts(params = {}) {
+  return apiRequest(`/api/v1/admin/moderation/posts${buildQuery(params)}`);
+}
+
+export function getModerationPost(id) {
+  return apiRequest(`/api/v1/admin/moderation/posts/${id}`);
+}
+
+export function moderatePost(id, body) {
+  return apiRequest(`/api/v1/admin/moderation/posts/${id}`, {
     method: "PATCH",
     body,
   });
@@ -173,6 +233,24 @@ export function updateGamificationLevels(body) {
 
 export function getGamificationBadges() {
   return apiRequest("/api/v1/admin/gamification/badges");
+}
+
+export function createGamificationBadge(body) {
+  return apiRequest("/api/v1/admin/gamification/badges", {
+    method: "POST",
+    body,
+  });
+}
+
+export function updateGamificationBadge(id, body) {
+  return apiRequest(`/api/v1/admin/gamification/badges/${id}`, {
+    method: "PUT",
+    body,
+  });
+}
+
+export function deleteGamificationBadge(id) {
+  return apiRequest(`/api/v1/admin/gamification/badges/${id}`, { method: "DELETE" });
 }
 
 export function listModerationPracticeSubmissions(params = {}) {

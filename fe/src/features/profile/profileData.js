@@ -1,12 +1,13 @@
 import * as profilesApi from "@/api/profilesApi";
+import * as gamificationApi from "@/api/gamificationApi";
 import {
   mapBadgesForSection,
   mapFormToUpdateRequest,
+  mapProfileActivityToHeatmap,
   mapProfileCard,
   mapProfileRecentPost,
   mapProfileToForm,
 } from "@/api/profileMapper";
-import { loadPosts } from "@/features/feed/feedData";
 import {
   getProfileFormData,
   saveProfileFormData,
@@ -165,12 +166,54 @@ export function getProfileByUsername(username) {
   };
 }
 
-export function loadProfileBadges(profileDto) {
+let badgeCatalogCache = null;
+
+export async function loadBadgeCatalog() {
   if (USE_MOCK) {
     return BADGE_CATALOG;
   }
 
-  return mapBadgesForSection(BADGE_CATALOG, profileDto?.badges ?? []);
+  if (badgeCatalogCache) {
+    return badgeCatalogCache;
+  }
+
+  try {
+    const items = await gamificationApi.getBadges();
+    badgeCatalogCache = (items ?? []).map(gamificationApi.mapBadgeCatalogItem);
+    return badgeCatalogCache;
+  } catch {
+    return BADGE_CATALOG;
+  }
+}
+
+export async function loadProfileBadges(profileDto) {
+  if (USE_MOCK) {
+    return BADGE_CATALOG;
+  }
+
+  const catalog = await loadBadgeCatalog();
+  return mapBadgesForSection(catalog, profileDto?.badges ?? []);
+}
+
+export async function loadProfileActivity(username, { months = 6 } = {}) {
+  const resolvedUsername = (username || PROFILE_MOCK.username).trim();
+
+  if (USE_MOCK) {
+    return {
+      heatmap: HEATMAP_DATA,
+      totalActivities: PROFILE_MOCK.totalActivities,
+    };
+  }
+
+  try {
+    const dto = await profilesApi.getProfileActivityByUsername(resolvedUsername, { months });
+    return {
+      heatmap: mapProfileActivityToHeatmap(dto),
+      totalActivities: dto?.totalActivities ?? 0,
+    };
+  } catch {
+    return { heatmap: null, totalActivities: 0 };
+  }
 }
 
 export async function loadRecentPostsByUsername(username, { limit = 5 } = {}) {
@@ -181,20 +224,17 @@ export async function loadRecentPostsByUsername(username, { limit = 5 } = {}) {
   }
 
   try {
-    const { items } = await loadPosts({ page: 1, pageSize: 50 });
-    return items
-      .filter((post) => post.author?.username === resolvedUsername)
-      .slice(0, limit)
-      .map(mapProfileRecentPost);
+    const result = await profilesApi.getProfilePostsByUsername(resolvedUsername, {
+      page: 1,
+      pageSize: limit,
+    });
+    return (result.items ?? []).map(mapProfileRecentPost);
   } catch {
     return [];
   }
 }
 
-export async function loadProfileByUsername(
-  username,
-  { includeMyStats = false, profileDto = null, postsCount = 0 } = {},
-) {
+export async function loadProfileByUsername(username, { profileDto = null } = {}) {
   const resolvedUsername = (username || PROFILE_MOCK.username).trim();
 
   if (USE_MOCK) {
@@ -204,15 +244,13 @@ export async function loadProfileByUsername(
   const dto = profileDto ?? (await profilesApi.getProfileByUsername(resolvedUsername));
   let statsDto = null;
 
-  if (includeMyStats) {
-    try {
-      statsDto = await profilesApi.getMyStats();
-    } catch {
-      /* stats optional for profile card */
-    }
+  try {
+    statsDto = await profilesApi.getProfileStatsByUsername(resolvedUsername);
+  } catch {
+    /* stats optional for profile card */
   }
 
-  return mapProfileCard(dto, statsDto, { postsCount });
+  return mapProfileCard(dto, statsDto);
 }
 
 export async function loadProfileForm(username, authUser) {

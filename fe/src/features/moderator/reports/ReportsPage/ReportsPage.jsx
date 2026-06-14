@@ -17,6 +17,7 @@ import {
   loadModeratorCommunityReports,
   REASON_META,
   reloadModeratorCommunityReportsAfterResolve,
+  sortModeratorReports,
 } from "@/features/moderator/reports/reportsData";
 import {
   getExamQuestionReports,
@@ -68,7 +69,9 @@ function TrustScore({ score }) {
         <div className={styles.trustTrack} aria-hidden>
           <span className={`${styles.trustFill} ${tone}`} style={{ width: `${clamped}%` }} />
         </div>
-        <span className={`${styles.trustValue} ${tone}`}>{clamped}/100</span>
+        <span className={`${styles.trustValue} ${tone}`} aria-label={`Trust score ${clamped} trên 100`}>
+          {clamped}/100
+        </span>
       </div>
     </div>
   );
@@ -87,13 +90,19 @@ function ReportsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    loadModeratorCommunityReports().then((items) => {
-      if (!cancelled) setCommunityReports(items);
-    });
+    loadModeratorCommunityReports()
+      .then((items) => {
+        if (!cancelled) setCommunityReports(items);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          showToast(err.message ?? "Không tải được báo cáo cộng đồng.");
+        }
+      });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     function refreshExamReports() {
@@ -124,38 +133,41 @@ function ReportsPage() {
         ? statusFiltered
         : statusFiltered.filter((report) => report.category === category);
     const q = query.trim().toLowerCase();
-    if (!q) return categoryFiltered;
+    const searched = !q
+      ? categoryFiltered
+      : categoryFiltered.filter(
+          (report) =>
+            report.code.toLowerCase().includes(q) ||
+            report.reporterUsername.toLowerCase().includes(q) ||
+            (report.reportedUser?.username ?? "").toLowerCase().includes(q) ||
+            (report.examId ?? "").toLowerCase().includes(q) ||
+            (REASON_META[report.reason]?.label ?? report.reason).toLowerCase().includes(q) ||
+            report.snippet.toLowerCase().includes(q),
+        );
 
-    return categoryFiltered.filter(
-      (report) =>
-        report.code.toLowerCase().includes(q) ||
-        report.reporterUsername.toLowerCase().includes(q) ||
-        (report.reportedUser?.username ?? "").toLowerCase().includes(q) ||
-        (report.examId ?? "").toLowerCase().includes(q) ||
-        (REASON_META[report.reason]?.label ?? report.reason).toLowerCase().includes(q) ||
-        report.snippet.toLowerCase().includes(q),
-    );
+    return sortModeratorReports(searched, tab);
   }, [reports, tab, category, query]);
 
   useEffect(() => {
     const fromUrl = searchParams.get("id");
-    if (fromUrl && reports.some((r) => r.id === fromUrl)) {
-      setSelectedId(fromUrl);
-      const item = reports.find((r) => r.id === fromUrl);
-      if (item?.status === "resolved") setTab("resolved");
-      else if (item?.status === "pending") setTab("pending");
-    }
-  }, [searchParams, reports]);
+    const urlItem = fromUrl ? reports.find((report) => report.id === fromUrl) : null;
 
-  useEffect(() => {
+    if (urlItem) {
+      setSelectedId(urlItem.id);
+      if (urlItem.status === "resolved") setTab("resolved");
+      else if (urlItem.status === "pending") setTab("pending");
+      return;
+    }
+
     if (filtered.length === 0) {
       setSelectedId(null);
       return;
     }
-    if (!selectedId || !filtered.some((r) => r.id === selectedId)) {
-      setSelectedId(filtered[0].id);
-    }
-  }, [filtered, selectedId]);
+
+    setSelectedId((current) =>
+      current && filtered.some((report) => report.id === current) ? current : filtered[0].id,
+    );
+  }, [searchParams, reports, filtered]);
 
   const selected = reports.find((r) => r.id === selectedId) ?? null;
 
@@ -189,19 +201,39 @@ function ReportsPage() {
     }
   }
 
+  function finishCommunityResolve(id, resolution, reloaded) {
+    const target = reports.find((report) => report.id === id);
+    if (reloaded) {
+      setCommunityReports(reloaded);
+      const resolved =
+        reloaded.find((report) => report.id === id) ??
+        (target ? { ...target, status: "resolved", resolution } : null);
+      if (resolved) {
+        setLastResolved(resolved);
+      }
+      setTab("resolved");
+      setSelectedId(id);
+      return;
+    }
+
+    resolveReportLocal(id, resolution);
+    setTab("resolved");
+    setSelectedId(id);
+  }
+
   async function handleDismiss(id) {
     const target = reports.find((report) => report.id === id);
     if (target?.category === "exam_question") {
       resolveReportLocal(id, "ignored");
+      setTab("resolved");
+      setSelectedId(id);
     } else {
-      const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "dismiss");
-      if (reloaded) {
-        setCommunityReports(reloaded);
-        if (target) {
-          setLastResolved({ ...target, status: "resolved", resolution: "ignored" });
-        }
-      } else {
-        resolveReportLocal(id, "ignored");
+      try {
+        const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "dismiss");
+        finishCommunityResolve(id, "ignored", reloaded);
+      } catch (err) {
+        showToast(err.message ?? "Không xử lý được báo cáo.");
+        return;
       }
     }
     showToast(
@@ -209,24 +241,26 @@ function ReportsPage() {
         ? "Đã bỏ qua — giữ nguyên câu hỏi trong ngân hàng đề."
         : "Đã bỏ qua báo cáo — giữ nguyên nội dung.",
     );
-    const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
-    setSelectedId(nextPending[0]?.id ?? null);
+    window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
   }
 
   async function handleDelete(id) {
     const target = reports.find((report) => report.id === id);
-    const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "delete");
-    if (reloaded) {
-      setCommunityReports(reloaded);
-      if (target) {
-        setLastResolved({ ...target, status: "resolved", resolution: "deleted" });
-      }
-    } else {
+    if (target?.category === "exam_question") {
       resolveReportLocal(id, "deleted");
+      setTab("resolved");
+      setSelectedId(id);
+    } else {
+      try {
+        const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "delete");
+        finishCommunityResolve(id, "deleted", reloaded);
+      } catch (err) {
+        showToast(err.message ?? "Không xóa được nội dung.");
+        return;
+      }
     }
     showToast("Đã xóa nội dung vi phạm.");
-    const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
-    setSelectedId(nextPending[0]?.id ?? null);
+    window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
   }
 
   function handleForwardExamReport(id) {

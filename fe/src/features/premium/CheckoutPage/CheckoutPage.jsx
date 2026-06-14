@@ -254,6 +254,17 @@ function CheckoutPage() {
                 <dt>Giá gốc</dt>
                 <dd>{formatVnd(checkout.originalPrice)}</dd>
               </div>
+              {order?.discountPercent > 0 && (
+                <div className={styles.row}>
+                  <dt>Voucher rank {order.discountSource ?? ""}</dt>
+                  <dd className={styles.discount}>
+                    - {order.discountPercent}%
+                    {order.originalAmount > order.amount
+                      ? ` (${formatVnd(order.originalAmount - order.amount)})`
+                      : ""}
+                  </dd>
+                </div>
+              )}
               {checkout.savingsAmount > 0 && (
                 <div className={styles.row}>
                   <dt>Ưu đãi SEHub</dt>

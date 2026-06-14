@@ -13,6 +13,7 @@ using SEHub.Infrastructure.Notifications;
 using SEHub.Infrastructure.Payments;
 using SEHub.Infrastructure.Persistence;
 using SEHub.Infrastructure.Persistence.Interceptors;
+using SEHub.Infrastructure.Caching;
 using SEHub.Infrastructure.Persistence.Repositories;
 using SEHub.Infrastructure.Sms;
 using SEHub.Infrastructure.Storage;
@@ -27,6 +28,7 @@ public static class DependencyInjection
         services.AddMemoryCache();
 
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IClientContext, ClientContext>();
         services.AddScoped<IPremiumStatusService, PremiumStatusService>();
         services.AddScoped<SoftDeleteInterceptor>();
         services.AddScoped<PaymentAuditLogAppendOnlyInterceptor>();
@@ -64,6 +66,7 @@ public static class DependencyInjection
         services.AddScoped<IPracticeSubmissionRepository, PracticeSubmissionRepository>();
         services.AddScoped<IAiTokenUsageRepository, AiTokenUsageRepository>();
         services.AddScoped<IDocumentRepository, DocumentRepository>();
+        services.AddScoped<IDocumentAccessLogRepository, DocumentAccessLogRepository>();
         services.AddScoped<IDocumentCategoryRepository, DocumentCategoryRepository>();
         services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
         services.AddScoped<IPaymentOrderRepository, PaymentOrderRepository>();
@@ -73,6 +76,9 @@ public static class DependencyInjection
         services.AddScoped<ILevelConfigRepository, LevelConfigRepository>();
         services.AddScoped<IBadgeRepository, BadgeRepository>();
         services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
+        services.AddScoped<IUserDailyActivityRepository, UserDailyActivityRepository>();
+        services.AddScoped<IProfileActivityCache, ProfileActivityCache>();
+        services.AddScoped<IProfileSnapshotCache, ProfileSnapshotCache>();
         services.AddScoped<IUserBanRepository, UserBanRepository>();
         services.AddScoped<IUserSearchRepository, UserSearchRepository>();
         services.AddScoped<IUserFollowRepository, UserFollowRepository>();
@@ -124,6 +130,11 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         });
         services.AddScoped<IPaymentConfirmationNotifier, PaymentConfirmationNotifier>();
+        var environmentName = configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT");
+        if (!string.Equals(environmentName, "Testing", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddHostedService<PaymentOrderExpiryBackgroundService>();
+        }
         services.AddScoped<IAiExplanationService, MockAiExplanationService>();
 
         return services;

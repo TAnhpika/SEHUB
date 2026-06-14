@@ -60,10 +60,14 @@ public sealed class AdminDocumentService : IAdminDocumentService
         return _mapper.Map<AdminDocumentDto>(document);
     }
 
-    public async Task<AdminDocumentDto> UploadAsync(UploadDocumentRequest request, Stream fileContent, string fileName, string mimeType, int pageCount, CancellationToken cancellationToken = default)
+    public async Task<AdminDocumentDto> UploadAsync(
+        UploadDocumentRequest request,
+        Stream fileContent,
+        string fileName,
+        string mimeType,
+        CancellationToken cancellationToken = default)
     {
-        _ = await _categoryRepository.GetByIdAsync(request.CategoryId, cancellationToken)
-            ?? throw new NotFoundException("DocumentCategory", request.CategoryId);
+        var category = await ResolveCategoryAsync(request, cancellationToken);
 
         var filePath = await _fileStorage.UploadAsync(
             fileContent,
@@ -74,11 +78,14 @@ public sealed class AdminDocumentService : IAdminDocumentService
 
         Enum.TryParse<AccessTier>(request.AccessTier, true, out var accessTier);
 
+        var pageCount = request.PageCount > 0 ? request.PageCount : 1;
+        var title = string.IsNullOrWhiteSpace(request.Title) ? fileName : request.Title.Trim();
+
         var document = new Document
         {
             Id = Guid.NewGuid(),
-            CategoryId = request.CategoryId,
-            Title = request.Title,
+            CategoryId = category.Id,
+            Title = title,
             FilePath = filePath,
             MimeType = mimeType,
             PageCount = pageCount,
@@ -89,7 +96,97 @@ public sealed class AdminDocumentService : IAdminDocumentService
         await _documentRepository.AddAsync(document, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        document.Category = category;
         return _mapper.Map<AdminDocumentDto>(document);
+    }
+
+    public async Task<AdminDocumentDto> UpdateAsync(
+        Guid id,
+        UpdateDocumentRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var document = await _documentRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Document", id);
+
+        if (document.IsDeleted)
+        {
+            throw new NotFoundException("Document", id);
+        }
+
+        if (request.CategoryId is Guid categoryId)
+        {
+            _ = await _categoryRepository.GetByIdAsync(categoryId, cancellationToken)
+                ?? throw new NotFoundException("DocumentCategory", categoryId);
+            document.CategoryId = categoryId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Title))
+        {
+            document.Title = request.Title.Trim();
+        }
+
+        if (request.PageCount is int pageCount)
+        {
+            document.PageCount = pageCount;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.AccessTier))
+        {
+            if (!Enum.TryParse<AccessTier>(request.AccessTier, true, out var accessTier))
+            {
+                throw new ForbiddenException("AccessTier must be FreePreview or PremiumFull.");
+            }
+
+            document.AccessTier = accessTier;
+        }
+
+        document.UpdatedAt = DateTime.UtcNow;
+        await _documentRepository.UpdateAsync(document, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var updated = await _documentRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Document", id);
+
+        return _mapper.Map<AdminDocumentDto>(updated);
+    }
+
+    private async Task<DocumentCategory> ResolveCategoryAsync(
+        UploadDocumentRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request.CategoryId != Guid.Empty)
+        {
+            var existingById = await _categoryRepository.GetByIdAsync(request.CategoryId, cancellationToken);
+            if (existingById is not null)
+            {
+                return existingById;
+            }
+        }
+
+        var subjectCode = request.SubjectCode.Trim().ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(subjectCode))
+        {
+            throw new NotFoundException("DocumentCategory", request.CategoryId);
+        }
+
+        var existingBySubject = await _categoryRepository.FindBySubjectCodeAsync(subjectCode, cancellationToken);
+        if (existingBySubject is not null)
+        {
+            return existingBySubject;
+        }
+
+        var semester = request.Semester > 0 ? request.Semester : 1;
+        var category = new DocumentCategory
+        {
+            Id = Guid.NewGuid(),
+            Name = $"{subjectCode} - Documents",
+            Semester = semester,
+            Major = "SE",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _categoryRepository.AddAsync(category, cancellationToken);
+        return category;
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)

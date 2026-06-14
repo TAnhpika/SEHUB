@@ -4,6 +4,7 @@ import {
   MAX_BONUS_TOKEN_BALANCE,
   PREMIUM_DAILY_TOKEN_QUOTA,
   validateManualTokenGrant,
+  canAdminConfirmPayment,
 } from "@/features/admin/payments/adminPaymentPolicy";
 import {
   activatePremiumFromPayment,
@@ -166,7 +167,7 @@ export function getPaymentStatsFromList(list = []) {
   return {
     monthRevenue,
     monthRevenueLabel: formatVnd(monthRevenue),
-    awaitingConfirm: list.filter((p) => p.status === "webhook_ok").length,
+    awaitingConfirm: list.filter((p) => p.status === "waiting_confirmation" || p.status === "webhook_ok").length,
     pendingPay: list.filter((p) => p.status === "pending_payment").length,
     pendingRefund: list.filter((p) => p.status === "refund_requested").length,
     refunded: refundedList.length,
@@ -252,10 +253,10 @@ export function confirmPayOsPayment(paymentId, adminUsername = "admin_sehub") {
   if (index < 0) return { ok: false, message: "Không tìm thấy giao dịch." };
 
   const payment = paymentsStore[index];
-  if (payment.status !== "webhook_ok") {
+  if (!canAdminConfirmPayment(payment.status)) {
     return {
       ok: false,
-      message: "Chỉ xác nhận đơn đã nhận webhook PayOS (Chờ Admin xác nhận).",
+      message: "Chỉ xác nhận đơn đang chờ Admin xác nhận (WaitingConfirmation).",
     };
   }
 
@@ -480,8 +481,13 @@ export async function confirmPayOsPaymentViaApi(paymentId, adminUsername = "admi
   }
 
   try {
-    await adminApi.confirmPayment(payment.apiId ?? payment.id, { note });
-    return confirmPayOsPayment(paymentId, adminUsername);
+    await adminApi.confirmPayment(payment.apiId ?? payment.id, {
+      note: note || "Admin xác nhận thủ công sau đối chiếu ngân hàng",
+    });
+    return {
+      ok: true,
+      message: `Đã xác nhận ${payment.payosOrderId} — Premium đã kích hoạt cho @${payment.username}.`,
+    };
   } catch (error) {
     return { ok: false, message: error?.message ?? "Không xác nhận được thanh toán." };
   }

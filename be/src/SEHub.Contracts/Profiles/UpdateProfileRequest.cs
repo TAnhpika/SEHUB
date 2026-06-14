@@ -7,4 +7,8 @@ public sealed class UpdateProfileRequest
     public string? Major { get; init; }
     public string? Semester { get; init; }
     public string? AvatarUrl { get; init; }
+    public string? Gender { get; init; }
+    public string? DateOfBirth { get; init; }
+    public string? Phone { get; init; }
+    public string? Address { get; init; }
 }

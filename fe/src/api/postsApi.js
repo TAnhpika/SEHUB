@@ -58,3 +58,7 @@ export function deleteComment(postId, commentId) {
 export function reportPost(postId, body) {
   return apiRequest(`/api/v1/posts/${postId}/report`, { method: "POST", body });
 }
+
+export function featurePost(id, body) {
+  return apiRequest(`/api/v1/posts/${id}/feature`, { method: "PATCH", body });
+}

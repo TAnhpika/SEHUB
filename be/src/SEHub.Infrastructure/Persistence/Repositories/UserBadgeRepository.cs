@@ -19,4 +19,24 @@ public class UserBadgeRepository : IUserBadgeRepository
 
     public Task<int> CountByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) =>
         _context.UserBadges.CountAsync(ub => ub.UserId == userId, cancellationToken);
+
+    public Task<bool> ExistsAsync(Guid userId, Guid badgeId, CancellationToken cancellationToken = default) =>
+        _context.UserBadges.AnyAsync(ub => ub.UserId == userId && ub.BadgeId == badgeId, cancellationToken);
+
+    public async Task<bool> TryGrantAsync(Guid userId, Guid badgeId, CancellationToken cancellationToken = default)
+    {
+        if (await ExistsAsync(userId, badgeId, cancellationToken))
+        {
+            return false;
+        }
+
+        await _context.UserBadges.AddAsync(new UserBadge
+        {
+            UserId = userId,
+            BadgeId = badgeId,
+            EarnedAt = DateTime.UtcNow
+        }, cancellationToken);
+
+        return true;
+    }
 }
