@@ -35,26 +35,30 @@ public sealed class PostImageContentResult
     public Stream Stream { get; init; } = Stream.Null;
     public string ContentType { get; init; } = "application/octet-stream";
     public string FileName { get; init; } = "image";
+    public string? ExternalUrl { get; init; }
 }
 
 public sealed class PostImageService : IPostImageService
 {
     private readonly IPostRepository _postRepository;
     private readonly IPostImageRepository _imageRepository;
-    private readonly ICloudFileStorageService _cloudStorage;
+    private readonly IImageCdnStorageService _cdnStorage;
+    private readonly ICloudFileStorageService _driveStorage;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
     public PostImageService(
         IPostRepository postRepository,
         IPostImageRepository imageRepository,
-        ICloudFileStorageService cloudStorage,
+        IImageCdnStorageService cdnStorage,
+        ICloudFileStorageService driveStorage,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
         _postRepository = postRepository;
         _imageRepository = imageRepository;
-        _cloudStorage = cloudStorage;
+        _cdnStorage = cdnStorage;
+        _driveStorage = driveStorage;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -82,13 +86,14 @@ public sealed class PostImageService : IPostImageService
         {
             CloudFileValidation.EnsureValidImage(upload.ContentType, upload.FileSizeBytes, upload.FileName);
 
-            CloudFileUploadResult result;
+            CdnUploadResult result;
             try
             {
-                result = await _cloudStorage.UploadAsync(
+                result = await _cdnStorage.UploadImageAsync(
                     upload.Content,
                     upload.FileName,
                     upload.ContentType,
+                    CdnFolders.Posts,
                     cancellationToken);
             }
             catch (Exception ex) when (ex is not DomainException and not NotFoundException and not ForbiddenException)
@@ -100,7 +105,8 @@ public sealed class PostImageService : IPostImageService
             {
                 Id = Guid.NewGuid(),
                 PostId = postId,
-                DriveFileId = result.DriveFileId,
+                PublicId = result.PublicId,
+                Url = result.Url,
                 SortOrder = sortOrder++,
                 CreatedAt = DateTime.UtcNow
             });
@@ -122,10 +128,20 @@ public sealed class PostImageService : IPostImageService
 
         EnsureCanViewImage(post);
 
+        if (!string.IsNullOrWhiteSpace(image.Url))
+        {
+            return new PostImageContentResult { ExternalUrl = image.Url };
+        }
+
+        if (string.IsNullOrWhiteSpace(image.DriveFileId))
+        {
+            throw new NotFoundException("PostImage", imageId);
+        }
+
         CloudFileReadResult read;
         try
         {
-            read = await _cloudStorage.OpenReadAsync(image.DriveFileId, cancellationToken);
+            read = await _driveStorage.OpenReadAsync(image.DriveFileId, cancellationToken);
         }
         catch (Exception ex) when (ex is not DomainException and not NotFoundException and not ForbiddenException)
         {
@@ -152,7 +168,14 @@ public sealed class PostImageService : IPostImageService
         {
             try
             {
-                await _cloudStorage.DeleteAsync(image.DriveFileId, cancellationToken);
+                if (!string.IsNullOrWhiteSpace(image.PublicId))
+                {
+                    await _cdnStorage.DeleteAsync(image.PublicId, isRaw: false, cancellationToken);
+                }
+                else if (!string.IsNullOrWhiteSpace(image.DriveFileId))
+                {
+                    await _driveStorage.DeleteAsync(image.DriveFileId, cancellationToken);
+                }
             }
             catch
             {
@@ -169,7 +192,9 @@ public sealed class PostImageService : IPostImageService
         {
             Id = image.Id,
             SortOrder = image.SortOrder,
-            ImagePath = $"/api/v1/posts/images/{image.Id}"
+            ImagePath = !string.IsNullOrWhiteSpace(image.Url)
+                ? image.Url
+                : $"/api/v1/posts/images/{image.Id}"
         };
 
     internal async Task<IReadOnlyList<PostImageDto>> MapDtosForPostAsync(

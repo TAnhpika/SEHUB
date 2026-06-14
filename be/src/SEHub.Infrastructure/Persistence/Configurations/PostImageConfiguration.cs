@@ -10,7 +10,9 @@ public class PostImageConfiguration : IEntityTypeConfiguration<PostImage>
     {
         builder.HasKey(i => i.Id);
         builder.HasIndex(i => i.PostId);
-        builder.Property(i => i.DriveFileId).HasMaxLength(128).IsRequired();
+        builder.Property(i => i.DriveFileId).HasMaxLength(128);
+        builder.Property(i => i.PublicId).HasMaxLength(256);
+        builder.Property(i => i.Url).HasMaxLength(2048);
 
         builder.HasOne(i => i.Post)
             .WithMany(p => p.Images)
