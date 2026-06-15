@@ -3,8 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperPlane, faRobot, faUser } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
-import { generateAiChatReply } from "@/features/exams/examAiChatData";
-import { appendAiChatMessages, getAiChatMessages } from "@/features/exams/examAiChatStore";
+import { loadExamAiChat, sendExamAiChatMessage } from "@/features/exams/examAiChatApi";
 import { canUseExamAiChat } from "@/utils/examAccess";
 import styles from "./ExamAiChat.module.css";
 
@@ -16,19 +15,43 @@ function formatTime(isoString) {
 }
 
 function ExamAiChat({ examId, question }) {
-  const { user, aiTokens, spendAiExplainTokens } = useAuth();
+  const { user, aiTokens, applyAiTokenRemaining } = useAuth();
   const { showToast } = useToast();
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const listRef = useRef(null);
 
   const questionId = question?.id;
 
   useEffect(() => {
-    if (!examId || questionId == null) return;
-    setMessages(getAiChatMessages(examId, questionId));
+    if (!examId || questionId == null) return undefined;
+
+    let cancelled = false;
+    setIsLoading(true);
+
+    loadExamAiChat(examId, questionId)
+      .then((result) => {
+        if (!cancelled) {
+          setMessages(result?.messages ?? []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMessages([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+
     setDraft("");
+    return () => {
+      cancelled = true;
+    };
   }, [examId, questionId]);
 
   useEffect(() => {
@@ -39,12 +62,11 @@ function ExamAiChat({ examId, question }) {
     return null;
   }
 
-  function handleSend() {
+  async function handleSend() {
     const text = draft.trim();
     if (!text || isSending || questionId == null) return;
 
-    const tokenResult = spendAiExplainTokens();
-    if (!tokenResult.ok) {
+    if (aiTokens.remaining < aiTokens.cost) {
       showToast("Đã hết token AI hôm nay. Token reset lúc 00:00.");
       return;
     }
@@ -52,24 +74,19 @@ function ExamAiChat({ examId, question }) {
     setIsSending(true);
     setDraft("");
 
-    const userMessage = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      text,
-      createdAt: new Date().toISOString(),
-    };
-
-    const aiText = generateAiChatReply(question, text);
-    const aiMessage = {
-      id: `ai-${Date.now() + 1}`,
-      role: "assistant",
-      text: aiText,
-      createdAt: new Date().toISOString(),
-    };
-
-    const nextMessages = appendAiChatMessages(examId, questionId, [userMessage, aiMessage]);
-    setMessages(nextMessages);
-    setIsSending(false);
+    try {
+      const result = await sendExamAiChatMessage(examId, questionId, text);
+      if (result?.messages?.length) {
+        setMessages(result.messages);
+      }
+      if (result?.remainingTokens != null) {
+        applyAiTokenRemaining(result.remainingTokens);
+      }
+    } catch (error) {
+      showToast(error?.message ?? "Không gửi được câu hỏi AI.");
+    } finally {
+      setIsSending(false);
+    }
   }
 
   function handleKeyDown(event) {
@@ -93,7 +110,8 @@ function ExamAiChat({ examId, question }) {
       </header>
 
       <div className={styles.messages} ref={listRef}>
-        {messages.length === 0 && !isSending ? (
+        {isLoading ? <p className={styles.empty}>Đang tải lịch sử chat...</p> : null}
+        {!isLoading && messages.length === 0 && !isSending ? (
           <p className={styles.empty}>
             Hỏi AI về câu hỏi này — ví dụ: &quot;Tại sao đáp án B đúng?&quot; hoặc &quot;Gợi ý cách
             loại trừ đáp án sai&quot;.

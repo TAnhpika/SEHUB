@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as authApi from "@/api/authApi";
 import { deriveUsernameFromEmail, mapApiUser } from "@/api/authMapper";
-import { mapProfileStatsToAuthUser } from "@/api/profileMapper";
+import { mapProfileStatsToAuthUser, mapAiTokenStatusDto } from "@/api/profileMapper";
 import * as profilesApi from "@/api/profilesApi";
 import {
   clearAuthTokens,
@@ -13,7 +13,7 @@ import {
 } from "@/api/httpClient";
 import { resolveIsPremium, STUDENT_PLAN } from "@/utils/studentPlan";
 import { loadSubscriptionStatus } from "@/features/landing/PricingModal/pricingData";
-import { consumeAiExplainTokens, getAiTokenSnapshot } from "@/utils/aiTokens";
+import { consumeAiExplainTokens, clearServerAiTokenSnapshot, getAiTokenSnapshot, setServerAiTokenSnapshot, applyServerRemainingTokens } from "@/utils/aiTokens";
 import { AuthContext } from "./authContextValue";
 
 const STORAGE_KEY = "sehubs_user";
@@ -147,13 +147,30 @@ async function syncPremiumSubscription(user) {
   }
 }
 
+async function syncAiTokens(user) {
+  if (!user || USE_MOCK) {
+    clearServerAiTokenSnapshot();
+    return;
+  }
+
+  try {
+    const dto = await profilesApi.getMyAiTokens();
+    setServerAiTokenSnapshot(mapAiTokenStatusDto(dto));
+  } catch {
+    clearServerAiTokenSnapshot();
+  }
+}
+
 async function syncUserFromApi(user) {
   const withStats = await syncProfileStats(user);
-  return syncPremiumSubscription(withStats);
+  const withPremium = await syncPremiumSubscription(withStats);
+  await syncAiTokens(withPremium);
+  return withPremium;
 }
 
 function clearAuthSession(setUser) {
   clearAuthTokens();
+  clearServerAiTokenSnapshot();
   persistUser(null);
   setUser(null);
 }
@@ -293,6 +310,23 @@ export function AuthProvider({ children }) {
     return result;
   }, [user]);
 
+  const refreshAiTokens = useCallback(async () => {
+    if (!user || USE_MOCK) {
+      setAiTokenVersion((version) => version + 1);
+      return getAiTokenSnapshot(user);
+    }
+
+    await syncAiTokens(user);
+    setAiTokenVersion((version) => version + 1);
+    return getAiTokenSnapshot(user);
+  }, [user]);
+
+  const applyAiTokenRemaining = useCallback((remaining) => {
+    if (remaining == null || USE_MOCK) return;
+    applyServerRemainingTokens(remaining);
+    setAiTokenVersion((version) => version + 1);
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -303,6 +337,8 @@ export function AuthProvider({ children }) {
       isModerator: user?.role === "moderator" || user?.role === "admin",
       aiTokens: getAiTokenSnapshot(user),
       spendAiExplainTokens,
+      refreshAiTokens,
+      applyAiTokenRemaining,
       login,
       register,
       googleLogin,
@@ -314,6 +350,8 @@ export function AuthProvider({ children }) {
       isBootstrapping,
       aiTokenVersion,
       spendAiExplainTokens,
+      refreshAiTokens,
+      applyAiTokenRemaining,
       login,
       register,
       googleLogin,

@@ -246,3 +246,15 @@ export function mapProfileActivityToHeatmap(activityDto) {
     totalActivities: activityDto.totalActivities ?? 0,
   };
 }
+
+export function mapAiTokenStatusDto(dto) {
+  return {
+    limit: Number(dto?.limit ?? 0),
+    used: Number(dto?.used ?? 0),
+    remaining: Number(dto?.remaining ?? 0),
+    costExplain: Number(dto?.costExplain ?? 10),
+    costChat: Number(dto?.costChat ?? 10),
+    canExplain: Boolean(dto?.canExplain),
+    canChat: Boolean(dto?.canChat),
+  };
+}

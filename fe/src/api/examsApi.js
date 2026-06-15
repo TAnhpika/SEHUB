@@ -34,6 +34,17 @@ export function aiExplain(questionId, body) {
   });
 }
 
+export function getExamAiChat(examId, questionId) {
+  return apiRequest(`/api/v1/exams/${examId}/questions/${questionId}/ai-chat`);
+}
+
+export function sendExamAiChat(examId, questionId, body) {
+  return apiRequest(`/api/v1/exams/${examId}/questions/${questionId}/ai-chat`, {
+    method: "POST",
+    body,
+  });
+}
+
 export function startAttempt(examId) {
   return apiRequest(`/api/v1/exams/${examId}/attempts`, { method: "POST" });
 }

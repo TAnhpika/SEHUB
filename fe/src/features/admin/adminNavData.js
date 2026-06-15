@@ -5,6 +5,7 @@ import {
   faCreditCard,
   faFileLines,
   faFlag,
+  faRobot,
   faTicket,
   faTrophy,
   faUserShield,
@@ -14,8 +15,7 @@ import {
 import { getAdminNavBadgeCounts } from "@/features/admin/adminNavBadges";
 
 /**
- * Cấu trúc sidebar Admin — bám §2.5 SEHUB_PhanTichNghiepVu.md (Giai đoạn 1).
- * Không gồm: Chatbot (P2), Sub-Admin (ngoài phạm vi dự án).
+ * Cấu trúc sidebar Admin — bám §2.5 SEHUB_PhanTichNghiepVu.md (Giai đoạn 1 + Chatbot P3).
  */
 const ADMIN_NAV_TEMPLATE = [
   {
@@ -94,6 +94,12 @@ const ADMIN_NAV_TEMPLATE = [
         label: "Gamification",
         to: "/admin/gamification",
         icon: faTrophy,
+      },
+      {
+        id: "chatbot",
+        label: "Chatbot tư vấn",
+        to: "/admin/settings/chatbot",
+        icon: faRobot,
       },
       { id: "vouchers", label: "Quản lý voucher", to: "/admin/vouchers", icon: faTicket },
     ],
