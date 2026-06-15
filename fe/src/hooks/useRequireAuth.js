@@ -12,10 +12,8 @@ export function useRequireAuth() {
   const navigate = useNavigate();
   const location = useLocation();
   const pendingRef = useRef(false);
-  const isCommunityRoute = location.pathname.startsWith("/community");
   const isSubjectArea = isSubjectContentPath(location.pathname);
-  /** Cộng đồng luôn coi như khách — cần toast + chuyển login khi tương tác feed/bài viết. */
-  const needsLoginPrompt = !isAuthenticated || isCommunityRoute;
+  const needsLoginPrompt = !isAuthenticated;
 
   useEffect(() => {
     pendingRef.current = false;
