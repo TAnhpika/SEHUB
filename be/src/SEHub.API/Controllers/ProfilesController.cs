@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SEHub.Application.Abstractions;
 using SEHub.Application.Profiles;
 using SEHub.Contracts.Profiles;
+using SEHub.Domain.Exceptions;
 using SEHub.Shared.Constants;
 
 namespace SEHub.API.Controllers;
@@ -13,15 +15,21 @@ public sealed class ProfilesController : ControllerBase
     private readonly IProfileService _profileService;
     private readonly IProfileStatsService _profileStatsService;
     private readonly IProfileActivityService _profileActivityService;
+    private readonly IAiTokenService _aiTokenService;
+    private readonly ICurrentUserService _currentUserService;
 
     public ProfilesController(
         IProfileService profileService,
         IProfileStatsService profileStatsService,
-        IProfileActivityService profileActivityService)
+        IProfileActivityService profileActivityService,
+        IAiTokenService aiTokenService,
+        ICurrentUserService currentUserService)
     {
         _profileService = profileService;
         _profileStatsService = profileStatsService;
         _profileActivityService = profileActivityService;
+        _aiTokenService = aiTokenService;
+        _currentUserService = currentUserService;
     }
 
     [HttpGet("{username}/activity")]
@@ -89,6 +97,15 @@ public sealed class ProfilesController : ControllerBase
             file.ContentType,
             file.Length,
             cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("me/ai-tokens")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> GetMyAiTokens(CancellationToken cancellationToken)
+    {
+        var userId = _currentUserService.UserId ?? throw new ForbiddenException("Authentication required.");
+        var result = await _aiTokenService.GetStatusAsync(userId, cancellationToken);
         return Ok(result);
     }
 

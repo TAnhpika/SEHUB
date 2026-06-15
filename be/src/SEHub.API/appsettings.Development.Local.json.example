@@ -88,6 +88,28 @@
 
     "WebhookUrl": "https://YOUR-NGROK-SUBDOMAIN.ngrok-free.app/api/v1/premium/webhooks/payos"
 
+  },
+
+  "Ai": {
+
+    "_comment": "From Google AI Studio → Get API key. Never commit real secrets.",
+
+    "Provider": "Gemini",
+
+    "ApiKey": "your-gemini-api-key",
+
+    "Model": "gemini-3.5-flash",
+
+    "BaseUrl": "https://generativelanguage.googleapis.com/v1beta",
+
+    "DailyTokenLimitFree": 10,
+
+    "DailyTokenLimitPremium": 1000,
+
+    "TokenCostExplain": 10,
+
+    "TokenCostChat": 10
+
   }
 
 }

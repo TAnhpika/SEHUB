@@ -13,17 +13,20 @@ public sealed class ExamsController : ControllerBase
     private readonly IExamQueryService _examQueryService;
     private readonly IExamAttemptService _examAttemptService;
     private readonly IAiExplanationApplicationService _aiExplanationService;
+    private readonly IAiExamChatApplicationService _aiExamChatService;
     private readonly IExamAttachmentService _examAttachmentService;
 
     public ExamsController(
         IExamQueryService examQueryService,
         IExamAttemptService examAttemptService,
         IAiExplanationApplicationService aiExplanationService,
+        IAiExamChatApplicationService aiExamChatService,
         IExamAttachmentService examAttachmentService)
     {
         _examQueryService = examQueryService;
         _examAttemptService = examAttemptService;
         _aiExplanationService = aiExplanationService;
+        _aiExamChatService = aiExamChatService;
         _examAttachmentService = examAttachmentService;
     }
 
@@ -64,6 +67,26 @@ public sealed class ExamsController : ControllerBase
     public async Task<IActionResult> AiExplain(Guid questionId, [FromBody] AiExplainRequest request, CancellationToken cancellationToken)
     {
         var result = await _aiExplanationService.ExplainAsync(questionId, request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("{examId:guid}/questions/{questionId:guid}/ai-chat")]
+    [Authorize(Policy = PolicyNames.RequirePremium)]
+    public async Task<IActionResult> GetExamAiChat(Guid examId, Guid questionId, CancellationToken cancellationToken)
+    {
+        var result = await _aiExamChatService.GetThreadAsync(examId, questionId, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("{examId:guid}/questions/{questionId:guid}/ai-chat")]
+    [Authorize(Policy = PolicyNames.RequirePremium)]
+    public async Task<IActionResult> SendExamAiChat(
+        Guid examId,
+        Guid questionId,
+        [FromBody] ExamAiChatRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _aiExamChatService.SendMessageAsync(examId, questionId, request, cancellationToken);
         return Ok(result);
     }
 

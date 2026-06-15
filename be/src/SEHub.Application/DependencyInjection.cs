@@ -1,9 +1,11 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using SEHub.Application.Abstractions;
 using SEHub.Application.Admin;
 using SEHub.Application.Admin.Validators;
 using SEHub.Application.Auth;
 using SEHub.Application.Auth.Validators;
+using SEHub.Application.Chatbot;
 using SEHub.Application.Documents;
 using SEHub.Application.Exams;
 using SEHub.Application.Exams.Validators;
@@ -52,6 +54,10 @@ public static class DependencyInjection
         services.AddScoped<IExamAttemptService, ExamAttemptService>();
         services.AddScoped<IExamGradingService, ExamGradingService>();
         services.AddScoped<IAiExplanationApplicationService, AiExplanationApplicationService>();
+        services.AddScoped<IAiExamChatApplicationService, AiExamChatApplicationService>();
+        services.AddScoped<IChatbotApplicationService, ChatbotApplicationService>();
+        services.AddScoped<IAdminChatbotService, AdminChatbotService>();
+        services.AddScoped<IAiTokenService, AiTokenService>();
         services.AddScoped<IPracticeSubmissionService, PracticeSubmissionService>();
 
         services.AddScoped<IDocumentService, DocumentService>();

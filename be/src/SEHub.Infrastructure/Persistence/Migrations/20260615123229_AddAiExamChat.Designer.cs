@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SEHub.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using SEHub.Infrastructure.Persistence;
 namespace SEHub.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(SEHubDbContext))]
-    partial class SEHubDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260615123229_AddAiExamChat")]
+    partial class AddAiExamChat
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -276,134 +279,6 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Badges");
-                });
-
-            modelBuilder.Entity("SEHub.Domain.Entities.ChatbotConversation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("ChatbotConversations");
-                });
-
-            modelBuilder.Entity("SEHub.Domain.Entities.ChatbotKnowledgeEntry", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasMaxLength(8000)
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Tags")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IsActive");
-
-                    b.ToTable("ChatbotKnowledgeEntries");
-                });
-
-            modelBuilder.Entity("SEHub.Domain.Entities.ChatbotMessage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasMaxLength(8000)
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("ConversationId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ConversationId");
-
-                    b.ToTable("ChatbotMessages");
-                });
-
-            modelBuilder.Entity("SEHub.Domain.Entities.ChatbotSettings", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("SystemPrompt")
-                        .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("WelcomeMessage")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ChatbotSettings");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.Comment", b =>
@@ -1835,17 +1710,6 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Navigation("Thread");
                 });
 
-            modelBuilder.Entity("SEHub.Domain.Entities.ChatbotMessage", b =>
-                {
-                    b.HasOne("SEHub.Domain.Entities.ChatbotConversation", "Conversation")
-                        .WithMany("Messages")
-                        .HasForeignKey("ConversationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Conversation");
-                });
-
             modelBuilder.Entity("SEHub.Domain.Entities.Comment", b =>
                 {
                     b.HasOne("SEHub.Domain.Entities.Comment", "ParentComment")
@@ -2135,11 +1999,6 @@ namespace SEHub.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("SEHub.Domain.Entities.Badge", b =>
                 {
                     b.Navigation("UserBadges");
-                });
-
-            modelBuilder.Entity("SEHub.Domain.Entities.ChatbotConversation", b =>
-                {
-                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.Comment", b =>

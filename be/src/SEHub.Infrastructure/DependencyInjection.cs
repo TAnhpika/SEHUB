@@ -65,6 +65,8 @@ public static class DependencyInjection
         services.AddScoped<IExamAttemptRepository, ExamAttemptRepository>();
         services.AddScoped<IPracticeSubmissionRepository, PracticeSubmissionRepository>();
         services.AddScoped<IAiTokenUsageRepository, AiTokenUsageRepository>();
+        services.AddScoped<IAiExamChatRepository, AiExamChatRepository>();
+        services.AddScoped<IChatbotRepository, ChatbotRepository>();
         services.AddScoped<IDocumentRepository, DocumentRepository>();
         services.AddScoped<IDocumentAccessLogRepository, DocumentAccessLogRepository>();
         services.AddScoped<IDocumentCategoryRepository, DocumentCategoryRepository>();
@@ -144,8 +146,20 @@ public static class DependencyInjection
         {
             services.AddHostedService<PaymentOrderExpiryBackgroundService>();
         }
-        services.AddScoped<IAiExplanationService, MockAiExplanationService>();
+
+        if (AiInfrastructureRegistration.ShouldUseGemini(configuration))
+        {
+            services.AddGeminiClient();
+            services.AddScoped<IAiProvider, GeminiAiProvider>();
+            services.AddScoped<IAiExplanationService, GeminiAiExplanationService>();
+        }
+        else
+        {
+            services.AddScoped<IAiProvider, MockAiProvider>();
+            services.AddScoped<IAiExplanationService, MockAiExplanationService>();
+        }
 
         return services;
     }
 }
+
