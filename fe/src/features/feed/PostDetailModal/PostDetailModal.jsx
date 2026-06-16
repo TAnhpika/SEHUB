@@ -31,6 +31,7 @@ import {
 } from "@/features/feed/feedData";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
+import ChatImageLightbox from "@/features/chat/ChatImageLightbox/ChatImageLightbox";
 import { copyPostLink, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./PostDetailModal.module.css";
@@ -48,16 +49,27 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
   const [displayBody, setDisplayBody] = useState("");
   const [likeCount, setLikeCount] = useState(0);
   const [viewCount, setViewCount] = useState(0);
+  const [coverImageUrl, setCoverImageUrl] = useState(null);
+  const [lightboxImage, setLightboxImage] = useState(null);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editCommentDraft, setEditCommentDraft] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
   const [savingPost, setSavingPost] = useState(false);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open) {
+      setLightboxImage(null);
+      return undefined;
+    }
 
     function handleKeyDown(event) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        if (lightboxImage) {
+          setLightboxImage(null);
+        } else {
+          onClose();
+        }
+      }
     }
 
     document.body.style.overflow = "hidden";
@@ -67,7 +79,7 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
       document.body.style.overflow = "";
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, onClose]);
+  }, [open, onClose, lightboxImage]);
 
   useEffect(() => {
     if (!post || !open) return undefined;
@@ -85,6 +97,7 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
       setEditBody(post.body ?? post.excerpt);
       setLikeCount(post.likes ?? 0);
       setViewCount(post.views ?? 0);
+      setCoverImageUrl(post.coverImageUrl ?? null);
       setComments(post.commentsList ?? []);
       setCommentCount(post.comments ?? 0);
 
@@ -100,6 +113,7 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
         setEditBody(detail.body ?? detail.excerpt);
         setLikeCount(detail.likes ?? 0);
         setViewCount(detail.views ?? 0);
+        setCoverImageUrl(detail.coverImageUrl ?? null);
       } catch {
         // Giữ dữ liệu từ danh sách nếu không tải được chi tiết.
       }
@@ -308,6 +322,23 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
               </div>
             ) : (
               <>
+                {coverImageUrl ? (
+                  <button
+                    type="button"
+                    className={styles.coverBtn}
+                    aria-label="Xem ảnh bìa full"
+                    onClick={() =>
+                      setLightboxImage({ url: coverImageUrl, alt: displayTitle || "Ảnh bìa bài viết" })
+                    }
+                  >
+                    <img
+                      src={coverImageUrl}
+                      alt=""
+                      className={styles.cover}
+                      loading="lazy"
+                    />
+                  </button>
+                ) : null}
                 <h3 className={styles.title}>
                   <span className={styles.hash}>#</span> <strong>{displayTitle}</strong>
                 </h3>
@@ -487,6 +518,16 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
           </section>
         </div>
       </div>
+
+      <ChatImageLightbox
+        image={lightboxImage}
+        onClose={() => setLightboxImage(null)}
+        onImageClick={() => setLightboxImage(null)}
+        onBackdropClick={() => {
+          setLightboxImage(null);
+          onClose();
+        }}
+      />
     </div>
   );
 }
