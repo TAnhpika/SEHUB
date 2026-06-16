@@ -11,6 +11,7 @@ import {
 import { addAdminDocumentFromApprovedExam } from "@/features/admin/documents/adminDocumentData";
 import { getSubmissionsByCourseCode } from "@/features/exams/practiceExamSubmissions";
 import { isValidGuid } from "@/features/feed/postUtils";
+import { enrichRevisionExamEntries } from "@/utils/examDisplay";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
@@ -290,12 +291,35 @@ export async function loadAdminPendingExams() {
   }
 
   const page = await adminApi.listExams({ status: "PendingApproval", pageSize: 100 });
-  apiPendingCache = (page.items ?? []).map((dto) => mapPendingExamListItem(dto));
+  apiPendingCache = enrichRevisionExamEntries(
+    (page.items ?? []).map((dto) => mapPendingExamListItem(dto)),
+  );
   return apiPendingCache;
 }
 
 async function createExamViaApi(body, confirmDuplicate = false) {
   return adminApi.createExam(body, confirmDuplicate);
+}
+
+export async function importExamQuestionsFromMarkdown(markdown) {
+  if (USE_MOCK) {
+    return {
+      questions: MOCK_OCR_QUESTIONS.map((q, index) => ({
+        orderIndex: index + 1,
+        content: q.text,
+        options: q.options.map((text, optionIndex) => ({
+          id: crypto.randomUUID(),
+          label: String.fromCharCode(65 + optionIndex),
+          text,
+        })),
+        correctOptionId: null,
+      })),
+      questionCount: MOCK_OCR_QUESTIONS.length,
+      warnings: [],
+    };
+  }
+
+  return adminApi.importExamMarkdown({ markdown });
 }
 
 export function removeAdminExam(id) {
@@ -598,9 +622,10 @@ export async function rejectPendingExam(pendingId, reasonPayload) {
     (await loadAdminPendingExams()).find((p) => p.id === pendingId);
   if (!item) return null;
 
-  await adminApi.updateExam(pendingId, {
-    status: "Archived",
-    description: reasonPayload.reasonFull,
+  await adminApi.rejectExam(pendingId, {
+    reasonCode: reasonPayload.reasonId,
+    reasonLabel: reasonPayload.reasonLabel,
+    detail: reasonPayload.reasonDetail ?? "",
   });
   apiPendingCache = apiPendingCache.filter((p) => p.id !== pendingId);
   const entry = {
