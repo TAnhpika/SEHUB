@@ -348,7 +348,7 @@ export async function loadFeaturedPostsState() {
     };
   }
 
-  const state = await adminApi.getFeaturedPosts({ pageSize: 100 });
+  const state = await adminApi.getPinnedPosts({ pageSize: 100 });
   const pinned = (state.pinned ?? []).map(mapModeratorFeaturedItem);
   const searchPool = (state.candidates ?? []).map(mapModeratorFeaturedItem);
 
@@ -386,4 +386,10 @@ export async function setPostFeatured(id, isFeatured) {
   if (USE_MOCK) return;
   await postsApi.featurePost(id, { isFeatured });
   window.dispatchEvent(new CustomEvent(FEATURED_POSTS_UPDATED_EVENT));
+}
+
+export async function setPostPinned(id, isPinned) {
+  if (USE_MOCK) return;
+  await postsApi.pinPost(id, { isPinned });
+  window.dispatchEvent(new CustomEvent("sehub-feed-pinned-updated"));
 }
