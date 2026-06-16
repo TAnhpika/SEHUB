@@ -13,11 +13,16 @@ public sealed class ExamsController : ControllerBase
 {
     private readonly IAdminExamService _adminExamService;
     private readonly IOcrExamService _ocrExamService;
+    private readonly IExamMarkdownImportService _markdownImportService;
 
-    public ExamsController(IAdminExamService adminExamService, IOcrExamService ocrExamService)
+    public ExamsController(
+        IAdminExamService adminExamService,
+        IOcrExamService ocrExamService,
+        IExamMarkdownImportService markdownImportService)
     {
         _adminExamService = adminExamService;
         _ocrExamService = ocrExamService;
+        _markdownImportService = markdownImportService;
     }
 
     [HttpGet]
@@ -80,11 +85,43 @@ public sealed class ExamsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("{id:guid}/reject")]
+    [Authorize(Policy = PolicyNames.RequireAdmin)]
+    public async Task<IActionResult> RejectExam(Guid id, [FromBody] RejectExamRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _adminExamService.RejectExamAsync(id, request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPut("{id:guid}/resubmit")]
+    [Authorize(Policy = PolicyNames.RequireModerator)]
+    public async Task<IActionResult> ResubmitExam(Guid id, [FromBody] ResubmitExamRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _adminExamService.ResubmitExamAsync(id, request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("{id:guid}/revision")]
+    [Authorize(Policy = PolicyNames.RequireModerator)]
+    public async Task<IActionResult> CreateRevision(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _adminExamService.CreateRevisionAsync(id, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpPost("ocr")]
     [Authorize(Policy = PolicyNames.RequireAdmin)]
     public async Task<IActionResult> OcrExam([FromBody] OcrExamRequest request, CancellationToken cancellationToken)
     {
         var result = await _ocrExamService.ProcessAsync(request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("import-markdown")]
+    [Authorize(Policy = PolicyNames.RequireModerator)]
+    public IActionResult ImportMarkdown([FromBody] ImportExamMarkdownRequest request)
+    {
+        var result = _markdownImportService.Parse(request.Markdown);
         return Ok(result);
     }
 }
