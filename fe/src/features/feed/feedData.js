@@ -172,7 +172,7 @@ export async function loadPostById(postId) {
   return mapPostDetail(detail, commentsList);
 }
 
-export async function submitPost({ title, content, tags }) {
+export async function submitPost({ title, content, tags, coverImageUrl }) {
   if (USE_MOCK) {
     return {
       id: Date.now(),
@@ -188,7 +188,7 @@ export async function submitPost({ title, content, tags }) {
     };
   }
 
-  const data = await postsApi.createPost({ title, content, tags });
+  const data = await postsApi.createPost({ title, content, tags, coverImageUrl });
   return mapPostDetail(data, []);
 }
 
