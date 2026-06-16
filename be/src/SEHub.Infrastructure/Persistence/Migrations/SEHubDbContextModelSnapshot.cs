@@ -514,6 +514,23 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Property<int>("QuestionCount")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("RejectedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("RejectedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RejectionReasonCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("RejectionReasonDetail")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<Guid?>("RevisionOfExamId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Semester")
                         .HasColumnType("int");
 
@@ -535,6 +552,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Code")
                         .IsUnique();
+
+                    b.HasIndex("RevisionOfExamId");
 
                     b.HasIndex("SubmittedById");
 
@@ -847,6 +866,10 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .HasMaxLength(10000)
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("CoverImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -860,6 +883,9 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsFeatured")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPinned")
                         .HasColumnType("bit");
 
                     b.Property<DateTime?>("ModeratedAt")
@@ -896,6 +922,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.HasIndex("CreatedAt");
 
                     b.HasIndex("Status", "IsFeatured");
+
+                    b.HasIndex("Status", "IsPinned");
 
                     b.ToTable("Posts");
                 });
@@ -1620,6 +1648,16 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Document");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.Exam", b =>
+                {
+                    b.HasOne("SEHub.Domain.Entities.Exam", "RevisionOfExam")
+                        .WithMany()
+                        .HasForeignKey("RevisionOfExamId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("RevisionOfExam");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.ExamAttempt", b =>
