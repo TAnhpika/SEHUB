@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -16,6 +16,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { useScrollBoundaryChain } from "@/hooks/useScrollBoundaryChain";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import AdminExamRejectModal from "@/features/admin/exams/AdminExamRejectModal";
 import {
@@ -33,6 +34,11 @@ import {
 } from "@/features/admin/exams/adminExamData";
 import { getAdminDocumentsSubjectUrl } from "@/features/admin/documents/adminDocumentPaths";
 import { getExamAssetFileName, resolveExamAssetUrl } from "@/utils/examAssetUrl";
+import {
+  getExamDisplayCode,
+  getExamDisplayTitle,
+  getExamSubjectCode,
+} from "@/utils/examDisplay";
 import pendingStyles from "@/features/admin/exams/AdminExamPendingPage.module.css";
 import AdminTableFooter from "@/features/admin/shared/AdminTableFooter";
 import { ADMIN_PAGE_SIZES } from "@/features/admin/shared/adminPaginationConstants";
@@ -50,7 +56,7 @@ const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 function publishedExamDocumentsLink(item) {
   return getAdminDocumentsSubjectUrl({
-    code: item.code,
+    code: getExamSubjectCode(item),
     semester: item.semester,
   });
 }
@@ -78,6 +84,9 @@ function AdminExamPendingPage() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyTab, setHistoryTab] = useState("all");
   const [actionLoading, setActionLoading] = useState(false);
+  const previewQuestionsRef = useRef(null);
+
+  useScrollBoundaryChain(previewQuestionsRef);
 
   useEffect(() => {
     let cancelled = false;
@@ -194,7 +203,7 @@ function AdminExamPendingPage() {
         });
         setHistoryTab("approved");
         setHistoryOpen(true);
-        showToast(`Đã duyệt [${item.code}] → ${EXAM_STATUS_LABELS.published}.`);
+        showToast(`Đã duyệt [${getExamDisplayCode(item)}] → ${EXAM_STATUS_LABELS.published}.`);
       } else {
         showToast("Không tìm thấy đề.");
       }
@@ -216,7 +225,7 @@ function AdminExamPendingPage() {
         setLastRejected(entry);
         setHistoryTab("rejected");
         setHistoryOpen(true);
-        showToast(`Đã từ chối [${entry.code}].`);
+        showToast(`Đã từ chối [${getExamDisplayCode(entry)}].`);
       }
       setRejectTarget(null);
     } catch (error) {
@@ -309,12 +318,12 @@ function AdminExamPendingPage() {
             <FontAwesomeIcon icon={faCheck} className={pendingStyles.bannerIcon} />
             <div className={pendingStyles.bannerBody}>
               <p className={pendingStyles.bannerTitle}>
-                Đã duyệt [{lastApproved.code}] — {lastApproved.title}
+                Đã duyệt [{getExamDisplayCode(lastApproved)}] — {getExamDisplayTitle(lastApproved)}
               </p>
               <p className={pendingStyles.bannerMeta}>
                 {lastApproved.type} · {getSemesterLabel(lastApproved.semester)} ·{" "}
                 <Link to={publishedExamDocumentsLink(lastApproved)} className={styles.link}>
-                  Xem tài liệu môn ({lastApproved.code}) →
+                  Xem tài liệu môn ({getExamSubjectCode(lastApproved)}) →
                 </Link>
               </p>
             </div>
@@ -334,7 +343,7 @@ function AdminExamPendingPage() {
             <FontAwesomeIcon icon={faBan} className={pendingStyles.bannerIcon} />
             <div className={pendingStyles.bannerBody}>
               <p className={pendingStyles.bannerTitle}>
-                Đã từ chối [{lastRejected.code}] — {lastRejected.title}
+                Đã từ chối [{getExamDisplayCode(lastRejected)}] — {getExamDisplayTitle(lastRejected)}
               </p>
               <p className={pendingStyles.bannerMeta}>
                 {lastRejected.submittedBy} · {lastRejected.rejectedAt}
@@ -406,8 +415,8 @@ function AdminExamPendingPage() {
                           <div className={pendingStyles.queueCardInner}>
                             <span className={pendingStyles.radio} aria-hidden />
                             <div className={pendingStyles.queueCardBody}>
-                              <p className={pendingStyles.queueCode}>{item.code}</p>
-                              <p className={pendingStyles.queueName}>{item.title}</p>
+                              <p className={pendingStyles.queueCode}>{getExamSubjectCode(item)}</p>
+                              <p className={pendingStyles.queueName}>{getExamDisplayTitle(item)}</p>
                               <div className={pendingStyles.tagRow}>
                                 <span
                                   className={`${pendingStyles.tag} ${
@@ -473,11 +482,11 @@ function AdminExamPendingPage() {
                     <span className={pendingStyles.detailStatusDot} />
                     Chờ duyệt
                   </div>
-                  <h3 className={pendingStyles.detailTitle}>{selected.title}</h3>
+                  <h3 className={pendingStyles.detailTitle}>{getExamDisplayTitle(selected)}</h3>
                   <dl className={pendingStyles.detailMetaGrid}>
                     <div className={pendingStyles.metaItem}>
                       <dt>Mã môn</dt>
-                      <dd>{selected.code}</dd>
+                      <dd>{getExamSubjectCode(selected)}</dd>
                     </div>
                     <div className={pendingStyles.metaItem}>
                       <dt>Loại đề</dt>
@@ -537,7 +546,10 @@ function AdminExamPendingPage() {
                       <p className={pendingStyles.sectionTitle}>
                         Xem trước câu hỏi ({previewQuestions.length} câu)
                       </p>
-                      <div className={pendingStyles.previewBox}>
+                      <div
+                        ref={previewQuestionsRef}
+                        className={`${pendingStyles.previewBox} ${pendingStyles.previewQuestionsBox}`}
+                      >
                         {previewQuestions.length > 0 ? (
                           <ul className={pendingStyles.ocrList}>
                             {previewQuestions.map((q, index) => (
@@ -683,7 +695,7 @@ function AdminExamPendingPage() {
                         <div key={row.key} className={pendingStyles.historyRow}>
                           <div>
                             <p className={pendingStyles.historyExam}>
-                              [{row.item.code}] {row.item.title}
+                              [{getExamDisplayCode(row.item)}] {getExamDisplayTitle(row.item)}
                             </p>
                             <p className={pendingStyles.historySub}>
                               {row.item.type} · {row.item.submittedBy} · {row.date}
@@ -695,7 +707,7 @@ function AdminExamPendingPage() {
                               to={publishedExamDocumentsLink(row.item)}
                               className={pendingStyles.historyLink}
                             >
-                              Xem tài liệu môn ({row.item.code}) →
+                              Xem tài liệu môn ({getExamSubjectCode(row.item)}) →
                             </Link>
                           </div>
                           <p
@@ -708,7 +720,7 @@ function AdminExamPendingPage() {
                         <div key={row.key} className={pendingStyles.historyRow}>
                           <div>
                             <p className={pendingStyles.historyExam}>
-                              [{row.item.code}] {row.item.title}
+                              [{getExamDisplayCode(row.item)}] {getExamDisplayTitle(row.item)}
                             </p>
                             <p className={pendingStyles.historySub}>
                               {row.item.type} · {row.item.submittedBy} · {row.date}
@@ -738,7 +750,7 @@ function AdminExamPendingPage() {
                       >
                         <div>
                           <p className={pendingStyles.historyExam}>
-                            [{item.code}] {item.title}
+                            [{getExamDisplayCode(item)}] {getExamDisplayTitle(item)}
                           </p>
                           <p className={pendingStyles.historySub}>
                             {item.type} · {item.submittedBy} · {item.approvedAt}
@@ -750,7 +762,7 @@ function AdminExamPendingPage() {
                             to={publishedExamDocumentsLink(item)}
                             className={pendingStyles.historyLink}
                           >
-                            Xem tài liệu môn ({item.code}) →
+                            Xem tài liệu môn ({getExamSubjectCode(item)}) →
                           </Link>
                         </div>
                         <p
@@ -772,7 +784,7 @@ function AdminExamPendingPage() {
                     <div key={`${item.id}-${item.rejectedAt}`} className={pendingStyles.historyRow}>
                       <div>
                         <p className={pendingStyles.historyExam}>
-                          [{item.code}] {item.title}
+                          [{getExamDisplayCode(item)}] {getExamDisplayTitle(item)}
                         </p>
                         <p className={pendingStyles.historySub}>
                           {item.type} · {item.submittedBy} · {item.rejectedAt}
@@ -798,7 +810,7 @@ function AdminExamPendingPage() {
 
       <AdminExamRejectModal
         open={Boolean(rejectTarget)}
-        examTitle={rejectTarget ? `[${rejectTarget.code}] ${rejectTarget.title}` : ""}
+        examTitle={rejectTarget ? `[${getExamDisplayCode(rejectTarget)}] ${getExamDisplayTitle(rejectTarget)}` : ""}
         onClose={() => setRejectTarget(null)}
         onConfirm={handleReject}
       />
