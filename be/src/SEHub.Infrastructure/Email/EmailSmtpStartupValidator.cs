@@ -53,6 +53,16 @@ public static class EmailSmtpStartupValidator
             return;
         }
 
+        var normalizedPassword = smtp.Password.Replace(" ", string.Empty, StringComparison.Ordinal).Trim();
+        if (normalizedPassword.Length != 16)
+        {
+            logger.LogWarning(
+                "SMTP App Password length is {Length} (expected 16). Gmail will reject authentication. " +
+                "Recreate the App Password for {Username} and copy all 16 characters.",
+                normalizedPassword.Length,
+                smtp.Username);
+        }
+
         logger.LogInformation(
             "SMTP email configuration present for host {Host}:{Port}. OTP emails will be sent via SmtpEmailService.",
             smtp.Host,

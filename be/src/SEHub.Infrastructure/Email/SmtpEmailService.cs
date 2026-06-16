@@ -23,22 +23,10 @@ public sealed class SmtpEmailService : IEmailService
     public async Task SendOtpEmailAsync(string email, string otpCode, CancellationToken cancellationToken = default)
     {
         var smtp = _settings.Smtp;
-        if (string.IsNullOrWhiteSpace(smtp.Host))
-        {
-            throw new InvalidOperationException("Email:Smtp:Host is required when Email:Provider is Smtp.");
-        }
+        ValidateSmtpConfig(smtp);
 
-        if (string.IsNullOrWhiteSpace(smtp.From))
-        {
-            throw new InvalidOperationException("Email:Smtp:From is required when Email:Provider is Smtp.");
-        }
-
-        if (string.IsNullOrWhiteSpace(smtp.Username) || string.IsNullOrWhiteSpace(smtp.Password))
-        {
-            throw new InvalidOperationException("Email:Smtp:Username and Email:Smtp:Password are required when Email:Provider is Smtp.");
-        }
-
-        var password = smtp.Password.Replace(" ", string.Empty, StringComparison.Ordinal);
+        var password = NormalizeAppPassword(smtp.Password);
+        var username = smtp.Username.Trim();
 
         var message = new MimeMessage();
         message.From.Add(new MailboxAddress(smtp.FromDisplayName, smtp.From));
@@ -51,19 +39,11 @@ public sealed class SmtpEmailService : IEmailService
 
         try
         {
-            using var client = new SmtpClient();
-            var socketOptions = smtp.Port == 465
-                ? SecureSocketOptions.SslOnConnect
-                : SecureSocketOptions.StartTls;
-
-            await client.ConnectAsync(smtp.Host, smtp.Port, socketOptions, cancellationToken);
-            await client.AuthenticateAsync(smtp.Username, password, cancellationToken);
-            await client.SendAsync(message, cancellationToken);
-            await client.DisconnectAsync(true, cancellationToken);
+            await SendViaSmtpAsync(smtp, message, username, password, cancellationToken);
         }
         catch (Exception ex) when (ex is AuthenticationException or SmtpCommandException or SmtpProtocolException)
         {
-            throw CreateDeliveryException(ex, smtp.Username, smtp.Host);
+            throw CreateDeliveryException(ex, username, smtp.Host);
         }
 
         _logger.LogInformation("OTP email sent to {Email} via SMTP host {Host}", email, smtp.Host);
@@ -76,7 +56,8 @@ public sealed class SmtpEmailService : IEmailService
         var smtp = _settings.Smtp;
         ValidateSmtpConfig(smtp);
 
-        var password = smtp.Password.Replace(" ", string.Empty, StringComparison.Ordinal);
+        var password = NormalizeAppPassword(smtp.Password);
+        var username = smtp.Username.Trim();
         var mimeMessage = new MimeMessage();
         mimeMessage.From.Add(new MailboxAddress(smtp.FromDisplayName, smtp.From));
         mimeMessage.To.Add(MailboxAddress.Parse(message.ToEmail));
@@ -91,25 +72,39 @@ public sealed class SmtpEmailService : IEmailService
 
         try
         {
-            using var client = new SmtpClient();
-            var socketOptions = smtp.Port == 465
-                ? SecureSocketOptions.SslOnConnect
-                : SecureSocketOptions.StartTls;
-
-            await client.ConnectAsync(smtp.Host, smtp.Port, socketOptions, cancellationToken);
-            await client.AuthenticateAsync(smtp.Username, password, cancellationToken);
-            await client.SendAsync(mimeMessage, cancellationToken);
-            await client.DisconnectAsync(true, cancellationToken);
+            await SendViaSmtpAsync(smtp, mimeMessage, username, password, cancellationToken);
         }
         catch (Exception ex) when (ex is AuthenticationException or SmtpCommandException or SmtpProtocolException)
         {
-            throw CreateDeliveryException(ex, smtp.Username, smtp.Host);
+            throw CreateDeliveryException(ex, username, smtp.Host);
         }
 
         _logger.LogInformation(
             "Payment confirmation email sent to {Email} via SMTP host {Host}",
             message.ToEmail,
             smtp.Host);
+    }
+
+    private static string NormalizeAppPassword(string password) =>
+        password.Replace(" ", string.Empty, StringComparison.Ordinal).Trim();
+
+    private static async Task SendViaSmtpAsync(
+        SmtpSettings smtp,
+        MimeMessage message,
+        string username,
+        string password,
+        CancellationToken cancellationToken)
+    {
+        using var client = new SmtpClient();
+        var socketOptions = smtp.Port == 465
+            ? SecureSocketOptions.SslOnConnect
+            : SecureSocketOptions.StartTls;
+
+        await client.ConnectAsync(smtp.Host, smtp.Port, socketOptions, cancellationToken);
+        client.AuthenticationMechanisms.Remove("XOAUTH2");
+        await client.AuthenticateAsync(username, password, cancellationToken);
+        await client.SendAsync(message, cancellationToken);
+        await client.DisconnectAsync(true, cancellationToken);
     }
 
     private EmailDeliveryException CreateDeliveryException(Exception ex, string username, string host)
