@@ -17,7 +17,15 @@ public class ExamConfiguration : IEntityTypeConfiguration<Exam>
         builder.Property(e => e.ContentHash).HasMaxLength(64).IsRequired();
         builder.Property(e => e.Description).HasMaxLength(4000);
         builder.Property(e => e.AssetUrl).HasMaxLength(500);
+        builder.Property(e => e.RejectionReasonCode).HasMaxLength(50);
+        builder.Property(e => e.RejectionReasonDetail).HasMaxLength(2000);
         builder.HasIndex(e => e.SubmittedById);
+        builder.HasIndex(e => e.RevisionOfExamId);
+
+        builder.HasOne(e => e.RevisionOfExam)
+            .WithMany()
+            .HasForeignKey(e => e.RevisionOfExamId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(e => e.Questions)
             .WithOne(q => q.Exam)
