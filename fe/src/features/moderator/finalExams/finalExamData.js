@@ -21,6 +21,14 @@ export const WIZARD_STEPS = [
   },
 ];
 
+export function getWizardSteps(basePath = "/moderator/final-exams/add") {
+  return [
+    { ...WIZARD_STEPS[0], path: basePath },
+    { ...WIZARD_STEPS[1], path: `${basePath}/questions` },
+    { ...WIZARD_STEPS[2], path: `${basePath}/review` },
+  ];
+}
+
 export const EMPTY_FINAL_EXAM_INFO = {
   subjectCode: "",
   subjectName: "",
@@ -52,4 +60,58 @@ export function parseTotalQuestions(value) {
 export function buildEmptyQuestions(count) {
   const total = parseTotalQuestions(count) ?? 1;
   return Array.from({ length: total }, (_, index) => createEmptyQuestion(`q-${index + 1}`));
+}
+
+export const MARKDOWN_IMPORT_PLACEHOLDER = `## Câu 1
+Nội dung câu hỏi?
+
+A. Phương án A
+B. Phương án B
+C. Phương án C
+D. Phương án D
+
+**Đáp án: B**
+
+---
+
+## Câu 2
+Câu hỏi tiếp theo...`;
+
+export function mapImportedExamQuestions(apiQuestions = []) {
+  return apiQuestions.map((question, index) => {
+    const options = question.options ?? [];
+    const answers = { A: "", B: "", C: "", D: "" };
+    let correctAnswer = "A";
+
+    for (const option of options) {
+      const label = String(option.label ?? option.Label ?? "")
+        .trim()
+        .toUpperCase();
+      if (ANSWER_KEYS.includes(label)) {
+        answers[label] = option.text ?? option.Text ?? "";
+      }
+    }
+
+    const correctOptionId = question.correctOptionId ?? question.CorrectOptionId;
+    if (correctOptionId) {
+      const correctOption = options.find(
+        (option) => (option.id ?? option.Id) === correctOptionId,
+      );
+      const label = String(correctOption?.label ?? correctOption?.Label ?? "")
+        .trim()
+        .toUpperCase();
+      if (ANSWER_KEYS.includes(label)) {
+        correctAnswer = label;
+      }
+    }
+
+    return {
+      id: `q-${index + 1}`,
+      content: question.content ?? question.Content ?? "",
+      answers,
+      correctAnswer,
+      explanation: "",
+      showExplanation: false,
+    };
+  });
 }
