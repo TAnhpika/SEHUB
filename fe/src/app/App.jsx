@@ -258,6 +258,11 @@ function App() {
                   <Route path="questions" element={<FinalExamQuestionsStep />} />
                   <Route path="review" element={<FinalExamReviewStep />} />
                 </Route>
+                <Route path="final-exams/edit/:examId" element={<AddFinalExamWizard />}>
+                  <Route index element={<FinalExamInfoStep />} />
+                  <Route path="questions" element={<FinalExamQuestionsStep />} />
+                  <Route path="review" element={<FinalExamReviewStep />} />
+                </Route>
               </Route>
             </Route>
             <Route path="/landing" element={<Navigate to="/" replace />} />
