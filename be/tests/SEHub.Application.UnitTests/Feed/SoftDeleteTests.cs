@@ -18,6 +18,7 @@ public sealed class SoftDeleteTests
     private readonly Mock<IUserProfileRepository> _profileRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IGamificationService> _gamificationService = new();
+    private readonly Mock<IFileStorageService> _fileStorage = new();
     private readonly Mock<IBadgeCheckService> _badgeCheckService = new();
     private readonly Mock<IUserActivityService> _userActivityService = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
@@ -34,6 +35,7 @@ public sealed class SoftDeleteTests
         _profileRepository.Object,
         _currentUser.Object,
         _gamificationService.Object,
+        _fileStorage.Object,
         _unitOfWork.Object,
         AutoMapperFactory.Create());
 
