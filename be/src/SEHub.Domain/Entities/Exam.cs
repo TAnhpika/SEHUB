@@ -16,6 +16,13 @@ public class Exam : BaseEntity
     public string Description { get; set; } = string.Empty;
     public string? AssetUrl { get; set; }
     public Guid? SubmittedById { get; set; }
+    public Guid? RevisionOfExamId { get; set; }
+    public string? RejectionReasonCode { get; set; }
+    public string? RejectionReasonDetail { get; set; }
+    public DateTime? RejectedAt { get; set; }
+    public Guid? RejectedById { get; set; }
+
+    public Exam? RevisionOfExam { get; set; }
 
     public ICollection<Question> Questions { get; set; } = [];
     public ICollection<ExamAttempt> Attempts { get; set; } = [];
