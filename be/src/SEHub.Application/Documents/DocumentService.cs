@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.Extensions.Configuration;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Contracts.Common;
@@ -15,30 +16,37 @@ public sealed class DocumentService : IDocumentService
     private readonly IDocumentRepository _documentRepository;
     private readonly IDocumentAccessLogRepository _accessLogRepository;
     private readonly IFileStorageService _fileStorage;
+    private readonly ICloudFileStorageService _cloudStorage;
     private readonly IDocumentAccessService _accessService;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClientContext _clientContext;
     private readonly IMapper _mapper;
+    private readonly string _apiBaseUrl;
 
     public DocumentService(
         IDocumentRepository documentRepository,
         IDocumentAccessLogRepository accessLogRepository,
         IFileStorageService fileStorage,
+        ICloudFileStorageService cloudStorage,
         IDocumentAccessService accessService,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork,
         IClientContext clientContext,
-        IMapper mapper)
+        IMapper mapper,
+        IConfiguration configuration)
     {
         _documentRepository = documentRepository;
         _accessLogRepository = accessLogRepository;
         _fileStorage = fileStorage;
+        _cloudStorage = cloudStorage;
         _accessService = accessService;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _clientContext = clientContext;
         _mapper = mapper;
+        _apiBaseUrl = configuration["FileStorage:ApiBaseUrl"]?.TrimEnd('/')
+            ?? "http://localhost:5006";
     }
 
     public async Task<PagedResult<DocumentListItemDto>> GetDocumentsAsync(DocumentQueryParams query, CancellationToken cancellationToken = default)
@@ -92,10 +100,13 @@ public sealed class DocumentService : IDocumentService
         _accessService.EnsureCanPreview(document, page);
         var decision = _accessService.Evaluate(document);
 
-        var contentUrl = await _fileStorage.GetSignedUrlAsync(
-            $"{document.FilePath}#page={page}",
-            TimeSpan.FromMinutes(15),
-            cancellationToken);
+        var contentUrl = DocumentFileAccess.UsesDrive(document)
+            ? BuildContentApiUrl(document.Id, page)
+            : await _fileStorage.GetSignedUrlAsync(
+                $"{document.FilePath}#page={page}",
+                TimeSpan.FromMinutes(15),
+                cancellationToken);
+
         await LogAccessAsync(document.Id, "Preview", cancellationToken);
 
         return new DocumentPreviewDto
@@ -115,6 +126,11 @@ public sealed class DocumentService : IDocumentService
 
         _accessService.EnsureCanDownload(document);
         await LogAccessAsync(document.Id, "Download", cancellationToken);
+
+        if (DocumentFileAccess.UsesDrive(document))
+        {
+            return BuildContentApiUrl(document.Id, page: null);
+        }
 
         return await _fileStorage.GetSignedUrlAsync(document.FilePath, TimeSpan.FromMinutes(30), cancellationToken);
     }
@@ -136,13 +152,22 @@ public sealed class DocumentService : IDocumentService
             await LogAccessAsync(document.Id, "Content", cancellationToken);
         }
 
-        var stream = await _fileStorage.OpenReadAsync(document.FilePath, cancellationToken);
+        var stream = await DocumentFileAccess.OpenReadAsync(document, _fileStorage, _cloudStorage, cancellationToken);
         return new DocumentContentResult
         {
             Stream = stream,
             ContentType = document.MimeType,
-            FileName = BuildDownloadFileName(document.Title, document.MimeType)
+            FileName = DocumentFileAccess.ResolveDownloadFileName(document)
         };
+    }
+
+    private string BuildContentApiUrl(Guid documentId, int? page)
+    {
+        var path = page is >= 1
+            ? $"/api/v1/documents/{documentId}/content?page={page.Value}"
+            : $"/api/v1/documents/{documentId}/content";
+
+        return $"{_apiBaseUrl}{path}";
     }
 
     private async Task LogAccessAsync(Guid documentId, string action, CancellationToken cancellationToken)
@@ -164,19 +189,5 @@ public sealed class DocumentService : IDocumentService
         }, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-    }
-
-    private static string BuildDownloadFileName(string title, string mimeType)
-    {
-        var extension = mimeType switch
-        {
-            "application/pdf" => ".pdf",
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation" => ".pptx",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => ".docx",
-            _ => string.Empty
-        };
-
-        var safeTitle = string.Join('_', title.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
-        return string.IsNullOrWhiteSpace(safeTitle) ? $"document{extension}" : $"{safeTitle}{extension}";
     }
 }

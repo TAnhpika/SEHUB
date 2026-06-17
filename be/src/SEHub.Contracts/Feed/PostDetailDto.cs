@@ -15,6 +15,7 @@ public sealed class PostDetailDto
     public bool IsFeatured { get; init; }
     public string? CoverImageUrl { get; init; }
     public bool? IsLiked { get; init; }
+    public IReadOnlyList<PostImageDto> Images { get; init; } = [];
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 }

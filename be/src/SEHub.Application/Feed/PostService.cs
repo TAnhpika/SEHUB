@@ -20,6 +20,8 @@ public sealed class PostService : IPostService
     };
 
     private readonly IPostRepository _postRepository;
+    private readonly IPostImageRepository _imageRepository;
+    private readonly IPostImageService _postImageService;
     private readonly IPostLikeRepository _likeRepository;
     private readonly ICommentRepository _commentRepository;
     private readonly IUserRepository _userRepository;
@@ -32,6 +34,8 @@ public sealed class PostService : IPostService
 
     public PostService(
         IPostRepository postRepository,
+        IPostImageRepository imageRepository,
+        IPostImageService postImageService,
         IPostLikeRepository likeRepository,
         ICommentRepository commentRepository,
         IUserRepository userRepository,
@@ -43,6 +47,8 @@ public sealed class PostService : IPostService
         IMapper mapper)
     {
         _postRepository = postRepository;
+        _imageRepository = imageRepository;
+        _postImageService = postImageService;
         _likeRepository = likeRepository;
         _commentRepository = commentRepository;
         _userRepository = userRepository;
@@ -226,6 +232,7 @@ public sealed class PostService : IPostService
             ?? throw new NotFoundException("Post", id);
 
         EnsureAuthorOrModerator(post.AuthorId);
+        await _postImageService.DeleteImagesForPostAsync(id, cancellationToken);
         await _postRepository.SoftDeleteAsync(post, RequireUserId(), cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
@@ -365,6 +372,8 @@ public sealed class PostService : IPostService
             isLiked = await _likeRepository.GetAsync(post.Id, userId, cancellationToken) is not null;
         }
 
+        var images = await _imageRepository.GetByPostIdAsync(post.Id, cancellationToken);
+
         return new PostListItemDto
         {
             Id = post.Id,
@@ -380,6 +389,7 @@ public sealed class PostService : IPostService
             IsFeatured = post.IsFeatured,
             CoverImageUrl = await ResolveCoverImageUrlAsync(post.CoverImageUrl, cancellationToken),
             IsLiked = isLiked,
+            Images = images.Select(PostImageService.MapDto).ToList()
         };
     }
 
@@ -407,7 +417,10 @@ public sealed class PostService : IPostService
             CoverImageUrl = await ResolveCoverImageUrlAsync(post.CoverImageUrl, cancellationToken),
             IsLiked = isLiked,
             CreatedAt = post.CreatedAt,
-            UpdatedAt = post.UpdatedAt
+            UpdatedAt = post.UpdatedAt,
+            Images = (await _imageRepository.GetByPostIdAsync(post.Id, cancellationToken))
+                .Select(PostImageService.MapDto)
+                .ToList()
         };
     }
 

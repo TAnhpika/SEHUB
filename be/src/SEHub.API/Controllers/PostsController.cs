@@ -11,17 +11,20 @@ namespace SEHub.API.Controllers;
 public sealed class PostsController : ControllerBase
 {
     private readonly IPostService _postService;
+    private readonly IPostImageService _postImageService;
     private readonly ICommentService _commentService;
     private readonly IPostLikeService _postLikeService;
     private readonly IPostReportService _postReportService;
 
     public PostsController(
         IPostService postService,
+        IPostImageService postImageService,
         ICommentService commentService,
         IPostLikeService postLikeService,
         IPostReportService postReportService)
     {
         _postService = postService;
+        _postImageService = postImageService;
         _commentService = commentService;
         _postLikeService = postLikeService;
         _postReportService = postReportService;
@@ -41,6 +44,19 @@ public sealed class PostsController : ControllerBase
     {
         var result = await _postService.GetFeaturedAsync(cancellationToken);
         return Ok(result);
+    }
+
+    [HttpGet("images/{imageId:guid}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetImage(Guid imageId, CancellationToken cancellationToken)
+    {
+        var content = await _postImageService.OpenImageAsync(imageId, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(content.ExternalUrl))
+        {
+            return Redirect(content.ExternalUrl);
+        }
+
+        return File(content.Stream, content.ContentType, enableRangeProcessing: true);
     }
 
     [HttpGet("{id:guid}")]
@@ -158,5 +174,45 @@ public sealed class PostsController : ControllerBase
     {
         await _postReportService.ReportAsync(id, request.Reason, cancellationToken);
         return Ok(new { message = "Report submitted" });
+    }
+
+    [HttpPost("{id:guid}/images")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> UploadImages(Guid id, IFormFileCollection files, CancellationToken cancellationToken)
+    {
+        if (files.Count == 0)
+        {
+            return BadRequest(new { message = "At least one image is required." });
+        }
+
+        var uploads = new List<PostImageUpload>();
+        foreach (var file in files)
+        {
+            if (file.Length == 0)
+            {
+                continue;
+            }
+
+            await using var stream = file.OpenReadStream();
+            var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer, cancellationToken);
+            buffer.Position = 0;
+
+            uploads.Add(new PostImageUpload
+            {
+                Content = buffer,
+                FileName = file.FileName,
+                ContentType = file.ContentType,
+                FileSizeBytes = file.Length
+            });
+        }
+
+        if (uploads.Count == 0)
+        {
+            return BadRequest(new { message = "At least one image is required." });
+        }
+
+        var result = await _postImageService.UploadImagesAsync(id, uploads, cancellationToken);
+        return Ok(result);
     }
 }

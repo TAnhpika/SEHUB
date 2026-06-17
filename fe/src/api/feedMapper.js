@@ -1,6 +1,14 @@
 import { formatRelativeTimeFromApi, parseApiDate } from "@/utils/parseApiDate";
 import { resolveAssetUrl } from "@/api/assetUrl";
 
+function mapPostImage(dto) {
+  return {
+    id: dto.id,
+    sortOrder: dto.sortOrder ?? 0,
+    url: resolveAssetUrl(dto.imagePath),
+  };
+}
+
 function formatRelativeTime(dateStr) {
   return formatRelativeTimeFromApi(dateStr);
 }
@@ -55,6 +63,7 @@ export function mapPostListItem(dto) {
     isFeatured: dto.isFeatured ?? false,
     coverImageUrl: resolveAssetUrl(dto.coverImageUrl),
     isLiked: dto.isLiked ?? false,
+    images: (dto.images ?? []).map(mapPostImage),
   };
 }
 
@@ -71,6 +80,7 @@ export function mapPostDetail(dto, commentsList = []) {
     isLiked: dto.isLiked ?? false,
     commentsList,
     status: dto.status,
+    images: (dto.images ?? []).map(mapPostImage),
   };
 }
 

@@ -40,7 +40,6 @@ import {
 import {
   createPracticeAttachmentEntry,
   PRACTICE_UPLOAD_ACCEPT,
-  uploadPracticeAttachment,
   validatePracticeUploadFile,
 } from "@/features/moderator/practiceExams/practiceExamUpload";
 import styles from "./AddPracticeExamPage.module.css";
@@ -165,11 +164,11 @@ function AddPracticeExamPage() {
       return;
     }
     if (attachments.some((file) => file.status === "uploading")) {
-      showToast("Đợi file đính kèm tải lên xong trước khi gửi.");
+      showToast("Đợi file đính kèm xử lý xong trước khi gửi.");
       return;
     }
-    if (!attachments.some((file) => file.status === "done" && file.assetUrl)) {
-      showToast("Upload ít nhất một file đề (PDF/ZIP/RAR/DOCX).");
+    if (!attachments.some((file) => file.status === "done" && file.file)) {
+      showToast("Chọn ít nhất một file đề (PDF/ZIP/RAR/DOCX).");
       return;
     }
 
@@ -223,40 +222,6 @@ function AddPracticeExamPage() {
 
       const entry = createPracticeAttachmentEntry(file);
       setAttachments((prev) => [...prev, entry]);
-
-      try {
-        setAttachments((prev) =>
-          prev.map((item) => (item.id === entry.id ? { ...item, progress: 40 } : item)),
-        );
-        const result = await uploadPracticeAttachment(file);
-        setAttachments((prev) =>
-          prev.map((item) =>
-            item.id === entry.id
-              ? {
-                  ...item,
-                  status: "done",
-                  progress: 100,
-                  assetUrl: result.url,
-                  name: result.fileName ?? file.name,
-                }
-              : item,
-          ),
-        );
-      } catch (error) {
-        setAttachments((prev) =>
-          prev.map((item) =>
-            item.id === entry.id
-              ? {
-                  ...item,
-                  status: "error",
-                  progress: 0,
-                  error: error instanceof ApiError ? error.message : error?.message ?? "Không tải được file.",
-                }
-              : item,
-          ),
-        );
-        showToast(error instanceof ApiError ? error.message : error?.message ?? "Không tải được file.");
-      }
     }
   }
 

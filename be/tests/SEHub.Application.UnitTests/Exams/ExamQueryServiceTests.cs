@@ -13,6 +13,7 @@ namespace SEHub.Application.UnitTests.Exams;
 public sealed class ExamQueryServiceTests
 {
     private readonly Mock<IExamRepository> _examRepository = new();
+    private readonly Mock<IExamAttachmentRepository> _attachmentRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly IMapper _mapper;
 
@@ -25,7 +26,11 @@ public sealed class ExamQueryServiceTests
         _mapper = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
     }
 
-    private ExamQueryService CreateSut() => new(_examRepository.Object, _currentUser.Object, _mapper);
+    private ExamQueryService CreateSut() => new(
+        _examRepository.Object,
+        _attachmentRepository.Object,
+        _currentUser.Object,
+        _mapper);
 
     [Fact]
     public async Task GetQuestionWithAnswerAsync_ForFreeUser_ThrowsForbiddenException()
@@ -74,6 +79,7 @@ public sealed class ExamQueryServiceTests
             .Setup(r => r.GetByIdAsync(ExamId, true, It.IsAny<CancellationToken>()))
             .ReturnsAsync(exam);
         _currentUser.SetupGet(u => u.IsModeratorOrAdmin).Returns(false);
+        _currentUser.SetupGet(u => u.UserId).Returns(Guid.NewGuid());
 
         var sut = CreateSut();
         var act = () => sut.GetQuestionsAsync(ExamId);
@@ -85,7 +91,7 @@ public sealed class ExamQueryServiceTests
     public async Task GetQuestionsAsync_ForFreeUser_DoesNotExposeCorrectAnswers()
     {
         SetupExam(includeQuestions: true);
-        _currentUser.SetupGet(u => u.IsAuthenticated).Returns(true);
+        _currentUser.SetupGet(u => u.UserId).Returns(Guid.NewGuid());
         _currentUser.SetupGet(u => u.IsPremium).Returns(false);
         _currentUser.SetupGet(u => u.IsModeratorOrAdmin).Returns(false);
 

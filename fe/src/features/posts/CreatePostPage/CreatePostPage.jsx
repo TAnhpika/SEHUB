@@ -105,6 +105,7 @@ function CreatePostPage() {
         content: content.trim(),
         tags,
         coverImageUrl,
+        coverFile: coverMode === "upload" ? coverFile : null,
       });
       showToast("Đã gửi bài viết — chờ moderator duyệt trước khi hiển thị.", 5500);
       window.setTimeout(() => navigate("/home"), 1200);

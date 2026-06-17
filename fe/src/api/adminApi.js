@@ -56,12 +56,6 @@ export function createExam(body, confirmDuplicate = false) {
   });
 }
 
-export function uploadExamAsset(file) {
-  const formData = new FormData();
-  formData.append("file", file);
-  return apiFormRequest("/api/v1/admin/exams/upload-asset", { formData });
-}
-
 export function updateExam(id, body) {
   return apiRequest(`/api/v1/admin/exams/${id}`, {
     method: "PUT",
@@ -102,6 +96,18 @@ export function importExamMarkdown(body) {
   return apiRequest("/api/v1/admin/exams/import-markdown", {
     method: "POST",
     body,
+  });
+}
+
+export function uploadExamAttachment(examId, file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiUploadRequest(`/api/v1/admin/exams/${examId}/attachments`, formData);
+}
+
+export function deleteExamAttachment(examId, attachmentId) {
+  return apiRequest(`/api/v1/admin/exams/${examId}/attachments/${attachmentId}`, {
+    method: "DELETE",
   });
 }
 

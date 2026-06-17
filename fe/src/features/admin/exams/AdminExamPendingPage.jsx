@@ -33,7 +33,7 @@ import {
   rejectPendingExam,
 } from "@/features/admin/exams/adminExamData";
 import { getAdminDocumentsSubjectUrl } from "@/features/admin/documents/adminDocumentPaths";
-import { getExamAssetFileName, resolveExamAssetUrl } from "@/utils/examAssetUrl";
+import { getExamAssetFileName, getPrimaryExamAttachment, resolveExamAssetUrl } from "@/utils/examAssetUrl";
 import {
   getExamDisplayCode,
   getExamDisplayTitle,
@@ -152,6 +152,7 @@ function AdminExamPendingPage() {
     filteredPending.find((p) => p.id === selectedId) ??
     pending.find((p) => p.id === selectedId) ??
     null;
+  const selectedAttachment = selected ? getPrimaryExamAttachment(selected) : null;
 
   const previewQuestions = USE_MOCK
     ? MOCK_OCR_QUESTIONS
@@ -515,19 +516,17 @@ function AdminExamPendingPage() {
                     </span>
                     <div className={pendingStyles.fileBody}>
                       <p className={pendingStyles.fileName}>
-                        {selected.assetUrl
-                          ? getExamAssetFileName(selected.assetUrl, selected.fileName)
-                          : "Chưa có file đính kèm"}
+                        {selectedAttachment?.name ?? "Chưa có file đính kèm"}
                       </p>
                       <p className={pendingStyles.fileHint}>
-                        {selected.assetUrl
+                        {selectedAttachment
                           ? "File đính kèm từ Mod — bấm Tải xuống để xem đúng file đã upload"
                           : "Mod chưa upload file hoặc đề gửi trước bản cập nhật — yêu cầu Mod gửi lại."}
                       </p>
                     </div>
-                    {selected.assetUrl ? (
+                    {selectedAttachment ? (
                       <a
-                        href={resolveExamAssetUrl(selected.assetUrl)}
+                        href={selectedAttachment.url}
                         className={pendingStyles.fileDownload}
                         download
                         target="_blank"

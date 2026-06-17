@@ -213,12 +213,17 @@ export function mapProfileActivityToHeatmap(activityDto) {
   start.setDate(start.getDate() - (HEATMAP_WEEKS * 7 - 1));
 
   const cells = [];
-  const months = [];
+  const months = Array(HEATMAP_WEEKS).fill("");
+  let lastMonth = null;
 
   for (let week = 0; week < HEATMAP_WEEKS; week += 1) {
     const weekStart = new Date(start);
     weekStart.setDate(start.getDate() + week * 7);
-    months.push(HEATMAP_MONTHS[weekStart.getMonth()]);
+    const month = weekStart.getMonth();
+    if (month !== lastMonth) {
+      months[week] = HEATMAP_MONTHS[month];
+      lastMonth = month;
+    }
 
     for (let day = 0; day < 7; day += 1) {
       const date = new Date(weekStart);
@@ -239,5 +244,17 @@ export function mapProfileActivityToHeatmap(activityDto) {
     dayLabels: HEATMAP_DAY_LABELS,
     cells,
     totalActivities: activityDto.totalActivities ?? 0,
+  };
+}
+
+export function mapAiTokenStatusDto(dto) {
+  return {
+    limit: Number(dto?.limit ?? 0),
+    used: Number(dto?.used ?? 0),
+    remaining: Number(dto?.remaining ?? 0),
+    costExplain: Number(dto?.costExplain ?? 10),
+    costChat: Number(dto?.costChat ?? 10),
+    canExplain: Boolean(dto?.canExplain),
+    canChat: Boolean(dto?.canChat),
   };
 }

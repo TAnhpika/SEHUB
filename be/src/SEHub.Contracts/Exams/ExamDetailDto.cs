@@ -12,4 +12,5 @@ public sealed class ExamDetailDto
     public string Status { get; init; } = string.Empty;
     public string? Description { get; init; }
     public string? AssetUrl { get; init; }
+    public IReadOnlyList<ExamAttachmentDto> Attachments { get; init; } = [];
 }

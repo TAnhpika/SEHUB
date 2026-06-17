@@ -1,5 +1,6 @@
 import { getDocumentPageContent } from "@/features/documents/documentPageContent";
 import { fetchDocumentDownloadUrl } from "@/features/documents/studentDocumentsData";
+import * as documentsApi from "@/api/documentsApi";
 
 const MIME_BY_EXT = {
   pdf: "application/pdf",
@@ -77,10 +78,15 @@ function buildFullDocumentContent(doc) {
 /** @param {{ name: string, subject?: string, pages?: number, description?: string }} doc */
 export async function downloadStudentDocument(doc) {
   try {
-    const downloadUrl = await fetchDocumentDownloadUrl(doc);
-    if (downloadUrl) {
+    const downloadTarget = await fetchDocumentDownloadUrl(doc);
+    if (downloadTarget?.requiresAuthDownload && downloadTarget.apiId) {
+      await documentsApi.downloadDocumentContent(downloadTarget.apiId, doc.name);
+      return;
+    }
+
+    if (typeof downloadTarget === "string" && downloadTarget) {
       const link = document.createElement("a");
-      link.href = downloadUrl;
+      link.href = downloadTarget;
       link.target = "_blank";
       link.rel = "noreferrer";
       link.download = doc.name;

@@ -24,4 +24,5 @@ public class Post : BaseEntity, ISoftDeletable
     public ICollection<Comment> Comments { get; set; } = [];
     public ICollection<PostLike> Likes { get; set; } = [];
     public ICollection<PostReport> Reports { get; set; } = [];
+    public ICollection<PostImage> Images { get; set; } = [];
 }

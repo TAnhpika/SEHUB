@@ -153,6 +153,67 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.AiExamChatMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ThreadId");
+
+                    b.ToTable("AiExamChatMessages");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.AiExamChatThread", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ExamId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ExamId", "QuestionId")
+                        .IsUnique();
+
+                    b.ToTable("AiExamChatThreads");
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.AiTokenDailyUsage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -215,6 +276,134 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Badges");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.ChatbotConversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ChatbotConversations");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.ChatbotKnowledgeEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Tags")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.ToTable("ChatbotKnowledgeEntries");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.ChatbotMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.ToTable("ChatbotMessages");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.ChatbotSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("SystemPrompt")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("WelcomeMessage")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ChatbotSettings");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.Comment", b =>
@@ -374,6 +563,10 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("DeletedById")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("DriveFileId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
                     b.Property<string>("FilePath")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -386,6 +579,10 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("OriginalFileName")
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
 
                     b.Property<int>("PageCount")
                         .HasColumnType("int");
@@ -560,6 +757,46 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.HasIndex("Semester", "Major", "ExamType");
 
                     b.ToTable("Exams");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.ExamAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DriveFileId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("ExamId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExamId");
+
+                    b.ToTable("ExamAttachments");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.ExamAttempt", b =>
@@ -926,6 +1163,45 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.HasIndex("Status", "IsPinned");
 
                     b.ToTable("Posts");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.PostImage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DriveFileId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PublicId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId");
+
+                    b.ToTable("PostImages");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.PostLike", b =>
@@ -1576,6 +1852,28 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.AiExamChatMessage", b =>
+                {
+                    b.HasOne("SEHub.Domain.Entities.AiExamChatThread", "Thread")
+                        .WithMany("Messages")
+                        .HasForeignKey("ThreadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Thread");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.ChatbotMessage", b =>
+                {
+                    b.HasOne("SEHub.Domain.Entities.ChatbotConversation", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.Comment", b =>
                 {
                     b.HasOne("SEHub.Domain.Entities.Comment", "ParentComment")
@@ -1660,6 +1958,17 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Navigation("RevisionOfExam");
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.ExamAttachment", b =>
+                {
+                    b.HasOne("SEHub.Domain.Entities.Exam", "Exam")
+                        .WithMany("Attachments")
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exam");
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.ExamAttempt", b =>
                 {
                     b.HasOne("SEHub.Domain.Entities.Exam", "Exam")
@@ -1708,6 +2017,17 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.PostImage", b =>
+                {
+                    b.HasOne("SEHub.Domain.Entities.Post", "Post")
+                        .WithMany("Images")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.PostLike", b =>
@@ -1845,9 +2165,19 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Navigation("Level");
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.AiExamChatThread", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.Badge", b =>
                 {
                     b.Navigation("UserBadges");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.ChatbotConversation", b =>
+                {
+                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.Comment", b =>
@@ -1869,6 +2199,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("SEHub.Domain.Entities.Exam", b =>
                 {
+                    b.Navigation("Attachments");
+
                     b.Navigation("Attempts");
 
                     b.Navigation("PracticeSubmissions");
@@ -1884,6 +2216,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("SEHub.Domain.Entities.Post", b =>
                 {
                     b.Navigation("Comments");
+
+                    b.Navigation("Images");
 
                     b.Navigation("Likes");
 

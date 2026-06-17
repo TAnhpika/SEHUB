@@ -1,12 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faAward,
-  faCommentDots,
-  faHome,
-  faUserGroup,
-} from "@fortawesome/free-solid-svg-icons";
+import { faAward, faCommentDots, faHome, faUserGroup } from "@fortawesome/free-solid-svg-icons";
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
+import { useAuth } from "@/context";
 import Button from "@/common/Button/Button";
 import SubjectNavSection from "@/common/Sidebar/SubjectNavSection/SubjectNavSection";
 import InteractionNavSection from "@/common/Sidebar/InteractionNavSection/InteractionNavSection";
@@ -19,6 +15,7 @@ const MAIN_LINKS = [
 
 function MainSidebar() {
   const { pathname } = useLocation();
+  const { isPremium } = useAuth();
 
   return (
     <div className={styles.root}>
@@ -44,7 +41,7 @@ function MainSidebar() {
 
             <SubjectNavSection pathname={pathname} styles={styles} scope="home" />
 
-            <InteractionNavSection pathname={pathname} styles={styles} />
+            <InteractionNavSection pathname={pathname} styles={styles} isPremium={isPremium} />
           </div>
 
           <div className={styles["panel-footer"]}>

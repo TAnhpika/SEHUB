@@ -1,4 +1,5 @@
 import { FE_ID_BY_PLAN_CODE } from "@/api/premiumMapper";
+import { resolveAssetUrl } from "@/api/assetUrl";
 import {
   buildExamDisplayFields,
   extractCourseSubjectCode,
@@ -165,9 +166,17 @@ export function mapAdminExamListItem(dto) {
     sha256: dto.contentHash ?? "",
     description: dto.description ?? "",
     assetUrl,
-    attachments: assetUrl
-      ? [{ id: "asset", name: assetUrl.split("/").pop() ?? "asset", url: assetUrl }]
-      : [],
+    attachments: (dto.attachments ?? []).length > 0
+      ? (dto.attachments ?? []).map((attachment) => ({
+          id: attachment.id,
+          name: attachment.originalFileName,
+          size: attachment.fileSize ?? 0,
+          viewPath: attachment.viewPath,
+          viewUrl: resolveAssetUrl(attachment.viewPath),
+        }))
+      : assetUrl
+        ? [{ id: "asset", name: assetUrl.split("/").pop() ?? "asset", url: assetUrl }]
+        : [],
     revisionOfExamId: dto.revisionOfExamId ?? null,
     revisionSourceCode: dto.revisionSourceCode ?? null,
     revisionSourceTitle: dto.revisionSourceTitle ?? null,
@@ -332,6 +341,62 @@ export function mapExamDetailToWizard(dto) {
   };
 }
 
+export function mapMockOcrQuestionsToCreateItems(questions) {
+  return (questions ?? []).map((question, index) => {
+    const options = (question.options ?? []).map((text, optionIndex) => ({
+      id: crypto.randomUUID(),
+      label: String.fromCharCode(65 + optionIndex),
+      text: String(text ?? ""),
+    }));
+    const correctOption = options[question.correct] ?? options[0];
+
+    return {
+      orderIndex: index + 1,
+      content: question.text?.trim() ?? "",
+      options,
+      correctOptionId: correctOption?.id ?? crypto.randomUUID(),
+    };
+  });
+}
+
+export function mapAdminExamFormToCreateRequest(form, { questions = [] } = {}) {
+  const githubGuide =
+    form.githubGuide ??
+    "Nộp link repository GitHub công khai. README ghi rõ MSSV, họ tên và hướng dẫn chạy project.";
+
+  const description =
+    form.typeKey === "practice"
+      ? [form.description?.trim(), githubGuide].filter(Boolean).join("\n\n")
+      : form.description?.trim() ?? "";
+
+  return {
+    code: form.code.trim(),
+    title: form.title.trim(),
+    examType: form.typeKey === "practice" ? "Practice" : "Final",
+    semester: form.semester,
+    major: form.track ?? "SE",
+    description,
+    questions,
+  };
+}
+
+export function mapAdminExamFormToUpdateRequest(form, { questions = null } = {}) {
+  const body = {
+    code: form.code.trim(),
+    title: form.title.trim(),
+    examType: form.typeKey === "practice" ? "Practice" : "Final",
+    semester: form.semester,
+    major: form.track ?? "SE",
+    description: form.description?.trim() ?? "",
+  };
+
+  if (Array.isArray(questions)) {
+    body.questions = questions;
+  }
+
+  return body;
+}
+
 export function mapPracticeExamFormToCreateRequest(form) {
   const githubGuide =
     form.githubGuide ??
@@ -354,8 +419,10 @@ export function mapPracticeExamFormToCreateRequest(form) {
 
 export function mapPendingExamListItem(dto, meta = {}) {
   const base = mapAdminExamListItem(dto);
+  const primaryAttachment = base.attachments?.[0];
   const fileName =
     meta.fileName ??
+    primaryAttachment?.name ??
     (base.assetUrl ? getExamAssetFileName(base.assetUrl) : null) ??
     "Chưa có file đính kèm";
 
@@ -365,7 +432,7 @@ export function mapPendingExamListItem(dto, meta = {}) {
     submittedAt: base.createdAt,
     urgent: Boolean(meta.urgent),
     fileName,
-    assetUrl: base.assetUrl ?? null,
+    assetUrl: base.assetUrl ?? primaryAttachment?.viewUrl ?? primaryAttachment?.viewPath ?? null,
     githubGuide: meta.githubGuide ?? (base.typeKey === "practice" ? githubGuideFromDescription(base.description) : ""),
     allowDiscussion: meta.allowDiscussion ?? false,
     pinExam: meta.pinExam ?? false,

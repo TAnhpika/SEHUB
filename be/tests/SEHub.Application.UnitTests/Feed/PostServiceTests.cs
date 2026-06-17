@@ -12,6 +12,8 @@ namespace SEHub.Application.UnitTests.Feed;
 public sealed class PostServiceTests
 {
     private readonly Mock<IPostRepository> _postRepository = new();
+    private readonly Mock<IPostImageRepository> _imageRepository = new();
+    private readonly Mock<IPostImageService> _postImageService = new();
     private readonly Mock<IPostLikeRepository> _likeRepository = new();
     private readonly Mock<ICommentRepository> _commentRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
@@ -26,6 +28,8 @@ public sealed class PostServiceTests
 
     private PostService CreateSut() => new(
         _postRepository.Object,
+        _imageRepository.Object,
+        _postImageService.Object,
         _likeRepository.Object,
         _commentRepository.Object,
         _userRepository.Object,
@@ -44,6 +48,8 @@ public sealed class PostServiceTests
             .ReturnsAsync(0);
         _commentRepository.Setup(r => r.CountByPostIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
+        _imageRepository.Setup(r => r.GetByPostIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
         _userRepository.Setup(r => r.GetByIdAsync(AuthorId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new UserAccount { Id = AuthorId, Username = "author", DisplayName = "Author" });
         _profileRepository.Setup(r => r.GetByUserIdAsync(AuthorId, It.IsAny<CancellationToken>()))
@@ -162,6 +168,7 @@ public sealed class PostServiceTests
         _postRepository.Setup(r => r.GetByIdAsync(PostId, It.IsAny<CancellationToken>())).ReturnsAsync(post);
         _likeRepository.Setup(r => r.CountByPostIdAsync(PostId, It.IsAny<CancellationToken>())).ReturnsAsync(0);
         _commentRepository.Setup(r => r.CountByPostIdAsync(PostId, It.IsAny<CancellationToken>())).ReturnsAsync(0);
+        _imageRepository.Setup(r => r.GetByPostIdAsync(PostId, It.IsAny<CancellationToken>())).ReturnsAsync([]);
         _userRepository.Setup(r => r.GetByIdAsync(AuthorId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new UserAccount { Id = AuthorId, Username = "author", DisplayName = "Author" });
         _profileRepository.Setup(r => r.GetByUserIdAsync(AuthorId, It.IsAny<CancellationToken>()))

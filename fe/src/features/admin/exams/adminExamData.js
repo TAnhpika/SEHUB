@@ -3,7 +3,10 @@
 import * as adminApi from "@/api/adminApi";
 import {
   mapAdminExamDetail,
+  mapAdminExamFormToCreateRequest,
+  mapAdminExamFormToUpdateRequest,
   mapAdminExamListItem,
+  mapMockOcrQuestionsToCreateItems,
   mapPendingExamFromCreate,
   mapPendingExamListItem,
   mapPracticeExamFormToCreateRequest,
@@ -322,6 +325,128 @@ export async function importExamQuestionsFromMarkdown(markdown) {
   return adminApi.importExamMarkdown({ markdown });
 }
 
+function pickExamUploadFile(form, pdfFile) {
+  if (pdfFile instanceof File) {
+    return pdfFile;
+  }
+
+  if (form.typeKey === "practice") {
+    const pdfAttachment = (form.attachments ?? []).find(
+      (item) => item.file instanceof File && item.file.type === "application/pdf",
+    );
+    return pdfAttachment?.file ?? null;
+  }
+
+  return null;
+}
+
+async function uploadExamPdfIfPresent(examId, form, pdfFile) {
+  const file = pickExamUploadFile(form, pdfFile);
+  if (!file) {
+    return null;
+  }
+
+  try {
+    await adminApi.uploadExamAttachment(examId, file);
+    return null;
+  } catch (error) {
+    return error instanceof Error
+      ? error.message
+      : "Không upload được file PDF lên Drive. Đề vẫn đã được lưu.";
+  }
+}
+
+function upsertExamInStore(mappedListItem) {
+  examsStore = [mappedListItem, ...examsStore.filter((exam) => exam.id !== mappedListItem.id)];
+}
+
+/**
+ * Tạo đề qua API, publish nếu cần, upload PDF lên Drive khi có file.
+ */
+export async function saveAdminExamViaApi(form, options = {}) {
+  const {
+    status = "draft",
+    ocrQuestions = [],
+    pdfFile = null,
+    confirmDuplicate = false,
+  } = options;
+
+  if (USE_MOCK) {
+    const created = createAdminExam({
+      ...form,
+      status,
+      questionCount: form.typeKey === "final" ? ocrQuestions.length : 0,
+      sha256: mockComputeSha256Unique(),
+      ocrConfirmed: form.typeKey === "final",
+    });
+    return { exam: created, uploadWarning: null, listItem: created };
+  }
+
+  const questions =
+    form.typeKey === "final" ? mapMockOcrQuestionsToCreateItems(ocrQuestions) : [];
+  const body = mapAdminExamFormToCreateRequest(form, { questions });
+  const dto = await adminApi.createExam(body, confirmDuplicate);
+
+  if (status === "published") {
+    await adminApi.approveExam(dto.id);
+  }
+
+  const uploadWarning = await uploadExamPdfIfPresent(dto.id, form, pdfFile);
+
+  const refreshed = await adminApi.getExam(dto.id);
+  const listItem = mapAdminExamListItem(refreshed);
+  upsertExamInStore(listItem);
+  return {
+    exam: mapAdminExamDetail(refreshed),
+    uploadWarning,
+    listItem,
+  };
+}
+
+/**
+ * Cập nhật đề qua API, publish nếu cần, upload PDF khi có file mới.
+ */
+export async function updateAdminExamViaApi(examId, form, options = {}) {
+  const {
+    status = "draft",
+    ocrQuestions = [],
+    pdfFile = null,
+    confirmDuplicate = false,
+  } = options;
+
+  if (USE_MOCK) {
+    const updated = updateAdminExam(examId, {
+      ...form,
+      status,
+      questionCount: form.typeKey === "final" ? ocrQuestions.length : 0,
+    });
+    return { exam: updated, uploadWarning: null, listItem: updated };
+  }
+
+  const questions =
+    form.typeKey === "final" && ocrQuestions.length > 0
+      ? mapMockOcrQuestionsToCreateItems(ocrQuestions)
+      : null;
+  const body = mapAdminExamFormToUpdateRequest(form, { questions });
+
+  await adminApi.updateExam(examId, body);
+
+  if (status === "published") {
+    await adminApi.approveExam(examId);
+  }
+
+  const uploadWarning = await uploadExamPdfIfPresent(examId, form, pdfFile);
+
+  const refreshed = await adminApi.getExam(examId);
+  const listItem = mapAdminExamListItem(refreshed);
+  upsertExamInStore(listItem);
+  return {
+    exam: mapAdminExamDetail(refreshed),
+    uploadWarning,
+    listItem,
+  };
+}
+
 export function removeAdminExam(id) {
   examsStore = examsStore.filter((e) => e.id !== id);
 }
@@ -415,10 +540,9 @@ let rejectedStore = [];
  * }} payload
  */
 export async function submitModeratorPracticeExam(payload, createRequest, { confirmDuplicate = false } = {}) {
-  const uploaded = payload.attachments?.find((file) => file.assetUrl);
-  const fileName =
-    uploaded?.name ?? payload.attachments?.find((f) => f.name)?.name ?? `${payload.subject}-practice-exam.pdf`;
-  const assetUrl = uploaded?.assetUrl ?? null;
+  const readyFiles = (payload.attachments ?? []).filter((file) => file.status === "done" && file.file);
+  const primaryFile = readyFiles[0];
+  const fileName = primaryFile?.name ?? payload.attachments?.find((f) => f.name)?.name ?? `${payload.subject}-practice-exam.pdf`;
 
   if (USE_MOCK) {
     const entry = {
@@ -433,7 +557,9 @@ export async function submitModeratorPracticeExam(payload, createRequest, { conf
       semester: payload.semesterId ?? "5",
       urgent: false,
       fileName,
-      assetUrl,
+      assetUrl: primaryFile
+        ? `/uploads/exams/mock-${encodeURIComponent(primaryFile.name ?? fileName)}`
+        : null,
       description: payload.description?.trim() ?? "",
       githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
       allowDiscussion: payload.allowDiscussion ?? false,
@@ -444,20 +570,24 @@ export async function submitModeratorPracticeExam(payload, createRequest, { conf
     return entry;
   }
 
-  const body = {
-    ...(createRequest ??
-      mapPracticeExamFormToCreateRequest({
-        subjectCode: payload.subject,
-        semester: payload.semesterId,
-        title: payload.title,
-        description: payload.description,
-        githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
-      })),
-    assetUrl,
-  };
+  const body =
+    createRequest ??
+    mapPracticeExamFormToCreateRequest({
+      subjectCode: payload.subject,
+      semester: payload.semesterId,
+      title: payload.title,
+      description: payload.description,
+      githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
+    });
 
   const dto = await createExamViaApi(body, confirmDuplicate);
-  const entry = mapPendingExamFromCreate(dto, {
+
+  for (const attachment of readyFiles) {
+    await adminApi.uploadExamAttachment(dto.id, attachment.file);
+  }
+
+  const refreshed = readyFiles.length > 0 ? await adminApi.getExam(dto.id) : dto;
+  const entry = mapPendingExamFromCreate(refreshed, {
     submittedBy: payload.submittedBy,
     fileName,
     githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
@@ -675,10 +805,14 @@ export async function loadAdminExams() {
     return getAdminExams();
   }
 
-  const page = await adminApi.listExams({ pageSize: 100 });
-  const apiExams = (page.items ?? []).map(mapAdminExamListItem);
-  examsStore = apiExams.map((exam) => ({ ...exam }));
-  return apiExams;
+  try {
+    const page = await adminApi.listExams({ pageSize: 100 });
+    const apiExams = (page.items ?? []).map(mapAdminExamListItem);
+    examsStore = apiExams.map((exam) => ({ ...exam }));
+    return apiExams;
+  } catch {
+    return getAdminExams();
+  }
 }
 
 export async function loadAdminExamById(id) {

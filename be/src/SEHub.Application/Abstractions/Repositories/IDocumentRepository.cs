@@ -10,5 +10,6 @@ public interface IDocumentRepository
     Task AddAsync(Document document, CancellationToken cancellationToken = default);
     Task UpdateAsync(Document document, CancellationToken cancellationToken = default);
     Task SoftDeleteAsync(Document document, Guid deletedById, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Document>> GetLocalStoredAsync(CancellationToken cancellationToken = default);
     Task<int> CountAsync(CancellationToken cancellationToken = default);
 }

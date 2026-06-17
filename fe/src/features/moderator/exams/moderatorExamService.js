@@ -117,7 +117,6 @@ export function buildPracticeExamCreateBody(payload) {
   const subjectCode =
     normalizeCourseSubjectCode(payload.subjectCode) ?? payload.subjectCode.trim();
   const paperCode = payload.title.trim();
-  const attachmentName = payload.attachments?.[0]?.name;
 
   return {
     code: paperCode,
@@ -126,9 +125,17 @@ export function buildPracticeExamCreateBody(payload) {
     semester: parseSemesterId(payload.semester),
     major: subjectCode,
     description: payload.description?.trim() ?? "",
-    assetUrl: attachmentName ? `pending://${attachmentName}` : undefined,
     questions: [],
   };
+}
+
+async function uploadExamPdfIfPresent(examId, payload) {
+  const pdfFile = payload.pdfFile ?? payload.attachments?.find((item) => item.file instanceof File)?.file;
+  if (!(pdfFile instanceof File)) {
+    return;
+  }
+
+  await adminApi.uploadExamAttachment(examId, pdfFile);
 }
 
 /**
@@ -162,16 +169,18 @@ export async function fetchModeratorExamContributions(moderatorUsername, filters
 
 export async function createFinalExamViaApi(examInfo, questions, confirmDuplicate = false) {
   const body = buildFinalExamCreateBody(examInfo, questions);
-  const result = await adminApi.createExam(body, confirmDuplicate);
+  const dto = await adminApi.createExam(body, confirmDuplicate);
+  await uploadExamPdfIfPresent(dto.id, examInfo);
   invalidateExamPaperCodeCache();
-  return result;
+  return dto;
 }
 
 export async function createPracticeExamViaApi(payload, confirmDuplicate = false) {
   const body = buildPracticeExamCreateBody(payload);
-  const result = await adminApi.createExam(body, confirmDuplicate);
+  const dto = await adminApi.createExam(body, confirmDuplicate);
+  await uploadExamPdfIfPresent(dto.id, payload);
   invalidateExamPaperCodeCache();
-  return result;
+  return dto;
 }
 
 export async function loadExamForWizardEdit(examId) {

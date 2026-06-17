@@ -22,6 +22,11 @@ public static class ErrorCodes
     public const string AuthRateLimitExceeded = "AUTH_RATE_LIMIT_EXCEEDED";
     public const string GoogleTokenInvalid = "GOOGLE_TOKEN_INVALID";
     public const string EmailDeliveryFailed = "EMAIL_DELIVERY_FAILED";
+    public const string AiProviderUnavailable = "AI_PROVIDER_UNAVAILABLE";
     public const string UserBlocked = "USER_BLOCKED";
     public const string MessageRateLimitExceeded = "MESSAGE_RATE_LIMIT_EXCEEDED";
+    public const string FileTooLarge = "FILE_TOO_LARGE";
+    public const string InvalidFileType = "INVALID_FILE_TYPE";
+    public const string StorageUploadFailed = "STORAGE_UPLOAD_FAILED";
+    public const string StorageNotConfigured = "STORAGE_NOT_CONFIGURED";
 }

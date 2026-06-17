@@ -294,7 +294,11 @@ cd fe && npm run build
 - N8n webhooks (`N8n.Enabled`, URLs)
 - `Frontend.BaseUrl`
 - SMTP qua secret manager (không commit password)
-- Thư mục upload chat: `wwwroot/uploads/chat/`
+- **Google Drive** (`GoogleDrive:ServiceAccountPath`, `FolderId`) — Documents + Exam attachments
+- **Cloudinary** (`Cloudinary:CloudName`, `ApiKey`, `ApiSecret`) — Avatar, Post images, Chat attachments; **rotate secret** nếu từng lộ trong chat/log
+- `wwwroot/uploads` — chỉ legacy/read; upload mới không phụ thuộc thư mục local
+- Sau deploy: `dotnet ef database update` (migrations `AddPostImageCloudinaryFields`, `AddDocumentDriveFields`)
+- Dev migrate tài liệu cũ: `POST /api/v1/admin/documents/migrate-local-to-drive` (Development only)
 
 ---
 

@@ -7,6 +7,7 @@ using SEHub.Application;
 using SEHub.Infrastructure;
 using SEHub.Infrastructure.Email;
 using SEHub.Infrastructure.Persistence;
+using SEHub.Infrastructure.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +25,8 @@ var app = builder.Build();
 if (!app.Environment.IsEnvironment("Testing"))
 {
     EmailSmtpStartupValidator.ValidateAndWarn(app.Services);
+    GoogleDriveStartupValidator.ValidateAndWarn(app.Services);
+    CloudinaryStartupValidator.ValidateAndWarn(app.Services);
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();

@@ -1,4 +1,5 @@
 import * as documentsApi from "@/api/documentsApi";
+import { resolveAssetUrl } from "@/api/assetUrl";
 import {
   mapDocumentDetailDto,
   mapDocumentToSubjectListItem,
@@ -175,7 +176,20 @@ export async function loadDocumentPreviewPage(doc, pageNum) {
     return null;
   }
 
-  return documentsApi.getDocumentPreview(apiId, pageNum);
+  const preview = await documentsApi.getDocumentPreview(apiId, pageNum);
+  if (!preview) {
+    return null;
+  }
+
+  if (documentsApi.isAuthenticatedDocumentContentUrl(preview.contentUrl)) {
+    const blobUrl = await documentsApi.fetchDocumentContentBlobUrl(apiId, pageNum);
+    return { ...preview, contentUrl: blobUrl };
+  }
+
+  return {
+    ...preview,
+    contentUrl: resolveAssetUrl(preview.contentUrl),
+  };
 }
 
 export async function fetchDocumentDownloadUrl(doc) {
@@ -185,5 +199,10 @@ export async function fetchDocumentDownloadUrl(doc) {
   }
 
   const result = await documentsApi.getDocumentDownloadUrl(apiId);
-  return result?.downloadUrl ?? null;
+  const downloadUrl = result?.downloadUrl ?? null;
+  if (documentsApi.isAuthenticatedDocumentContentUrl(downloadUrl)) {
+    return { apiId, requiresAuthDownload: true };
+  }
+
+  return downloadUrl;
 }

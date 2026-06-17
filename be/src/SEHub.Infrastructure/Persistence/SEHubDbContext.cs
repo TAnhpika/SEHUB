@@ -22,6 +22,8 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<PostLike> PostLikes => Set<PostLike>();
     public DbSet<PostReport> PostReports => Set<PostReport>();
     public DbSet<Exam> Exams => Set<Exam>();
+    public DbSet<ExamAttachment> ExamAttachments => Set<ExamAttachment>();
+    public DbSet<PostImage> PostImages => Set<PostImage>();
     public DbSet<Question> Questions => Set<Question>();
     public DbSet<QuestionOption> QuestionOptions => Set<QuestionOption>();
     public DbSet<ExamAttempt> ExamAttempts => Set<ExamAttempt>();
@@ -37,6 +39,12 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<Badge> Badges => Set<Badge>();
     public DbSet<UserBadge> UserBadges => Set<UserBadge>();
     public DbSet<AiTokenDailyUsage> AiTokenDailyUsages => Set<AiTokenDailyUsage>();
+    public DbSet<AiExamChatThread> AiExamChatThreads => Set<AiExamChatThread>();
+    public DbSet<AiExamChatMessage> AiExamChatMessages => Set<AiExamChatMessage>();
+    public DbSet<ChatbotSettings> ChatbotSettings => Set<ChatbotSettings>();
+    public DbSet<ChatbotKnowledgeEntry> ChatbotKnowledgeEntries => Set<ChatbotKnowledgeEntry>();
+    public DbSet<ChatbotConversation> ChatbotConversations => Set<ChatbotConversation>();
+    public DbSet<ChatbotMessage> ChatbotMessages => Set<ChatbotMessage>();
     public DbSet<UserBan> UserBans => Set<UserBan>();
     public DbSet<UserFollow> UserFollows => Set<UserFollow>();
     public DbSet<Conversation> Conversations => Set<Conversation>();

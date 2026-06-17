@@ -11,12 +11,18 @@ namespace SEHub.Application.Exams;
 public sealed class ExamQueryService : IExamQueryService
 {
     private readonly IExamRepository _examRepository;
+    private readonly IExamAttachmentRepository _attachmentRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IMapper _mapper;
 
-    public ExamQueryService(IExamRepository examRepository, ICurrentUserService currentUser, IMapper mapper)
+    public ExamQueryService(
+        IExamRepository examRepository,
+        IExamAttachmentRepository attachmentRepository,
+        ICurrentUserService currentUser,
+        IMapper mapper)
     {
         _examRepository = examRepository;
+        _attachmentRepository = attachmentRepository;
         _currentUser = currentUser;
         _mapper = mapper;
     }
@@ -43,7 +49,29 @@ public sealed class ExamQueryService : IExamQueryService
             throw new NotFoundException("Exam", id);
         }
 
-        return _mapper.Map<ExamDetailDto>(exam);
+        var dto = _mapper.Map<ExamDetailDto>(exam);
+        IReadOnlyList<ExamAttachmentDto> attachmentDtos = [];
+
+        if (ExamContentAccess.CanViewExamContent(_currentUser, exam))
+        {
+            var attachments = await _attachmentRepository.GetByExamIdAsync(id, cancellationToken);
+            attachmentDtos = attachments.Select(a => ExamAttachmentService.MapDto(id, a)).ToList();
+        }
+
+        return new ExamDetailDto
+        {
+            Id = dto.Id,
+            Code = dto.Code,
+            Title = dto.Title,
+            ExamType = dto.ExamType,
+            Semester = dto.Semester,
+            Major = dto.Major,
+            QuestionCount = dto.QuestionCount,
+            Status = dto.Status,
+            Description = dto.Description,
+            AssetUrl = dto.AssetUrl,
+            Attachments = attachmentDtos
+        };
     }
 
     public async Task<IReadOnlyList<QuestionPublicDto>> GetQuestionsAsync(Guid examId, CancellationToken cancellationToken = default)
@@ -51,10 +79,7 @@ public sealed class ExamQueryService : IExamQueryService
         var exam = await _examRepository.GetByIdAsync(examId, includeQuestions: true, cancellationToken: cancellationToken)
             ?? throw new NotFoundException("Exam", examId);
 
-        if (exam.Status != ExamStatus.Published && !_currentUser.IsModeratorOrAdmin)
-        {
-            throw new NotFoundException("Exam", examId);
-        }
+        ExamContentAccess.EnsureCanViewExamContent(_currentUser, exam);
 
         return exam.Questions
             .OrderBy(q => q.OrderIndex)

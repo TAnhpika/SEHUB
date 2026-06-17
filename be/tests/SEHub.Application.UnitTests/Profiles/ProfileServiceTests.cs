@@ -4,6 +4,7 @@ using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
 using SEHub.Application.Models;
 using SEHub.Application.Profiles;
+using SEHub.Application.Storage;
 using SEHub.Contracts.Profiles;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Exceptions;
@@ -22,24 +23,32 @@ public sealed class ProfileServiceTests
     private readonly Mock<ILevelConfigRepository> _levelConfigRepository = new();
     private readonly Mock<IUserFollowRepository> _followRepository = new();
     private readonly Mock<IFileStorageService> _fileStorage = new();
+    private readonly Mock<IImageCdnStorageService> _cdnStorage = new();
+    private readonly Mock<ICdnFolderSettings> _cdnFolders = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
     private static readonly Guid UserId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
 
-    private ProfileService CreateSut() => new(
-        _userRepository.Object,
-        _profileRepository.Object,
-        _badgeRepository.Object,
-        _postRepository.Object,
-        _likeRepository.Object,
-        _commentRepository.Object,
-        _gamificationService.Object,
-        _levelConfigRepository.Object,
-        _followRepository.Object,
-        _fileStorage.Object,
-        _currentUser.Object,
-        _unitOfWork.Object);
+    private ProfileService CreateSut()
+    {
+        _cdnFolders.SetupGet(f => f.Avatars).Returns(CdnFolders.Avatars);
+        return new(
+            _userRepository.Object,
+            _profileRepository.Object,
+            _badgeRepository.Object,
+            _postRepository.Object,
+            _likeRepository.Object,
+            _commentRepository.Object,
+            _gamificationService.Object,
+            _levelConfigRepository.Object,
+            _followRepository.Object,
+            _fileStorage.Object,
+            _cdnStorage.Object,
+            _cdnFolders.Object,
+            _currentUser.Object,
+            _unitOfWork.Object);
+    }
 
     [Fact]
     public async Task UploadMyAvatarAsync_StoresFileAndReturnsPublicUrl()
@@ -54,22 +63,26 @@ public sealed class ProfileServiceTests
         _currentUser.SetupGet(u => u.UserId).Returns(UserId);
         _profileRepository.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(profile);
-        _fileStorage.Setup(s => s.UploadAsync(
+        _cdnStorage.Setup(s => s.UploadImageAsync(
                 It.IsAny<Stream>(),
                 "avatar.png",
                 "image/png",
-                "avatars",
+                CdnFolders.Avatars,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync("avatars/new.png");
-        _fileStorage.Setup(s => s.GetSignedUrlAsync("avatars/new.png", It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync("/uploads/avatars/new.png");
+            .ReturnsAsync(new CdnUploadResult
+            {
+                PublicId = "sehub/avatars/new",
+                Url = "https://res.cloudinary.com/test/image/upload/sehub/avatars/new.png",
+                ContentType = "image/png",
+                FileSize = 3
+            });
 
         var sut = CreateSut();
         using var stream = new MemoryStream([1, 2, 3]);
         var result = await sut.UploadMyAvatarAsync(stream, "avatar.png", "image/png", 3);
 
-        result.AvatarUrl.Should().Be("/uploads/avatars/new.png");
-        profile.AvatarUrl.Should().Be("avatars/new.png");
+        result.AvatarUrl.Should().Be("https://res.cloudinary.com/test/image/upload/sehub/avatars/new.png");
+        profile.AvatarUrl.Should().Be("https://res.cloudinary.com/test/image/upload/sehub/avatars/new.png");
         _profileRepository.Verify(r => r.UpdateAsync(profile, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }

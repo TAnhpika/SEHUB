@@ -134,6 +134,13 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
         <div className={styles.coverWrap}>
           <img src={post.coverImageUrl} alt="" className={styles.cover} loading="lazy" />
         </div>
+      ) : post.images?.[0]?.url ? (
+        <img
+          className={styles.cover}
+          src={post.images[0].url}
+          alt=""
+          loading="lazy"
+        />
       ) : null}
       <p className={styles.excerpt}>{post.excerpt}</p>
 

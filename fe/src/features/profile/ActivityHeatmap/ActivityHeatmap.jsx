@@ -58,11 +58,20 @@ function ActivityHeatmap({
       ) : (
         <div className={styles.chart}>
           <div className={styles.months} aria-hidden="true">
-            {chartData.months.map((month, index) => (
-              <span key={`${month}-${index}`} className={styles.month}>
-                {month}
-              </span>
-            ))}
+            {weeks.map((week) => {
+              const label = chartData.months[week];
+              if (!label) return null;
+
+              return (
+                <span
+                  key={week}
+                  className={styles.month}
+                  style={{ "--week-index": week }}
+                >
+                  {label}
+                </span>
+              );
+            })}
           </div>
 
           <div className={styles["grid-wrap"]}>
