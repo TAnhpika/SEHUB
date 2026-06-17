@@ -15,7 +15,7 @@ public class MockAiExplanationService : IAiExplanationService
         return Task.FromResult(new AiExplanationResult
         {
             Explanation = explanation,
-            TokensUsed = 150
+            TokensUsed = 10
         });
     }
 }

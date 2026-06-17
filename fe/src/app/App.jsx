@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ToastProvider } from "@/common/Toast/ToastProvider";
 import PrivateRoute from "@/common/guards/PrivateRoute";
 import GuestRoute from "@/common/guards/GuestRoute";
+import AuthenticatedHomeRedirect from "@/common/guards/AuthenticatedHomeRedirect";
 import AuthLayout from "@/common/Layout/AuthLayout/AuthLayout";
 import CommunityLayout from "@/common/Layout/CommunityLayout/CommunityLayout";
 import GuestLayout from "@/common/Layout/GuestLayout/GuestLayout";
@@ -58,6 +59,8 @@ import AdminPaymentListPage from "@/features/admin/payments/AdminPaymentListPage
 import AdminPaymentDetailPage from "@/features/admin/payments/AdminPaymentDetailPage";
 import AdminVoucherPage from "@/features/admin/vouchers/AdminVoucherPage";
 import AdminGamificationConfigPage from "@/features/admin/gamification/AdminGamificationConfigPage";
+import AdminChatbotPage from "@/features/admin/chatbot/AdminChatbotPage";
+import ChatbotAdvisorPage from "@/features/chatbot/ChatbotAdvisorPage/ChatbotAdvisorPage";
 import AdminPermissionsPage from "@/features/admin/permissions/AdminPermissionsPage";
 import AdminActivityLogPage from "@/features/admin/activity/AdminActivityLogPage";
 import AddPracticeExamPage from "@/features/moderator/practiceExams/AddPracticeExamPage/AddPracticeExamPage";
@@ -82,9 +85,55 @@ function App() {
       <ToastProvider>
         <BrowserRouter>
           <Routes>
-            <Route element={<GuestLayout />}>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/support" element={<SupportPage />} />
+            <Route element={<AuthenticatedHomeRedirect />}>
+              <Route element={<GuestLayout />}>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/support" element={<SupportPage />} />
+              </Route>
+              <Route path="/community" element={<CommunityLayout />}>
+                <Route index element={<FeedPage />} />
+                <Route path="final-exam" element={<ReviewQuestionsPage />} />
+                <Route
+                  path="final-exam/:courseCode"
+                  element={<SubjectDetailPage page="review" />}
+                />
+                <Route
+                  path="final-exam/:courseCode/:examId"
+                  element={<ExamDetailPage page="review" />}
+                />
+                <Route
+                  path="final-exam/:courseCode/:examId/result"
+                  element={<ExamResultPage page="review" />}
+                />
+                <Route path="pratical-exam" element={<PracticeQuestionsPage />} />
+                <Route
+                  path="pratical-exam/:courseCode"
+                  element={<SubjectDetailPage page="practice" />}
+                />
+                <Route
+                  path="pratical-exam/:courseCode/:examId"
+                  element={<ExamDetailPage page="practice" />}
+                />
+                <Route element={<PremiumRoute />}>
+                  <Route
+                    path="pratical-exam/:courseCode/:examId/do/:questionIndex"
+                    element={<PracticeDoPage />}
+                  />
+                  <Route
+                    path="pratical-exam/:courseCode/:examId/result/:questionIndex"
+                    element={<ExamResultPage page="practice" />}
+                  />
+                </Route>
+                <Route path="documents" element={<DocumentsPage />} />
+                <Route
+                  path="documents/:courseCode"
+                  element={<SubjectDetailPage page="documents" />}
+                />
+                <Route
+                  path="documents/:courseCode/:examId"
+                  element={<ExamDetailPage page="documents" />}
+                />
+              </Route>
             </Route>
             <Route element={<GuestRoute />}>
               <Route element={<AuthLayout />}>
@@ -150,6 +199,9 @@ function App() {
                 />
                 <Route path="/profile/:username/edit" element={<EditProfilePage />} />
                 <Route path="/profile/:username" element={<ProfilePage />} />
+                <Route element={<PremiumRoute />}>
+                  <Route path="/home/advisor" element={<ChatbotAdvisorPage />} />
+                </Route>
               </Route>
               <Route element={<PremiumRoute />}>
                 <Route element={<ExamFocusLayout />}>
@@ -174,50 +226,6 @@ function App() {
                 />
               </Route>
             </Route>
-            <Route path="/community" element={<CommunityLayout />}>
-              <Route index element={<FeedPage />} />
-              <Route path="final-exam" element={<ReviewQuestionsPage />} />
-              <Route
-                path="final-exam/:courseCode"
-                element={<SubjectDetailPage page="review" />}
-              />
-              <Route
-                path="final-exam/:courseCode/:examId"
-                element={<ExamDetailPage page="review" />}
-              />
-              <Route
-                path="final-exam/:courseCode/:examId/result"
-                element={<ExamResultPage page="review" />}
-              />
-              <Route path="pratical-exam" element={<PracticeQuestionsPage />} />
-              <Route
-                path="pratical-exam/:courseCode"
-                element={<SubjectDetailPage page="practice" />}
-              />
-              <Route
-                path="pratical-exam/:courseCode/:examId"
-                element={<ExamDetailPage page="practice" />}
-              />
-              <Route element={<PremiumRoute />}>
-                <Route
-                  path="pratical-exam/:courseCode/:examId/do/:questionIndex"
-                  element={<PracticeDoPage />}
-                />
-                <Route
-                  path="pratical-exam/:courseCode/:examId/result/:questionIndex"
-                  element={<ExamResultPage page="practice" />}
-                />
-              </Route>
-              <Route path="documents" element={<DocumentsPage />} />
-              <Route
-                path="documents/:courseCode"
-                element={<SubjectDetailPage page="documents" />}
-              />
-              <Route
-                path="documents/:courseCode/:examId"
-                element={<ExamDetailPage page="documents" />}
-              />
-            </Route>
             <Route element={<AdminRoute />}>
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboardPage />} />
@@ -238,6 +246,7 @@ function App() {
                 <Route path="payments/:id" element={<AdminPaymentDetailPage />} />
                 <Route path="vouchers" element={<AdminVoucherPage />} />
                 <Route path="gamification" element={<AdminGamificationConfigPage />} />
+                <Route path="settings/chatbot" element={<AdminChatbotPage />} />
                 <Route path="permissions" element={<AdminPermissionsPage />} />
                 <Route path="activity" element={<AdminActivityLogPage />} />
               </Route>

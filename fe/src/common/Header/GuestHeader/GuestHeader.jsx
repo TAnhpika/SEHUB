@@ -9,27 +9,30 @@ import styles from "./GuestHeader.module.css";
 function GuestHeader() {
   const { pathname } = useLocation();
   const { isAuthenticated, isBootstrapping } = useAuth();
-  const isHome = pathname === "/";
-  const isCommunity = pathname.startsWith("/community");
+  const homePath = isAuthenticated ? "/home" : "/";
+  const isHome = isAuthenticated ? pathname.startsWith("/home") : pathname === "/";
+  const isCommunity = isAuthenticated
+    ? pathname.startsWith("/home")
+    : pathname.startsWith("/community");
   const isSupport = pathname.startsWith("/support");
 
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
-        <Link to="/" className={styles.brand}>
+        <Link to={homePath} className={styles.brand}>
           <img src={logoSrc} alt="" className={styles["brand-logo"]} decoding="async" aria-hidden="true" />
           <span className={styles["brand-text"]}>SEHub</span>
         </Link>
 
         <nav className={styles.nav} aria-label="Điều hướng chính">
           <Link
-            to="/"
+            to={homePath}
             className={`${styles["nav-link"]} ${isHome ? styles["nav-active"] : ""}`}
           >
             Trang chủ
           </Link>
           <Link
-            to="/community"
+            to={isAuthenticated ? "/home" : "/community"}
             className={`${styles["nav-link"]} ${isCommunity ? styles["nav-active"] : ""}`}
           >
             Cộng đồng

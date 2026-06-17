@@ -84,6 +84,11 @@ public sealed class ExceptionHandlingMiddleware
                 conflict.Message,
                 [new ApiError(string.Empty, conflict.Message)]),
 
+            AiProviderException aiProvider => (
+                StatusCodes.Status503ServiceUnavailable,
+                aiProvider.Message,
+                [new ApiError("ai", ErrorCodes.AiProviderUnavailable)]),
+
             DomainException domain => (
                 StatusCodes.Status400BadRequest,
                 domain.Message,

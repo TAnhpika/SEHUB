@@ -130,8 +130,25 @@ export function mapAiExplainResponse(response) {
       label: `Ghi chú ${index + 1}`,
       text,
     })),
-    note: "Giải thích từ SEHub AI.",
+    note: "Giải thích từ SEHub AI (Gemini).",
     tokensUsed: response.tokensUsed,
     remainingTokens: response.remainingTokens,
+  };
+}
+
+export function mapExamAiChatResponse(response) {
+  const messages = (response?.messages ?? []).map((message) => ({
+    id: message.id ?? `${message.role}-${message.createdAt}`,
+    role: message.role === "assistant" ? "assistant" : "user",
+    text: message.text ?? "",
+    createdAt: message.createdAt ?? new Date().toISOString(),
+  }));
+
+  return {
+    threadId: response?.threadId ?? null,
+    reply: response?.reply ?? "",
+    tokensUsed: response?.tokensUsed ?? null,
+    remainingTokens: response?.remainingTokens ?? null,
+    messages,
   };
 }

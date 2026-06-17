@@ -52,6 +52,23 @@ export function mapHomeSubjectPathToCommunity(pathname) {
 }
 
 /**
+ * Đã đăng nhập trên landing hoặc /community → chuyển sang /home tương ứng.
+ * @param {string} pathname
+ * @returns {string | null}
+ */
+export function mapCommunityPathToHome(pathname) {
+  if (pathname === "/community") {
+    return "/home";
+  }
+
+  if (pathname.startsWith("/community/")) {
+    return pathname.replace(/^\/community/, "/home");
+  }
+
+  return null;
+}
+
+/**
  * @param {"community" | "home"} [scope="community"]
  */
 export function getSubjectNavLinks(scope = "community") {

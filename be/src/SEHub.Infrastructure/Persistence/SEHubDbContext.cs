@@ -39,6 +39,12 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<Badge> Badges => Set<Badge>();
     public DbSet<UserBadge> UserBadges => Set<UserBadge>();
     public DbSet<AiTokenDailyUsage> AiTokenDailyUsages => Set<AiTokenDailyUsage>();
+    public DbSet<AiExamChatThread> AiExamChatThreads => Set<AiExamChatThread>();
+    public DbSet<AiExamChatMessage> AiExamChatMessages => Set<AiExamChatMessage>();
+    public DbSet<ChatbotSettings> ChatbotSettings => Set<ChatbotSettings>();
+    public DbSet<ChatbotKnowledgeEntry> ChatbotKnowledgeEntries => Set<ChatbotKnowledgeEntry>();
+    public DbSet<ChatbotConversation> ChatbotConversations => Set<ChatbotConversation>();
+    public DbSet<ChatbotMessage> ChatbotMessages => Set<ChatbotMessage>();
     public DbSet<UserBan> UserBans => Set<UserBan>();
     public DbSet<UserFollow> UserFollows => Set<UserFollow>();
     public DbSet<Conversation> Conversations => Set<Conversation>();

@@ -25,6 +25,7 @@ import {
   buildExamQuestions,
   EXAM_PREVIEW_LABELS,
   EXAM_TYPE_LABELS,
+  EXAM_USE_MOCK,
   loadExamMeta,
   loadQuestionWithAnswer,
   loadReviewQuestions,
@@ -36,7 +37,6 @@ import PracticeExamSubmitPanel from "@/features/exams/PracticeExamSubmitPanel/Pr
 import PracticeBriefPanel from "@/features/exams/PracticeBriefPanel/PracticeBriefPanel";
 import { getPracticeBrief } from "@/features/exams/practiceBriefData";
 import {
-  getExamById,
   getSubjectDetailConfig,
 } from "@/features/subjects/SubjectDetailPage/subjectDetailData";
 import {
@@ -84,15 +84,6 @@ function ExamDetailPage({ page }) {
 
     async function fetchExam() {
       setExamReady(false);
-      const mockExam = getExamById(courseCode, decodedExamId, page, scope);
-      if (mockExam) {
-        if (!cancelled) {
-          setExam(mockExam);
-          setApiExamId(null);
-          setExamReady(true);
-        }
-        return;
-      }
 
       if (page === "documents") {
         try {
@@ -122,6 +113,7 @@ function ExamDetailPage({ page }) {
       } catch {
         if (!cancelled) {
           setExam(null);
+          setApiExamId(null);
         }
       } finally {
         if (!cancelled) {
@@ -167,6 +159,11 @@ function ExamDetailPage({ page }) {
             if (!apiExamId) {
               setApiExamId(resolvedApiId);
             }
+            return;
+          }
+
+          if (!cancelled && !EXAM_USE_MOCK) {
+            setQuestions([]);
             return;
           }
         }
@@ -281,6 +278,20 @@ function ExamDetailPage({ page }) {
 
   if (!exam) {
     return <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />;
+  }
+
+  if (isReviewExam && orderedQuestions.length === 0) {
+    return (
+      <div className={styles.page}>
+        <p>
+          Không tải được câu hỏi từ hệ thống. Hãy mở đề thi đã được Admin xuất bản (có mã đề khớp
+          API) hoặc thử tải lại trang.
+        </p>
+        <Link to={`${config.detailBase}/${exam.courseCode}`} className={styles.back}>
+          Quay lại danh sách
+        </Link>
+      </div>
+    );
   }
 
   const currentQuestion = orderedQuestions[currentIndex];
@@ -616,7 +627,10 @@ function ExamDetailPage({ page }) {
             </article>
 
             {isReviewExam && currentQuestion && (
-              <ExamAiExplanation examId={exam.id} question={currentQuestion} />
+              <ExamAiExplanation
+                examId={apiExamId ?? exam.id}
+                question={currentQuestion}
+              />
             )}
           </div>
 

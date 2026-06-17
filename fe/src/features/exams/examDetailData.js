@@ -10,6 +10,8 @@ import { isValidGuid } from "@/features/feed/postUtils";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
+export { USE_MOCK as EXAM_USE_MOCK };
+
 export const DEMO_API_EXAM_CODES = {
   final: "SE301-FINAL-01",
   practice: "SE301-LAB-01",
@@ -187,30 +189,36 @@ export async function resolveExamApiId(examIdOrCode) {
 }
 
 export async function loadExamMeta(courseCode, examId, pageKey, scope = "community") {
+  if (!USE_MOCK) {
+    const apiExamId = await resolveExamApiId(examId);
+    if (apiExamId) {
+      try {
+        const detail = await examsApi.getExam(apiExamId);
+        return {
+          exam: mapExamDetailDtoToFeExam(detail, courseCode),
+          apiExamId,
+          source: "api",
+        };
+      } catch {
+        /* fall back to mock below */
+      }
+    }
+  }
+
   const mockExam = getMockExamById(courseCode, examId, pageKey, scope);
   if (mockExam) {
     return { exam: mockExam, apiExamId: null, source: "mock" };
   }
 
-  if (USE_MOCK) {
-    return null;
-  }
-
-  const apiExamId = await resolveExamApiId(examId);
-  if (!apiExamId) {
-    return null;
-  }
-
-  const detail = await examsApi.getExam(apiExamId);
-  return {
-    exam: mapExamDetailDtoToFeExam(detail, courseCode),
-    apiExamId,
-    source: "api",
-  };
+  return null;
 }
 
 export async function loadReviewQuestions(apiExamId, fallbackCount, pageKey) {
-  if (USE_MOCK || !apiExamId || pageKey !== "review") {
+  if (pageKey !== "review") {
+    return buildExamQuestions(fallbackCount, pageKey);
+  }
+
+  if (USE_MOCK || !apiExamId) {
     return buildExamQuestions(fallbackCount, pageKey);
   }
 
@@ -220,10 +228,10 @@ export async function loadReviewQuestions(apiExamId, fallbackCount, pageKey) {
       return questionDtos.map(mapQuestionPublicDto);
     }
   } catch {
-    /* fallback below */
+    /* API mode: no mock fallback */
   }
 
-  return buildExamQuestions(fallbackCount, pageKey);
+  return [];
 }
 
 export async function loadQuestionWithAnswer(apiExamId, questionId) {
@@ -236,7 +244,7 @@ export async function loadQuestionWithAnswer(apiExamId, questionId) {
 }
 
 export async function loadAiExplanation(questionId, context) {
-  if (USE_MOCK || !questionId) {
+  if (USE_MOCK || !questionId || !isValidGuid(String(questionId))) {
     return null;
   }
 
