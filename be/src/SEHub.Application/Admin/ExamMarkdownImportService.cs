@@ -11,16 +11,24 @@ public interface IExamMarkdownImportService
 public sealed class ExamMarkdownImportService : IExamMarkdownImportService
 {
     private static readonly Regex QuestionHeaderRegex = new(
-        @"^#{1,3}\s*(?:C(?:âu|au)\s*)?(\d+)\s*$",
+        @"^\s*#{1,3}\s*(?:C(?:âu|au)\s*)?(\d+)\s*$",
         RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.Compiled);
 
+    private static readonly Regex DocumentTitleRegex = new(
+        @"^\s*#{1,6}\s+(?!C(?:âu|au)\s*\d)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     private static readonly Regex OptionLineRegex = new(
-        @"^([A-Da-d])[\.)]\s*(.+)$",
+        @"^\s*([A-Da-d])[\.)]\s*(.+)$",
         RegexOptions.Compiled);
 
     private static readonly Regex AnswerRegex = new(
         @"(?:\*\*)?(?:Đáp án|Dap an|Answer)\s*:\s*([A-Da-d])(?:\*\*)?",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex HorizontalRuleRegex = new(
+        @"^\s*---+\s*$",
+        RegexOptions.Compiled);
 
     public ImportExamMarkdownResponse Parse(string markdown)
     {
@@ -30,7 +38,8 @@ public sealed class ExamMarkdownImportService : IExamMarkdownImportService
         }
 
         var warnings = new List<string>();
-        var blocks = SplitQuestionBlocks(markdown.Trim());
+        var normalized = NormalizeMarkdown(markdown);
+        var blocks = SplitQuestionBlocks(normalized);
         if (blocks.Count == 0)
         {
             throw new Domain.Exceptions.DomainException(
@@ -64,6 +73,40 @@ public sealed class ExamMarkdownImportService : IExamMarkdownImportService
         };
     }
 
+    private static string NormalizeMarkdown(string markdown)
+    {
+        var normalized = markdown.Replace("\r\n", "\n").Trim();
+        if (string.IsNullOrEmpty(normalized))
+        {
+            return normalized;
+        }
+
+        var lines = normalized.Split('\n');
+        var nonEmpty = lines.Where(line => !string.IsNullOrWhiteSpace(line)).ToList();
+        if (nonEmpty.Count == 0)
+        {
+            return normalized;
+        }
+
+        var minIndent = nonEmpty.Min(line => line.TakeWhile(ch => ch == ' ').Count());
+        if (minIndent <= 0)
+        {
+            return normalized;
+        }
+
+        return string.Join(
+            '\n',
+            lines.Select(line =>
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    return string.Empty;
+                }
+
+                return line.Length >= minIndent ? line[minIndent..].TrimEnd() : line.Trim();
+            }));
+    }
+
     private static List<string> SplitQuestionBlocks(string markdown)
     {
         var normalized = markdown.Replace("\r\n", "\n");
@@ -82,8 +125,9 @@ public sealed class ExamMarkdownImportService : IExamMarkdownImportService
             return blocks.Where(b => b.Length > 0).ToList();
         }
 
-        return normalized
-            .Split("\n---\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        return Regex
+            .Split(normalized, @"\n\s*---+\s*\n", RegexOptions.Multiline)
+            .Select(block => block.Trim())
             .Where(b => b.Length > 0)
             .ToList();
     }
@@ -109,7 +153,11 @@ public sealed class ExamMarkdownImportService : IExamMarkdownImportService
             throw new InvalidOperationException("Thiếu đáp án dạng A. ... B. ...");
         }
 
-        var contentLines = lines.Skip(startIndex).Take(optionStartIndex - startIndex).ToList();
+        var contentLines = lines
+            .Skip(startIndex)
+            .Take(optionStartIndex - startIndex)
+            .Where(line => !ShouldSkipContentLine(line))
+            .ToList();
         var content = string.Join("\n", contentLines).Trim();
         if (string.IsNullOrWhiteSpace(content))
         {
@@ -120,7 +168,13 @@ public sealed class ExamMarkdownImportService : IExamMarkdownImportService
         var optionLines = new List<(string Label, string Text)>();
         for (var i = optionStartIndex; i < lines.Count; i++)
         {
-            var match = OptionLineRegex.Match(lines[i]);
+            var line = lines[i];
+            if (AnswerRegex.IsMatch(line) || HorizontalRuleRegex.IsMatch(line) || QuestionHeaderRegex.IsMatch(line))
+            {
+                break;
+            }
+
+            var match = OptionLineRegex.Match(line);
             if (!match.Success)
             {
                 continue;
@@ -177,4 +231,10 @@ public sealed class ExamMarkdownImportService : IExamMarkdownImportService
             CorrectOptionId = correctOption.Id,
         };
     }
+
+    private static bool ShouldSkipContentLine(string line) =>
+        QuestionHeaderRegex.IsMatch(line)
+        || DocumentTitleRegex.IsMatch(line)
+        || HorizontalRuleRegex.IsMatch(line)
+        || AnswerRegex.IsMatch(line);
 }
