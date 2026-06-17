@@ -39,6 +39,8 @@ import {
   getExamDisplayTitle,
   getExamSubjectCode,
 } from "@/utils/examDisplay";
+import { downloadExamAttachment } from "@/api/examsApi";
+import ExamAttachmentViewer from "@/features/exams/ExamAttachmentViewer/ExamAttachmentViewer";
 import pendingStyles from "@/features/admin/exams/AdminExamPendingPage.module.css";
 import AdminTableFooter from "@/features/admin/shared/AdminTableFooter";
 import { ADMIN_PAGE_SIZES } from "@/features/admin/shared/adminPaginationConstants";
@@ -152,7 +154,22 @@ function AdminExamPendingPage() {
     filteredPending.find((p) => p.id === selectedId) ??
     pending.find((p) => p.id === selectedId) ??
     null;
-  const selectedAttachment = selected ? getPrimaryExamAttachment(selected) : null;
+  const attachmentSource = selectedDetail ?? selected;
+  const selectedAttachment = attachmentSource ? getPrimaryExamAttachment(attachmentSource) : null;
+  const attachmentExamId = selectedDetail?.id ?? selected?.id ?? null;
+
+  async function handleDownloadAttachment() {
+    if (!selectedAttachment?.id || !attachmentExamId || actionLoading) return;
+
+    try {
+      await downloadExamAttachment(attachmentExamId, selectedAttachment.id, selectedAttachment.name, {
+        contentType: selectedAttachment.contentType,
+        fileName: selectedAttachment.name,
+      });
+    } catch {
+      showToast("Không tải được file đính kèm.");
+    }
+  }
 
   const previewQuestions = USE_MOCK
     ? MOCK_OCR_QUESTIONS
@@ -516,7 +533,9 @@ function AdminExamPendingPage() {
                     </span>
                     <div className={pendingStyles.fileBody}>
                       <p className={pendingStyles.fileName}>
-                        {selectedAttachment?.name ?? "Chưa có file đính kèm"}
+                        {!USE_MOCK && selectedId && !selectedDetail
+                          ? "Đang tải thông tin file..."
+                          : (selectedAttachment?.name ?? "Chưa có file đính kèm")}
                       </p>
                       <p className={pendingStyles.fileHint}>
                         {selectedAttachment
@@ -525,18 +544,22 @@ function AdminExamPendingPage() {
                       </p>
                     </div>
                     {selectedAttachment ? (
-                      <a
-                        href={selectedAttachment.url}
+                      <button
+                        type="button"
                         className={pendingStyles.fileDownload}
-                        download
-                        target="_blank"
-                        rel="noreferrer"
+                        onClick={handleDownloadAttachment}
                       >
                         <FontAwesomeIcon icon={faDownload} />
                         Tải xuống
-                      </a>
+                      </button>
                     ) : null}
                   </div>
+                  {selectedDetail?.attachments?.length > 0 ? (
+                    <ExamAttachmentViewer
+                      examApiId={selectedDetail.id}
+                      attachments={selectedDetail.attachments}
+                    />
+                  ) : null}
                 </div>
 
                 <div className={pendingStyles.detailBody}>
