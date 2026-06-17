@@ -1,5 +1,28 @@
+import { resolveAssetUrl } from "@/api/assetUrl";
+
+export function mapExamAttachmentDto(attachment, examId) {
+  const viewPath =
+    attachment.viewPath ??
+    (attachment.id && examId
+      ? `/api/v1/exams/${examId}/attachments/${attachment.id}/view`
+      : null);
+
+  return {
+    id: attachment.id,
+    name: attachment.originalFileName ?? attachment.name ?? "exam-attachment",
+    contentType: attachment.contentType ?? "",
+    fileSize: attachment.fileSize ?? 0,
+    viewPath,
+    viewUrl: resolveAssetUrl(viewPath),
+  };
+}
+
 export function mapExamDetailDtoToFeExam(dto, courseCode) {
   const examTypeLabel = dto.examType === "Practice" ? "Thực hành" : "Cuối kỳ";
+  const attachments = (dto.attachments ?? []).map((attachment) =>
+    mapExamAttachmentDto(attachment, dto.id),
+  );
+  const primaryAttachment = attachments[0];
 
   return {
     id: dto.code || dto.id,
@@ -10,7 +33,8 @@ export function mapExamDetailDtoToFeExam(dto, courseCode) {
     questionCount: dto.questionCount ?? 0,
     title: dto.title,
     description: dto.description,
-    assetUrl: dto.assetUrl,
+    assetUrl: dto.assetUrl ?? primaryAttachment?.viewUrl ?? primaryAttachment?.viewPath ?? null,
+    attachments,
     semester: dto.semester,
     major: dto.major,
     status: dto.status,

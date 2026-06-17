@@ -170,6 +170,8 @@ export function mapAdminExamListItem(dto) {
       ? (dto.attachments ?? []).map((attachment) => ({
           id: attachment.id,
           name: attachment.originalFileName,
+          contentType: attachment.contentType ?? "",
+          fileSize: attachment.fileSize ?? 0,
           size: attachment.fileSize ?? 0,
           viewPath: attachment.viewPath,
           viewUrl: resolveAssetUrl(attachment.viewPath),
