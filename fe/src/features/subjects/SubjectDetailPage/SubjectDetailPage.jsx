@@ -13,8 +13,8 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import {
   EXAMS_PER_PAGE,
   filterExamPapers,
-  getExamPapersForCourse,
   getSubjectDetailConfig,
+  loadExamPapersForCourse,
   TERM_OPTIONS,
   YEAR_OPTIONS,
 } from "./subjectDetailData";
@@ -42,6 +42,7 @@ function SubjectDetailPage({ page }) {
   const code = courseCode?.toUpperCase() ?? "";
   const isDocumentsPage = page === "documents";
   const [allExams, setAllExams] = useState([]);
+  const [examsLoading, setExamsLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,9 +64,28 @@ function SubjectDetailPage({ page }) {
       };
     }
 
-    setAllExams(getExamPapersForCourse(code, config.examType, config.codePrefix));
-    return undefined;
-  }, [code, config.examType, config.codePrefix, isDocumentsPage]);
+    setExamsLoading(true);
+    loadExamPapersForCourse(code, config.pageKey)
+      .then((items) => {
+        if (!cancelled) {
+          setAllExams(items);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAllExams([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setExamsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [code, config.pageKey, isDocumentsPage]);
 
   const exams = useMemo(
     () => filterExamPapers(allExams, yearFilter, termFilter),
@@ -95,6 +115,10 @@ function SubjectDetailPage({ page }) {
     document.getElementById("feed-top")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function getExamNavState(exam) {
+    return exam.apiId ? { apiExamId: exam.apiId } : undefined;
+  }
+
   function getExamHref(exam) {
     return `${config.detailBase}/${code}/${encodeURIComponent(exam.id)}`;
   }
@@ -109,7 +133,7 @@ function SubjectDetailPage({ page }) {
       if (!requireAuth(loginMessage, { guestOnly: true, redirectTo: href })) return;
     }
 
-    navigate(href);
+    navigate(href, { state: getExamNavState(exam) });
   }
 
   return (
@@ -206,7 +230,7 @@ function SubjectDetailPage({ page }) {
                       <FontAwesomeIcon icon={faChevronRight} className={styles.chevron} />
                     </button>
                   ) : (
-                    <Link to={getExamHref(exam)} className={styles["exam-link"]}>
+                    <Link to={getExamHref(exam)} state={getExamNavState(exam)} className={styles["exam-link"]}>
                       <span className={styles["exam-code"]}>
                         {isDocumentsPage ? exam.name ?? exam.id : exam.id}
                       </span>
@@ -232,11 +256,15 @@ function SubjectDetailPage({ page }) {
           </tbody>
         </table>
 
-        {exams.length === 0 && (
+        {examsLoading ? (
+          <p className={styles.empty}>Đang tải danh sách đề...</p>
+        ) : null}
+
+        {!examsLoading && exams.length === 0 && (
           <p className={styles.empty}>
             {isDocumentsPage
               ? "Chưa có tài liệu cho môn này."
-              : "Không có đề phù hợp với bộ lọc."}
+              : "Chưa có đề đã xuất bản cho môn này."}
           </p>
         )}
       </section>

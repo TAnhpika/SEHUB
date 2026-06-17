@@ -1,11 +1,23 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5006";
 
+export function isPdfAttachment(attachment) {
+  if (!attachment) return false;
+
+  const contentType = attachment.contentType?.toLowerCase() ?? "";
+  if (contentType.includes("pdf")) return true;
+
+  const name = attachment.name ?? attachment.originalFileName ?? "";
+  return /\.pdf$/i.test(name);
+}
+
 export function getPrimaryExamAttachment(exam) {
   const attachment = exam?.attachments?.[0];
   if (attachment?.viewUrl || attachment?.viewPath) {
     return {
+      id: attachment.id,
       name: attachment.name ?? attachment.originalFileName ?? "exam-attachment",
       url: attachment.viewUrl ?? resolveExamAssetUrl(attachment.viewPath),
+      contentType: attachment.contentType ?? "",
     };
   }
 
