@@ -58,11 +58,19 @@ async function parseResponse(response) {
 
   if (!response.ok || isSuccess === false) {
     const firstError = payload?.errors?.[0];
-    const message =
+    let message =
       payload?.message ||
       firstError?.message ||
-      firstError?.code ||
-      "Yêu cầu thất bại.";
+      firstError?.code;
+
+    if (!message && response.status === 403) {
+      message = "Tính năng yêu cầu gói Premium.";
+    }
+
+    if (!message) {
+      message = "Yêu cầu thất bại.";
+    }
+
     throw new ApiError(message, {
       status: response.status,
       errors: payload?.errors ?? [],

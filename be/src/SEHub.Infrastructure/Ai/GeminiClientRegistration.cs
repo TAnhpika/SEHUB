@@ -1,4 +1,5 @@
 using Google.GenAI;
+using Google.GenAI.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SEHub.Application.Exams;
@@ -12,7 +13,15 @@ internal static class GeminiClientRegistration
         services.AddSingleton(sp =>
         {
             var settings = sp.GetRequiredService<IOptions<AiTokenLimitSettings>>().Value;
-            return new Client(apiKey: settings.ApiKey);
+            return new Client(
+                apiKey: settings.ApiKey,
+                clientOptions: new ClientOptions
+                {
+                    HttpClientFactory = () => new HttpClient
+                    {
+                        Timeout = Timeout.InfiniteTimeSpan,
+                    },
+                });
         });
 
         return services;
