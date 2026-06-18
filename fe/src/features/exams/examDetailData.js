@@ -188,9 +188,13 @@ export async function resolveExamApiId(examIdOrCode) {
   return match?.id ?? null;
 }
 
-export async function loadExamMeta(courseCode, examId, pageKey, scope = "community") {
+export async function loadExamMeta(courseCode, examId, pageKey, scope = "community", options = {}) {
   if (!USE_MOCK) {
-    const apiExamId = await resolveExamApiId(examId);
+    let apiExamId = options.apiExamId ?? null;
+    if (!apiExamId) {
+      apiExamId = await resolveExamApiId(examId);
+    }
+
     if (apiExamId) {
       try {
         const detail = await examsApi.getExam(apiExamId);

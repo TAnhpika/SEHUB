@@ -67,8 +67,33 @@ export function approveExam(id) {
   return apiRequest(`/api/v1/admin/exams/${id}/approve`, { method: "POST" });
 }
 
+export function rejectExam(id, body) {
+  return apiRequest(`/api/v1/admin/exams/${id}/reject`, {
+    method: "POST",
+    body,
+  });
+}
+
+export function resubmitExam(id, body) {
+  return apiRequest(`/api/v1/admin/exams/${id}/resubmit`, {
+    method: "PUT",
+    body,
+  });
+}
+
+export function createExamRevision(id) {
+  return apiRequest(`/api/v1/admin/exams/${id}/revision`, { method: "POST" });
+}
+
 export function ocrExam(body) {
   return apiRequest("/api/v1/admin/exams/ocr", {
+    method: "POST",
+    body,
+  });
+}
+
+export function importExamMarkdown(body) {
+  return apiRequest("/api/v1/admin/exams/import-markdown", {
     method: "POST",
     body,
   });
@@ -164,6 +189,10 @@ export function getModerationStats() {
 
 export function getFeaturedPosts(params = {}) {
   return apiRequest(`/api/v1/admin/moderation/featured-posts${buildQuery(params)}`);
+}
+
+export function getPinnedPosts(params = {}) {
+  return apiRequest(`/api/v1/admin/moderation/pinned-posts${buildQuery(params)}`);
 }
 
 export function getAdminOverview() {

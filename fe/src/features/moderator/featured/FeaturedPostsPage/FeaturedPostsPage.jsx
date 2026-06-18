@@ -22,6 +22,7 @@ import {
   PINNED_POSTS_INITIAL,
   SEARCH_POSTS_INITIAL,
   setPostFeatured,
+  setPostPinned,
   tagToCategoryLabel,
 } from "@/features/moderator/featured/featuredPostsData";
 import styles from "./FeaturedPostsPage.module.css";
@@ -32,7 +33,7 @@ const STATS_EVENT = "sehub-moderator-stats-updated";
 const FEATURED_CRUMBS = [
   { label: "Trang chủ", to: "/home" },
   { label: "Kiểm duyệt", to: "/moderator/content" },
-  { label: "Bài viết nổi bật" },
+  { label: "Ghim bài trên feed" },
 ];
 
 function PinnedCard({ post, isSelected, onSelect, onUnpin }) {
@@ -228,7 +229,7 @@ function FeaturedPostsPage() {
         return [enrichFeaturedPost({ ...post, isFeatured: false }), ...prev];
       });
       if (selectedId === id) setSelectedId(null);
-      showToast("Đã bỏ ghim bài viết.");
+      showToast("Đã bỏ ghim bài khỏi feed.");
     };
 
     if (USE_MOCK) {
@@ -236,7 +237,7 @@ function FeaturedPostsPage() {
       return;
     }
 
-    setPostFeatured(id, false)
+    setPostPinned(id, false)
       .then(applyLocal)
       .catch((err) => showToast(err.message ?? "Không bỏ ghim được bài viết.", "error"));
   }
@@ -261,7 +262,7 @@ function FeaturedPostsPage() {
           comments: post.comments ?? 0,
         }),
       ]);
-      showToast("Đã ghim bài viết lên sidebar cộng đồng.");
+      showToast("Đã ghim bài lên đầu feed cộng đồng.");
       window.dispatchEvent(new CustomEvent(STATS_EVENT));
     };
 
@@ -270,7 +271,7 @@ function FeaturedPostsPage() {
       return;
     }
 
-    setPostFeatured(id, true)
+    setPostPinned(id, true)
       .then(applyLocal)
       .catch((err) => showToast(err.message ?? "Không ghim được bài viết.", "error"));
   }

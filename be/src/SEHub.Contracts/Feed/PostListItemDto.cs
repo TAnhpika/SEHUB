@@ -9,7 +9,11 @@ public sealed class PostListItemDto
     public IReadOnlyList<string> Tags { get; init; } = [];
     public int LikeCount { get; init; }
     public int CommentCount { get; init; }
+    public int ViewCount { get; init; }
     public DateTime CreatedAt { get; init; }
+    public bool IsPinned { get; init; }
     public bool IsFeatured { get; init; }
+    public string? CoverImageUrl { get; init; }
+    public bool? IsLiked { get; init; }
     public IReadOnlyList<PostImageDto> Images { get; init; } = [];
 }

@@ -18,6 +18,14 @@ public sealed class AdminExamDto
     public IReadOnlyList<ExamAttachmentDto> Attachments { get; init; } = [];
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
+    public Guid? RevisionOfExamId { get; init; }
+    public string? RejectionReasonCode { get; init; }
+    public string? RejectionReasonDetail { get; init; }
+    public DateTime? RejectedAt { get; init; }
+    public bool CanResubmit { get; init; }
+    public bool IsContentLocked { get; init; }
+    public string? RevisionSourceCode { get; init; }
+    public string? RevisionSourceTitle { get; init; }
     public IReadOnlyList<AdminExamQuestionDto> Questions { get; init; } = [];
 }
 

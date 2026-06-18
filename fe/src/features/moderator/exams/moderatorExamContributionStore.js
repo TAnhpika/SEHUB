@@ -22,6 +22,7 @@ import {
   EXAM_CONTRIBUTION_TYPE_LABELS,
 } from "@/features/moderator/exams/moderatorExamConstants";
 import {
+  enrichRevisionContributionEntries,
   fetchModeratorExamContributions,
   mapApiExamToContributionEntry,
 } from "@/features/moderator/exams/moderatorExamService";
@@ -268,6 +269,7 @@ export async function loadExamContributionAudit(moderator, filters = {}) {
   }
 
   let merged = mergeContributionEntries(localDrafts, apiEntries);
+  merged = enrichRevisionContributionEntries(merged);
   if (status && status !== "all") {
     merged = merged.filter((entry) => entry.status === status);
   }

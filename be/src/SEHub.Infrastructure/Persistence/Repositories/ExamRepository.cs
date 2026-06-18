@@ -20,7 +20,7 @@ public class ExamRepository : IExamRepository
             query = query.Include(e => e.Questions).ThenInclude(q => q.Options);
         }
 
-        return await query.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+        return await query.Include(e => e.RevisionOfExam).FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
 
     public Task<Exam?> GetByCodeAsync(string code, CancellationToken cancellationToken = default) =>
@@ -68,6 +68,7 @@ public class ExamRepository : IExamRepository
 
         var total = await dbQuery.CountAsync(cancellationToken);
         var items = await dbQuery
+            .Include(e => e.RevisionOfExam)
             .OrderByDescending(e => e.CreatedAt)
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
@@ -81,10 +82,44 @@ public class ExamRepository : IExamRepository
 
     public Task UpdateAsync(Exam exam, CancellationToken cancellationToken = default)
     {
-        _context.Exams.Update(exam);
+        var entry = _context.Entry(exam);
+        if (entry.State == EntityState.Detached)
+        {
+            _context.Exams.Update(exam);
+        }
+
         return Task.CompletedTask;
+    }
+
+    public async Task ReplaceQuestionsAsync(
+        Guid examId,
+        IReadOnlyList<Question> newQuestions,
+        CancellationToken cancellationToken = default)
+    {
+        var existing = await _context.Questions
+            .Where(q => q.ExamId == examId)
+            .Include(q => q.Options)
+            .ToListAsync(cancellationToken);
+
+        if (existing.Count > 0)
+        {
+            _context.Questions.RemoveRange(existing);
+        }
+
+        if (newQuestions.Count > 0)
+        {
+            await _context.Questions.AddRangeAsync(newQuestions, cancellationToken);
+        }
     }
 
     public Task<int> CountPublishedAsync(CancellationToken cancellationToken = default) =>
         _context.Exams.CountAsync(e => e.Status == ExamStatus.Published, cancellationToken);
+
+    public Task<Exam?> GetPendingRevisionOfAsync(Guid publishedExamId, CancellationToken cancellationToken = default) =>
+        _context.Exams
+            .Include(e => e.Questions)
+            .ThenInclude(q => q.Options)
+            .FirstOrDefaultAsync(
+                e => e.RevisionOfExamId == publishedExamId && e.Status == ExamStatus.PendingApproval,
+                cancellationToken);
 }

@@ -18,6 +18,7 @@ import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import { useRequirePremium } from "@/hooks/useRequirePremium";
 import ExamAiExplanation from "@/features/exams/ExamAiExplanation/ExamAiExplanation";
+import ExamAttachmentViewer from "@/features/exams/ExamAttachmentViewer/ExamAttachmentViewer";
 import ExamCommentsPanel from "@/features/exams/ExamCommentsPanel/ExamCommentsPanel";
 import { getExamSession } from "@/features/exams/examSession";
 import { getPracticeSession } from "@/features/exams/practiceSession";
@@ -105,7 +106,9 @@ function ExamDetailPage({ page }) {
       }
 
       try {
-        const meta = await loadExamMeta(courseCode, decodedExamId, page, scope);
+        const meta = await loadExamMeta(courseCode, decodedExamId, page, scope, {
+          apiExamId: locationState?.apiExamId,
+        });
         if (!cancelled) {
           setExam(meta?.exam ?? null);
           setApiExamId(meta?.apiExamId ?? null);
@@ -126,7 +129,7 @@ function ExamDetailPage({ page }) {
     return () => {
       cancelled = true;
     };
-  }, [courseCode, decodedExamId, page, scope]);
+  }, [courseCode, decodedExamId, page, scope, locationState?.apiExamId]);
 
   useEffect(() => {
     if (!exam) return undefined;
@@ -321,6 +324,7 @@ function ExamDetailPage({ page }) {
   const practiceBrief = isPracticeExam && currentQuestion
     ? getPracticeBrief(exam.id, currentIndex + 1, exam.courseCode, currentQuestion.text)
     : null;
+  const resolvedApiExamId = apiExamId ?? exam.apiId ?? null;
 
   function bumpReviewSession() {
     setSessionTick((tick) => tick + 1);
@@ -408,6 +412,17 @@ function ExamDetailPage({ page }) {
               <dd>{exam.questionCount}</dd>
             </div>
           </dl>
+        </section>
+      ) : null}
+
+      {!isDocumentsRoute && resolvedApiExamId && (exam.attachments?.length ?? 0) > 0 ? (
+        <ExamAttachmentViewer examApiId={resolvedApiExamId} attachments={exam.attachments} />
+      ) : null}
+
+      {!isDocumentsRoute && resolvedApiExamId && (exam.attachments?.length ?? 0) === 0 ? (
+        <section className={styles["info-card"]} aria-label="File đề gốc">
+          <h2 className={styles["info-title"]}>File đề gốc</h2>
+          <p className={styles.subtitle}>Đề này chưa có file đính kèm trên Drive.</p>
         </section>
       ) : null}
 

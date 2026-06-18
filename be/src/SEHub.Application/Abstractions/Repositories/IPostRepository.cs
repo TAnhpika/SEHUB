@@ -17,7 +17,14 @@ public interface IPostRepository
         Guid authorId, int page, int pageSize, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Post>> GetFeaturedAsync(int limit, CancellationToken cancellationToken = default);
     Task<int> CountFeaturedAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Post>> GetPinnedAsync(int limit, CancellationToken cancellationToken = default);
+    Task<int> CountPinnedAsync(CancellationToken cancellationToken = default);
     Task<(IReadOnlyList<Post> Items, int TotalCount)> GetPublishedCandidatesForFeaturingAsync(
+        string? search,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+    Task<(IReadOnlyList<Post> Items, int TotalCount)> GetPublishedCandidatesForPinningAsync(
         string? search,
         int page,
         int pageSize,

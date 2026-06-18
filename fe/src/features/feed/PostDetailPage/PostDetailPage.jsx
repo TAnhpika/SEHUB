@@ -32,6 +32,7 @@ import {
 } from "@/features/feed/feedData";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
+import ChatImageLightbox from "@/features/chat/ChatImageLightbox/ChatImageLightbox";
 import { copyPostLink, formatDisplayTitle, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./PostDetailPage.module.css";
@@ -59,6 +60,7 @@ function PostDetailPage() {
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editCommentDraft, setEditCommentDraft] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -248,7 +250,26 @@ function PostDetailPage() {
         <h1 className={styles.title}>
           <span className={styles.hash}>#</span> {displayTitle}
         </h1>
-        {post.images?.length > 0 ? (
+        {post.coverImageUrl ? (
+          <button
+            type="button"
+            className={styles.coverBtn}
+            aria-label="Xem ảnh bìa full"
+            onClick={() =>
+              setLightboxImage({
+                url: post.coverImageUrl,
+                alt: displayTitle || "Ảnh bìa bài viết",
+              })
+            }
+          >
+            <img
+              src={post.coverImageUrl}
+              alt=""
+              className={styles.cover}
+              loading="lazy"
+            />
+          </button>
+        ) : post.images?.length > 0 ? (
           <div className={styles.images}>
             {post.images.map((image) => (
               <img key={image.id} className={styles.image} src={image.url} alt="" loading="lazy" />
@@ -439,6 +460,12 @@ function PostDetailPage() {
           </div>
         </div>
       </section>
+
+      <ChatImageLightbox
+        image={lightboxImage}
+        onClose={() => setLightboxImage(null)}
+        onImageClick={() => setLightboxImage(null)}
+      />
     </div>
   );
 }

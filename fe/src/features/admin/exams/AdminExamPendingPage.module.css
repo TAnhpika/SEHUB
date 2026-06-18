@@ -479,6 +479,7 @@
   display: flex;
   flex-direction: column;
   min-height: 320px;
+  min-width: 0;
 }
 
 .detailEmpty {
@@ -609,12 +610,6 @@
   color: var(--pending-muted);
 }
 
-.detailBody {
-  flex: 1;
-  padding: 1rem 1.5rem;
-  overflow-y: auto;
-}
-
 .sectionTitle {
   margin: 0 0 0.75rem;
   font-size: 0.6875rem;
@@ -629,6 +624,28 @@
   background: #f9fafb;
   border: 1px solid var(--pending-border);
   border-radius: 10px;
+}
+
+.previewQuestionsBox {
+  max-height: min(420px, 55vh);
+  overflow-y: auto;
+  overscroll-behavior: auto;
+}
+
+.previewQuestionsBox::-webkit-scrollbar {
+  width: 6px;
+}
+
+.previewQuestionsBox::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.detailBody {
+  flex: 1;
+  min-height: 0;
+  padding: 1rem 1.5rem;
+  overflow: visible;
 }
 
 .previewBox + .sectionTitle {

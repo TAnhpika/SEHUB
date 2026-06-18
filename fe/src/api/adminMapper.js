@@ -1,5 +1,11 @@
 import { FE_ID_BY_PLAN_CODE } from "@/api/premiumMapper";
 import { resolveAssetUrl } from "@/api/assetUrl";
+import {
+  buildExamDisplayFields,
+  extractCourseSubjectCode,
+  normalizeCourseSubjectCode,
+  resolvePublicExamName,
+} from "@/utils/examDisplay";
 import { getExamAssetFileName } from "@/utils/examAssetUrl";
 
 const ROLE_MAP = {
@@ -41,7 +47,8 @@ function mapAccessTierLabel(accessTier) {
 function mapExamStatus(status) {
   const value = String(status ?? "").toLowerCase();
   if (value === "published") return "published";
-  if (value === "pendingapproval") return "draft";
+  if (value === "pendingapproval") return "pending_approval";
+  if (value === "rejected") return "rejected";
   if (value === "archived") return "draft";
   return "draft";
 }
@@ -163,6 +170,8 @@ export function mapAdminExamListItem(dto) {
       ? (dto.attachments ?? []).map((attachment) => ({
           id: attachment.id,
           name: attachment.originalFileName,
+          contentType: attachment.contentType ?? "",
+          fileSize: attachment.fileSize ?? 0,
           size: attachment.fileSize ?? 0,
           viewPath: attachment.viewPath,
           viewUrl: resolveAssetUrl(attachment.viewPath),
@@ -170,6 +179,15 @@ export function mapAdminExamListItem(dto) {
       : assetUrl
         ? [{ id: "asset", name: assetUrl.split("/").pop() ?? "asset", url: assetUrl }]
         : [],
+    revisionOfExamId: dto.revisionOfExamId ?? null,
+    revisionSourceCode: dto.revisionSourceCode ?? null,
+    revisionSourceTitle: dto.revisionSourceTitle ?? null,
+    rejectionReasonCode: dto.rejectionReasonCode ?? null,
+    rejectionReasonDetail: dto.rejectionReasonDetail ?? null,
+    rejectedAt: dto.rejectedAt ?? null,
+    canResubmit: dto.canResubmit ?? false,
+    isContentLocked: dto.isContentLocked ?? false,
+    ...buildExamDisplayFields(dto),
   };
 }
 
@@ -220,14 +238,108 @@ export function mapWizardQuestionsToCreateItems(questions) {
 }
 
 export function mapFinalExamWizardToCreateRequest(examInfo, questions) {
+  const subjectCode =
+    normalizeCourseSubjectCode(examInfo.subjectCode) ?? examInfo.subjectCode.trim();
+  const paperCode = examInfo.examCode?.trim();
+
   return {
-    code: examInfo.subjectCode.trim(),
-    title: examInfo.examCode?.trim() || `${examInfo.subjectCode} — Cuối kỳ`,
+    code: paperCode,
+    title: paperCode || `${subjectCode} — Cuối kỳ`,
     examType: "Final",
     semester: parseSemesterNumber(examInfo.semesterLabel),
-    major: "SE",
-    description: examInfo.subjectName ?? "",
+    major: subjectCode,
+    description: `${examInfo.subjectName ?? subjectCode} · ${examInfo.durationMinutes} phút`,
     questions: mapWizardQuestionsToCreateItems(questions),
+  };
+}
+
+export function mapFinalExamWizardToResubmitRequest(examInfo, questions, { isRevision = false } = {}) {
+  const title = isRevision
+    ? resolvePublicExamName({
+        revisionSourceCode: examInfo.revisionSourceCode,
+        revisionSourceTitle: examInfo.revisionSourceTitle,
+        code: examInfo.examCode,
+        title: examInfo.subjectName,
+      })
+    : examInfo.examCode?.trim() || examInfo.subjectName?.trim() || examInfo.subjectCode.trim();
+
+  return {
+    title,
+    description: `${examInfo.subjectName ?? examInfo.subjectCode} · ${examInfo.durationMinutes} phút`,
+    questions: mapWizardQuestionsToCreateItems(questions),
+  };
+}
+
+export function mapExamDetailToWizard(dto) {
+  const rawQuestions = dto.questions ?? dto.questionsData ?? [];
+  const wizardQuestions = rawQuestions.map((question, index) => {
+    const answers = { A: "", B: "", C: "", D: "" };
+    let correctAnswer = "A";
+    const labels = ["A", "B", "C", "D"];
+    const options = question.options ?? [];
+
+    for (const option of options) {
+      const label = String(option.label ?? option.Label ?? "")
+        .trim()
+        .toUpperCase();
+      if (labels.includes(label)) {
+        answers[label] = option.text ?? option.Text ?? "";
+      }
+    }
+
+    const correctOptionId = question.correctOptionId ?? question.CorrectOptionId;
+    if (correctOptionId) {
+      const correctOption = options.find(
+        (option) => (option.id ?? option.Id) === correctOptionId,
+      );
+      const label = String(correctOption?.label ?? correctOption?.Label ?? "")
+        .trim()
+        .toUpperCase();
+      if (labels.includes(label)) {
+        correctAnswer = label;
+      }
+    } else if (typeof question.correct === "number" && question.correct >= 0) {
+      correctAnswer = labels[question.correct] ?? "A";
+    } else {
+      labels.forEach((label, optionIndex) => {
+        answers[label] = question.options?.[optionIndex] ?? answers[label];
+      });
+    }
+
+    return {
+      id: `q-${index + 1}`,
+      content: question.content ?? question.text ?? question.Content ?? "",
+      answers,
+      correctAnswer,
+      explanation: "",
+      showExplanation: false,
+    };
+  });
+
+  const durationMatch = String(dto.description ?? "").match(/(\d+)\s*phút/);
+  const durationMinutes = durationMatch ? Number(durationMatch[1]) : 60;
+  const questionCount = Math.max(dto.questionCount ?? 0, wizardQuestions.length, 1);
+  const publicName = resolvePublicExamName(dto);
+  const subjectCode =
+    extractCourseSubjectCode(dto.major, dto.revisionSourceCode, dto.code, dto.title) ??
+    dto.major ??
+    "";
+
+  return {
+    examInfo: {
+      subjectCode,
+      subjectName: String(dto.description ?? "").split(" · ")[0]?.trim() || publicName,
+      semesterLabel: dto.semester ? `Học kỳ ${dto.semester}` : "",
+      examCode: publicName,
+      revisionSourceCode: dto.revisionSourceCode ?? null,
+      revisionSourceTitle: dto.revisionSourceTitle ?? null,
+      durationMinutes,
+      totalQuestions: questionCount,
+    },
+    questions: wizardQuestions.length ? wizardQuestions : undefined,
+    revisionOfExamId: dto.revisionOfExamId ?? null,
+    canResubmit: dto.canResubmit ?? false,
+    isContentLocked: dto.isContentLocked ?? false,
   };
 }
 
@@ -291,13 +403,13 @@ export function mapPracticeExamFormToCreateRequest(form) {
   const githubGuide =
     form.githubGuide ??
     "Nộp link repository GitHub công khai. README ghi rõ MSSV, họ tên và hướng dẫn chạy project.";
-  const subjectCode = form.subjectCode.trim();
-  const examCode =
-    form.examCode?.trim() || `${subjectCode}-PRAC-${Date.now()}`;
+  const subjectCode =
+    normalizeCourseSubjectCode(form.subjectCode) ?? form.subjectCode.trim();
+  const paperCode = form.title.trim();
 
   return {
-    code: examCode,
-    title: form.title.trim(),
+    code: paperCode,
+    title: paperCode,
     examType: "Practice",
     semester: parseSemesterNumber(form.semester),
     major: subjectCode,

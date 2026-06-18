@@ -131,6 +131,7 @@ export function resolveModeratorPageTitle(pathname) {
   if (pathname === "/moderator") return "Xử lý báo cáo";
   if (pathname.startsWith("/moderator/content/history")) return "Lịch sử duyệt bài";
   if (pathname.startsWith("/moderator/exams/history")) return "Lịch sử đóng góp đề";
+  if (pathname.includes("/final-exams/edit")) return "Sửa đề cuối kỳ";
   if (pathname.includes("/final-exams/add/questions")) return "Thêm đề cuối kỳ";
   if (pathname.includes("/final-exams/add/review")) return "Thêm đề cuối kỳ";
   return "Kiểm duyệt";

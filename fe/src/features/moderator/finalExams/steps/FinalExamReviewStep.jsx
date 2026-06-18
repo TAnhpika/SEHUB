@@ -8,6 +8,7 @@ import {
   recordExamDraft,
   submitExamForApproval,
 } from "@/features/moderator/exams/moderatorExamContributionStore";
+import { resubmitFinalExamViaApi } from "@/features/moderator/exams/moderatorExamService";
 import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
 import styles from "./FinalExamReviewStep.module.css";
@@ -17,7 +18,16 @@ function FinalExamReviewStep() {
   const { showToast } = useToast();
   const { user } = useAuth();
   const moderator = user?.username ?? "mod_sehub";
-  const { examInfo, questions, completeCount, totalQuestions } = useFinalExamWizard();
+  const {
+    examInfo,
+    questions,
+    completeCount,
+    totalQuestions,
+    editingExamId,
+    isEditMode,
+    isRevisionEdit,
+    basePath,
+  } = useFinalExamWizard();
   const [submitting, setSubmitting] = useState(false);
 
   function handleSaveDraft() {
@@ -41,10 +51,21 @@ function FinalExamReviewStep() {
     );
 
     async function send(confirmDuplicate = false) {
-      await submitExamForApproval(payload, { examInfo, questions, confirmDuplicate });
-      showToast(
-        "Đề thi cuối kỳ đã được gửi. Trạng thái: chờ Admin duyệt trước khi public (theo nghiệp vụ).",
-      );
+      if (isEditMode && editingExamId) {
+        await resubmitFinalExamViaApi(editingExamId, examInfo, questions, {
+          isRevision: isRevisionEdit,
+        });
+        showToast(
+          isRevisionEdit
+            ? "Bản cập nhật đã gửi Admin duyệt. Đề đang public giữ nguyên cho đến khi được duyệt."
+            : "Đề đã được sửa và gửi lại Admin duyệt.",
+        );
+      } else {
+        await submitExamForApproval(payload, { examInfo, questions, confirmDuplicate });
+        showToast(
+          "Đề thi cuối kỳ đã được gửi. Trạng thái: chờ Admin duyệt trước khi public (theo nghiệp vụ).",
+        );
+      }
       navigate("/moderator/exams/history?type=final");
     }
 
@@ -52,7 +73,7 @@ function FinalExamReviewStep() {
     try {
       await send(false);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 409) {
+      if (!isEditMode && error instanceof ApiError && error.status === 409) {
         const confirmed = window.confirm(
           "Đề trùng nội dung (SHA-256) với đề đã có. Gửi duyệt anyway?",
         );
@@ -73,13 +94,22 @@ function FinalExamReviewStep() {
     }
   }
 
+  const submitLabel = submitting
+    ? "Đang gửi..."
+    : isEditMode
+      ? isRevisionEdit
+        ? "Gửi bản cập nhật"
+        : "Gửi lại Admin duyệt"
+      : "Gửi duyệt";
+
   return (
     <div className={styles.step}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Xem lại & xuất bản</h1>
+        <h1 className={styles.title}>{isEditMode ? "Xem lại & gửi lại" : "Xem lại & xuất bản"}</h1>
         <p className={styles.subtitle}>
-          Kiểm tra thông tin trước khi gửi duyệt. Moderator không thể tự public — Admin sẽ duyệt
-          theo quy trình SEHUB.
+          {isRevisionEdit
+            ? "Kiểm tra bản cập nhật trước khi gửi Admin. Sinh viên vẫn làm đề public hiện tại cho đến khi Admin duyệt."
+            : "Kiểm tra thông tin trước khi gửi duyệt. Moderator không thể tự public — Admin sẽ duyệt theo quy trình SEHUB."}
         </p>
       </header>
 
@@ -131,9 +161,9 @@ function FinalExamReviewStep() {
 
       <WizardBottomActions
         onSaveDraft={handleSaveDraft}
-        onBack={() => navigate("/moderator/final-exams/add/questions")}
+        onBack={() => navigate(`${basePath}/questions`)}
         onContinue={handlePublish}
-        continueLabel={submitting ? "Đang gửi..." : "Gửi duyệt"}
+        continueLabel={submitLabel}
         continueDisabled={submitting}
       />
     </div>

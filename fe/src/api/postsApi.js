@@ -12,7 +12,7 @@ function buildQuery(params = {}) {
 }
 
 export function listPosts(params = {}) {
-  return apiRequest(`/api/v1/posts${buildQuery(params)}`, { auth: false });
+  return apiRequest(`/api/v1/posts${buildQuery(params)}`);
 }
 
 export function getFeaturedPosts() {
@@ -69,4 +69,14 @@ export function uploadPostImages(postId, files) {
 
 export function featurePost(id, body) {
   return apiRequest(`/api/v1/posts/${id}/feature`, { method: "PATCH", body });
+}
+
+export function pinPost(id, body) {
+  return apiRequest(`/api/v1/posts/${id}/pin`, { method: "PATCH", body });
+}
+
+export function uploadPostCover(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiUploadRequest("/api/v1/posts/upload-cover", formData);
 }

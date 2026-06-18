@@ -141,6 +141,31 @@
   margin-bottom: 1rem;
 }
 
+.coverBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-height: min(360px, 50vh);
+  padding: 0;
+  margin-bottom: 1rem;
+  border: none;
+  background: var(--color-surface-muted, #f1f5f9);
+  border-radius: var(--radius-xl);
+  cursor: zoom-in;
+  overflow: hidden;
+}
+
+.cover {
+  display: block;
+  max-width: 100%;
+  max-height: min(360px, 50vh);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--radius-xl);
+}
+
 .tags {
   display: flex;
   flex-wrap: wrap;

@@ -24,9 +24,12 @@ import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
+import * as postsApi from "@/api/postsApi";
 import { submitPost } from "@/features/feed/feedData";
 import { MAJORS, MAX_CONTENT_LENGTH, SEMESTERS } from "@/features/posts/createPostData";
 import styles from "./CreatePostPage.module.css";
+
+const MAX_COVER_SIZE = 5 * 1024 * 1024;
 
 function CreatePostPage() {
   const navigate = useNavigate();
@@ -69,8 +72,25 @@ function CreatePostPage() {
   function handleCoverFileChange(event) {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_COVER_SIZE) {
+      showToast("Ảnh bìa tối đa 5MB.");
+      return;
+    }
     setCoverFile(file);
     setCoverFileName(file.name);
+  }
+
+  async function resolveCoverImageUrl() {
+    if (coverMode === "url") {
+      return coverUrl.trim() || null;
+    }
+
+    if (!coverFile) {
+      return null;
+    }
+
+    const result = await postsApi.uploadPostCover(coverFile);
+    return result?.coverImageUrl ?? result?.CoverImageUrl ?? null;
   }
 
   async function handleSubmit(event) {
@@ -79,10 +99,12 @@ function CreatePostPage() {
 
     setIsSubmitting(true);
     try {
+      const coverImageUrl = await resolveCoverImageUrl();
       await submitPost({
         title: title.trim(),
         content: content.trim(),
         tags,
+        coverImageUrl,
         coverFile: coverMode === "upload" ? coverFile : null,
       });
       showToast("Đã gửi bài viết — chờ moderator duyệt trước khi hiển thị.", 5500);
@@ -282,12 +304,12 @@ function CreatePostPage() {
                 Chọn ảnh bìa
                 <input
                   type="file"
-                  accept="image/png,image/jpeg,image/gif"
+                  accept="image/png,image/jpeg,image/gif,image/webp"
                   className={styles["file-input"]}
                   onChange={handleCoverFileChange}
                 />
               </label>
-              <p className={styles.hint}>PNG, JPG, GIF (tối đa 5MB)</p>
+              <p className={styles.hint}>PNG, JPG, GIF, WEBP (tối đa 5MB)</p>
               {coverFileName && <p className={styles["file-name"]}>{coverFileName}</p>}
             </div>
           ) : (

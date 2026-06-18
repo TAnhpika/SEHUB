@@ -11,5 +11,7 @@ public interface IExamRepository
     Task<(IReadOnlyList<Exam> Items, int TotalCount)> GetPagedAsync(ExamQueryParams query, CancellationToken cancellationToken = default);
     Task AddAsync(Exam exam, CancellationToken cancellationToken = default);
     Task UpdateAsync(Exam exam, CancellationToken cancellationToken = default);
+    Task ReplaceQuestionsAsync(Guid examId, IReadOnlyList<Question> newQuestions, CancellationToken cancellationToken = default);
     Task<int> CountPublishedAsync(CancellationToken cancellationToken = default);
+    Task<Exam?> GetPendingRevisionOfAsync(Guid publishedExamId, CancellationToken cancellationToken = default);
 }
