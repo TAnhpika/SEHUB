@@ -7,6 +7,7 @@ import {
   resolvePublicExamName,
 } from "@/utils/examDisplay";
 import { getExamAssetFileName } from "@/utils/examAssetUrl";
+import { mapImportedExamQuestions } from "@/features/moderator/finalExams/finalExamData";
 
 const ROLE_MAP = {
   student: "student",
@@ -205,11 +206,19 @@ export function mapAdminExamDetail(dto) {
   };
 }
 
-const WIZARD_ANSWER_KEYS = ["A", "B", "C", "D"];
+const WIZARD_ANSWER_KEYS = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
 function parseSemesterNumber(semesterLabel) {
   const match = String(semesterLabel ?? "").match(/\d+/);
   return match ? match[0] : "1";
+}
+
+function getWizardOptionLabels(question) {
+  const labels = (question.optionLabels ?? WIZARD_ANSWER_KEYS.slice(0, 4))
+    .map((label) => String(label).trim().toUpperCase())
+    .filter((label) => WIZARD_ANSWER_KEYS.includes(label));
+
+  return labels.length > 0 ? labels : WIZARD_ANSWER_KEYS.slice(0, 4);
 }
 
 export function mapWizardQuestionsToCreateItems(questions) {
@@ -217,22 +226,34 @@ export function mapWizardQuestionsToCreateItems(questions) {
     .filter(
       (question) =>
         question.content?.trim() &&
-        WIZARD_ANSWER_KEYS.some((key) => question.answers?.[key]?.trim()),
+        getWizardOptionLabels(question).some((key) => question.answers?.[key]?.trim()),
     )
     .map((question, index) => {
-      const options = WIZARD_ANSWER_KEYS.map((key) => ({
+      const optionLabels = getWizardOptionLabels(question);
+      const options = optionLabels.map((key) => ({
         id: crypto.randomUUID(),
         label: key,
         text: question.answers[key]?.trim() ?? "",
       }));
-      const correct =
-        options.find((option) => option.label === question.correctAnswer) ?? options[0];
+
+      const isMulti = String(question.questionType ?? "").toLowerCase() === "multiselect";
+      const correctLabels = isMulti
+        ? (question.correctAnswers ?? []).filter((label) => optionLabels.includes(label))
+        : [question.correctAnswer].filter(Boolean);
+
+      const correctOptions = options.filter((option) => correctLabels.includes(option.label));
+      const fallbackCorrect = correctOptions[0] ?? options[0];
 
       return {
         orderIndex: index + 1,
         content: question.content.trim(),
+        questionType: isMulti ? "MultiSelect" : "SingleChoice",
+        requiredSelectCount: isMulti
+          ? question.requiredSelectCount ?? correctOptions.length
+          : null,
         options,
-        correctOptionId: correct.id,
+        correctOptionId: fallbackCorrect?.id,
+        correctOptionIds: correctOptions.map((option) => option.id),
       };
     });
 }
@@ -272,49 +293,7 @@ export function mapFinalExamWizardToResubmitRequest(examInfo, questions, { isRev
 
 export function mapExamDetailToWizard(dto) {
   const rawQuestions = dto.questions ?? dto.questionsData ?? [];
-  const wizardQuestions = rawQuestions.map((question, index) => {
-    const answers = { A: "", B: "", C: "", D: "" };
-    let correctAnswer = "A";
-    const labels = ["A", "B", "C", "D"];
-    const options = question.options ?? [];
-
-    for (const option of options) {
-      const label = String(option.label ?? option.Label ?? "")
-        .trim()
-        .toUpperCase();
-      if (labels.includes(label)) {
-        answers[label] = option.text ?? option.Text ?? "";
-      }
-    }
-
-    const correctOptionId = question.correctOptionId ?? question.CorrectOptionId;
-    if (correctOptionId) {
-      const correctOption = options.find(
-        (option) => (option.id ?? option.Id) === correctOptionId,
-      );
-      const label = String(correctOption?.label ?? correctOption?.Label ?? "")
-        .trim()
-        .toUpperCase();
-      if (labels.includes(label)) {
-        correctAnswer = label;
-      }
-    } else if (typeof question.correct === "number" && question.correct >= 0) {
-      correctAnswer = labels[question.correct] ?? "A";
-    } else {
-      labels.forEach((label, optionIndex) => {
-        answers[label] = question.options?.[optionIndex] ?? answers[label];
-      });
-    }
-
-    return {
-      id: `q-${index + 1}`,
-      content: question.content ?? question.text ?? question.Content ?? "",
-      answers,
-      correctAnswer,
-      explanation: "",
-      showExplanation: false,
-    };
-  });
+  const wizardQuestions = mapImportedExamQuestions(rawQuestions);
 
   const durationMatch = String(dto.description ?? "").match(/(\d+)\s*phút/);
   const durationMinutes = durationMatch ? Number(durationMatch[1]) : 60;
