@@ -37,7 +37,10 @@ export async function submitApiAttempt(examId, apiExamId, attemptId, questions, 
   const uiAnswers = {};
 
   for (const item of result.items) {
-    if (item.selectedAnswer) {
+    if (item.selectedAnswers?.length) {
+      uiAnswers[String(item.questionId)] =
+        item.selectedAnswers.length > 1 ? item.selectedAnswers : item.selectedAnswers[0];
+    } else if (item.selectedAnswer) {
       uiAnswers[String(item.questionId)] = item.selectedAnswer;
     }
   }

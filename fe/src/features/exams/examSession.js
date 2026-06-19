@@ -45,7 +45,13 @@ export function saveExamAnswer(examId, questionId, answerKey) {
     session.answers[key] = answerKey;
   }
 
-  session.answers[String(questionId)] = answerKey;
+  writeSession(examId, session);
+  return session;
+}
+
+export function saveExamAnswers(examId, answers) {
+  const session = getOrCreateExamSession(examId);
+  session.answers = answers;
   writeSession(examId, session);
   return session;
 }
