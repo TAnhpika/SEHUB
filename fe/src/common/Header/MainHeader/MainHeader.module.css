@@ -147,6 +147,10 @@
   position: relative;
 }
 
+.profileOpen {
+  z-index: 11;
+}
+
 .profile-trigger {
   display: flex;
   align-items: center;
@@ -159,10 +163,12 @@
 }
 
 .profile:hover .profile-menu,
-.profile:focus-within .profile-menu {
+.profile:focus-within .profile-menu,
+.profileOpen .profile-menu {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
+  pointer-events: auto;
 }
 
 .avatar {
@@ -207,12 +213,22 @@
   box-shadow: var(--shadow-md);
   opacity: 0;
   visibility: hidden;
+  pointer-events: none;
   transform: translateY(-4px);
   transition:
     opacity 0.15s ease,
     transform 0.15s ease,
     visibility 0.15s ease;
   z-index: 10;
+}
+
+.profile-menu::before {
+  content: "";
+  position: absolute;
+  top: -0.5rem;
+  left: 0;
+  right: 0;
+  height: 0.5rem;
 }
 
 .menu-item {
