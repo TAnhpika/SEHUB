@@ -6,6 +6,9 @@ import {
 } from "@/features/feed/feedData";
 import styles from "./FeaturedPostsPanel.module.css";
 
+/** Matches --featured-max-visible in FeaturedPostsPanel.module.css */
+const MAX_VISIBLE_FEATURED = 6;
+
 function FeaturedPostsPanel({ className = "" }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +35,7 @@ function FeaturedPostsPanel({ className = "" }) {
         <p className={styles.empty}>Đang tải…</p>
       ) : posts.length === 0 ? (
         <p className={styles.empty}>
-          Chưa có bài ghim. Moderator có thể ghim tối đa 5 bài từ trang Ghim bài.
+          Chưa có bài ghim. Moderator có thể ghim tối đa {MAX_VISIBLE_FEATURED} bài từ trang Ghim bài.
         </p>
       ) : (
         <ul className={styles.posts}>

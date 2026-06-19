@@ -1,4 +1,6 @@
 .panel {
+  --featured-max-visible: 6;
+  --featured-row-height: 3rem;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -21,13 +23,25 @@
 
 .posts {
   display: flex;
-  flex: 1;
   flex-direction: column;
-  min-height: 0;
+  max-height: calc(var(--featured-row-height) * var(--featured-max-visible));
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.posts::-webkit-scrollbar {
+  width: 4px;
+}
+
+.posts::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-full);
 }
 
 .item {
