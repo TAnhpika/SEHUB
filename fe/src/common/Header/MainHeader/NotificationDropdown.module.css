@@ -62,6 +62,15 @@
   box-shadow: 0 12px 32px rgb(30 41 59 / 12%);
 }
 
+.dropdown::before {
+  content: "";
+  position: absolute;
+  top: -0.625rem;
+  left: 0;
+  right: 0;
+  height: 0.625rem;
+}
+
 .header {
   display: flex;
   align-items: flex-start;

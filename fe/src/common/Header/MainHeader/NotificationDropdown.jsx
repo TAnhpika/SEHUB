@@ -20,6 +20,7 @@ import {
 } from "@/api/notificationsApi";
 import { mapNotificationItem, mapNotificationPage } from "@/api/notificationsMapper";
 import { useChatHub } from "@/hooks/useChatHub";
+import { useHoverDropdown } from "@/hooks/useHoverDropdown";
 import { NOTIFICATION_META } from "./notificationData";
 import styles from "./NotificationDropdown.module.css";
 
@@ -39,7 +40,7 @@ const TYPE_ICONS = {
 
 function NotificationDropdown() {
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
+  const { open, setOpen, rootProps, handleTriggerClick } = useHoverDropdown();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const rootRef = useRef(null);
@@ -97,26 +98,18 @@ function NotificationDropdown() {
   useEffect(() => {
     if (!open) return undefined;
 
-    function handlePointerDown(event) {
-      if (!rootRef.current?.contains(event.target)) {
-        setOpen(false);
-      }
-    }
-
     function handleKeyDown(event) {
       if (event.key === "Escape") {
         setOpen(false);
       }
     }
 
-    document.addEventListener("mousedown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open]);
+  }, [open, setOpen]);
 
   async function handleMarkAllRead() {
     try {
@@ -146,11 +139,11 @@ function NotificationDropdown() {
   }
 
   return (
-    <div className={styles.root} ref={rootRef}>
+    <div className={styles.root} ref={rootRef} {...rootProps}>
       <button
         type="button"
         className={`${styles.trigger} ${open ? styles["trigger-open"] : ""}`}
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={handleTriggerClick}
         aria-label={`Thông báo (${unreadItems} chưa đọc)`}
         aria-haspopup="dialog"
         aria-expanded={open}

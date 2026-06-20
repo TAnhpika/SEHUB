@@ -10,11 +10,14 @@ import { useAuth } from "@/context";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import NotificationDropdown from "@/common/Header/MainHeader/NotificationDropdown";
 import StreakDropdown from "@/common/Header/MainHeader/StreakDropdown";
+import { useHoverDropdown } from "@/hooks/useHoverDropdown";
 import styles from "@/common/Header/MainHeader/MainHeader.module.css";
 
 function HeaderUserActions() {
   const navigate = useNavigate();
   const { user, logout, isPremium } = useAuth();
+  const { open: profileOpen, rootProps: profileHoverProps, handleTriggerClick } =
+    useHoverDropdown();
 
   const displayName = user?.displayName ?? "Anhpika";
   const initial = user?.initial ?? displayName.charAt(0).toUpperCase();
@@ -28,8 +31,17 @@ function HeaderUserActions() {
     <>
       <NotificationDropdown />
       <StreakDropdown />
-      <div className={styles.profile}>
-        <button type="button" className={styles["profile-trigger"]} aria-haspopup="menu">
+      <div
+        className={`${styles.profile} ${profileOpen ? styles.profileOpen : ""}`.trim()}
+        {...profileHoverProps}
+      >
+        <button
+          type="button"
+          className={styles["profile-trigger"]}
+          aria-haspopup="menu"
+          aria-expanded={profileOpen}
+          onClick={handleTriggerClick}
+        >
           <span className={styles.avatar} aria-hidden="true">
             {initial}
           </span>
