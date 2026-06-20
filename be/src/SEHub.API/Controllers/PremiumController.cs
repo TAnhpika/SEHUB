@@ -183,6 +183,52 @@ public sealed class PremiumController : ControllerBase
 
     }
 
+    [HttpGet("refund/form")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> GetRefundForm(
+        [FromQuery] string orderCode,
+        CancellationToken cancellationToken)
+    {
+        var result = await _premiumRefundService.GetRefundFormAsync(orderCode, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("refund/bank-details")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(55 * 1024 * 1024)]
+    public async Task<IActionResult> SubmitRefundBankDetails(
+        [FromForm] PremiumRefundBankDetailsRequest request,
+        [FromForm] IFormFileCollection? files,
+        CancellationToken cancellationToken)
+    {
+        var paymentProofs = new List<RefundPaymentProofUpload>();
+        if (files is not null)
+        {
+            foreach (var file in files)
+            {
+                if (file.Length <= 0)
+                {
+                    continue;
+                }
+
+                paymentProofs.Add(new RefundPaymentProofUpload
+                {
+                    Content = file.OpenReadStream(),
+                    FileName = file.FileName,
+                    ContentType = file.ContentType ?? string.Empty,
+                    SizeBytes = file.Length,
+                });
+            }
+        }
+
+        var result = await _premiumRefundService.SubmitRefundBankDetailsAsync(
+            request,
+            paymentProofs,
+            cancellationToken);
+        return Ok(result);
+    }
+
 
 
     [HttpPost("webhooks/payos")]

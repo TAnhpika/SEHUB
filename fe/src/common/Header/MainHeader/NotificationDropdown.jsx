@@ -9,6 +9,7 @@ import {
   faUserPlus,
   faUserGroup,
   faEnvelope,
+  faRotateLeft,
 } from "@fortawesome/free-solid-svg-icons";
 import { faBell as faBellOutline } from "@fortawesome/free-regular-svg-icons";
 import {
@@ -33,6 +34,7 @@ const TYPE_ICONS = {
   like: faCommentDots,
   token: faBell,
   badge: faBell,
+  refund: faRotateLeft,
 };
 
 function NotificationDropdown() {

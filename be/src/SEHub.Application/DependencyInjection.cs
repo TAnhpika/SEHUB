@@ -70,6 +70,7 @@ public static class DependencyInjection
         services.AddScoped<IN8nPremiumActivationService, N8nPremiumActivationService>();
         services.AddScoped<IValidator<N8NPremiumActivationDto>, N8nPremiumActivationValidator>();
         services.AddScoped<IValidator<PremiumRefundRequestDto>, PremiumRefundRequestValidator>();
+        services.AddScoped<IValidator<PremiumRefundBankDetailsRequest>, PremiumRefundBankDetailsValidator>();
 
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IProfileStatsService, ProfileStatsService>();

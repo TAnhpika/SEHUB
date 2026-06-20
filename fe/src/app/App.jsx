@@ -37,6 +37,7 @@ import PremiumPage from "@/features/premium/PremiumPage/PremiumPage";
 import CheckoutPage from "@/features/premium/CheckoutPage/CheckoutPage";
 import PaymentSuccessPage from "@/features/premium/PaymentSuccessPage/PaymentSuccessPage";
 import PaymentReturnPage from "@/features/premium/PaymentReturnPage/PaymentReturnPage";
+import PremiumRefundFormPage from "@/features/premium/PremiumRefundFormPage/PremiumRefundFormPage";
 import SupportPage from "@/features/support/SupportPage/SupportPage";
 import AdminRoute from "@/common/guards/AdminRoute";
 import ModeratorRoute from "@/common/guards/ModeratorRoute";
@@ -154,6 +155,7 @@ function App() {
                 <Route path="/home/premium/checkout/:planId" element={<CheckoutPage />} />
                 <Route path="/home/premium/payment-return" element={<PaymentReturnPage />} />
                 <Route path="/home/premium/success/:planId" element={<PaymentSuccessPage />} />
+                <Route path="/home/premium/refund-form" element={<PremiumRefundFormPage />} />
                 <Route path="/home/friends" element={<FriendsPage />} />
                 <Route path="/home/friends/:username" element={<FriendProfilePage />} />
                 <Route path="/home/final-exam" element={<ReviewQuestionsPage scope="home" />} />

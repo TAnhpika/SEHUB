@@ -172,9 +172,9 @@ export const FEATURE_COMPARISON = [
 ];
 
 export const PAYMENT_INFO = {
-  bank: "MB Bank (Quân Đội)",
-  accountNumber: "123456789",
-  accountName: "SEHUB PLATFORM",
+  bank: "MB Bank",
+  accountNumber: "0001137880784",
+  accountName: "MAC TU HAU",
   transferPrefix: "SEHUB",
 };
 
