@@ -2,8 +2,8 @@ import * as adminApi from "@/api/adminApi";
 import {
   mapExamDetailToWizard,
   mapFinalExamWizardToResubmitRequest,
+  mapWizardQuestionsToCreateItems,
 } from "@/api/adminMapper";
-import { ANSWER_KEYS } from "@/features/moderator/finalExams/finalExamData";
 import {
   buildExamDisplayFields,
   enrichRevisionExamEntries,
@@ -80,23 +80,7 @@ export function enrichRevisionContributionEntries(entries) {
 }
 
 export function buildFinalExamCreateBody(examInfo, questions) {
-  const apiQuestions = questions
-    .filter((question) => question.content.trim())
-    .map((question, index) => {
-      const options = ANSWER_KEYS.map((key) => ({
-        id: crypto.randomUUID(),
-        label: key,
-        text: question.answers[key]?.trim() ?? "",
-      }));
-      const correctOption = options.find((option) => option.label === question.correctAnswer) ?? options[0];
-
-      return {
-        orderIndex: index + 1,
-        content: question.content.trim(),
-        options,
-        correctOptionId: correctOption.id,
-      };
-    });
+  const apiQuestions = mapWizardQuestionsToCreateItems(questions);
 
   const subjectCode =
     normalizeCourseSubjectCode(examInfo.subjectCode) ?? examInfo.subjectCode.trim();

@@ -9,7 +9,7 @@ import {
   recordExamDraft,
 } from "@/features/moderator/exams/moderatorExamContributionStore";
 import {
-  ANSWER_KEYS,
+  isQuestionComplete,
   MARKDOWN_IMPORT_PLACEHOLDER,
   mapImportedExamQuestions,
 } from "@/features/moderator/finalExams/finalExamData";
@@ -17,13 +17,6 @@ import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWiz
 import QuestionEditorCard from "@/features/moderator/finalExams/components/QuestionEditorCard";
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
 import styles from "./FinalExamQuestionsStep.module.css";
-
-function isQuestionComplete(question) {
-  return (
-    question.content.trim() &&
-    ANSWER_KEYS.every((key) => question.answers[key]?.trim())
-  );
-}
 
 function FinalExamQuestionsStep() {
   const navigate = useNavigate();
@@ -168,6 +161,7 @@ function FinalExamQuestionsStep() {
             onChange={updateActiveQuestion}
             onAnswerChange={updateActiveAnswer}
             onCorrectAnswerChange={(key) => updateActiveQuestion({ correctAnswer: key })}
+            onCorrectAnswersChange={(correctAnswers) => updateActiveQuestion({ correctAnswers })}
             onToggleExplanation={() =>
               updateActiveQuestion({ showExplanation: !activeQuestion.showExplanation })
             }
@@ -197,8 +191,9 @@ function FinalExamQuestionsStep() {
         <section className={styles.markdownPanel}>
           <h2 className={styles.markdownTitle}>Import câu hỏi bằng Markdown</h2>
           <p className={styles.markdownDesc}>
-            Dán nội dung theo mẫu <code>## Câu 1</code>, <code>A.</code>–<code>D.</code>,{" "}
-            <code>**Đáp án: X**</code>. Sau khi import, chuyển sang tab Nhập thủ công để chỉnh sửa.
+            Dán nội dung theo mẫu <code>## Câu 1</code>, <code>A.</code>–<code>H.</code>,{" "}
+            <code>**Đáp án: X**</code> hoặc <code>## Câu 2 [MULTI:3]</code> với{" "}
+            <code>**Đáp án: A, C, E**</code>.
           </p>
           <textarea
             className={styles.markdownInput}
@@ -209,7 +204,7 @@ function FinalExamQuestionsStep() {
           />
           <p className={styles.markdownHint}>
             Mỗi câu bắt đầu bằng <strong>## Câu N</strong> hoặc phân tách bằng <strong>---</strong>.
-            Dòng cuối mỗi câu: <strong>**Đáp án: A**</strong> (hoặc B/C/D).
+            Câu chọn nhiều: thêm <strong>[MULTI:3]</strong> và <strong>**Đáp án: A, C, E**</strong>.
           </p>
           <div className={styles.markdownActions}>
             <Button type="button" onClick={handleImportMarkdown} disabled={importingMarkdown}>

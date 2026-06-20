@@ -88,7 +88,11 @@ public sealed class ExamQueryService : IExamQueryService
                 Id = q.Id,
                 OrderIndex = q.OrderIndex,
                 Content = q.Content,
-                Options = q.Options.Select(o => new QuestionOptionDto
+                QuestionType = q.QuestionType.ToString(),
+                RequiredSelectCount = q.RequiredSelectCount,
+                Options = q.Options
+                    .OrderBy(o => o.Label)
+                    .Select(o => new QuestionOptionDto
                 {
                     Id = o.Id,
                     Label = o.Label,
@@ -116,8 +120,13 @@ public sealed class ExamQueryService : IExamQueryService
             Id = question.Id,
             OrderIndex = question.OrderIndex,
             Content = question.Content,
+            QuestionType = question.QuestionType.ToString(),
+            RequiredSelectCount = question.RequiredSelectCount,
             CorrectOptionId = question.CorrectOptionId,
-            Options = question.Options.Select(o => new QuestionOptionDto
+            CorrectOptionIds = QuestionCorrectAnswers.GetCorrectOptionIds(question),
+            Options = question.Options
+                .OrderBy(o => o.Label)
+                .Select(o => new QuestionOptionDto
             {
                 Id = o.Id,
                 Label = o.Label,

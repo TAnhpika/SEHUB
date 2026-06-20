@@ -150,7 +150,13 @@ function FinalExamReviewStep() {
             <li key={question.id}>
               <strong>Câu {index + 1}:</strong>{" "}
               {question.content.trim() || "(Chưa nhập nội dung)"}
-              <span className={styles.correct}> — Đáp án: {question.correctAnswer}</span>
+              <span className={styles.correct}>
+                {" "}
+                — Đáp án:{" "}
+                {String(question.questionType ?? "").toLowerCase() === "multiselect"
+                  ? (question.correctAnswers ?? []).join(", ")
+                  : question.correctAnswer}
+              </span>
             </li>
           ))}
         </ol>

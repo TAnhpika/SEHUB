@@ -210,3 +210,38 @@
     grid-template-columns: 1fr;
   }
 }
+
+.select,
+.numberInput {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  font: inherit;
+  border: 1px solid rgba(195, 198, 215, 0.6);
+  border-radius: 8px;
+}
+
+.addOptionBtn {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0 2rem 1rem;
+  padding: 0.5rem 0.875rem;
+  font: inherit;
+  color: #004ac6;
+  cursor: pointer;
+  background: #eef4ff;
+  border: none;
+  border-radius: 8px;
+}
+
+.removeOptionBtn {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: 1.125rem;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+}

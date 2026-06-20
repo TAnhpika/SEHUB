@@ -86,4 +86,31 @@ public sealed class ExamMarkdownImportServiceTests
         Assert.Equal("1 + 1 bằng mấy?", result.Questions[1].Content);
         Assert.Equal("B", result.Questions[1].Options.First(o => o.Id == result.Questions[1].CorrectOptionId).Label);
     }
+
+    [Fact]
+    public void Parse_MultiSelectMarkdown_ReturnsMultiQuestion()
+    {
+        const string markdown = """
+            ## Câu 1 [MULTI:3]
+            Chọn 3 ngôn ngữ OOP:
+
+            A. Java
+            B. HTML
+            C. C++
+            D. Python
+            E. CSS
+            F. Assembly
+
+            **Đáp án: A, C, D**
+            """;
+
+        var result = _service.Parse(markdown);
+
+        Assert.Equal(1, result.QuestionCount);
+        var question = result.Questions[0];
+        Assert.Equal("MultiSelect", question.QuestionType);
+        Assert.Equal(3, question.RequiredSelectCount);
+        Assert.Equal(6, question.Options.Count);
+        Assert.Equal(3, question.CorrectOptionIds.Count);
+    }
 }

@@ -9,6 +9,9 @@ public sealed class SaveAnswersRequestValidator : AbstractValidator<SaveAnswersR
     {
         RuleFor(x => x.Answers)
             .NotNull()
-            .Must(a => a.All(kv => kv.Key != Guid.Empty && kv.Value != Guid.Empty));
+            .Must(a => a.All(kv =>
+                kv.Key != Guid.Empty
+                && kv.Value is not null
+                && kv.Value.All(optionId => optionId != Guid.Empty)));
     }
 }

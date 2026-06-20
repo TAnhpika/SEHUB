@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using SEHub.Contracts.Admin;
+using SEHub.Domain.Enums;
 
 namespace SEHub.Application.Admin;
 
@@ -10,8 +11,10 @@ public interface IExamMarkdownImportService
 
 public sealed class ExamMarkdownImportService : IExamMarkdownImportService
 {
+    private const string OptionLabels = "ABCDEFGH";
+
     private static readonly Regex QuestionHeaderRegex = new(
-        @"^\s*#{1,3}\s*(?:C(?:âu|au)\s*)?(\d+)\s*$",
+        @"^\s*#{1,3}\s*(?:C(?:âu|au)\s*)?(\d+)(?:\s*\[MULTI(?::(\d+))?\])?\s*$",
         RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.Compiled);
 
     private static readonly Regex DocumentTitleRegex = new(
@@ -19,12 +22,12 @@ public sealed class ExamMarkdownImportService : IExamMarkdownImportService
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly Regex OptionLineRegex = new(
-        @"^\s*([A-Da-d])[\.)]\s*(.+)$",
+        @"^\s*([A-Ha-h])[\.)]\s*(.+)$",
         RegexOptions.Compiled);
 
     private static readonly Regex AnswerRegex = new(
-        @"(?:\*\*)?(?:Đáp án|Dap an|Answer)\s*:\s*([A-Da-d])(?:\*\*)?",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        @"(?:\*\*)?(?:Đáp án|Dap an|Answer)\s*:\s*([A-Ha-h,\s;]+?)(?:\*\*)?\s*$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Multiline);
 
     private static readonly Regex HorizontalRuleRegex = new(
         @"^\s*---+\s*$",
@@ -146,7 +149,17 @@ public sealed class ExamMarkdownImportService : IExamMarkdownImportService
             throw new InvalidOperationException("Khối câu hỏi trống.");
         }
 
-        var startIndex = QuestionHeaderRegex.IsMatch(lines[0]) ? 1 : 0;
+        var headerMatch = QuestionHeaderRegex.Match(lines[0]);
+        var startIndex = headerMatch.Success ? 1 : 0;
+        var isMultiSelect = headerMatch.Success && headerMatch.Groups[2].Success
+            || (headerMatch.Success && block.Contains("[MULTI", StringComparison.OrdinalIgnoreCase));
+        int? requiredSelectCount = null;
+        if (headerMatch.Success && int.TryParse(headerMatch.Groups[2].Value, out var parsedRequired))
+        {
+            requiredSelectCount = parsedRequired;
+            isMultiSelect = true;
+        }
+
         var optionStartIndex = lines.FindIndex(startIndex, l => OptionLineRegex.IsMatch(l));
         if (optionStartIndex < 0)
         {
@@ -204,32 +217,71 @@ public sealed class ExamMarkdownImportService : IExamMarkdownImportService
             throw new InvalidOperationException("Thiếu dòng **Đáp án: X** hoặc Answer: X.");
         }
 
-        var answerLabel = answerMatch.Groups[1].Value.ToUpperInvariant();
-        var correctOption = options.FirstOrDefault(o => o.Label == answerLabel);
-        if (correctOption is null)
+        var answerLabels = ParseAnswerLabels(answerMatch.Groups[1].Value);
+        if (answerLabels.Count == 0)
         {
-            throw new InvalidOperationException($"Đáp án {answerLabel} không khớp phương án.");
+            throw new InvalidOperationException("Không đọc được đáp án đúng.");
+        }
+
+        if (answerLabels.Count > 1)
+        {
+            isMultiSelect = true;
+        }
+
+        var correctOptions = new List<CreateExamOptionItem>();
+        foreach (var answerLabel in answerLabels)
+        {
+            var match = options.FirstOrDefault(option => option.Label == answerLabel);
+            if (match is null)
+            {
+                throw new InvalidOperationException($"Đáp án {answerLabel} không khớp phương án.");
+            }
+
+            correctOptions.Add(match);
         }
 
         var orderIndex = fallbackOrder;
-        var headerMatch = QuestionHeaderRegex.Match(lines[0]);
         if (headerMatch.Success && int.TryParse(headerMatch.Groups[1].Value, out var parsedOrder))
         {
             orderIndex = parsedOrder;
         }
 
-        if (options.Count < 4)
+        if (options.Count < 4 && !isMultiSelect)
         {
             warnings.Add($"Câu {orderIndex}: chỉ có {options.Count} phương án.");
+        }
+
+        if (isMultiSelect)
+        {
+            requiredSelectCount ??= correctOptions.Count;
+            if (requiredSelectCount != correctOptions.Count)
+            {
+                warnings.Add(
+                    $"Câu {orderIndex}: [MULTI:{requiredSelectCount}] nhưng có {correctOptions.Count} đáp án đúng.");
+            }
         }
 
         return new CreateExamQuestionItem
         {
             OrderIndex = orderIndex,
             Content = content,
+            QuestionType = isMultiSelect ? QuestionType.MultiSelect.ToString() : QuestionType.SingleChoice.ToString(),
+            RequiredSelectCount = isMultiSelect ? requiredSelectCount : null,
             Options = options,
-            CorrectOptionId = correctOption.Id,
+            CorrectOptionId = correctOptions[0].Id,
+            CorrectOptionIds = correctOptions.Select(option => option.Id).ToList(),
         };
+    }
+
+    private static List<string> ParseAnswerLabels(string raw)
+    {
+        return raw
+            .Replace(";", ",")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(token => token.Trim().Trim('*').ToUpperInvariant())
+            .Where(token => token.Length == 1 && OptionLabels.Contains(token))
+            .Distinct()
+            .ToList();
     }
 
     private static bool ShouldSkipContentLine(string line) =>

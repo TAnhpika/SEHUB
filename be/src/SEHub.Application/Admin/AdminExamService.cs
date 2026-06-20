@@ -2,11 +2,11 @@ using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Exams;
+using SEHub.Domain.Enums;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Exams;
 using SEHub.Domain.Entities;
-using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
 using SEHub.Shared.Constants;
 
@@ -295,23 +295,63 @@ public sealed class AdminExamService : IAdminExamService
     private static Question BuildQuestion(CreateExamQuestionItem item, Guid examId)
     {
         var questionId = Guid.NewGuid();
+        var options = item.Options.Select(o => new QuestionOption
+        {
+            Id = o.Id == Guid.Empty ? Guid.NewGuid() : o.Id,
+            QuestionId = questionId,
+            Label = o.Label,
+            Text = o.Text,
+            CreatedAt = DateTime.UtcNow,
+        }).ToList();
+
+        var questionType = Enum.TryParse<QuestionType>(item.QuestionType, true, out var parsedType)
+            ? parsedType
+            : QuestionType.SingleChoice;
+        var correctOptionIds = ResolveCorrectOptionIds(item, options);
+        if (correctOptionIds.Count == 0 && options.Count > 0)
+        {
+            correctOptionIds = [options[0].Id];
+        }
+
+        if (correctOptionIds.Count > 1)
+        {
+            questionType = QuestionType.MultiSelect;
+        }
+
+        int? requiredSelectCount = questionType == QuestionType.MultiSelect
+            ? item.RequiredSelectCount ?? correctOptionIds.Count
+            : null;
+
         return new Question
         {
             Id = questionId,
             ExamId = examId,
             OrderIndex = item.OrderIndex,
             Content = item.Content,
-            CorrectOptionId = item.CorrectOptionId,
+            QuestionType = questionType,
+            RequiredSelectCount = requiredSelectCount,
+            CorrectOptionId = questionType == QuestionType.SingleChoice ? correctOptionIds[0] : null,
+            CorrectOptionIdsJson = QuestionCorrectAnswers.SerializeCorrectOptionIds(correctOptionIds),
             CreatedAt = DateTime.UtcNow,
-            Options = item.Options.Select(o => new QuestionOption
-            {
-                Id = o.Id == Guid.Empty ? Guid.NewGuid() : o.Id,
-                QuestionId = questionId,
-                Label = o.Label,
-                Text = o.Text,
-                CreatedAt = DateTime.UtcNow
-            }).ToList()
+            Options = options,
         };
+    }
+
+    private static List<Guid> ResolveCorrectOptionIds(CreateExamQuestionItem item, IReadOnlyList<QuestionOption> options)
+    {
+        var optionIds = options.Select(option => option.Id).ToHashSet();
+        var fromRequest = item.CorrectOptionIds.Where(optionIds.Contains).Distinct().ToList();
+        if (fromRequest.Count > 0)
+        {
+            return fromRequest;
+        }
+
+        if (item.CorrectOptionId != Guid.Empty && optionIds.Contains(item.CorrectOptionId))
+        {
+            return [item.CorrectOptionId];
+        }
+
+        return [];
     }
 
     private static Exam CloneExamAsRevision(Exam published, string revisionCode)
@@ -350,8 +390,20 @@ public sealed class AdminExamService : IAdminExamService
                     CreatedAt = DateTime.UtcNow,
                 }).ToList();
 
-                var correctLabel = q.Options.FirstOrDefault(o => o.Id == q.CorrectOptionId)?.Label;
-                var correctOption = options.FirstOrDefault(o => o.Label == correctLabel) ?? options.FirstOrDefault();
+                var correctLabels = QuestionCorrectAnswers.GetCorrectOptionIds(q)
+                    .Select(id => q.Options.FirstOrDefault(o => o.Id == id)?.Label)
+                    .Where(label => !string.IsNullOrWhiteSpace(label))
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                var remappedCorrectIds = options
+                    .Where(o => correctLabels.Contains(o.Label))
+                    .Select(o => o.Id)
+                    .ToList();
+
+                if (remappedCorrectIds.Count == 0)
+                {
+                    remappedCorrectIds = options.Count > 0 ? [options[0].Id] : [];
+                }
 
                 return new Question
                 {
@@ -359,7 +411,12 @@ public sealed class AdminExamService : IAdminExamService
                     ExamId = revisionId,
                     OrderIndex = q.OrderIndex,
                     Content = q.Content,
-                    CorrectOptionId = correctOption?.Id ?? options.FirstOrDefault()?.Id,
+                    QuestionType = q.QuestionType,
+                    RequiredSelectCount = q.RequiredSelectCount,
+                    CorrectOptionId = q.QuestionType == QuestionType.SingleChoice
+                        ? remappedCorrectIds.FirstOrDefault()
+                        : null,
+                    CorrectOptionIdsJson = QuestionCorrectAnswers.SerializeCorrectOptionIds(remappedCorrectIds),
                     CreatedAt = DateTime.UtcNow,
                     Options = options,
                 };
@@ -486,8 +543,11 @@ public sealed class AdminExamService : IAdminExamService
                 Id = q.Id,
                 OrderIndex = q.OrderIndex,
                 Content = q.Content,
+                QuestionType = q.QuestionType.ToString(),
+                RequiredSelectCount = q.RequiredSelectCount,
                 CorrectOptionId = q.CorrectOptionId ?? Guid.Empty,
-                Options = q.Options.Select(o => new AdminExamOptionDto
+                CorrectOptionIds = QuestionCorrectAnswers.GetCorrectOptionIds(q),
+                Options = q.Options.OrderBy(o => o.Label).Select(o => new AdminExamOptionDto
                 {
                     Id = o.Id,
                     Label = o.Label,

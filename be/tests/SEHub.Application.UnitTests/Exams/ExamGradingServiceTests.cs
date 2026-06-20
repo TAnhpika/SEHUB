@@ -56,10 +56,10 @@ public sealed class ExamGradingServiceTests
             ]
         };
 
-        var answers = new Dictionary<Guid, Guid>
+        var answers = new Dictionary<Guid, List<Guid>>
         {
-            [question1Id] = optionA,
-            [question2Id] = optionB
+            [question1Id] = [optionA],
+            [question2Id] = [optionB],
         };
 
         var result = _sut.Grade(exam, answers);
@@ -69,6 +69,50 @@ public sealed class ExamGradingServiceTests
         result.Score.Should().Be(50m);
         result.Answers.Should().ContainSingle(a => a.IsCorrect);
         result.Answers.Should().ContainSingle(a => !a.IsCorrect);
+    }
+
+    [Fact]
+    public void Grade_MultiSelect_RequiresExactMatch()
+    {
+        var optionA = Guid.NewGuid();
+        var optionB = Guid.NewGuid();
+        var optionC = Guid.NewGuid();
+        var optionD = Guid.NewGuid();
+        var questionId = Guid.NewGuid();
+
+        var exam = new Exam
+        {
+            Id = Guid.NewGuid(),
+            Code = "EX-MULTI",
+            Title = "Multi Exam",
+            ExamType = ExamType.Final,
+            Status = ExamStatus.Published,
+            Questions =
+            [
+                new Question
+                {
+                    Id = questionId,
+                    OrderIndex = 1,
+                    Content = "Pick 2",
+                    QuestionType = QuestionType.MultiSelect,
+                    RequiredSelectCount = 2,
+                    CorrectOptionIdsJson = QuestionCorrectAnswers.SerializeCorrectOptionIds([optionA, optionC]),
+                    Options =
+                    [
+                        new QuestionOption { Id = optionA, Label = "A", Text = "A" },
+                        new QuestionOption { Id = optionB, Label = "B", Text = "B" },
+                        new QuestionOption { Id = optionC, Label = "C", Text = "C" },
+                        new QuestionOption { Id = optionD, Label = "D", Text = "D" },
+                    ]
+                }
+            ]
+        };
+
+        var partial = _sut.Grade(exam, new Dictionary<Guid, List<Guid>> { [questionId] = [optionA] });
+        partial.CorrectCount.Should().Be(0);
+
+        var exact = _sut.Grade(exam, new Dictionary<Guid, List<Guid>> { [questionId] = [optionA, optionC] });
+        exact.CorrectCount.Should().Be(1);
     }
 
     [Fact]
@@ -83,7 +127,7 @@ public sealed class ExamGradingServiceTests
             Status = ExamStatus.Published
         };
 
-        var result = _sut.Grade(exam, new Dictionary<Guid, Guid>());
+        var result = _sut.Grade(exam, new Dictionary<Guid, List<Guid>>());
 
         result.Score.Should().Be(0);
         result.TotalQuestions.Should().Be(0);

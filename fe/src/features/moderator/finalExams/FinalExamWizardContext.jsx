@@ -5,6 +5,7 @@ import {
   buildEmptyQuestions,
   createEmptyQuestion,
   getWizardSteps,
+  isQuestionComplete,
   parseTotalQuestions,
 } from "@/features/moderator/finalExams/finalExamData";
 import { loadExamForWizardEdit } from "@/features/moderator/exams/moderatorExamService";
@@ -30,12 +31,7 @@ export function FinalExamWizardProvider({ children }) {
   const totalQuestions = examInfo.totalQuestions;
 
   const completeCount = useMemo(
-    () =>
-      questions.filter(
-        (question) =>
-          question.content.trim() &&
-          ANSWER_KEYS.every((key) => question.answers[key]?.trim()),
-      ).length,
+    () => questions.filter(isQuestionComplete).length,
     [questions],
   );
 

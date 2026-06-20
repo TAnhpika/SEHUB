@@ -53,8 +53,13 @@ import {
   getReviewSession,
   isReviewCorrectAnswerRevealed,
   shuffleReviewQuestions,
+  ensureReviewOptionOrder,
   toggleReviewCorrectAnswerReveal,
 } from "@/features/exams/examReviewSessionStore";
+import {
+  buildDisplayOptions,
+  mapCorrectAnswersToDisplay,
+} from "@/features/exams/examReviewOptions";
 import {
   getExamFocusDoPath,
   getExamResultPath,
@@ -203,7 +208,7 @@ function ExamDetailPage({ page }) {
   const isReviewExam = page === "review";
 
   const reviewSession = useMemo(() => {
-    if (!exam || !isReviewExam) return { correctAnswerRevealed: false, order: null };
+    if (!exam || !isReviewExam) return { correctAnswerRevealed: false, order: null, optionOrders: {} };
     return getReviewSession(exam.id, username);
   }, [exam, isReviewExam, username, sessionTick]);
 
@@ -212,6 +217,32 @@ function ExamDetailPage({ page }) {
     if (!isReviewExam) return questions;
     return getOrderedReviewQuestions(questions, reviewSession);
   }, [exam, isReviewExam, questions, reviewSession]);
+
+  const currentQuestion = orderedQuestions[currentIndex];
+
+  useEffect(() => {
+    if (!isReviewExam || !exam || !currentQuestion?.options?.length) return;
+
+    const session = getReviewSession(exam.id, username);
+    const key = String(currentQuestion.id);
+    if (session.optionOrders?.[key]?.length === currentQuestion.options.length) {
+      return;
+    }
+
+    ensureReviewOptionOrder(exam.id, username, currentQuestion.id, currentQuestion.options.length);
+    setSessionTick((tick) => tick + 1);
+  }, [isReviewExam, exam, currentQuestion?.id, currentQuestion?.options?.length, username]);
+
+  const currentDisplayOptions = useMemo(() => {
+    if (!currentQuestion?.options?.length || !exam) return [];
+    const permutation = reviewSession.optionOrders?.[String(currentQuestion.id)];
+    return buildDisplayOptions(currentQuestion.options, permutation);
+  }, [currentQuestion, exam, reviewSession]);
+
+  const displayCorrectAnswers = useMemo(
+    () => mapCorrectAnswersToDisplay(currentQuestion, currentDisplayOptions),
+    [currentQuestion, currentDisplayOptions],
+  );
 
   const showCorrectAnswer = isReviewExam && canViewExamAnswers(user);
   const correctAnswerRevealed = isReviewExam
@@ -297,7 +328,6 @@ function ExamDetailPage({ page }) {
     );
   }
 
-  const currentQuestion = orderedQuestions[currentIndex];
   const isFirstQuestion = currentIndex === 0;
   const isLastQuestion = currentIndex >= orderedQuestions.length - 1;
   const isPracticeExam = page === "practice";
@@ -514,6 +544,11 @@ function ExamDetailPage({ page }) {
                 </p>
               )}
               <h3 className={styles["question-text"]}>{currentQuestion?.text}</h3>
+              {currentQuestion?.questionType === "MultiSelect" && currentQuestion?.requiredSelectCount ? (
+                <p className={styles["multi-hint"]}>
+                  Chọn đúng {currentQuestion.requiredSelectCount} đáp án.
+                </p>
+              ) : null}
 
               {isPracticeExam && practiceBrief ? (
                 <PracticeBriefPanel
@@ -524,14 +559,14 @@ function ExamDetailPage({ page }) {
                 />
               ) : null}
 
-              {isReviewExam && currentQuestion?.options && (
+              {isReviewExam && currentDisplayOptions.length > 0 && (
                 <ul className={styles.options}>
-                  {currentQuestion.options.map((option) => {
+                  {currentDisplayOptions.map((option) => {
                     const isCorrect =
-                      revealCorrectAnswer && option.key === currentQuestion.correctAnswer;
+                      revealCorrectAnswer && displayCorrectAnswers.includes(option.key);
 
                     return (
-                      <li key={option.key}>
+                      <li key={option.optionId ?? option.key}>
                         <div
                           className={`${styles.option} ${isCorrect ? styles["option-correct"] : ""}`}
                         >
@@ -655,6 +690,7 @@ function ExamDetailPage({ page }) {
               reason={!isAuthenticated ? "guest" : "premium"}
               examId={exam.id}
               questionId={currentQuestion.id}
+              questionLabel={`Câu ${currentIndex + 1}`}
             />
           )}
         </div>

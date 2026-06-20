@@ -1,4 +1,3 @@
-using System.Text.Json;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
@@ -92,7 +91,7 @@ public sealed class ExamAttemptService : IExamAttemptService
         var attempt = await GetOwnedAttemptAsync(examId, attemptId, cancellationToken);
         EnsureInProgress(attempt);
 
-        attempt.AnswersJson = JsonSerializer.Serialize(request.Answers);
+        attempt.AnswersJson = ExamAttemptAnswersJson.Serialize(request.Answers);
         attempt.UpdatedAt = DateTime.UtcNow;
         await _attemptRepository.UpdateAsync(attempt, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -194,16 +193,10 @@ public sealed class ExamAttemptService : IExamAttemptService
         StartedAt = attempt.StartedAt,
         Answers = attempt.Status == ExamAttemptStatus.InProgress
             ? DeserializeAnswers(attempt.AnswersJson)
+                .ToDictionary(pair => pair.Key, pair => (IReadOnlyList<Guid>)pair.Value)
             : null
     };
 
-    private static Dictionary<Guid, Guid> DeserializeAnswers(string json)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return [];
-        }
-
-        return JsonSerializer.Deserialize<Dictionary<Guid, Guid>>(json) ?? [];
-    }
+    private static Dictionary<Guid, List<Guid>> DeserializeAnswers(string json) =>
+        ExamAttemptAnswersJson.Deserialize(json);
 }

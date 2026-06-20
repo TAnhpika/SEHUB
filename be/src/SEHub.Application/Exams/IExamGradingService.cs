@@ -5,5 +5,5 @@ namespace SEHub.Application.Exams;
 
 public interface IExamGradingService
 {
-    ExamResultDto Grade(Exam exam, IReadOnlyDictionary<Guid, Guid> answers);
+    ExamResultDto Grade(Exam exam, IReadOnlyDictionary<Guid, List<Guid>> answers);
 }
