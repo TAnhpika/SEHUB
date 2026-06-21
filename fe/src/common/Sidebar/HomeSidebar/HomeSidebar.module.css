@@ -118,8 +118,7 @@
 }
 
 .featured {
-  flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   border-color: var(--color-primary);

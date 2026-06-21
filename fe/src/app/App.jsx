@@ -78,12 +78,14 @@ import FeaturedPostsPage from "@/features/moderator/featured/FeaturedPostsPage/F
 import ReportsPage from "@/features/moderator/reports/ReportsPage/ReportsPage";
 import PracticeFocusRedirect from "@/common/routes/PracticeFocusRedirect";
 import ExamFocusResultRedirect from "@/common/routes/ExamFocusResultRedirect";
+import ScrollToTop from "@/common/routes/ScrollToTop";
 
 function App() {
   return (
     <AuthProvider>
       <ToastProvider>
         <BrowserRouter>
+          <ScrollToTop />
           <Routes>
             <Route element={<AuthenticatedHomeRedirect />}>
               <Route element={<GuestLayout />}>

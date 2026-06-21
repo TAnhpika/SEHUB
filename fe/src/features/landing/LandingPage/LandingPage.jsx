@@ -99,7 +99,7 @@ function LandingPage() {
           <div className={styles["hero-visual"]} aria-hidden="true">
             <span className={styles["points-badge"]}>
               <FontAwesomeIcon icon={faTrophy} />
-              +50 Điểm
+              Hỏi AI → +XP
             </span>
 
             <div className={styles["chat-card"]}>

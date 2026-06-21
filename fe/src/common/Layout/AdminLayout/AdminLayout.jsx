@@ -9,7 +9,7 @@ function AdminLayout() {
       <AdminSidebar />
       <div className={styles.main}>
         <AdminHeader />
-        <div className={styles.content}>
+        <div className={styles.content} data-layout-scroll>
           <Outlet />
         </div>
       </div>

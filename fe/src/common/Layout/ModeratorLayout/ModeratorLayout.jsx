@@ -11,7 +11,7 @@ function ModeratorLayout() {
         <ModeratorSidebar />
         <div className={styles.main}>
           <ModeratorHeader />
-          <div className={styles.content}>
+          <div className={styles.content} data-layout-scroll>
             <Outlet />
           </div>
         </div>
