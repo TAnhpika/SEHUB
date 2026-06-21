@@ -138,7 +138,11 @@ function LandingPage() {
               </div>
             </div>
 
-            <span className={styles["exam-badge"]}>Đề thi đến hạn</span>
+            <span className={styles["exam-badge"]}>
+              <span className={styles["exam-badge-dot"]} aria-hidden="true" />
+              <FontAwesomeIcon icon={faRobot} />
+              Ôn thi cùng AI
+            </span>
           </div>
         </div>
       </section>
