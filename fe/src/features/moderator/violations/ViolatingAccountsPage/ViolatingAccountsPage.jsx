@@ -308,6 +308,7 @@ function ViolatingAccountsPage() {
 
   return (
     <ModeratorPageShell
+      variant="wide"
       title="Quản lý Tài khoản vi phạm"
       description="Cảnh báo hoặc khóa tạm tài khoản vi phạm: 1 ngày / 7 ngày / 30 ngày (Moderator)."
       crumbs={VIOLATIONS_CRUMBS}
@@ -427,7 +428,7 @@ function ViolatingAccountsPage() {
                             </div>
                           </div>
                         </td>
-                        <td>
+                        <td className={styles.detailCell}>
                           <button
                             type="button"
                             className={styles.detailBtn}
