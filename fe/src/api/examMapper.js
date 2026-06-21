@@ -184,7 +184,7 @@ export function mapAiExplainResponse(response) {
       label: `Ghi chú ${index + 1}`,
       text,
     })),
-    note: "Giải thích từ SEHub AI (Gemini).",
+    note: "Giải thích từ SEHub AI.",
     tokensUsed: response.tokensUsed,
     remainingTokens: response.remainingTokens,
   };

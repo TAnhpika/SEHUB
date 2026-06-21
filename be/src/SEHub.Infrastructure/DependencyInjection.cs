@@ -147,10 +147,10 @@ public static class DependencyInjection
             services.AddHostedService<PaymentOrderExpiryBackgroundService>();
         }
 
-        if (AiInfrastructureRegistration.ShouldUseGemini(configuration))
+        if (AiInfrastructureRegistration.ShouldUseOpenRouter(configuration))
         {
-            services.AddGeminiClient();
-            services.AddScoped<IAiProvider, GeminiAiProvider>();
+            services.AddOpenRouterClient();
+            services.AddScoped<IAiProvider, OpenRouterAiProvider>();
             services.AddScoped<IAiExplanationService, GeminiAiExplanationService>();
         }
         else

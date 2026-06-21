@@ -1,0 +1,3 @@
+# Backup cấu hình riêng — KHÔNG commit (chứa API key / mật khẩu thật)
+LOCAL_SECRETS.private.md
+LOCAL_SECRETS.private.txt

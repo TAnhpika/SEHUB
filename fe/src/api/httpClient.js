@@ -172,7 +172,7 @@ export async function refreshSession() {
   return refreshInFlight;
 }
 
-export async function apiRequest(path, { method = "GET", body, auth = true, retryOnUnauthorized = true } = {}) {
+export async function apiRequest(path, { method = "GET", body, auth = true, retryOnUnauthorized = true, signal } = {}) {
   const headers = {
     Accept: "application/json",
   };
@@ -193,6 +193,7 @@ export async function apiRequest(path, { method = "GET", body, auth = true, retr
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal,
     });
     return parseResponse(response);
   }

@@ -26,9 +26,24 @@ export async function loadChatbotConversation(conversationId) {
 }
 
 export async function sendAdvisorMessage(message, conversationId) {
-  const dto = await sendChatbotMessage({
-    message,
-    conversationId: conversationId ?? undefined,
-  });
-  return mapChatbotReplyResponse(dto);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 130_000);
+
+  try {
+    const dto = await sendChatbotMessage(
+      {
+        message,
+        conversationId: conversationId ?? undefined,
+      },
+      { signal: controller.signal },
+    );
+    return mapChatbotReplyResponse(dto);
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("AI phản hồi quá chậm (quá 2 phút). Thử lại hoặc hỏi câu ngắn hơn.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
