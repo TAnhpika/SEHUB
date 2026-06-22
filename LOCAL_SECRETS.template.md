@@ -2,24 +2,36 @@
 
 > Copy file này thành **`LOCAL_SECRETS.private.md`** (đã gitignore), điền giá trị thật, **không commit** bản private.
 
-**Cập nhật mẫu:** 2026-06-21
+**Cập nhật mẫu:** 2026-06-21 · **Branch:** `Hau_BE`
 
 ---
 
-## Checklist sau merge `main`
+## Checklist setup local
 
-1. Tạo lại `be/src/SEHub.API/appsettings.Development.Local.json` từ `.example` hoặc từ backup private.
-2. Cấu hình **Email SMTP** (mục dưới) nếu cần gửi OTP / mail Premium trên local.
-3. Kiểm tra `fe/.env.development`.
-4. `dotnet ef database update` nếu cần.
-5. **Restart BE** sau khi đổi config Email.
-6. Restart FE.
+1. Tạo `be/src/SEHub.API/appsettings.Development.Local.json` (JSON mục 2).
+2. Tạo `LOCAL_SECRETS.private.md` — backup key ra ngoài repo.
+3. Kiểm tra `fe/.env.development` — `VITE_GOOGLE_CLIENT_ID` khớp `Google:ClientId` BE.
+4. `dotnet ef database update` nếu thiếu bảng.
+5. **Restart BE** (`http://localhost:5006`) sau mọi thay đổi config.
+6. Restart FE (`http://localhost:5173`).
+7. PayOS webhook: cập nhật ngrok nếu subdomain đổi.
 
 ---
 
-## Backend local JSON
+## 1. File cấu hình (gitignored / local)
 
-Copy cấu trúc từ `be/src/SEHub.API/appsettings.Development.Local.json.example`, thêm `ConnectionStrings` nếu cần:
+| File | Mục đích |
+|------|----------|
+| `be/src/SEHub.API/appsettings.Development.Local.json` | DB, SMTP, Google, Drive, Cloudinary, PayOS, OpenRouter |
+| `LOCAL_SECRETS.private.md` | Backup markdown (secret thật) |
+| `fe/.env.development` | `VITE_API_BASE_URL`, `VITE_GOOGLE_CLIENT_ID` |
+| `be/secrets/` | Service account Google Drive (optional) |
+
+**Mẫu JSON:** `be/src/SEHub.API/appsettings.Development.Local.json.example`
+
+---
+
+## 2. Backend — `appsettings.Development.Local.json`
 
 ```json
 {
@@ -45,7 +57,9 @@ Copy cấu trúc từ `be/src/SEHub.API/appsettings.Development.Local.json.examp
     "FolderId": "your-drive-folder-id",
     "OAuthClientId": "your-oauth-client-id.apps.googleusercontent.com",
     "OAuthClientSecret": "your-oauth-client-secret",
-    "RefreshToken": "your-drive-refresh-token"
+    "RefreshToken": "your-drive-refresh-token",
+    "ServiceAccountPath": "../../secrets/sehub-drive-service.json",
+    "ImpersonateUser": ""
   },
   "Cloudinary": {
     "CloudName": "your_cloud_name",
@@ -82,59 +96,54 @@ Copy cấu trúc từ `be/src/SEHub.API/appsettings.Development.Local.json.examp
 }
 ```
 
-### Bảng key — điền placeholder
-
 | Key | Ghi chú |
 |-----|---------|
-| `ConnectionStrings:DefaultConnection` | SQL Server instance + user/pass |
-| `Email:Provider` | `Smtp` (gửi thật) hoặc bỏ block → mặc định `Logging` (chỉ console) |
-| `Email:Smtp:Username` / `From` | Cùng một Gmail (ví dụ `sehub.noreply@gmail.com`) |
-| `Email:Smtp:Password` | **App Password 16 ký tự** — copy 4 nhóm từ Google, có thể giữ dấu cách |
-| `Google:ClientId` | OAuth Web client — trùng FE |
-| `GoogleDrive:*` | FolderId, OAuth hoặc service account |
-| `Cloudinary:*` | Cloud name, API key, secret |
-| `PayOS:*` | ClientId, ApiKey, ChecksumKey, WebhookUrl (ngrok) |
-| `Ai:Provider` | `OpenRouter` hoặc `Mock` |
-| `Ai:ApiKey` | OpenRouter API key (openrouter.ai/keys) |
-| `Ai:Model` | Ví dụ `nex-agi/nex-n2-pro:free` — không fallback model khác |
-| `Ai:RequestTimeoutSeconds` | Timeout gọi OpenRouter (mặc định 120) |
-
-### Email SMTP — hướng dẫn nhanh
-
-1. Đăng nhập đúng tài khoản Gmail dùng làm `Username` / `From`.
-2. Bật **Xác minh 2 bước** → tạo [App Password](https://myaccount.google.com/apppasswords).
-3. Dán vào `Email:Smtp:Password` (khuyên dùng dạng `"abcd efgh ijkl mnop"`).
-4. Restart BE — log: `SMTP email configuration present for host smtp.gmail.com:587`.
-5. Test quên MK với **Gmail thật đã đăng ký** (không dùng `@sehub.local`).
-
-| Luồng | Subject email |
-|-------|----------------|
-| OTP quên mật khẩu | `SEHub - Ma xac thuc OTP` |
-| Xác nhận Premium | `SEHub - Xac nhan thanh toan Premium thanh cong` |
+| `Ai:Provider` | `OpenRouter` + `ApiKey` → AI thật · thiếu key → `Mock` |
+| `Ai:Model` | `nex-agi/nex-n2-pro:free` · không fallback model khác |
+| `Ai:RequestTimeoutSeconds` | 120 (giây) |
+| `Cloudinary:*` | Avatar / post / chat |
+| `GoogleDrive:*` | PDF đề, tài liệu |
+| `PayOS:WebhookUrl` | ngrok + `/api/v1/premium/webhooks/payos` |
 
 ---
 
-## Frontend `.env.development`
+## 3. Frontend — `fe/.env.development`
 
 ```env
 VITE_API_BASE_URL=http://localhost:5006
 VITE_GOOGLE_CLIENT_ID=<same-as-google-client-id>
 ```
 
+### Chuyển khoản Premium (FE)
+
+`fe/src/features/landing/PricingModal/pricingData.js` → `PAYMENT_INFO`:
+
+| Field | Dev |
+|-------|-----|
+| Ngân hàng | MB Bank |
+| Số TK | `0001137880784` |
+| Chủ TK | MAC TU HAU |
+
 ---
 
-## Tài khoản dev (seed — trong repo)
+## 4. JWT dev (trong repo)
 
-| Email | Password | Vai trò |
-|-------|----------|---------|
-| admin@sehub.local | Admin@123 | Admin |
-| demo.student@sehub.local | Demo@12345 | Demo Premium |
-| free.student@sehub.local | Free@12345 | Free |
-| moderator@sehub.local | Mod@12345 | Moderator |
+`be/src/SEHub.API/appsettings.json` → `Jwt:Secret = SEHub-Dev-Secret-Key-Min-32-Chars-Long!`
 
 ---
 
-## URL dev
+## 5. Tài khoản dev (seed)
+
+| Vai trò | Email | Mật khẩu |
+|---------|-------|----------|
+| Admin | `admin@sehub.local` | `Admin@123` |
+| Demo Premium | `demo.student@sehub.local` | `Demo@12345` |
+| Free | `free.student@sehub.local` | `Free@12345` |
+| Moderator | `moderator@sehub.local` | `Mod@12345` |
+
+---
+
+## 6. URL dev
 
 | Dịch vụ | URL |
 |---------|-----|
@@ -144,12 +153,9 @@ VITE_GOOGLE_CLIENT_ID=<same-as-google-client-id>
 
 ---
 
-## Lệnh chạy nhanh
+## 7. Lệnh chạy
 
 ```powershell
-cd be\src\SEHub.API
-dotnet run --launch-profile http
-
-cd fe
-npm run dev
+cd be\src\SEHub.API; dotnet run --launch-profile http
+cd fe; npm run dev
 ```

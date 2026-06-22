@@ -1,120 +1,72 @@
 {
-
   "_comment": "Copy to appsettings.Development.Local.json (gitignored). Fill credentials locally. Never commit real passwords.",
 
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=YOUR_INSTANCE;Database=SEHubDb;User Id=...;Password=...;TrustServerCertificate=True;MultipleActiveResultSets=true"
+  },
+
   "Email": {
-
     "Provider": "Smtp",
-
     "Smtp": {
-
       "Host": "smtp.gmail.com",
-
       "Port": 587,
-
       "Username": "your-account@gmail.com",
-
       "Password": "your-16-char-app-password",
-
       "From": "your-account@gmail.com",
-
       "FromDisplayName": "SEHub",
-
       "EnableSsl": true
-
     }
-
   },
 
   "Google": {
-
     "ClientId": "your-google-oauth-client-id.apps.googleusercontent.com",
-
     "ClientSecret": "your-google-oauth-client-secret"
-
   },
 
   "GoogleDrive": {
-
-    "_comment": "Option A (recommended for My Drive): OAuth refresh token from your Google account. Option B: service account + Shared drive folder.",
-
+    "_comment": "Option A (My Drive): OAuth refresh token. Option B: service account + Shared drive folder.",
     "FolderId": "your-drive-folder-id",
-
     "OAuthClientId": "your-oauth-client-id.apps.googleusercontent.com",
-
     "OAuthClientSecret": "your-oauth-client-secret",
-
     "RefreshToken": "your-drive-refresh-token",
-
     "ServiceAccountPath": "../../secrets/sehub-drive-service.json",
-
     "ImpersonateUser": ""
-
   },
 
   "Cloudinary": {
-
-    "_comment": "From Cloudinary Console → Settings → API Keys. Never commit real secrets.",
-
+    "_comment": "Cloudinary Console → Settings → API Keys",
     "CloudName": "your_cloud_name",
-
     "ApiKey": "your_api_key",
-
     "ApiSecret": "your_api_secret",
-
     "Secure": true,
-
     "AvatarFolder": "sehub/avatars",
-
     "PostFolder": "sehub/posts",
-
     "ChatFolder": "sehub/chat"
-
   },
 
   "PayOS": {
-
-    "ClientId": "35aacbc0-31a4-4b05-94c6-302d709a85e8",
-
-    "ApiKey": "ea038bfd-cce6-4a6a-885e-9cb142628101",
-
-    "ChecksumKey": "0effdd76606c6cf79ddd82c08f5479bfcf53008644c9dd00029a38ed46395dca",
-
-    "ReturnUrl": "http://localhost:5173/home/premium/success/trial",
-
-    "CancelUrl": "http://localhost:5173/home/premium",
-
+    "ClientId": "your-payos-client-id",
+    "ApiKey": "your-payos-api-key",
+    "ChecksumKey": "your-payos-checksum-key",
     "FrontendBaseUrl": "http://localhost:5173",
-
+    "ReturnUrl": "http://localhost:5173/home/premium/payment-return?orderId={orderId}",
+    "CancelUrl": "http://localhost:5173/home/premium?cancelled=1",
     "WebhookUrl": "https://YOUR-NGROK-SUBDOMAIN.ngrok-free.app/api/v1/premium/webhooks/payos"
-
   },
 
   "Ai": {
-
-    "_comment": "From openrouter.ai/keys. Never commit real secrets.",
-
+    "_comment": "openrouter.ai/keys — Provider OpenRouter + ApiKey bắt buộc để bật AI thật",
     "Provider": "OpenRouter",
-
     "ApiKey": "your-openrouter-api-key",
-
     "Model": "nex-agi/nex-n2-pro:free",
-
     "BaseUrl": "https://openrouter.ai/api/v1",
-
     "HttpReferer": "http://localhost:5173",
-
     "SiteTitle": "SEHub",
-
+    "RequestTimeoutSeconds": 120,
+    "MaxTokens": 1024,
     "DailyTokenLimitFree": 10,
-
     "DailyTokenLimitPremium": 1000,
-
     "TokenCostExplain": 10,
-
     "TokenCostChat": 10
-
   }
-
 }
-
