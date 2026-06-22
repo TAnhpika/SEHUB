@@ -12,10 +12,11 @@ export function getChatbotConversation(conversationId) {
   return apiRequest(`/api/v1/chatbot/conversations/${conversationId}`);
 }
 
-export function sendChatbotMessage(body) {
+export function sendChatbotMessage(body, options = {}) {
   return apiRequest("/api/v1/chatbot/messages", {
     method: "POST",
     body,
+    signal: options.signal,
   });
 }
 

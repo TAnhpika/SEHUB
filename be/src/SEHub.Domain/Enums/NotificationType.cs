@@ -9,5 +9,6 @@ public enum NotificationType
     Like,
     Comment,
     Token,
-    Badge
+    Badge,
+    Refund
 }

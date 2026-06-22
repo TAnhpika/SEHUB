@@ -9,14 +9,23 @@ const API_ERROR_MESSAGES = {
   STORAGE_UPLOAD_FAILED: "Không upload được file lên storage. Kiểm tra cấu hình Google Drive hoặc thử lại.",
 };
 
-function resolveApiErrorMessage(payload) {
+function resolveApiErrorMessage(payload, status) {
   const firstError = payload?.errors?.[0];
   const code = firstError?.code ?? payload?.message;
   if (code && API_ERROR_MESSAGES[code]) {
     return API_ERROR_MESSAGES[code];
   }
 
-  return payload?.message || firstError?.message || firstError?.code || "Yêu cầu thất bại.";
+  const message = payload?.message || firstError?.message || firstError?.code;
+  if (message) {
+    return message;
+  }
+
+  if (status === 403) {
+    return "Tính năng yêu cầu gói Premium.";
+  }
+
+  return "Yêu cầu thất bại.";
 }
 
 let refreshInFlight = null;
@@ -73,8 +82,7 @@ async function parseResponse(response) {
   const isSuccess = isEnvelope ? payload.success : response.ok;
 
   if (!response.ok || isSuccess === false) {
-    const firstError = payload?.errors?.[0];
-    throw new ApiError(resolveApiErrorMessage(payload), {
+    throw new ApiError(resolveApiErrorMessage(payload, response.status), {
       status: response.status,
       errors: payload?.errors ?? [],
     });
@@ -164,7 +172,7 @@ export async function refreshSession() {
   return refreshInFlight;
 }
 
-export async function apiRequest(path, { method = "GET", body, auth = true, retryOnUnauthorized = true } = {}) {
+export async function apiRequest(path, { method = "GET", body, auth = true, retryOnUnauthorized = true, signal } = {}) {
   const headers = {
     Accept: "application/json",
   };
@@ -185,6 +193,7 @@ export async function apiRequest(path, { method = "GET", body, auth = true, retr
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal,
     });
     return parseResponse(response);
   }

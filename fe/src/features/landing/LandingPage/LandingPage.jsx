@@ -99,7 +99,7 @@ function LandingPage() {
           <div className={styles["hero-visual"]} aria-hidden="true">
             <span className={styles["points-badge"]}>
               <FontAwesomeIcon icon={faTrophy} />
-              Hỏi AI → +XP
+              500+ đề thi
             </span>
 
             <div className={styles["chat-card"]}>
@@ -138,7 +138,11 @@ function LandingPage() {
               </div>
             </div>
 
-            <span className={styles["exam-badge"]}>Đề thi đến hạn</span>
+            <span className={styles["exam-badge"]}>
+              <span className={styles["exam-badge-dot"]} aria-hidden="true" />
+              <FontAwesomeIcon icon={faRobot} />
+              Ôn thi cùng AI
+            </span>
           </div>
         </div>
       </section>

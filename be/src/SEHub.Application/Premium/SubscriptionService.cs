@@ -67,4 +67,42 @@ public sealed class SubscriptionService : ISubscriptionService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         _premiumStatusService.InvalidateCache(userId);
     }
+
+    public async Task<bool> RevokePlanDurationForRefundAsync(
+        Guid userId,
+        int durationDays,
+        CancellationToken cancellationToken = default)
+    {
+        if (durationDays <= 0)
+        {
+            return (await GetStatusAsync(userId, cancellationToken)).IsActive;
+        }
+
+        var subscription = await _subscriptionRepository.GetActiveByUserIdAsync(userId, cancellationToken);
+        if (subscription is null)
+        {
+            return false;
+        }
+
+        var now = DateTime.UtcNow;
+        var newEndAt = subscription.EndAt.AddDays(-durationDays);
+
+        if (newEndAt <= now)
+        {
+            subscription.IsActive = false;
+            subscription.EndAt = newEndAt;
+        }
+        else
+        {
+            subscription.EndAt = newEndAt;
+            subscription.IsActive = true;
+        }
+
+        subscription.UpdatedAt = now;
+        await _subscriptionRepository.UpdateAsync(subscription, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _premiumStatusService.InvalidateCache(userId);
+
+        return subscription.IsActive && subscription.EndAt > now;
+    }
 }
