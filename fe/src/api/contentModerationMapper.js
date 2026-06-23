@@ -1,4 +1,5 @@
 import { DEFAULT_REJECT_REASON } from "@/features/moderator/content/contentModerationData";
+import { mapModerationPostImages } from "@/utils/mapModerationPostImages";
 import {
   formatDateTimeFromApi,
   formatRelativeTimeFromApi,
@@ -44,6 +45,7 @@ export function mapModerationPostListItem(dto) {
   const uiStatus = mapModerationUiStatus(dto.status);
   const authorLabel = dto.author?.displayName?.trim() || dto.author?.username || "Unknown";
   const createdAt = dto.createdAt;
+  const { coverImage, inlineImages } = mapModerationPostImages(dto.images ?? []);
 
   return {
     id: dto.id,
@@ -64,6 +66,9 @@ export function mapModerationPostListItem(dto) {
     sortOrder: parseApiDate(createdAt)?.getTime() ?? 0,
     allowComments: true,
     moderation: mapModerationRecord(dto, uiStatus),
+    coverImage,
+    inlineImages,
+    attachments: [],
   };
 }
 
