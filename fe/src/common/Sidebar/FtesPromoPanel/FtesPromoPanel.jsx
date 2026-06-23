@@ -1,38 +1,42 @@
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowRight, faStar } from "@fortawesome/free-solid-svg-icons";
+import ftesLogo from "@/img/ftes-logo.png";
 import styles from "./FtesPromoPanel.module.css";
 
 const FTES_URL = "https://ftes.vn/vi";
-const FTES_LOGO_URL = "https://ftes.vn/home/LOGO_FTES.svg";
 
-function FtesPromoPanel({ className = "" }) {
+function FtesPromoPanel() {
   return (
-    <section
-      className={`${styles.panel} ${className}`.trim()}
-      aria-labelledby="ftes-promo-logo"
+    <a
+      href={FTES_URL}
+      className={styles.card}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Khám phá khóa học tại FTES"
     >
-      <img
-        id="ftes-promo-logo"
-        src={FTES_LOGO_URL}
-        alt="FTES"
-        className={styles.logo}
-        width={88}
-        height={32}
-        loading="lazy"
-        decoding="async"
-      />
+      <span className={styles.badge}>
+        <FontAwesomeIcon icon={faStar} className={styles.badgeIcon} />
+        Đối tác học tập
+      </span>
 
-      <p className={styles.desc}>
-        Khóa học lập trình &amp; lộ trình học dành cho sinh viên ngành SE.
-      </p>
+      <div className={styles.logoWrap}>
+        <img
+          src={ftesLogo}
+          alt="FTES"
+          className={styles.logo}
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
 
-      <a
-        href={FTES_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={styles.link}
-      >
-        Xem khóa học tại ftes.vn
-      </a>
-    </section>
+      <p className={styles.title}>Nâng level kỹ năng SE</p>
+      <p className={styles.text}>Khóa học & lộ trình thực chiến cho sinh viên FPT.</p>
+
+      <span className={styles.cta}>
+        Khám phá khóa học
+        <FontAwesomeIcon icon={faArrowRight} className={styles.ctaIcon} />
+      </span>
+    </a>
   );
 }
 

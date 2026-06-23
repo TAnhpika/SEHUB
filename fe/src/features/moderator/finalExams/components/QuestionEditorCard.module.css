@@ -31,6 +31,32 @@
   color: #191c1e;
 }
 
+.importWarning {
+  margin: 1rem 2rem 0;
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #78350f;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+}
+
+.importWarning strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: #92400e;
+}
+
+.importWarning ul {
+  margin: 0;
+  padding-left: 1.125rem;
+}
+
+.importWarning li + li {
+  margin-top: 0.25rem;
+}
+
 .deleteBtn {
   display: flex;
   align-items: center;

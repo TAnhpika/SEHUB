@@ -97,6 +97,7 @@ export function ToastProvider({ children }) {
     ({
       title = "Đã sao chép",
       message = "Link bài viết đã được sao chép vào clipboard",
+      duration = DEFAULT_TOAST_DURATION,
     } = {}) => {
       clearTimers();
       setToast({ variant: "copy", title, message });
@@ -104,7 +105,7 @@ export function ToastProvider({ children }) {
       timerRef.current = setTimeout(() => {
         setToast(null);
         timerRef.current = null;
-      }, DEFAULT_TOAST_DURATION);
+      }, duration);
     },
     [clearTimers],
   );

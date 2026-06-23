@@ -62,8 +62,25 @@ function getReviewScoreOnTen(correctCount, total) {
 }
 
 function getOptionReviewState(item, optionKey) {
-  const isCorrect = optionKey === item.correctAnswer;
-  const isSelected = optionKey === item.selectedAnswer;
+  const correctKeys = item.correctAnswers?.length
+    ? item.correctAnswers
+    : item.correctAnswer
+      ? String(item.correctAnswer)
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+      : [];
+  const selectedKeys = item.selectedAnswers?.length
+    ? item.selectedAnswers
+    : item.selectedAnswer
+      ? String(item.selectedAnswer)
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+      : [];
+
+  const isCorrect = correctKeys.includes(optionKey);
+  const isSelected = selectedKeys.includes(optionKey);
 
   if (isCorrect && isSelected) return "correct-selected";
   if (isCorrect) return "correct";
@@ -73,7 +90,8 @@ function getOptionReviewState(item, optionKey) {
 
 function ReviewQuestionCard({ item, index, onOpenExplanation }) {
   const isCorrect = item.isCorrect;
-  const status = !item.selectedAnswer ? "empty" : isCorrect ? "correct" : "wrong";
+  const hasAnswer = Boolean(item.selectedAnswer || item.selectedAnswers?.length);
+  const status = !hasAnswer ? "empty" : isCorrect ? "correct" : "wrong";
 
   return (
     <article
@@ -90,11 +108,15 @@ function ReviewQuestionCard({ item, index, onOpenExplanation }) {
         </div>
         <span
           className={`${styles["review-status-badge"]} ${
-            isCorrect ? styles["review-status-correct"] : styles["review-status-wrong"]
+            !hasAnswer
+              ? styles["review-status-empty"]
+              : isCorrect
+                ? styles["review-status-correct"]
+                : styles["review-status-wrong"]
           }`}
         >
-          <FontAwesomeIcon icon={isCorrect ? faCheck : faXmark} />
-          {isCorrect ? "CHÍNH XÁC" : "CHƯA ĐÚNG"}
+          <FontAwesomeIcon icon={!hasAnswer ? faClock : isCorrect ? faCheck : faXmark} />
+          {!hasAnswer ? "CHƯA TRẢ LỜI" : isCorrect ? "CHÍNH XÁC" : "CHƯA ĐÚNG"}
         </span>
       </header>
 
@@ -351,7 +373,8 @@ function ExamResultPage({ page = "review" }) {
     ? `${scope === "home" ? "/home" : "/community"}/pratical-exam`
     : `${scope === "home" ? "/home" : "/community"}/final-exam`;
   const subjectPath = `${config.detailBase}/${exam.courseCode}`;
-  const reviewWrongCount = result.total - result.correctCount;
+  const reviewWrongCount = result.wrongCount;
+  const reviewUnansweredCount = result.unansweredCount;
   const reviewAccuracy = getReviewAccuracyPercent(result.correctCount, result.total);
 
   if (!isPracticeExam) {
@@ -406,7 +429,11 @@ function ExamResultPage({ page = "review" }) {
             <article className={`${styles["review-metric"]} ${styles["review-metric-wrong"]}`}>
               <p className={styles["review-metric-label"]}>SAI</p>
               <p className={styles["review-metric-value"]}>{reviewWrongCount}</p>
-              <p className={styles["review-metric-sub"]}>Cần ôn tập lại</p>
+              <p className={styles["review-metric-sub"]}>
+                {reviewUnansweredCount > 0
+                  ? `Gồm ${reviewUnansweredCount} câu chưa trả lời`
+                  : "Cần ôn tập lại"}
+              </p>
             </article>
           </div>
         </section>

@@ -1013,6 +1013,11 @@
   background: #fee2e2;
 }
 
+.review-status-empty {
+  color: #475569;
+  background: #e2e8f0;
+}
+
 .review-options {
   display: flex;
   flex-direction: column;

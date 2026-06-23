@@ -18,7 +18,6 @@ public sealed class ModerationServiceTests
 {
     private readonly Mock<IPostReportRepository> _reportRepository = new();
     private readonly Mock<IPostRepository> _postRepository = new();
-    private readonly Mock<IPostImageRepository> _imageRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<IUserProfileRepository> _profileRepository = new();
     private readonly Mock<IUserBanRepository> _banRepository = new();
@@ -39,14 +38,9 @@ public sealed class ModerationServiceTests
         _currentUser.SetupGet(u => u.UserId).Returns(_moderatorId);
         _currentUser.SetupGet(u => u.Role).Returns("Moderator");
 
-        _imageRepository
-            .Setup(r => r.GetByPostIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<PostImage>());
-
         _service = new ModerationService(
             _reportRepository.Object,
             _postRepository.Object,
-            _imageRepository.Object,
             _userRepository.Object,
             _profileRepository.Object,
             _banRepository.Object,
