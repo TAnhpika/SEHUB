@@ -55,40 +55,29 @@ function WorkspaceSwitcher({
       <ul className={styles.list}>
         {visibleWorkspaces.map((workspace) => {
           const isCurrent = workspace.id === currentId;
-
-          if (isCurrent) {
-            return (
-              <li key={workspace.id} className={styles.itemCurrent} aria-current="page">
-                <span className={styles.icon} aria-hidden>
-                  <FontAwesomeIcon icon={workspace.icon} />
-                </span>
-                <span className={styles.copy}>
-                  <span className={styles.label}>{workspace.label}</span>
-                  {variant !== "menu-compact" ? (
-                    <span className={styles.desc}>{workspace.desc}</span>
-                  ) : null}
-                </span>
-                <span className={styles.badge}>Đang dùng</span>
-              </li>
-            );
-          }
+          const content = (
+            <>
+              <span className={styles.icon} aria-hidden>
+                <FontAwesomeIcon icon={workspace.icon} />
+              </span>
+              <span className={styles.copy}>
+                <span className={styles.label}>{workspace.label}</span>
+                {variant !== "menu-compact" ? (
+                  <span className={styles.desc}>{workspace.desc}</span>
+                ) : null}
+              </span>
+            </>
+          );
 
           return (
             <li key={workspace.id}>
               <Link
                 to={workspace.to}
-                className={styles.item}
+                className={`${styles.item}${isCurrent ? ` ${styles.itemActive}` : ""}`}
                 onClick={onNavigate}
+                aria-current={isCurrent ? "page" : undefined}
               >
-                <span className={styles.icon} aria-hidden>
-                  <FontAwesomeIcon icon={workspace.icon} />
-                </span>
-                <span className={styles.copy}>
-                  <span className={styles.label}>{workspace.label}</span>
-                  {variant !== "menu-compact" ? (
-                    <span className={styles.desc}>{workspace.desc}</span>
-                  ) : null}
-                </span>
+                {content}
               </Link>
             </li>
           );
