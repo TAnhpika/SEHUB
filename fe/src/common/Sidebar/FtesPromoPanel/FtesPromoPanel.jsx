@@ -1,5 +1,3 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUpRightFromSquare, faGraduationCap } from "@fortawesome/free-solid-svg-icons";
 import styles from "./FtesPromoPanel.module.css";
 
 const FTES_URL = "https://ftes.vn/vi";
@@ -8,30 +6,23 @@ function FtesPromoPanel({ className = "" }) {
   return (
     <section
       className={`${styles.panel} ${className}`.trim()}
-      aria-labelledby="ftes-promo-title"
+      aria-labelledby="ftes-promo-logo"
     >
-      <div className={styles.header}>
-        <span className={styles.icon} aria-hidden="true">
-          <FontAwesomeIcon icon={faGraduationCap} />
-        </span>
-        <h2 id="ftes-promo-title" className={styles.title}>
-          Học cùng FTES
-        </h2>
-      </div>
+      <span id="ftes-promo-logo" className={styles.logo}>
+        FTES
+      </span>
 
       <p className={styles.desc}>
-        Nền tảng học trực tuyến đồng hành sinh viên SE — khóa học, lộ trình và cộng đồng học
-        tập thực chiến.
+        Khóa học lập trình &amp; lộ trình học dành cho sinh viên ngành SE.
       </p>
 
       <a
         href={FTES_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className={styles.cta}
+        className={styles.link}
       >
-        Khám phá FTES
-        <FontAwesomeIcon icon={faArrowUpRightFromSquare} className={styles["cta-icon"]} />
+        Xem khóa học tại ftes.vn
       </a>
     </section>
   );
