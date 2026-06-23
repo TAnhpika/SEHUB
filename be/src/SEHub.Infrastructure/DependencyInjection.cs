@@ -151,7 +151,7 @@ public static class DependencyInjection
         {
             services.AddOpenRouterClient();
             services.AddScoped<IAiProvider, OpenRouterAiProvider>();
-            services.AddScoped<IAiExplanationService, GeminiAiExplanationService>();
+            services.AddScoped<IAiExplanationService, OpenRouterAiExplanationService>();
         }
         else
         {

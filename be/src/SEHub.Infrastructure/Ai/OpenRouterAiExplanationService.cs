@@ -1,15 +1,16 @@
 using Microsoft.Extensions.Options;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Exams;
+using SEHub.Shared.Constants;
 
 namespace SEHub.Infrastructure.Ai;
 
-public sealed class GeminiAiExplanationService : IAiExplanationService
+public sealed class OpenRouterAiExplanationService : IAiExplanationService
 {
     private readonly IAiProvider _aiProvider;
     private readonly AiTokenLimitSettings _settings;
 
-    public GeminiAiExplanationService(IAiProvider aiProvider, IOptions<AiTokenLimitSettings> settings)
+    public OpenRouterAiExplanationService(IAiProvider aiProvider, IOptions<AiTokenLimitSettings> settings)
     {
         _aiProvider = aiProvider;
         _settings = settings.Value;
@@ -24,7 +25,8 @@ public sealed class GeminiAiExplanationService : IAiExplanationService
         var systemInstruction =
             "Bạn là trợ giảng SEHub cho sinh viên FPT. Giải thích câu hỏi trắc nghiệm bằng tiếng Việt, " +
             "rõ ràng, có cấu trúc (tóm tắt, phân tích từng đáp án nếu có, kết luận). " +
-            "Không bịa đáp án nếu thiếu thông tin.";
+            "Không bịa đáp án nếu thiếu thông tin. " +
+            AiPromptRules.PlainTextOnly;
 
         var userPrompt =
             $"QuestionId: {questionId}\n" +
