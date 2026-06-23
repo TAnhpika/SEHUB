@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SEHub.Application.Exams;
 using SEHub.Contracts.Exams;
-using SEHub.Contracts.Exams;
 using SEHub.Shared.Constants;
 
 namespace SEHub.API.Controllers;
