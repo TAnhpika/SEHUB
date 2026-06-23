@@ -6,22 +6,12 @@
 }
 
 .logo {
-  display: inline-block;
-  font-size: 1.625rem;
-  font-weight: 800;
-  font-style: italic;
-  letter-spacing: -0.03em;
-  line-height: 1;
-  background: linear-gradient(
-    100deg,
-    #2563eb 0%,
-    #6366f1 42%,
-    #7c3aed 72%,
-    #a855f7 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  display: block;
+  width: auto;
+  height: 2rem;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .desc {
