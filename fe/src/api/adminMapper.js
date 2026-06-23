@@ -1,5 +1,6 @@
 import { FE_ID_BY_PLAN_CODE } from "@/api/premiumMapper";
 import { resolveAssetUrl } from "@/api/assetUrl";
+import { mapModerationPostImages } from "@/utils/mapModerationPostImages";
 import { getExamAssetFileName } from "@/utils/examAssetUrl";
 
 const ROLE_MAP = {
@@ -439,6 +440,7 @@ function toModerationInitials(name) {
 export function mapModerationPostListItem(dto) {
   const status = mapModerationPostStatus(dto.status);
   const createdMs = new Date(dto.createdAt).getTime();
+  const { coverImage, inlineImages } = mapModerationPostImages(dto.images ?? []);
 
   return {
     id: dto.id,
@@ -461,8 +463,8 @@ export function mapModerationPostListItem(dto) {
     allowComments: true,
     anonymous: false,
     attachments: [],
-    coverImage: null,
-    inlineImages: [],
+    coverImage,
+    inlineImages,
     resubmission: status === "pending" && Boolean(dto.moderatedAt),
     moderation: dto.moderatedAt
       ? {
