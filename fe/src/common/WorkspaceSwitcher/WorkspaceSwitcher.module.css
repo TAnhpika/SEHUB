@@ -13,14 +13,10 @@
   list-style: none;
 }
 
-.item,
-.itemCurrent {
+.item {
   gap: 0.75rem;
   padding: 0.625rem 0.75rem;
   border-radius: 10px;
-}
-
-.item {
   display: flex;
   align-items: flex-start;
   color: inherit;
@@ -29,45 +25,30 @@
   background: transparent;
   border: 1px solid transparent;
   box-sizing: border-box;
-  transition: background 0.12s ease;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
 }
 
-.itemCurrent {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  column-gap: 0.75rem;
-  row-gap: 0.25rem;
-  align-items: center;
+.itemActive {
   background: #eff6ff;
-  border-color: #dbeafe;
+  border-color: #bfdbfe;
 }
 
 .itemActive:hover,
 .itemActive:active {
   background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.itemActive .label {
+  color: #1d4ed8;
+  font-weight: 700;
 }
 
 .itemActive .icon {
   color: #1d4ed8;
   background: #dbeafe;
-}
-
-.itemCurrent .icon {
-  grid-column: 1;
-  grid-row: 1 / -1;
-  align-self: center;
-}
-
-.itemCurrent .copy {
-  grid-column: 2;
-  grid-row: 1;
-  min-width: 0;
-}
-
-.itemCurrent .badge {
-  grid-column: 2;
-  grid-row: 2;
-  justify-self: start;
 }
 
 .item:hover {
@@ -129,12 +110,23 @@
 }
 
 .sidebarDark .itemActive {
-  background: rgba(37, 99, 235, 0.14);
-  border-color: rgba(96, 165, 250, 0.28);
+  background: rgba(37, 99, 235, 0.18);
+  border-color: rgba(96, 165, 250, 0.35);
 }
 
 .sidebarDark .itemActive:hover {
-  background: rgba(37, 99, 235, 0.2);
+  background: rgba(37, 99, 235, 0.26);
+  border-color: rgba(96, 165, 250, 0.45);
+}
+
+.sidebarDark .itemActive .label {
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.sidebarDark .itemActive .icon {
+  color: #bfdbfe;
+  background: rgba(37, 99, 235, 0.35);
 }
 
 .sidebarDark .icon {
@@ -169,12 +161,23 @@
 }
 
 .sidebarMod .itemActive {
-  background: rgba(37, 99, 235, 0.16);
-  border-color: rgba(96, 165, 250, 0.28);
+  background: rgba(37, 99, 235, 0.2);
+  border-color: rgba(96, 165, 250, 0.38);
 }
 
 .sidebarMod .itemActive:hover {
-  background: rgba(37, 99, 235, 0.22);
+  background: rgba(37, 99, 235, 0.28);
+  border-color: rgba(96, 165, 250, 0.48);
+}
+
+.sidebarMod .itemActive .label {
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.sidebarMod .itemActive .icon {
+  color: #bfdbfe;
+  background: rgba(37, 99, 235, 0.35);
 }
 
 /* Menu profile (MainHeader / dropdown nhỏ) */
@@ -185,16 +188,20 @@
 .menuCompact .item {
   margin: 0 0.25rem;
   padding: 0.5rem 0.75rem;
+  align-items: center;
 }
 
 .menuCompact .item:hover {
   background: #f1f5f9;
 }
 
-.menuCompact .item {
-  align-items: center;
+.menuCompact .itemActive {
+  background: #eff6ff;
+  border-color: #bfdbfe;
 }
 
-.menuCompact .itemCurrent .label {
+.menuCompact .itemActive .label {
+  color: #1d4ed8;
+  font-weight: 700;
   white-space: nowrap;
 }
