@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFire, faTrophy } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
+import FtesPromoPanel from "@/common/Sidebar/FtesPromoPanel/FtesPromoPanel";
 import { FEATURED_POSTS } from "@/features/feed/feedData";
 import styles from "./HomeSidebar.module.css";
 
@@ -65,6 +66,8 @@ function HomeSidebar() {
           ))}
         </ul>
       </div>
+
+      <FtesPromoPanel />
     </aside>
   );
 }

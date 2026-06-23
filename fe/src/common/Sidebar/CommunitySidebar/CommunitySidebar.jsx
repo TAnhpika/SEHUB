@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRocket } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import FtesPromoPanel from "@/common/Sidebar/FtesPromoPanel/FtesPromoPanel";
 import { FEATURED_POSTS } from "@/features/feed/feedData";
 import styles from "./CommunitySidebar.module.css";
 
@@ -48,6 +49,8 @@ function CommunitySidebar() {
           ))}
         </ul>
       </div>
+
+      <FtesPromoPanel />
     </aside>
   );
 }
