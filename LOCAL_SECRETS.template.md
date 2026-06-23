@@ -82,7 +82,7 @@
   "Ai": {
     "Provider": "OpenRouter",
     "ApiKey": "your-openrouter-api-key",
-    "Model": "nex-agi/nex-n2-pro:free",
+    "Model": "poolside/laguna-m.1:free",
     "BaseUrl": "https://openrouter.ai/api/v1",
     "HttpReferer": "http://localhost:5173",
     "SiteTitle": "SEHub",
@@ -99,7 +99,7 @@
 | Key | Ghi chú |
 |-----|---------|
 | `Ai:Provider` | `OpenRouter` + `ApiKey` → AI thật · thiếu key → `Mock` |
-| `Ai:Model` | `nex-agi/nex-n2-pro:free` · không fallback model khác |
+| `Ai:Model` | `poolside/laguna-m.1:free` · không fallback model khác |
 | `Ai:RequestTimeoutSeconds` | 120 (giây) |
 | `Cloudinary:*` | Avatar / post / chat |
 | `GoogleDrive:*` | PDF đề, tài liệu |

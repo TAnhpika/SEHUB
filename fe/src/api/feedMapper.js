@@ -64,6 +64,7 @@ export function mapPostListItem(dto) {
     coverImageUrl: resolveAssetUrl(dto.coverImageUrl),
     isLiked: dto.isLiked ?? false,
     images: (dto.images ?? []).map(mapPostImage),
+    commentsList: [],
   };
 }
 

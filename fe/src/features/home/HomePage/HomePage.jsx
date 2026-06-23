@@ -101,9 +101,18 @@ function HomePage() {
   }
 
   function handleUpdatePost(updatedPost) {
-    setPosts((prev) => prev.map((item) => (item.id === updatedPost.id ? updatedPost : item)));
+    setPosts((prev) =>
+      prev.map((item) => (item.id === updatedPost.id ? { ...item, ...updatedPost } : item)),
+    );
     setSelectedPost(updatedPost);
     setEditOnOpen(false);
+  }
+
+  function handlePostChange(patch) {
+    setPosts((prev) =>
+      prev.map((item) => (item.id === patch.id ? { ...item, ...patch } : item)),
+    );
+    setSelectedPost((prev) => (prev?.id === patch.id ? { ...prev, ...patch } : prev));
   }
 
   async function handleDeletePost(post) {
@@ -181,6 +190,7 @@ function HomePage() {
           setEditOnOpen(false);
         }}
         onUpdate={handleUpdatePost}
+        onPostChange={handlePostChange}
         onDelete={handleDeletePost}
         initialEditMode={editOnOpen}
       />

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faComment,
@@ -24,7 +24,16 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
   const isOwner = isOwnPost(post, user);
   const [liked, setLiked] = useState(Boolean(post.isLiked));
   const [likes, setLikes] = useState(post.likes ?? 0);
+  const [commentCount, setCommentCount] = useState(post.comments ?? 0);
+  const [commentPreviews, setCommentPreviews] = useState(post.commentsList ?? []);
   const [liking, setLiking] = useState(false);
+
+  useEffect(() => {
+    setLiked(Boolean(post.isLiked));
+    setLikes(post.likes ?? 0);
+    setCommentCount(post.comments ?? 0);
+    setCommentPreviews(post.commentsList ?? []);
+  }, [post.id, post.isLiked, post.likes, post.comments, post.commentsList]);
 
   function handleOpenPost() {
     if (!canInteract) {
@@ -34,11 +43,13 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
     onOpen?.(post);
   }
 
-  function handleInteract(event) {
+  function handleCommentClick(event) {
     event.stopPropagation();
     if (!canInteract) {
-      requireAuth("Vui lòng đăng nhập để tương tác với bài viết.");
+      requireAuth("Vui lòng đăng nhập để bình luận bài viết.");
+      return;
     }
+    onOpen?.(post);
   }
 
   function handleEditPost(event) {
@@ -152,6 +163,21 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
         ))}
       </ul>
 
+      {commentPreviews.length > 0 ? (
+        <ul
+          className={styles.commentPreviews}
+          aria-label="Bình luận gần đây"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {commentPreviews.map((comment) => (
+            <li key={comment.id} className={styles.commentPreview}>
+              <span className={styles.commentAuthor}>{comment.author.name}</span>
+              <span className={styles.commentText}>{comment.content}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
       <footer className={styles.footer} onClick={(event) => event.stopPropagation()}>
         <div className={styles.stats}>
           <button
@@ -169,20 +195,15 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
             type="button"
             className={styles.stat}
             aria-label="Bình luận"
-            onClick={handleInteract}
+            onClick={handleCommentClick}
           >
             <FontAwesomeIcon icon={faComment} />
-            {post.comments}
+            {commentCount}
           </button>
-          <button
-            type="button"
-            className={styles.stat}
-            aria-label="Lượt xem"
-            onClick={handleInteract}
-          >
+          <span className={styles.stat} aria-label="Lượt xem">
             <FontAwesomeIcon icon={faEye} />
             {post.views}
-          </button>
+          </span>
         </div>
         <div className={styles.actions}>
           {!isOwner && (

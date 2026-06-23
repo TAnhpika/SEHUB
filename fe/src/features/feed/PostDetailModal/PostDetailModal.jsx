@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faAlignLeft,
@@ -36,7 +36,15 @@ import { copyPostLink, isOwnComment, isOwnPost } from "@/features/feed/postUtils
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./PostDetailModal.module.css";
 
-function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditMode = false }) {
+function PostDetailModal({
+  post,
+  open,
+  onClose,
+  onUpdate,
+  onPostChange,
+  onDelete,
+  initialEditMode = false,
+}) {
   const { user, isPremium } = useAuth();
   const { showCopyToast, showToast } = useToast();
   const [comments, setComments] = useState([]);
@@ -55,6 +63,15 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
   const [editCommentDraft, setEditCommentDraft] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
   const [savingPost, setSavingPost] = useState(false);
+  const onPostChangeRef = useRef(onPostChange);
+
+  useEffect(() => {
+    onPostChangeRef.current = onPostChange;
+  }, [onPostChange]);
+
+  function emitPostChange(patch) {
+    onPostChangeRef.current?.(patch);
+  }
 
   useEffect(() => {
     if (!open) {
@@ -114,6 +131,13 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
         setLikeCount(detail.likes ?? 0);
         setViewCount(detail.views ?? 0);
         setCoverImageUrl(detail.coverImageUrl ?? null);
+        emitPostChange({
+          id: post.id,
+          comments: detail.comments ?? 0,
+          commentsList: detail.commentsList ?? [],
+          likes: detail.likes ?? 0,
+          views: detail.views ?? 0,
+        });
       } catch {
         // Giữ dữ liệu từ danh sách nếu không tải được chi tiết.
       }
@@ -123,7 +147,7 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
     return () => {
       cancelled = true;
     };
-  }, [post, open, initialEditMode]);
+  }, [post?.id, open, initialEditMode]);
 
   if (!open || !post) return null;
 
@@ -141,8 +165,15 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
     setSubmittingComment(true);
     try {
       const newComment = await submitComment(post.id, content);
-      setComments((prev) => [...prev, newComment]);
-      setCommentCount((prev) => prev + 1);
+      const nextComments = [...comments, newComment];
+      const nextCount = commentCount + 1;
+      setComments(nextComments);
+      setCommentCount(nextCount);
+      emitPostChange({
+        id: post.id,
+        comments: nextCount,
+        commentsList: nextComments,
+      });
       setDraft("");
     } catch (err) {
       showToast(err.message ?? "Không gửi được bình luận.");
@@ -237,8 +268,15 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
 
     try {
       await removeComment(post.id, commentId);
-      setComments((prev) => prev.filter((item) => item.id !== commentId));
-      setCommentCount((prev) => Math.max(0, prev - 1));
+      const nextComments = comments.filter((item) => item.id !== commentId);
+      const nextCount = Math.max(0, commentCount - 1);
+      setComments(nextComments);
+      setCommentCount(nextCount);
+      emitPostChange({
+        id: post.id,
+        comments: nextCount,
+        commentsList: nextComments,
+      });
       if (editingCommentId === commentId) {
         setEditingCommentId(null);
         setEditCommentDraft("");

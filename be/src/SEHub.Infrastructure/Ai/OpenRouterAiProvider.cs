@@ -47,7 +47,7 @@ public sealed class OpenRouterAiProvider : IAiProvider
         }
 
         var primaryModel = string.IsNullOrWhiteSpace(_settings.Model)
-            ? "nex-agi/nex-n2-pro:free"
+            ? "poolside/laguna-m.1:free"
             : _settings.Model.Trim();
 
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
