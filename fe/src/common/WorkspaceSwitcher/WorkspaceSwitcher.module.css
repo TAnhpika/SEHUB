@@ -15,26 +15,49 @@
 
 .item,
 .itemCurrent {
-  display: flex;
   gap: 0.75rem;
-  align-items: flex-start;
   padding: 0.625rem 0.75rem;
   border-radius: 10px;
 }
 
 .item {
+  display: flex;
+  align-items: flex-start;
   color: inherit;
   text-decoration: none;
   transition: background 0.12s ease;
 }
 
-.item:hover {
-  background: #f1f5f9;
-}
-
 .itemCurrent {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.75rem;
+  row-gap: 0.25rem;
+  align-items: center;
   background: #eff6ff;
   border: 1px solid #dbeafe;
+}
+
+.itemCurrent .icon {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  align-self: center;
+}
+
+.itemCurrent .copy {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.itemCurrent .badge {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: start;
+}
+
+.item:hover {
+  background: #f1f5f9;
 }
 
 .icon {
@@ -175,6 +198,10 @@
   display: none;
 }
 
-.menuCompact .badge {
-  align-self: center;
+.menuCompact .item {
+  align-items: center;
+}
+
+.menuCompact .itemCurrent .label {
+  white-space: nowrap;
 }
