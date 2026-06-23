@@ -6,7 +6,6 @@ import {
   faHouse,
   faMagnifyingGlass,
   faRightFromBracket,
-  faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import WorkspaceSwitcher from "@/common/WorkspaceSwitcher/WorkspaceSwitcher";
@@ -123,18 +122,6 @@ function AdminHeader() {
 
             {menuOpen ? (
               <div className={styles.menu} role="menu">
-                <p className={styles.menuHeading}>Tài khoản</p>
-                <Link
-                  to="/admin"
-                  className={styles.menuItem}
-                  role="menuitem"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <span className={styles.menuIcon}>
-                    <FontAwesomeIcon icon={faUser} />
-                  </span>
-                  Dashboard
-                </Link>
                 <div className={styles.menuWorkspace}>
                   <WorkspaceSwitcher
                     variant="menu-compact"

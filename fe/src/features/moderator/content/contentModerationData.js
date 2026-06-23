@@ -43,7 +43,7 @@ export const CONTENT_QUEUE_MOCK = [
 
 Mình đang ôn theo slide của thầy tuần 1–8, phần đệ quy và cây nhị phân hơi yếu. FE thường ra dạng trace code hay implement BST không ạ?
 
-Mình attach slide ôn và vài bài tập mẫu bên dưới. Cảm ơn mọi người!`,
+Xem thêm tài liệu ôn: https://fpt.edu.vn — cảm ơn mọi người!`,
     semester: "Fall 2025",
     major: "SE",
     tags: ["CSD", "FE"],
@@ -397,7 +397,10 @@ Xin hỏi lịch thi chính thức MAE101 kỳ Summer 2025 và phòng thi FE ạ
 ];
 
 export function buildDefaultContentItems() {
-  return [...CONTENT_QUEUE_MOCK, ...CONTENT_HISTORY_MOCK];
+  return [...CONTENT_QUEUE_MOCK, ...CONTENT_HISTORY_MOCK].map((item) => ({
+    ...item,
+    attachments: [],
+  }));
 }
 
 function buildItemHaystack(item) {
@@ -413,7 +416,6 @@ function buildItemHaystack(item) {
     item.moderation?.reason,
     item.moderation?.note,
     ...(item.tags ?? []),
-    ...(item.attachments ?? []).map((file) => file.name),
   ]
     .filter(Boolean)
     .join(" ")

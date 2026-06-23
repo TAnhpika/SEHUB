@@ -340,6 +340,19 @@
   background: var(--color-surface-muted, #f1f5f9);
 }
 
+.menuItemActive {
+  background: #eff6ff;
+}
+
+.menuItemActive:hover {
+  background: #dbeafe;
+}
+
+.menuItemActive .menuIcon {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
 .menuIcon {
   display: flex;
   flex-shrink: 0;

@@ -96,11 +96,13 @@ function AdminDashboardPage() {
               <ul className={dash.activityList}>
                 {data.activity.map((item) => (
                   <li key={item.id} className={dash.activityItem}>
-                    <span className={dash.activityTime}>{item.time}</span>
-                    <span className={dash.activityText}>{item.text}</span>
-                    <DashboardBadge variant={ACTIVITY_BADGE_VARIANT[item.type] ?? "neutral"}>
-                      {ACTIVITY_TYPE_LABEL[item.type] ?? item.type}
-                    </DashboardBadge>
+                    <div className={dash.activityHead}>
+                      <span className={dash.activityTime}>{item.time}</span>
+                      <DashboardBadge variant={ACTIVITY_BADGE_VARIANT[item.type] ?? "neutral"}>
+                        {ACTIVITY_TYPE_LABEL[item.type] ?? item.type}
+                      </DashboardBadge>
+                    </div>
+                    <p className={dash.activityText}>{item.text}</p>
                   </li>
                 ))}
               </ul>
