@@ -1,5 +1,13 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { useAuth } from "@/context";
+import {
+  ApiError,
+  buildFinalExamContributionPayload,
+  recordExamDraft,
+  submitExamForApproval,
+} from "@/features/moderator/exams/moderatorExamContributionStore";
 import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
 import styles from "./FinalExamReviewStep.module.css";
@@ -7,18 +15,62 @@ import styles from "./FinalExamReviewStep.module.css";
 function FinalExamReviewStep() {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { examInfo, questions, enteredCount, completeCount, totalQuestions } =
-    useFinalExamWizard();
+  const { user } = useAuth();
+  const moderator = user?.username ?? "mod_sehub";
+  const { examInfo, questions, completeCount, totalQuestions } = useFinalExamWizard();
+  const [submitting, setSubmitting] = useState(false);
 
   function handleSaveDraft() {
+    recordExamDraft(
+      buildFinalExamContributionPayload(moderator, examInfo, completeCount, "Bước 3: Xem lại"),
+    );
     showToast("Đã lưu nháp. Đề chờ Admin duyệt trước khi xuất bản.");
   }
 
-  function handlePublish() {
-    showToast(
-      "Đề thi cuối kỳ đã được gửi. Trạng thái: chờ Admin duyệt trước khi public (theo nghiệp vụ).",
+  async function handlePublish() {
+    if (completeCount < 1) {
+      showToast("Cần ít nhất một câu hỏi hoàn chỉnh trước khi gửi duyệt.");
+      return;
+    }
+
+    const payload = buildFinalExamContributionPayload(
+      moderator,
+      examInfo,
+      completeCount,
+      "Bước 3: Xem lại",
     );
-    navigate("/moderator/final-exams/add");
+
+    async function send(confirmDuplicate = false) {
+      await submitExamForApproval(payload, { examInfo, questions, confirmDuplicate });
+      showToast(
+        "Đề thi cuối kỳ đã được gửi. Trạng thái: chờ Admin duyệt trước khi public (theo nghiệp vụ).",
+      );
+      navigate("/moderator/exams/history?type=final");
+    }
+
+    setSubmitting(true);
+    try {
+      await send(false);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        const confirmed = window.confirm(
+          "Đề trùng nội dung (SHA-256) với đề đã có. Gửi duyệt anyway?",
+        );
+        if (confirmed) {
+          try {
+            await send(true);
+            return;
+          } catch (retryError) {
+            showToast(retryError?.message ?? "Không gửi được đề.");
+            return;
+          }
+        }
+        return;
+      }
+      showToast(error?.message ?? "Không gửi được đề.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -55,7 +107,7 @@ function FinalExamReviewStep() {
           <div>
             <dt>Số câu</dt>
             <dd>
-              {completeCount}/{totalQuestions} câu hoàn thiện · {enteredCount} câu đã thêm vào đề
+              {completeCount}/{totalQuestions} câu hoàn thiện
             </dd>
           </div>
         </dl>
@@ -81,7 +133,8 @@ function FinalExamReviewStep() {
         onSaveDraft={handleSaveDraft}
         onBack={() => navigate("/moderator/final-exams/add/questions")}
         onContinue={handlePublish}
-        continueLabel="Gửi duyệt"
+        continueLabel={submitting ? "Đang gửi..." : "Gửi duyệt"}
+        continueDisabled={submitting}
       />
     </div>
   );

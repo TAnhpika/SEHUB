@@ -10,11 +10,15 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import FilterDropdown from "@/common/FilterDropdown/FilterDropdown";
 import { useToast } from "@/common/Toast/ToastProvider";
 import {
   filterReports,
+  getCommunityReportsMock,
+  loadModeratorCommunityReports,
   REASON_META,
-  REPORTS_MOCK,
+  reloadModeratorCommunityReportsAfterResolve,
+  sortModeratorReports,
 } from "@/features/moderator/reports/reportsData";
 import {
   getExamQuestionReports,
@@ -23,16 +27,10 @@ import {
 import { EXAM_REPORT_ROUTING } from "@/features/exams/examQuestionReportData";
 import styles from "./ReportsPage.module.css";
 
-const TAB_OPTIONS = [
-  { id: "pending", label: "Chờ xử lý" },
-  { id: "resolved", label: "Đã xử lý" },
-  { id: "all", label: "Tất cả" },
-];
-
-const CATEGORY_OPTIONS = [
-  { id: "all", label: "Tất cả loại" },
-  { id: "community", label: "Cộng đồng" },
-  { id: "exam_question", label: "Câu hỏi đề" },
+const CATEGORY_FILTER_OPTIONS = [
+  { value: "all", label: "Tất cả loại" },
+  { value: "community", label: "Cộng đồng" },
+  { value: "exam_question", label: "Câu hỏi đề" },
 ];
 
 const CATEGORY_LABELS = {
@@ -66,7 +64,9 @@ function TrustScore({ score }) {
         <div className={styles.trustTrack} aria-hidden>
           <span className={`${styles.trustFill} ${tone}`} style={{ width: `${clamped}%` }} />
         </div>
-        <span className={`${styles.trustValue} ${tone}`}>{clamped}/100</span>
+        <span className={`${styles.trustValue} ${tone}`} aria-label={`Trust score ${clamped} trên 100`}>
+          {clamped}/100
+        </span>
       </div>
     </div>
   );
@@ -75,15 +75,29 @@ function TrustScore({ score }) {
 function ReportsPage() {
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [communityReports, setCommunityReports] = useState(() =>
-    REPORTS_MOCK.map((report) => ({ ...report, category: "community" })),
-  );
+  const [communityReports, setCommunityReports] = useState(getCommunityReportsMock);
   const [examReports, setExamReports] = useState(getExamQuestionReports);
   const [tab, setTab] = useState("pending");
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [lastResolved, setLastResolved] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadModeratorCommunityReports()
+      .then((items) => {
+        if (!cancelled) setCommunityReports(items);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          showToast(err.message ?? "Không tải được báo cáo cộng đồng.");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showToast]);
 
   useEffect(() => {
     function refreshExamReports() {
@@ -107,6 +121,15 @@ function ReportsPage() {
   const pendingCount = reports.filter((r) => r.status === "pending").length;
   const resolvedCount = reports.filter((r) => r.status === "resolved").length;
 
+  const statusFilterOptions = useMemo(
+    () => [
+      { value: "pending", label: `Chờ xử lý (${pendingCount})` },
+      { value: "resolved", label: "Đã xử lý" },
+      { value: "all", label: "Tất cả" },
+    ],
+    [pendingCount],
+  );
+
   const filtered = useMemo(() => {
     const statusFiltered = filterReports(reports, tab === "all" ? "all" : tab);
     const categoryFiltered =
@@ -114,38 +137,41 @@ function ReportsPage() {
         ? statusFiltered
         : statusFiltered.filter((report) => report.category === category);
     const q = query.trim().toLowerCase();
-    if (!q) return categoryFiltered;
+    const searched = !q
+      ? categoryFiltered
+      : categoryFiltered.filter(
+          (report) =>
+            report.code.toLowerCase().includes(q) ||
+            report.reporterUsername.toLowerCase().includes(q) ||
+            (report.reportedUser?.username ?? "").toLowerCase().includes(q) ||
+            (report.examId ?? "").toLowerCase().includes(q) ||
+            (REASON_META[report.reason]?.label ?? report.reason).toLowerCase().includes(q) ||
+            report.snippet.toLowerCase().includes(q),
+        );
 
-    return categoryFiltered.filter(
-      (report) =>
-        report.code.toLowerCase().includes(q) ||
-        report.reporterUsername.toLowerCase().includes(q) ||
-        (report.reportedUser?.username ?? "").toLowerCase().includes(q) ||
-        (report.examId ?? "").toLowerCase().includes(q) ||
-        (REASON_META[report.reason]?.label ?? report.reason).toLowerCase().includes(q) ||
-        report.snippet.toLowerCase().includes(q),
-    );
+    return sortModeratorReports(searched, tab);
   }, [reports, tab, category, query]);
 
   useEffect(() => {
     const fromUrl = searchParams.get("id");
-    if (fromUrl && reports.some((r) => r.id === fromUrl)) {
-      setSelectedId(fromUrl);
-      const item = reports.find((r) => r.id === fromUrl);
-      if (item?.status === "resolved") setTab("resolved");
-      else if (item?.status === "pending") setTab("pending");
-    }
-  }, [searchParams, reports]);
+    const urlItem = fromUrl ? reports.find((report) => report.id === fromUrl) : null;
 
-  useEffect(() => {
+    if (urlItem) {
+      setSelectedId(urlItem.id);
+      if (urlItem.status === "resolved") setTab("resolved");
+      else if (urlItem.status === "pending") setTab("pending");
+      return;
+    }
+
     if (filtered.length === 0) {
       setSelectedId(null);
       return;
     }
-    if (!selectedId || !filtered.some((r) => r.id === selectedId)) {
-      setSelectedId(filtered[0].id);
-    }
-  }, [filtered, selectedId]);
+
+    setSelectedId((current) =>
+      current && filtered.some((report) => report.id === current) ? current : filtered[0].id,
+    );
+  }, [searchParams, reports, filtered]);
 
   const selected = reports.find((r) => r.id === selectedId) ?? null;
 
@@ -161,7 +187,7 @@ function ReportsPage() {
     );
   }
 
-  function resolveReport(id, resolution) {
+  function resolveReportLocal(id, resolution) {
     const target = reports.find((report) => report.id === id);
     if (target?.category === "exam_question") {
       resolveExamQuestionReport(id, resolution);
@@ -179,27 +205,70 @@ function ReportsPage() {
     }
   }
 
-  function handleDismiss(id) {
+  function finishCommunityResolve(id, resolution, reloaded) {
     const target = reports.find((report) => report.id === id);
-    resolveReport(id, "ignored");
+    if (reloaded) {
+      setCommunityReports(reloaded);
+      const resolved =
+        reloaded.find((report) => report.id === id) ??
+        (target ? { ...target, status: "resolved", resolution } : null);
+      if (resolved) {
+        setLastResolved(resolved);
+      }
+      setTab("resolved");
+      setSelectedId(id);
+      return;
+    }
+
+    resolveReportLocal(id, resolution);
+    setTab("resolved");
+    setSelectedId(id);
+  }
+
+  async function handleDismiss(id) {
+    const target = reports.find((report) => report.id === id);
+    if (target?.category === "exam_question") {
+      resolveReportLocal(id, "ignored");
+      setTab("resolved");
+      setSelectedId(id);
+    } else {
+      try {
+        const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "dismiss");
+        finishCommunityResolve(id, "ignored", reloaded);
+      } catch (err) {
+        showToast(err.message ?? "Không xử lý được báo cáo.");
+        return;
+      }
+    }
     showToast(
       target?.category === "exam_question"
         ? "Đã bỏ qua — giữ nguyên câu hỏi trong ngân hàng đề."
-        : "Đã bỏ qua báo cáo — giữ nguyên nội dung (mock).",
+        : "Đã bỏ qua báo cáo — giữ nguyên nội dung.",
     );
-    const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
-    setSelectedId(nextPending[0]?.id ?? null);
+    window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
   }
 
-  function handleDelete(id) {
-    resolveReport(id, "deleted");
-    showToast("Đã xóa nội dung vi phạm (mock).");
-    const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
-    setSelectedId(nextPending[0]?.id ?? null);
+  async function handleDelete(id) {
+    const target = reports.find((report) => report.id === id);
+    if (target?.category === "exam_question") {
+      resolveReportLocal(id, "deleted");
+      setTab("resolved");
+      setSelectedId(id);
+    } else {
+      try {
+        const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "delete");
+        finishCommunityResolve(id, "deleted", reloaded);
+      } catch (err) {
+        showToast(err.message ?? "Không xóa được nội dung.");
+        return;
+      }
+    }
+    showToast("Đã xóa nội dung vi phạm.");
+    window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
   }
 
   function handleForwardExamReport(id) {
-    resolveReport(id, "forwarded_admin");
+    resolveReportLocal(id, "forwarded_admin");
     showToast("Đã ghi nhận — chuyển Admin duyệt chỉnh sửa đề thi.");
     const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
     setSelectedId(nextPending[0]?.id ?? null);
@@ -307,30 +376,19 @@ function ReportsPage() {
               onChange={(e) => setQuery(e.target.value)}
               aria-label="Tìm báo cáo"
             />
-            <div className={styles.filterTrack} role="group" aria-label="Lọc trạng thái">
-              {TAB_OPTIONS.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  className={`${styles.filterBtn} ${tab === opt.id ? styles.filterBtnActive : ""}`}
-                  onClick={() => setTab(opt.id)}
-                >
-                  {opt.label}
-                  {opt.id === "pending" ? ` (${pendingCount})` : ""}
-                </button>
-              ))}
-            </div>
-            <div className={styles.filterTrack} role="group" aria-label="Lọc loại báo cáo">
-              {CATEGORY_OPTIONS.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  className={`${styles.filterBtn} ${category === opt.id ? styles.filterBtnActive : ""}`}
-                  onClick={() => setCategory(opt.id)}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <div className={styles.filterRow}>
+              <FilterDropdown
+                options={statusFilterOptions}
+                value={tab}
+                onChange={setTab}
+                ariaLabel="Lọc trạng thái báo cáo"
+              />
+              <FilterDropdown
+                options={CATEGORY_FILTER_OPTIONS}
+                value={category}
+                onChange={setCategory}
+                ariaLabel="Lọc loại báo cáo"
+              />
             </div>
           </div>
 
@@ -339,7 +397,7 @@ function ReportsPage() {
               <div className={styles.emptyQueue}>
                 <FontAwesomeIcon icon={faInbox} className={styles.emptyIcon} />
                 <p className={styles.emptyTitle}>Không có báo cáo</p>
-                <p className={styles.emptyDesc}>Thử đổi tab hoặc từ khóa tìm kiếm.</p>
+                <p className={styles.emptyDesc}>Thử đổi bộ lọc hoặc từ khóa tìm kiếm.</p>
               </div>
             ) : (
               <ul className={styles.queueList}>

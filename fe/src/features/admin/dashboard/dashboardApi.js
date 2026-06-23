@@ -3,6 +3,9 @@ import {
   getDashboardPending,
   getMergedActivityLog,
 } from "@/features/admin/adminMockData";
+import * as adminApi from "@/api/adminApi";
+import { mergeDashboardStats } from "@/api/adminMapper";
+import { loadAdminActivityPreview } from "@/features/admin/activity/adminActivityData";
 import { getAdminDocuments } from "@/features/admin/documents/adminDocumentData";
 import { getAdminExams } from "@/features/admin/exams/adminExamData";
 import { getAdminReports } from "@/features/admin/moderation/adminReportData";
@@ -33,6 +36,7 @@ export const DASHBOARD_PERIOD_OPTIONS = [
 ];
 
 const API_DELAY_MS = 680;
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 function delay(ms) {
   return new Promise((resolve) => {
@@ -363,8 +367,31 @@ function buildYearPayload() {
  * @param {"month" | "quarter" | "year"} period
  */
 export async function fetchDashboardData(period) {
-  await delay(API_DELAY_MS);
-  if (period === "quarter") return buildQuarterPayload();
-  if (period === "year") return buildYearPayload();
-  return buildMonthPayload();
+  const mockPayload =
+    period === "quarter"
+      ? buildQuarterPayload()
+      : period === "year"
+        ? buildYearPayload()
+        : buildMonthPayload();
+
+  if (USE_MOCK) {
+    await delay(API_DELAY_MS);
+    return mockPayload;
+  }
+
+  const [overview, activityPreview] = await Promise.all([
+    adminApi.getAdminOverview(),
+    loadAdminActivityPreview(4),
+  ]);
+
+  const stats = overview?.dashboard ?? overview?.Dashboard;
+  const moderationStats = overview?.moderation ?? overview?.Moderation;
+
+  await delay(120);
+  return {
+    ...mergeDashboardStats(mockPayload, stats, {
+      pendingReports: moderationStats?.pendingReports ?? stats?.pendingReports,
+    }),
+    activity: activityPreview,
+  };
 }

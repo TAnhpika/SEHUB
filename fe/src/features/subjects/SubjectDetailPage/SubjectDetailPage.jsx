@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -8,29 +8,31 @@ import {
   faFileLines,
 } from "@fortawesome/free-solid-svg-icons";
 import Pagination from "@/common/Pagination/Pagination";
+import { useAuth } from "@/context";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import {
   EXAMS_PER_PAGE,
   filterExamPapers,
-  getDocumentItemsForCourse,
   getExamPapersForCourse,
   getSubjectDetailConfig,
   TERM_OPTIONS,
   YEAR_OPTIONS,
 } from "./subjectDetailData";
+import { loadDocumentItemsForCourse } from "@/features/documents/studentDocumentsData";
 import styles from "./SubjectDetailPage.module.css";
 
 function SubjectDetailPage({ page }) {
   const { courseCode } = useParams();
   const { pathname } = useLocation();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [yearFilter, setYearFilter] = useState("all");
   const [termFilter, setTermFilter] = useState("all");
 
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const { requireAuth } = useRequireAuth();
-
   const scope = pathname.startsWith("/home/") ? "home" : "community";
+  const guestOnCommunity = scope === "community" && !isAuthenticated;
   const config = getSubjectDetailConfig(page, scope);
   const semesterQuery = searchParams.get("semester");
   const backHref =
@@ -39,14 +41,31 @@ function SubjectDetailPage({ page }) {
       : config.backTo;
   const code = courseCode?.toUpperCase() ?? "";
   const isDocumentsPage = page === "documents";
+  const [allExams, setAllExams] = useState([]);
 
-  const allExams = useMemo(
-    () =>
-      isDocumentsPage
-        ? getDocumentItemsForCourse(code)
-        : getExamPapersForCourse(code, config.examType, config.codePrefix),
-    [code, config.examType, config.codePrefix, isDocumentsPage],
-  );
+  useEffect(() => {
+    let cancelled = false;
+
+    if (isDocumentsPage) {
+      loadDocumentItemsForCourse(code)
+        .then((items) => {
+          if (!cancelled) {
+            setAllExams(items);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setAllExams([]);
+          }
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setAllExams(getExamPapersForCourse(code, config.examType, config.codePrefix));
+    return undefined;
+  }, [code, config.examType, config.codePrefix, isDocumentsPage]);
 
   const exams = useMemo(
     () => filterExamPapers(allExams, yearFilter, termFilter),
@@ -76,11 +95,21 @@ function SubjectDetailPage({ page }) {
     document.getElementById("feed-top")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function getExamHref(exam) {
+    return `${config.detailBase}/${code}/${encodeURIComponent(exam.id)}`;
+  }
+
   function handleExamClick(exam) {
-    if (isDocumentsPage) {
-      if (!requireAuth("Vui lòng đăng nhập để xem tài liệu.")) return;
+    const href = getExamHref(exam);
+    const loginMessage = isDocumentsPage
+      ? "Vui lòng đăng nhập để xem tài liệu."
+      : "Vui lòng đăng nhập để xem đề thi.";
+
+    if (guestOnCommunity) {
+      if (!requireAuth(loginMessage, { guestOnly: true, redirectTo: href })) return;
     }
-    navigate(`${config.detailBase}/${code}/${encodeURIComponent(exam.id)}`);
+
+    navigate(href);
   }
 
   return (
@@ -150,8 +179,7 @@ function SubjectDetailPage({ page }) {
               {isDocumentsPage ? (
                 <>
                   <th scope="col">Tên file</th>
-                  <th scope="col">Quyền truy cập</th>
-                  <th scope="col">Số trang</th>
+                  <th scope="col">Định dạng</th>
                 </>
               ) : (
                 <>
@@ -166,22 +194,39 @@ function SubjectDetailPage({ page }) {
             {pageExams.map((exam) => (
               <tr key={exam.id}>
                 <td>
-                  <button
-                    type="button"
-                    className={styles["exam-link"]}
-                    onClick={() => handleExamClick(exam)}
-                  >
-                    <span className={styles["exam-code"]}>
-                      {isDocumentsPage ? exam.name ?? exam.id : exam.id}
-                    </span>
-                    <FontAwesomeIcon icon={faChevronRight} className={styles.chevron} />
-                  </button>
+                  {guestOnCommunity ? (
+                    <button
+                      type="button"
+                      className={styles["exam-link"]}
+                      onClick={() => handleExamClick(exam)}
+                    >
+                      <span className={styles["exam-code"]}>
+                        {isDocumentsPage ? exam.name ?? exam.id : exam.id}
+                      </span>
+                      <FontAwesomeIcon icon={faChevronRight} className={styles.chevron} />
+                    </button>
+                  ) : (
+                    <Link to={getExamHref(exam)} className={styles["exam-link"]}>
+                      <span className={styles["exam-code"]}>
+                        {isDocumentsPage ? exam.name ?? exam.id : exam.id}
+                      </span>
+                      <FontAwesomeIcon icon={faChevronRight} className={styles.chevron} />
+                    </Link>
+                  )}
                   <time className={styles.time} dateTime={exam.uploadedAt}>
                     {exam.uploadedAt}
                   </time>
                 </td>
-                <td className={styles.type}>{exam.type}</td>
-                <td className={styles.count}>{exam.questionCount}</td>
+                {isDocumentsPage ? (
+                  <td className={styles.count}>
+                    {exam.name?.match(/\.([^.]+)$/)?.[1]?.toUpperCase() ?? "—"}
+                  </td>
+                ) : (
+                  <>
+                    <td className={styles.type}>{exam.type}</td>
+                    <td className={styles.count}>{exam.questionCount}</td>
+                  </>
+                )}
               </tr>
             ))}
           </tbody>

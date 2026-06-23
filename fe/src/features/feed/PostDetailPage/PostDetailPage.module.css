@@ -118,6 +118,22 @@
   margin-bottom: 0.875rem;
 }
 
+.images {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+}
+
 .body {
   font-size: 0.9375rem;
   line-height: 1.7;

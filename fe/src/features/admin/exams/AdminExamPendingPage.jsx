@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -8,6 +8,7 @@ import {
   faChevronUp,
   faClipboardList,
   faClock,
+  faDownload,
   faFileLines,
   faInbox,
   faMousePointer,
@@ -26,9 +27,12 @@ import {
   getAdminRejectedExams,
   getSemesterLabel,
   getTrackLabel,
+  loadAdminExamById,
+  loadAdminPendingExams,
   rejectPendingExam,
 } from "@/features/admin/exams/adminExamData";
 import { getAdminDocumentsSubjectUrl } from "@/features/admin/documents/adminDocumentPaths";
+import { getPrimaryExamAttachment } from "@/utils/examAssetUrl";
 import pendingStyles from "@/features/admin/exams/AdminExamPendingPage.module.css";
 import AdminTableFooter from "@/features/admin/shared/AdminTableFooter";
 import { ADMIN_PAGE_SIZES } from "@/features/admin/shared/adminPaginationConstants";
@@ -41,6 +45,8 @@ const FILTER_OPTIONS = [
   { id: "final", label: "Cuối kỳ" },
   { id: "practice", label: "Thực hành" },
 ];
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 function publishedExamDocumentsLink(item) {
   return getAdminDocumentsSubjectUrl({
@@ -59,16 +65,62 @@ function modInitials(name) {
 
 function AdminExamPendingPage() {
   const { showToast } = useToast();
-  const [pending, setPending] = useState(getAdminPendingExams);
+  const [pending, setPending] = useState(() => getAdminPendingExams());
   const [approved, setApproved] = useState(getAdminApprovedExams);
   const [rejected, setRejected] = useState(getAdminRejectedExams);
   const [selectedId, setSelectedId] = useState(() => getAdminPendingExams()[0]?.id ?? null);
+  const [selectedDetail, setSelectedDetail] = useState(null);
+  const [loading, setLoading] = useState(!USE_MOCK);
   const [filter, setFilter] = useState("all");
   const [rejectTarget, setRejectTarget] = useState(null);
   const [lastApproved, setLastApproved] = useState(null);
   const [lastRejected, setLastRejected] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyTab, setHistoryTab] = useState("all");
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    loadAdminPendingExams()
+      .then((items) => {
+        if (cancelled) return;
+        setPending(items);
+        if (items.length === 0) {
+          setSelectedId(null);
+          return;
+        }
+        if (!items.some((item) => item.id === selectedId)) {
+          setSelectedId(items[0].id);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) showToast("Không tải hàng chờ duyệt.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedId || USE_MOCK) {
+      setSelectedDetail(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    loadAdminExamById(selectedId).then((detail) => {
+      if (!cancelled) setSelectedDetail(detail);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId]);
 
   const urgentCount = pending.filter((p) => p.urgent).length;
 
@@ -91,6 +143,11 @@ function AdminExamPendingPage() {
     filteredPending.find((p) => p.id === selectedId) ??
     pending.find((p) => p.id === selectedId) ??
     null;
+  const selectedAttachment = selected ? getPrimaryExamAttachment(selected) : null;
+
+  const previewQuestions = USE_MOCK
+    ? MOCK_OCR_QUESTIONS
+    : (selectedDetail?.questionsData ?? []);
 
   const historyAll = useMemo(() => {
     const rows = [
@@ -112,8 +169,8 @@ function AdminExamPendingPage() {
 
   const historyTotal = approved.length + rejected.length;
 
-  function refresh() {
-    const nextPending = getAdminPendingExams();
+  async function refresh() {
+    const nextPending = await loadAdminPendingExams();
     setPending(nextPending);
     setApproved(getAdminApprovedExams());
     setRejected(getAdminRejectedExams());
@@ -122,38 +179,52 @@ function AdminExamPendingPage() {
     }
   }
 
-  function handleApprove(item) {
-    const created = approvePendingExam(item.id);
-    refresh();
-    setLastRejected(null);
-    if (created) {
-      setLastApproved({
-        code: item.code,
-        title: item.title,
-        type: item.type,
-        typeKey: item.typeKey,
-        semester: item.semester,
-      });
-      setHistoryTab("approved");
-      setHistoryOpen(true);
-      showToast(`Đã duyệt [${item.code}] → ${EXAM_STATUS_LABELS.published}.`);
-    } else {
-      showToast("Không tìm thấy đề.");
+  async function handleApprove(item) {
+    setActionLoading(true);
+    try {
+      const created = await approvePendingExam(item.id);
+      await refresh();
+      setLastRejected(null);
+      if (created) {
+        setLastApproved({
+          code: item.code,
+          title: item.title,
+          type: item.type,
+          typeKey: item.typeKey,
+          semester: item.semester,
+        });
+        setHistoryTab("approved");
+        setHistoryOpen(true);
+        showToast(`Đã duyệt [${item.code}] → ${EXAM_STATUS_LABELS.published}.`);
+      } else {
+        showToast("Không tìm thấy đề.");
+      }
+    } catch (error) {
+      showToast(error?.message ?? "Không duyệt được đề.");
+    } finally {
+      setActionLoading(false);
     }
   }
 
-  function handleReject(payload) {
+  async function handleReject(payload) {
     if (!rejectTarget) return;
-    const entry = rejectPendingExam(rejectTarget.id, payload);
-    refresh();
-    setLastApproved(null);
-    if (entry) {
-      setLastRejected(entry);
-      setHistoryTab("rejected");
-      setHistoryOpen(true);
-      showToast(`Đã từ chối [${entry.code}].`);
+    setActionLoading(true);
+    try {
+      const entry = await rejectPendingExam(rejectTarget.id, payload);
+      await refresh();
+      setLastApproved(null);
+      if (entry) {
+        setLastRejected(entry);
+        setHistoryTab("rejected");
+        setHistoryOpen(true);
+        showToast(`Đã từ chối [${entry.code}].`);
+      }
+      setRejectTarget(null);
+    } catch (error) {
+      showToast(error?.message ?? "Không từ chối được đề.");
+    } finally {
+      setActionLoading(false);
     }
-    setRejectTarget(null);
   }
 
   return (
@@ -306,7 +377,11 @@ function AdminExamPendingPage() {
             </div>
 
             <div className={pendingStyles.queueScroll}>
-              {filteredPending.length === 0 ? (
+              {loading ? (
+                <div className={pendingStyles.emptyQueue}>
+                  <p className={pendingStyles.emptyDesc}>Đang tải hàng chờ...</p>
+                </div>
+              ) : filteredPending.length === 0 ? (
                 <div className={pendingStyles.emptyQueue}>
                   <FontAwesomeIcon icon={faInbox} className={pendingStyles.emptyIcon} />
                   <p className={pendingStyles.emptyTitle}>Trống</p>
@@ -430,10 +505,28 @@ function AdminExamPendingPage() {
                     <span className={pendingStyles.fileIcon}>
                       <FontAwesomeIcon icon={faFileLines} />
                     </span>
-                    <div>
-                      <p className={pendingStyles.fileName}>{selected.fileName}</p>
-                      <p className={pendingStyles.fileHint}>File đính kèm từ Mod</p>
+                    <div className={pendingStyles.fileBody}>
+                      <p className={pendingStyles.fileName}>
+                        {selectedAttachment?.name ?? "Chưa có file đính kèm"}
+                      </p>
+                      <p className={pendingStyles.fileHint}>
+                        {selectedAttachment
+                          ? "File đính kèm từ Mod — bấm Tải xuống để xem đúng file đã upload"
+                          : "Mod chưa upload file hoặc đề gửi trước bản cập nhật — yêu cầu Mod gửi lại."}
+                      </p>
                     </div>
+                    {selectedAttachment ? (
+                      <a
+                        href={selectedAttachment.url}
+                        className={pendingStyles.fileDownload}
+                        download
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <FontAwesomeIcon icon={faDownload} />
+                        Tải xuống
+                      </a>
+                    ) : null}
                   </div>
                 </div>
 
@@ -441,35 +534,41 @@ function AdminExamPendingPage() {
                   {selected.typeKey === "final" ? (
                     <>
                       <p className={pendingStyles.sectionTitle}>
-                        Xem trước OCR ({MOCK_OCR_QUESTIONS.length} câu)
+                        Xem trước câu hỏi ({previewQuestions.length} câu)
                       </p>
                       <div className={pendingStyles.previewBox}>
-                        <ul className={pendingStyles.ocrList}>
-                          {MOCK_OCR_QUESTIONS.map((q, index) => (
-                            <li key={q.id} className={pendingStyles.ocrItem}>
-                              <p className={pendingStyles.ocrQuestion}>
-                                {index + 1}. {q.text}
-                              </p>
-                              <ol className={pendingStyles.ocrOptions}>
-                                {q.options.map((opt, i) => (
-                                  <li
-                                    key={opt}
-                                    className={
-                                      i === q.correct ? pendingStyles.ocrCorrect : undefined
-                                    }
-                                  >
-                                    {String.fromCharCode(65 + i)}. {opt}
-                                    {i === q.correct ? " ✓" : ""}
-                                  </li>
-                                ))}
-                              </ol>
-                            </li>
-                          ))}
-                        </ul>
+                        {previewQuestions.length > 0 ? (
+                          <ul className={pendingStyles.ocrList}>
+                            {previewQuestions.map((q, index) => (
+                              <li key={q.id ?? index} className={pendingStyles.ocrItem}>
+                                <p className={pendingStyles.ocrQuestion}>
+                                  {index + 1}. {q.text}
+                                </p>
+                                <ol className={pendingStyles.ocrOptions}>
+                                  {q.options.map((opt, i) => (
+                                    <li
+                                      key={`${q.id}-${i}`}
+                                      className={
+                                        i === q.correct ? pendingStyles.ocrCorrect : undefined
+                                      }
+                                    >
+                                      {String.fromCharCode(65 + i)}. {opt}
+                                      {i === q.correct ? " ✓" : ""}
+                                    </li>
+                                  ))}
+                                </ol>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className={pendingStyles.contentBlock}>
+                            {USE_MOCK ? "—" : "Chưa có câu hỏi hoặc đang tải chi tiết..."}
+                          </p>
+                        )}
                       </div>
                       <p className={pendingStyles.hintBox}>
-                        Sau khi duyệt, đề cuối kỳ có {MOCK_OCR_QUESTIONS.length} câu trên kho
-                        đề — Premium được làm bài online.
+                        Sau khi duyệt, đề cuối kỳ có {previewQuestions.length || selected.questionCount || 0}{" "}
+                        câu trên kho đề — Premium được làm bài online.
                       </p>
                     </>
                   ) : (
@@ -495,13 +594,14 @@ function AdminExamPendingPage() {
                 </div>
 
                 <div className={pendingStyles.detailActions}>
-                  <Button onClick={() => handleApprove(selected)}>
+                  <Button onClick={() => handleApprove(selected)} disabled={actionLoading}>
                     Duyệt & {EXAM_STATUS_LABELS.published}
                   </Button>
                   <Button
                     look="outline"
                     className={pendingStyles.rejectBtn}
                     onClick={() => setRejectTarget(selected)}
+                    disabled={actionLoading}
                   >
                     Từ chối
                   </Button>

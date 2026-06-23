@@ -1,4 +1,11 @@
-import { patchUserRole } from "@/features/admin/users/adminUserStore";
+import {
+  findAdminUserByUsername,
+  loadAdminUsers,
+  patchAdminUserViaApi,
+  patchUserRole,
+} from "@/features/admin/users/adminUserStore";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 /** Mock store phân quyền Moderator — Admin gán/thu hồi */
 
@@ -198,6 +205,117 @@ export function revokeModerator(username, adminUsername = "admin_sehub") {
   auditStore = [audit, ...auditStore];
 
   patchUserRole(username, "student");
+
+  return { ok: true, message: `Đã thu hồi quyền Mod của @${username}.` };
+}
+
+function mapUserToModerator(user) {
+  return {
+    username: user.username,
+    email: user.email,
+    displayName: user.displayName,
+    initial: user.displayName?.charAt(0)?.toUpperCase() ?? user.username.charAt(0).toUpperCase(),
+    grantedAt: user.joinedAt ?? "—",
+    grantedBy: "Admin",
+    reportsHandled: 0,
+    postsReviewed: 0,
+  };
+}
+
+function mapUserToCandidate(user) {
+  return {
+    username: user.username,
+    email: user.email,
+    displayName: user.displayName,
+    initial: user.displayName?.charAt(0)?.toUpperCase() ?? user.username.charAt(0).toUpperCase(),
+    rank: user.levelName ?? "Bronze",
+    points: user.points ?? 0,
+    trustScore: 70,
+    note: user.plan === "Premium" ? "Tài khoản Premium" : undefined,
+  };
+}
+
+function pushPermissionAudit(entry) {
+  auditStore = [{ ...entry, id: `perm-aud-${Date.now()}` }, ...auditStore];
+}
+
+export async function loadPermissionsData() {
+  if (USE_MOCK) {
+    return {
+      moderators: getModerators(),
+      candidates: getModeratorCandidates(),
+      stats: getPermissionsStats(),
+      audit: getPermissionsAudit(),
+    };
+  }
+
+  const users = await loadAdminUsers();
+  const moderators = users.filter((user) => user.role === "moderator").map(mapUserToModerator);
+  const modUsernames = new Set(moderators.map((mod) => mod.username));
+  const candidates = users
+    .filter((user) => user.role === "student" && user.status === "active")
+    .filter((user) => !modUsernames.has(user.username))
+    .sort((a, b) => (b.points ?? 0) - (a.points ?? 0))
+    .slice(0, 50)
+    .map(mapUserToCandidate);
+
+  return {
+    moderators,
+    candidates,
+    stats: {
+      activeMods: moderators.length,
+      candidates: candidates.length,
+      permissionCount: MOD_PERMISSIONS.length,
+      totalHandled: 0,
+    },
+    audit: getPermissionsAudit(),
+  };
+}
+
+export async function grantModeratorViaApi(username, adminUsername = "admin_sehub") {
+  if (USE_MOCK) {
+    return grantModerator(username, adminUsername);
+  }
+
+  const user = findAdminUserByUsername(username);
+  if (!user) return { ok: false, message: "Không tìm thấy tài khoản." };
+  if (user.role !== "student") {
+    return { ok: false, message: "Chỉ gán Mod từ tài khoản Sinh viên." };
+  }
+
+  await patchAdminUserViaApi(user.id, { role: "Moderator" });
+  patchUserRole(username, "moderator");
+  pushPermissionAudit({
+    at: new Date().toISOString(),
+    action: "grant",
+    username,
+    admin: adminUsername,
+    detail: `Gán quyền Moderator cho @${username}`,
+  });
+
+  return { ok: true, message: `Đã gán Mod cho @${username}.` };
+}
+
+export async function revokeModeratorViaApi(username, adminUsername = "admin_sehub") {
+  if (USE_MOCK) {
+    return revokeModerator(username, adminUsername);
+  }
+
+  const user = findAdminUserByUsername(username);
+  if (!user) return { ok: false, message: "Không tìm thấy tài khoản." };
+  if (user.role !== "moderator") {
+    return { ok: false, message: "Tài khoản không phải Moderator." };
+  }
+
+  await patchAdminUserViaApi(user.id, { role: "Student" });
+  patchUserRole(username, "student");
+  pushPermissionAudit({
+    at: new Date().toISOString(),
+    action: "revoke",
+    username,
+    admin: adminUsername,
+    detail: `Thu hồi quyền Moderator @${username}`,
+  });
 
   return { ok: true, message: `Đã thu hồi quyền Mod của @${username}.` };
 }

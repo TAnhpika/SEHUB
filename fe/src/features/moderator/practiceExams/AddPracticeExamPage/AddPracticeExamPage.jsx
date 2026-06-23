@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -13,20 +13,31 @@ import {
   faLink,
   faListOl,
   faListUl,
+  faTrash,
   faUnderline,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { useAuth } from "@/context";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
+import ExamContributionAuditList from "@/features/moderator/exams/components/ExamContributionAuditList/ExamContributionAuditList";
 import {
-  getAllPracticeSubmissions,
-  getSubmissionStatusLabel,
-} from "@/features/exams/practiceExamSubmissions";
+  ApiError,
+  loadExamContributionAudit,
+  loadPendingContributionCount,
+  recordExamDraft,
+  submitExamForApproval,
+} from "@/features/moderator/exams/moderatorExamContributionStore";
 import {
   DEMO_DRAFT,
   PRACTICE_SEMESTER_OPTIONS,
   PRACTICE_SUBJECT_OPTIONS,
 } from "@/features/moderator/practiceExams/practiceExamData";
+import {
+  createPracticeAttachmentEntry,
+  PRACTICE_UPLOAD_ACCEPT,
+  validatePracticeUploadFile,
+} from "@/features/moderator/practiceExams/practiceExamUpload";
 import styles from "./AddPracticeExamPage.module.css";
 
 const PRACTICE_CRUMBS = [
@@ -35,7 +46,7 @@ const PRACTICE_CRUMBS = [
   { label: "Thêm đề thực hành" },
 ];
 
-const ACCEPTED_TYPES = ".pdf,.zip,.rar,.docx";
+const ACCEPTED_TYPES = PRACTICE_UPLOAD_ACCEPT;
 const MAX_FILE_MB = 50;
 
 function FileTypeIcon({ type }) {
@@ -47,48 +58,138 @@ function FileTypeIcon({ type }) {
 
 function AddPracticeExamPage() {
   const { showToast } = useToast();
+  const { user } = useAuth();
   const fileInputRef = useRef(null);
+  const moderator = user?.username ?? "mod_sehub";
 
   const [activeTab, setActiveTab] = useState("create");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [auditLog, setAuditLog] = useState([]);
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
   const [subject, setSubject] = useState(DEMO_DRAFT.subject);
   const [semester, setSemester] = useState(DEMO_DRAFT.semester);
   const [title, setTitle] = useState(DEMO_DRAFT.title);
   const [description, setDescription] = useState(DEMO_DRAFT.description);
-  const [attachments, setAttachments] = useState(DEMO_DRAFT.attachments);
+  const [attachments, setAttachments] = useState([]);
   const [allowDiscussion, setAllowDiscussion] = useState(DEMO_DRAFT.allowDiscussion);
   const [pinExam, setPinExam] = useState(DEMO_DRAFT.pinExam);
-  const submissions = getAllPracticeSubmissions();
   const [isDragging, setIsDragging] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all([
+      loadExamContributionAudit(moderator, { examType: "practice" }),
+      loadPendingContributionCount(moderator, "practice"),
+    ])
+      .then(([items, pendingCount]) => {
+        if (cancelled) return;
+        setAuditLog(items);
+        setPendingApprovalCount(pendingCount);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAuditLog([]);
+          setPendingApprovalCount(0);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [moderator, refreshKey]);
+
+  function buildPayload() {
+    return {
+      examType: "practice",
+      moderator,
+      subjectCode: subject,
+      semester,
+      title,
+      description,
+      attachments,
+      allowDiscussion,
+      pinExam,
+    };
+  }
 
   function handleSaveDraft() {
+    if (!subject || !semester || !title.trim()) {
+      showToast("Điền môn, học kỳ và tiêu đề trước khi lưu nháp.");
+      return;
+    }
+    recordExamDraft(buildPayload());
+    setRefreshKey((k) => k + 1);
     showToast("Đã lưu nháp đề thi thực hành.");
   }
 
-  function handlePublish(event) {
+  async function handlePublish(event) {
     event?.preventDefault?.();
     if (!subject || !semester || !title.trim() || !description.trim()) {
       showToast("Vui lòng điền đầy đủ các trường bắt buộc.");
       return;
     }
-    showToast("Đề thi đã được lưu và gửi chờ duyệt trước khi xuất bản.");
+    if (attachments.some((file) => file.status === "uploading")) {
+      showToast("Đợi file đính kèm xử lý xong trước khi gửi.");
+      return;
+    }
+    if (!attachments.some((file) => file.status === "done" && file.file)) {
+      showToast("Chọn ít nhất một file đề (PDF/ZIP/RAR/DOCX).");
+      return;
+    }
+
+    const payload = buildPayload();
+
+    async function send(confirmDuplicate = false) {
+      await submitExamForApproval(payload, { confirmDuplicate });
+      setRefreshKey((k) => k + 1);
+      setActiveTab("audit");
+      showToast("Đề thi đã gửi chờ Admin duyệt trước khi xuất bản.");
+    }
+
+    setSubmitting(true);
+    try {
+      await send(false);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        const confirmed = window.confirm(
+          "Đề trùng metadata với đề đã có. Gửi duyệt anyway?",
+        );
+        if (confirmed) {
+          try {
+            await send(true);
+            return;
+          } catch (retryError) {
+            showToast(retryError?.message ?? "Không gửi được đề.");
+            return;
+          }
+        }
+        return;
+      }
+      showToast(error?.message ?? "Không gửi được đề.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  function addFiles(fileList) {
+  function removeAttachment(id) {
+    setAttachments((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  async function addFiles(fileList) {
     if (!fileList?.length) return;
 
-    const next = [...attachments];
-    Array.from(fileList).forEach((file, index) => {
-      const ext = file.name.split(".").pop()?.toLowerCase() ?? "file";
-      next.push({
-        id: `upload-${Date.now()}-${index}`,
-        name: file.name,
-        sizeLabel: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-        type: ext === "pdf" ? "pdf" : "zip",
-        status: "uploading",
-        progress: 10,
-      });
-    });
-    setAttachments(next);
+    for (const file of Array.from(fileList)) {
+      const validationError = validatePracticeUploadFile(file);
+      if (validationError) {
+        showToast(validationError);
+        continue;
+      }
+
+      const entry = createPracticeAttachmentEntry(file);
+      setAttachments((prev) => [...prev, entry]);
+    }
   }
 
   function handleFileInput(event) {
@@ -107,9 +208,9 @@ function AddPracticeExamPage() {
       <button type="button" className={styles["btn-draft"]} onClick={handleSaveDraft}>
         Lưu nháp
       </button>
-      <Button type="button" className={styles["btn-publish"]} onClick={handlePublish}>
+      <Button type="button" className={styles["btn-publish"]} onClick={handlePublish} disabled={submitting}>
         <FontAwesomeIcon icon={faArrowUpFromBracket} />
-        Lưu &amp; Xuất bản
+        {submitting ? "Đang gửi..." : "Lưu & Xuất bản"}
       </Button>
     </div>
   );
@@ -134,15 +235,17 @@ function AddPracticeExamPage() {
           <button
             type="button"
             role="tab"
-            aria-selected={activeTab === "submissions"}
-            className={`${styles.tab} ${activeTab === "submissions" ? styles["tab-active"] : ""}`}
-            onClick={() => setActiveTab("submissions")}
+            aria-selected={activeTab === "audit"}
+            className={`${styles.tab} ${activeTab === "audit" ? styles["tab-active"] : ""}`}
+            onClick={() => setActiveTab("audit")}
           >
-            Danh sách nộp bài
-            <span className={styles.badge}>{submissions.length}</span>
+            Nhật ký đóng góp
+            {pendingApprovalCount > 0 ? (
+              <span className={styles.badge}>{pendingApprovalCount}</span>
+            ) : null}
           </button>
           <Link to="/moderator/practice-submissions" className={styles["tab-link"]}>
-            Mở trang chấm bài →
+            Chấm bài nộp GitHub →
           </Link>
         </div>
 
@@ -297,9 +400,20 @@ function AddPracticeExamPage() {
                             {file.sizeLabel}
                             {file.status === "done"
                               ? " • Tải lên xong"
-                              : ` • Đang tải... ${file.progress}%`}
+                              : file.status === "error"
+                                ? ` • ${file.error ?? "Lỗi tải lên"}`
+                                : ` • Đang tải... ${file.progress}%`}
                           </p>
                         </div>
+                        <button
+                          type="button"
+                          className={styles.removeFile}
+                          onClick={() => removeAttachment(file.id)}
+                          aria-label={`Xóa ${file.name}`}
+                          disabled={file.status === "uploading"}
+                        >
+                          <FontAwesomeIcon icon={faTrash} />
+                        </button>
                         {file.status === "uploading" && (
                           <div
                             className={styles.spinner}
@@ -354,33 +468,18 @@ function AddPracticeExamPage() {
             </div>
           </form>
         ) : (
-          <div className={styles.submissions}>
-            <ul className={styles["submission-list"]}>
-              {submissions.map((item) => (
-                <li key={item.id} className={styles["submission-item"]}>
-                  <div>
-                    <p className={styles["submission-name"]}>{item.displayName}</p>
-                    <p className={styles["submission-meta"]}>
-                      @{item.student} · {item.courseCode} ·{" "}
-                      {new Date(item.submittedAt).toLocaleString("vi-VN")}
-                    </p>
-                    <a
-                      href={item.githubUrl}
-                      className={styles["submission-link"]}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {item.githubUrl}
-                    </a>
-                  </div>
-                  <span
-                    className={`${styles["submission-status"]} ${styles[`status-${item.status}`]}`}
-                  >
-                    {getSubmissionStatusLabel(item.status)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          <div className={styles.auditPanel} key={refreshKey}>
+            <ExamContributionAuditList
+              items={auditLog}
+              title="Nhật ký đóng góp đề thực hành"
+              description="Mod lưu nháp hoặc gửi Admin duyệt trước khi public (§2.4). Bài nộp GitHub của sinh viên xem tại trang chấm bài riêng (§3.4)."
+              emptyMessage={
+                user?.role === "admin"
+                  ? "Đăng nhập Moderator (moderator@sehub.local) để xem demo đóng góp, hoặc bấm Lưu & Xuất bản để tạo đề mới."
+                  : "Chưa có bản ghi. Gửi đề mới hoặc xem Lịch sử đóng góp đề trên menu bên trái."
+              }
+              showHistoryLink
+            />
           </div>
         )}
       </section>

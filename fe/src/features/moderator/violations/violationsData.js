@@ -1,3 +1,6 @@
+import * as adminApi from "@/api/adminApi";
+import { mapViolatingUser, mapViolatingUserDetail } from "@/api/adminMapper";
+
 export const VIOLATIONS_PAGE_SIZE = 10;
 
 /** Moderator: khóa tạm 1 / 7 / 30 ngày — mức nghiêm trọng tăng dần (§2.4) */
@@ -124,6 +127,7 @@ export const RANK_OPTIONS = [
   { value: "bronze", label: "Hạng Đồng" },
   { value: "silver", label: "Hạng Bạc" },
   { value: "gold", label: "Hạng Vàng" },
+  { value: "platinum", label: "Hạng Bạch kim" },
 ];
 
 export const SORT_OPTIONS = [
@@ -142,7 +146,12 @@ export const RANK_META = {
   bronze: { label: "Hạng Đồng", tone: "bronze" },
   silver: { label: "Hạng Bạc", tone: "silver" },
   gold: { label: "Hạng Vàng", tone: "gold" },
+  platinum: { label: "Hạng Bạch kim", tone: "gold" },
 };
+
+export const DEFAULT_BAN_REASON = "Vi phạm quy định cộng đồng SEHUB.";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 const DEPARTMENTS = ["Khoa CNTT", "Khoa QTKD", "Khoa Ngôn ngữ", "Khoa Thiết kế"];
 const STATUSES = ["locked", "warning", "normal"];
@@ -247,4 +256,106 @@ export function filterViolatingAccounts(accounts, { query, status, rank, sort })
   });
 
   return result;
+}
+
+export async function loadViolatingAccounts({
+  page = 1,
+  pageSize = VIOLATIONS_PAGE_SIZE,
+  search = "",
+  status = "all",
+  rank = "all",
+  sort = "violations-desc",
+} = {}) {
+  if (USE_MOCK) {
+    const filtered = filterViolatingAccounts(VIOLATING_ACCOUNTS_MOCK, {
+      query: search,
+      status,
+      rank,
+      sort,
+    });
+    const totalCount = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+    const safePage = Math.min(page, totalPages);
+    const start = (safePage - 1) * pageSize;
+
+    return {
+      items: filtered.slice(start, start + pageSize),
+      page: safePage,
+      pageSize,
+      totalCount,
+      totalPages,
+      hasNextPage: safePage < totalPages,
+      hasPreviousPage: safePage > 1,
+    };
+  }
+
+  const result = await adminApi.listViolatingUsers({
+    page,
+    pageSize,
+    search: search.trim() || undefined,
+    status,
+    rank,
+    sort,
+  });
+
+  const totalCount = result?.totalCount ?? 0;
+  const resolvedPageSize = result?.pageSize ?? pageSize;
+  const totalPages = Math.max(1, Math.ceil(totalCount / resolvedPageSize) || 1);
+
+  return {
+    items: (result?.items ?? []).map(mapViolatingUser),
+    page: result?.page ?? page,
+    pageSize: resolvedPageSize,
+    totalCount,
+    totalPages,
+    hasNextPage: result?.hasNextPage ?? page < totalPages,
+    hasPreviousPage: result?.hasPreviousPage ?? page > 1,
+  };
+}
+
+export async function loadViolatingAccountDetail(userId) {
+  if (USE_MOCK) {
+    const account = VIOLATING_ACCOUNTS_MOCK.find((item) => item.id === userId);
+    if (!account) {
+      throw new Error("Không tìm thấy tài khoản vi phạm.");
+    }
+    return {
+      ...account,
+      tempBanCount: account.status === "locked" ? 1 : 0,
+      history: [],
+    };
+  }
+
+  const detail = await adminApi.getViolatingUser(userId);
+  return mapViolatingUserDetail(detail);
+}
+
+export async function submitViolatingAccountWarning(userId, reason = "") {
+  if (USE_MOCK) {
+    return { ...buildWarningUpdate(), reason };
+  }
+
+  const updated = await adminApi.warnViolatingUser(userId, { reason });
+  return mapViolatingUser(updated);
+}
+
+export async function submitViolatingAccountBan(userId, durationDays, reason = DEFAULT_BAN_REASON) {
+  if (USE_MOCK) {
+    return buildLockUpdate(durationDays);
+  }
+
+  const updated = await adminApi.banViolatingUser(userId, {
+    durationDays,
+    reason: reason.trim() || DEFAULT_BAN_REASON,
+  });
+  return mapViolatingUser(updated);
+}
+
+export async function submitViolatingAccountUnban(userId, note = "") {
+  if (USE_MOCK) {
+    return buildWarningUpdate();
+  }
+
+  const updated = await adminApi.unbanViolatingUser(userId, { note });
+  return mapViolatingUser(updated);
 }

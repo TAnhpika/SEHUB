@@ -1,52 +1,142 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
+  faBan,
   faCircleInfo,
   faFaceSmile,
+  faFile,
+  faFlag,
   faImage,
   faPaperPlane,
+  faPaperclip,
   faPhone,
-  faPlus,
   faVideo,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import ConversationAvatar from "@/features/chat/ConversationAvatar/ConversationAvatar";
+import EmojiPicker from "@/features/chat/EmojiPicker/EmojiPicker";
+import ChatImageLightbox from "@/features/chat/ChatImageLightbox/ChatImageLightbox";
 import styles from "./ConversationChat.module.css";
 
-function formatTime(date) {
-  return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+const IMAGE_ACCEPT = "image/jpeg,image/png,image/gif,image/webp";
+const FILE_ACCEPT =
+  ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/zip,text/plain";
+
+function formatFileSize(bytes) {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function ConversationChat({ conversation, compact = false, onBack, onClose }) {
+function MessageBubble({ message, onImageClick }) {
+  if (message.messageType === "image" && message.attachmentUrl) {
+    return (
+      <div className={styles.bubble}>
+        {message.text?.trim() && <p className={styles.caption}>{message.text}</p>}
+        <button
+          type="button"
+          className={styles.imageButton}
+          aria-label="Phóng to ảnh"
+          onClick={() =>
+            onImageClick?.({
+              url: message.attachmentUrl,
+              alt: message.attachmentFileName || "Ảnh đính kèm",
+            })
+          }
+        >
+          <img
+            src={message.attachmentUrl}
+            alt={message.attachmentFileName || "Ảnh đính kèm"}
+            className={styles.imageAttachment}
+            loading="lazy"
+          />
+        </button>
+      </div>
+    );
+  }
+
+  if (message.messageType === "file" && message.attachmentUrl) {
+    return (
+      <div className={styles.bubble}>
+        {message.text?.trim() && <p className={styles.caption}>{message.text}</p>}
+        <a
+          href={message.attachmentUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.fileAttachment}
+          download={message.attachmentFileName || undefined}
+        >
+          <FontAwesomeIcon icon={faFile} className={styles.fileIcon} />
+          <span className={styles.fileMeta}>
+            <span className={styles.fileName}>{message.attachmentFileName || "Tệp đính kèm"}</span>
+            {message.attachmentSizeBytes ? (
+              <span className={styles.fileSize}>{formatFileSize(message.attachmentSizeBytes)}</span>
+            ) : null}
+          </span>
+        </a>
+      </div>
+    );
+  }
+
+  return <div className={styles.bubble}>{message.text}</div>;
+}
+
+function ConversationChat({
+  conversation,
+  messages = [],
+  onSend,
+  sending = false,
+  loading = false,
+  compact = false,
+  onBack,
+  onClose,
+  isBlockedByMe = false,
+  isBlockedEitherWay = false,
+  onBlock,
+  onUnblock,
+  onReport,
+}) {
   const [draft, setDraft] = useState("");
-  const [extraMessages, setExtraMessages] = useState([]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState(null);
+  const menuRef = useRef(null);
+  const emojiAnchorRef = useRef(null);
+  const inputRef = useRef(null);
+  const imageInputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  const messages = useMemo(
-    () => [...conversation.messages, ...extraMessages],
-    [conversation.messages, extraMessages],
-  );
+  const renderedMessages = useMemo(() => messages, [messages]);
+  const inputDisabled = sending || isBlockedEitherWay;
 
-  function handleSend() {
+  async function handleSendText() {
     const text = draft.trim();
-    if (!text) return;
+    if (!text || inputDisabled) return;
 
-    setExtraMessages((prev) => [
-      ...prev,
-      {
-        id: `local-${Date.now()}`,
-        type: "sent",
-        text,
-        time: formatTime(new Date()),
-      },
-    ]);
     setDraft("");
+    await onSend?.({ text });
+  }
+
+  async function handleAttachmentSelected(file) {
+    if (!file || inputDisabled) return;
+
+    const caption = draft.trim();
+    setDraft("");
+    await onSend?.({ text: caption, file });
+  }
+
+  function handleEmojiSelect(emoji) {
+    setDraft((current) => `${current}${emoji}`);
+    setEmojiOpen(false);
+    inputRef.current?.focus();
   }
 
   function handleKeyDown(event) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      handleSend();
+      handleSendText();
     }
   }
 
@@ -64,13 +154,7 @@ function ConversationChat({ conversation, compact = false, onBack, onClose }) {
             <ConversationAvatar conversation={conversation} size={compact ? "sm" : "md"} />
             <div className={styles.meta}>
               <p className={styles.name}>{conversation.name}</p>
-              <p className={styles.status}>
-                {conversation.typing
-                  ? "Đang nhập..."
-                  : conversation.online
-                    ? "Đang hoạt động"
-                    : "Ngoại tuyến"}
-              </p>
+              <p className={styles.status}>Ngoại tuyến</p>
             </div>
           </div>
         </div>
@@ -78,17 +162,57 @@ function ConversationChat({ conversation, compact = false, onBack, onClose }) {
         <div className={styles.actions}>
           {!compact && (
             <>
-              <button type="button" className={styles["action-btn"]} aria-label="Gọi thoại">
+              <button type="button" className={styles["action-btn"]} aria-label="Gọi thoại" disabled>
                 <FontAwesomeIcon icon={faPhone} />
               </button>
-              <button type="button" className={styles["action-btn"]} aria-label="Gọi video">
+              <button type="button" className={styles["action-btn"]} aria-label="Gọi video" disabled>
                 <FontAwesomeIcon icon={faVideo} />
               </button>
             </>
           )}
-          <button type="button" className={styles["action-btn"]} aria-label="Thông tin hội thoại">
-            <FontAwesomeIcon icon={faCircleInfo} />
-          </button>
+          <div className={styles["menu-wrap"]} ref={menuRef}>
+            <button
+              type="button"
+              className={styles["action-btn"]}
+              aria-label="Tùy chọn hội thoại"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((prev) => !prev)}
+            >
+              <FontAwesomeIcon icon={faCircleInfo} />
+            </button>
+            {menuOpen && (
+              <div className={styles.menu} role="menu">
+                <button
+                  type="button"
+                  className={styles["menu-item"]}
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onReport?.();
+                  }}
+                >
+                  <FontAwesomeIcon icon={faFlag} />
+                  Báo cáo hội thoại
+                </button>
+                <button
+                  type="button"
+                  className={styles["menu-item"]}
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    if (isBlockedByMe) {
+                      onUnblock?.();
+                    } else {
+                      onBlock?.();
+                    }
+                  }}
+                >
+                  <FontAwesomeIcon icon={faBan} />
+                  {isBlockedByMe ? "Bỏ chặn người dùng" : "Chặn người dùng"}
+                </button>
+              </div>
+            )}
+          </div>
           {compact && onClose && (
             <button type="button" className={styles["action-btn"]} aria-label="Đóng" onClick={onClose}>
               <FontAwesomeIcon icon={faXmark} />
@@ -98,7 +222,13 @@ function ConversationChat({ conversation, compact = false, onBack, onClose }) {
       </header>
 
       <div className={styles.body}>
-        {messages.map((message) => {
+        {loading && <p className={styles.loading}>Đang tải tin nhắn...</p>}
+
+        {!loading && renderedMessages.length === 0 && (
+          <p className={styles.loading}>Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện.</p>
+        )}
+
+        {renderedMessages.map((message) => {
           if (message.type === "date") {
             return (
               <div key={message.id} className={styles["date-divider"]}>
@@ -114,59 +244,114 @@ function ConversationChat({ conversation, compact = false, onBack, onClose }) {
               key={message.id}
               className={`${styles["message-row"]} ${isSent ? styles.sent : styles.received}`}
             >
-              <div className={styles.bubble}>{message.text}</div>
+              <MessageBubble message={message} onImageClick={setLightboxImage} />
               <span className={styles["message-time"]}>{message.time}</span>
             </div>
           );
         })}
-
-        {conversation.typing && (
-          <div className={`${styles["message-row"]} ${styles.received}`}>
-            <div className={`${styles.bubble} ${styles.typing}`} aria-label="Đang nhập">
-              <span />
-              <span />
-              <span />
-            </div>
-          </div>
-        )}
       </div>
 
       <footer className={styles.footer}>
-        {!compact && (
-          <>
-            <button type="button" className={styles["footer-btn"]} aria-label="Thêm">
-              <FontAwesomeIcon icon={faPlus} />
-            </button>
-            <button type="button" className={styles["footer-btn"]} aria-label="Gửi ảnh">
-              <FontAwesomeIcon icon={faImage} />
-            </button>
-          </>
+        {isBlockedEitherWay && (
+          <p className={styles.blockedNotice}>
+            {isBlockedByMe
+              ? "Bạn đã chặn người dùng này. Bỏ chặn để tiếp tục nhắn tin."
+              : "Bạn không thể nhắn tin với người dùng này."}
+          </p>
         )}
+
+        <button
+          type="button"
+          className={styles["footer-btn"]}
+          aria-label="Gửi ảnh"
+          disabled={inputDisabled}
+          onClick={() => imageInputRef.current?.click()}
+        >
+          <FontAwesomeIcon icon={faImage} />
+        </button>
+
+        <button
+          type="button"
+          className={styles["footer-btn"]}
+          aria-label="Gửi tệp"
+          disabled={inputDisabled}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <FontAwesomeIcon icon={faPaperclip} />
+        </button>
+
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept={IMAGE_ACCEPT}
+          className={styles.hiddenInput}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) {
+              handleAttachmentSelected(file);
+            }
+          }}
+        />
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={FILE_ACCEPT}
+          className={styles.hiddenInput}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) {
+              handleAttachmentSelected(file);
+            }
+          }}
+        />
 
         <label className={styles["input-wrap"]}>
           <input
+            ref={inputRef}
             type="text"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Nhập tin nhắn..."
             aria-label="Nhập tin nhắn"
+            disabled={inputDisabled}
           />
-          <button type="button" className={styles.emoji} aria-label="Chọn emoji">
-            <FontAwesomeIcon icon={faFaceSmile} />
-          </button>
+          <div className={styles.emojiWrap}>
+            <button
+              ref={emojiAnchorRef}
+              type="button"
+              className={styles.emoji}
+              aria-label="Chọn emoji"
+              aria-expanded={emojiOpen}
+              disabled={inputDisabled}
+              onClick={() => setEmojiOpen((prev) => !prev)}
+            >
+              <FontAwesomeIcon icon={faFaceSmile} />
+            </button>
+            <EmojiPicker
+              open={emojiOpen}
+              anchorRef={emojiAnchorRef}
+              onSelect={handleEmojiSelect}
+              onClose={() => setEmojiOpen(false)}
+            />
+          </div>
         </label>
 
         <button
           type="button"
           className={styles.send}
           aria-label="Gửi tin nhắn"
-          onClick={handleSend}
-          disabled={!draft.trim()}
+          onClick={handleSendText}
+          disabled={!draft.trim() || inputDisabled}
         >
           <FontAwesomeIcon icon={faPaperPlane} />
         </button>
       </footer>
+
+      <ChatImageLightbox image={lightboxImage} onClose={() => setLightboxImage(null)} />
     </div>
   );
 }

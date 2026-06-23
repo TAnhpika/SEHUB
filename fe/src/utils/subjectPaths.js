@@ -20,11 +20,52 @@ export function getSubjectScopeFromPath(pathname) {
 
 const HOME_SUBJECT_PREFIXES = ["/home/final-exam", "/home/pratical-exam", "/home/documents"];
 
+const SUBJECT_CONTENT_PREFIXES = [
+  "/community/final-exam",
+  "/community/pratical-exam",
+  "/community/documents",
+  ...HOME_SUBJECT_PREFIXES,
+];
+
 /** @param {string} pathname */
 export function isHomeSubjectArea(pathname) {
   return HOME_SUBJECT_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
+}
+
+/** Ôn tập / thực hành / tài liệu — xem nội dung không ép đăng nhập như tương tác feed. */
+export function isSubjectContentPath(pathname) {
+  return SUBJECT_CONTENT_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
+/**
+ * Khách truy cập /home/... (ôn tập, thực hành, tài liệu) → chuyển sang /community/... tương ứng.
+ * @param {string} pathname
+ * @returns {string | null}
+ */
+export function mapHomeSubjectPathToCommunity(pathname) {
+  if (!isHomeSubjectArea(pathname)) return null;
+  return pathname.replace(/^\/home/, "/community");
+}
+
+/**
+ * Đã đăng nhập trên landing hoặc /community → chuyển sang /home tương ứng.
+ * @param {string} pathname
+ * @returns {string | null}
+ */
+export function mapCommunityPathToHome(pathname) {
+  if (pathname === "/community") {
+    return "/home";
+  }
+
+  if (pathname.startsWith("/community/")) {
+    return pathname.replace(/^\/community/, "/home");
+  }
+
+  return null;
 }
 
 /**

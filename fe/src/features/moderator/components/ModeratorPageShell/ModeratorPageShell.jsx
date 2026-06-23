@@ -10,7 +10,7 @@ const DEFAULT_CRUMBS = [{ label: "Trang chủ", to: "/home" }];
  *   description?: string,
  *   crumbs?: Array<{ label: string, to?: string }>,
  *   actions?: import('react').ReactNode,
- *   variant?: 'default' | 'full' | 'wizard',
+ *   variant?: 'default' | 'full' | 'wide' | 'wizard',
  *   children: import('react').ReactNode,
  * }} props
  */
@@ -33,6 +33,7 @@ function ModeratorPageShell({
   const shellClass = [
     styles.shell,
     variant === "full" ? styles.full : "",
+    variant === "wide" ? styles.wide : "",
     variant === "wizard" ? styles.wizard : "",
   ]
     .filter(Boolean)

@@ -5,7 +5,6 @@ import {
   faCheck,
   faClipboardList,
   faClock,
-  faFilePdf,
   faImage,
   faInbox,
   faXmark,
@@ -24,7 +23,14 @@ import {
   SORT_OPTIONS,
   STATUS_META,
 } from "@/features/moderator/content/contentModerationData";
-import { useContentModerationItems } from "@/features/moderator/content/contentModerationStore";
+import {
+  CONTENT_MODERATION_USE_MOCK,
+  loadModerationCounts,
+} from "@/features/moderator/content/contentModerationService";
+import {
+  useContentModerationDetail,
+  useContentModerationHistory,
+} from "@/features/moderator/content/contentModerationStore";
 import styles from "./ContentModerationHistoryPage.module.css";
 
 const HISTORY_CRUMBS = [
@@ -39,17 +45,45 @@ function StatusBadge({ status }) {
 }
 
 function ContentModerationHistoryPage() {
-  const { items } = useContentModerationItems();
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState("all");
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(1);
   const [focusedId, setFocusedId] = useState(null);
+  const [metricCounts, setMetricCounts] = useState({
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    all: 0,
+  });
 
-  const counts = useMemo(() => countContentByStatus(items), [items]);
+  const { items, loading, error } = useContentModerationHistory({ status: tab, sort });
+  const { item: focusedItem, loading: detailLoading } = useContentModerationDetail(focusedId);
+
+  const counts = useMemo(() => {
+    if (CONTENT_MODERATION_USE_MOCK) {
+      return countContentByStatus(items);
+    }
+    return metricCounts;
+  }, [items, metricCounts]);
+
+  useEffect(() => {
+    if (CONTENT_MODERATION_USE_MOCK) return undefined;
+
+    let cancelled = false;
+    loadModerationCounts()
+      .then((data) => {
+        if (!cancelled) setMetricCounts(data);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [items]);
 
   const filtered = useMemo(
-    () => filterContentItems(items, { status: tab, sort }),
+    () => (CONTENT_MODERATION_USE_MOCK ? filterContentItems(items, { status: tab, sort }) : items),
     [items, tab, sort],
   );
 
@@ -61,9 +95,9 @@ function ContentModerationHistoryPage() {
     return filtered.slice(start, start + CONTENT_HISTORY_PAGE_SIZE);
   }, [filtered, safePage]);
 
-  const focusedItem = useMemo(
-    () => items.find((item) => item.id === focusedId) ?? null,
-    [items, focusedId],
+  const focusedItemResolved = useMemo(
+    () => focusedItem ?? filtered.find((item) => item.id === focusedId) ?? null,
+    [focusedItem, filtered, focusedId],
   );
 
   const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * CONTENT_HISTORY_PAGE_SIZE + 1;
@@ -221,7 +255,19 @@ function ContentModerationHistoryPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {pageItems.length === 0 ? (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={4} className={styles.empty}>
+                        Đang tải lịch sử duyệt...
+                      </td>
+                    </tr>
+                  ) : error ? (
+                    <tr>
+                      <td colSpan={4} className={styles.empty} role="alert">
+                        {error}
+                      </td>
+                    </tr>
+                  ) : pageItems.length === 0 ? (
                     <tr>
                       <td colSpan={4} className={styles.empty}>
                         Không có bài viết trong mục này.
@@ -250,12 +296,6 @@ function ContentModerationHistoryPage() {
                                   <span className={styles.contentHint}>
                                     <FontAwesomeIcon icon={faImage} />
                                     Ảnh bìa
-                                  </span>
-                                ) : null}
-                                {item.attachments?.length ? (
-                                  <span className={styles.contentHint}>
-                                    <FontAwesomeIcon icon={faFilePdf} />
-                                    {item.attachments.length} file
                                   </span>
                                 ) : null}
                               </div>
@@ -302,7 +342,11 @@ function ContentModerationHistoryPage() {
           </div>
 
           <aside className={styles.detailCol} aria-label="Chi tiết bài viết">
-            <ContentPostDetailPanel item={focusedItem} mode="history" />
+            {detailLoading && focusedId ? (
+              <div className={styles.empty}>Đang tải chi tiết bài viết...</div>
+            ) : (
+              <ContentPostDetailPanel item={focusedItemResolved} mode="history" />
+            )}
           </aside>
         </div>
       </section>

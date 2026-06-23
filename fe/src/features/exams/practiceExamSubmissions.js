@@ -1,5 +1,19 @@
 /** Mock store — bài nộp đề thực hành (GitHub). §3.4 SEHUB_PhanTichNghiepVu */
 
+import * as adminApi from "@/api/adminApi";
+import * as examsApi from "@/api/examsApi";
+import * as practiceSubmissionsApi from "@/api/practiceSubmissionsApi";
+import {
+  buildReviewerComment,
+  mapFeReviewStatusToApi,
+  mapModerationPracticeSubmission,
+  mapPracticeSubmissionDto,
+  mapPracticeSubmissionListItem,
+} from "@/api/practiceSubmissionMapper";
+import { resolveExamApiId } from "@/features/exams/examDetailData";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+
 const STORAGE_KEY = "sehubs_practice_submissions";
 
 /** @typedef {"pending" | "reviewed" | "pass" | "fail"} SubmissionStatus */
@@ -404,4 +418,119 @@ export function isValidGithubUrl(url) {
   } catch {
     return false;
   }
+}
+
+export async function loadStudentSubmission(courseCode, examId, username) {
+  if (USE_MOCK) {
+    return getStudentSubmission(courseCode, examId, username);
+  }
+
+  const apiExamId = await resolveExamApiId(examId);
+  if (!apiExamId) {
+    return getStudentSubmission(courseCode, examId, username);
+  }
+
+  try {
+    const dto = await practiceSubmissionsApi.getMyPracticeSubmission(apiExamId);
+    if (!dto) return null;
+
+    return mapPracticeSubmissionDto(dto, {
+      courseCode,
+      examId,
+      student: username,
+      username,
+    });
+  } catch {
+    return getStudentSubmission(courseCode, examId, username);
+  }
+}
+
+export async function submitPracticeExamAsync(payload) {
+  if (USE_MOCK) {
+    return submitPracticeExam(payload);
+  }
+
+  const apiExamId = await resolveExamApiId(payload.examId);
+  if (!apiExamId) {
+    return submitPracticeExam(payload);
+  }
+
+  const dto = await practiceSubmissionsApi.submitPractice(apiExamId, {
+    gitHubRepoUrl: payload.githubUrl.trim(),
+  });
+
+  return mapPracticeSubmissionDto(dto, payload);
+}
+
+export async function loadAllPracticeSubmissions() {
+  if (USE_MOCK) {
+    return getAllPracticeSubmissions();
+  }
+
+  try {
+    const page = await adminApi.listModerationPracticeSubmissions({ pageSize: 100 });
+    const submissions = (page.items ?? []).map((item) => mapModerationPracticeSubmission(item));
+    if (submissions.length > 0) {
+      return submissions.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+    }
+  } catch {
+    /* fallback below */
+  }
+
+  try {
+    const examsResult = await examsApi.listExams({ type: "Practice", pageSize: 100 });
+    const submissions = [];
+
+    for (const exam of examsResult.items ?? []) {
+      try {
+        const page = await practiceSubmissionsApi.listPracticeSubmissions(exam.id, {
+          pageSize: 100,
+        });
+
+        for (const item of page.items ?? []) {
+          submissions.push(mapPracticeSubmissionListItem(item, exam));
+        }
+      } catch {
+        /* skip exams without moderator access or empty */
+      }
+    }
+
+    if (submissions.length > 0) {
+      return submissions.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+    }
+  } catch {
+    /* fallback below */
+  }
+
+  return getAllPracticeSubmissions();
+}
+
+export async function loadPendingPracticeSubmissionCount() {
+  const submissions = await loadAllPracticeSubmissions();
+  return submissions.filter((item) => item.status === "pending").length;
+}
+
+export async function savePracticeSubmissionReview(submission, payload) {
+  if (USE_MOCK || !submission?.apiExamId) {
+    return gradePracticeSubmission(submission.id, payload);
+  }
+
+  const apiStatus = mapFeReviewStatusToApi(payload.status);
+  if (!apiStatus) {
+    throw new Error("Trạng thái chấm bài không được hỗ trợ qua API.");
+  }
+
+  const dto = await practiceSubmissionsApi.reviewPracticeSubmission(
+    submission.apiExamId,
+    submission.id,
+    {
+      status: apiStatus,
+      reviewerComment: buildReviewerComment(payload.grade, payload.feedback),
+    },
+  );
+
+  return mapPracticeSubmissionDto(dto, {
+    ...submission,
+    gradedBy: payload.gradedBy,
+  });
 }

@@ -13,11 +13,13 @@ function writeSession(examId, session) {
   sessionStorage.setItem(`${SESSION_PREFIX}${examId}`, JSON.stringify(session));
 }
 
-export function createExamSession(examId) {
+export function createExamSession(examId, extras = {}) {
   const session = {
     examId,
-    startedAt: Date.now(),
-    answers: {},
+    apiExamId: extras.apiExamId ?? null,
+    attemptId: extras.attemptId ?? null,
+    startedAt: extras.startedAt ?? Date.now(),
+    answers: extras.answers ?? {},
     submitted: false,
     result: null,
   };
@@ -130,6 +132,28 @@ export function submitExamSession(examId, questions) {
   };
   writeSession(examId, next);
   return next;
+}
+
+export function applyApiExamResult(
+  examId,
+  { apiExamId, attemptId, startedAt, submittedAt, answers, result },
+) {
+  const next = {
+    examId,
+    apiExamId: apiExamId ?? null,
+    attemptId: attemptId ?? null,
+    startedAt: startedAt ?? Date.now(),
+    submittedAt: submittedAt ?? Date.now(),
+    answers: answers ?? {},
+    submitted: true,
+    result,
+  };
+  writeSession(examId, next);
+  return next;
+}
+
+export function usesApiAttempt(session) {
+  return Boolean(session?.apiExamId && session?.attemptId);
 }
 
 export function clearExamSession(examId) {

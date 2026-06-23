@@ -1,0 +1,193 @@
+using AutoMapper;
+using Microsoft.Extensions.Configuration;
+using SEHub.Application.Abstractions;
+using SEHub.Application.Abstractions.Repositories;
+using SEHub.Contracts.Common;
+using SEHub.Contracts.Documents;
+using SEHub.Domain.Entities;
+using SEHub.Domain.Exceptions;
+
+namespace SEHub.Application.Documents;
+
+public sealed class DocumentService : IDocumentService
+{
+    public const int FreePreviewPageLimit = DocumentAccessService.FreePreviewPageLimit;
+
+    private readonly IDocumentRepository _documentRepository;
+    private readonly IDocumentAccessLogRepository _accessLogRepository;
+    private readonly IFileStorageService _fileStorage;
+    private readonly ICloudFileStorageService _cloudStorage;
+    private readonly IDocumentAccessService _accessService;
+    private readonly ICurrentUserService _currentUser;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IClientContext _clientContext;
+    private readonly IMapper _mapper;
+    private readonly string _apiBaseUrl;
+
+    public DocumentService(
+        IDocumentRepository documentRepository,
+        IDocumentAccessLogRepository accessLogRepository,
+        IFileStorageService fileStorage,
+        ICloudFileStorageService cloudStorage,
+        IDocumentAccessService accessService,
+        ICurrentUserService currentUser,
+        IUnitOfWork unitOfWork,
+        IClientContext clientContext,
+        IMapper mapper,
+        IConfiguration configuration)
+    {
+        _documentRepository = documentRepository;
+        _accessLogRepository = accessLogRepository;
+        _fileStorage = fileStorage;
+        _cloudStorage = cloudStorage;
+        _accessService = accessService;
+        _currentUser = currentUser;
+        _unitOfWork = unitOfWork;
+        _clientContext = clientContext;
+        _mapper = mapper;
+        _apiBaseUrl = configuration["FileStorage:ApiBaseUrl"]?.TrimEnd('/')
+            ?? "http://localhost:5006";
+    }
+
+    public async Task<PagedResult<DocumentListItemDto>> GetDocumentsAsync(DocumentQueryParams query, CancellationToken cancellationToken = default)
+    {
+        _accessService.EnsureAuthenticated();
+        var (items, total) = await _documentRepository.GetPagedAsync(query, cancellationToken);
+
+        return new PagedResult<DocumentListItemDto>
+        {
+            Items = _mapper.Map<IReadOnlyList<DocumentListItemDto>>(items),
+            Page = query.Page,
+            PageSize = query.PageSize,
+            TotalCount = total
+        };
+    }
+
+    public async Task<DocumentDetailDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        _accessService.EnsureAuthenticated();
+        var document = await _documentRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Document", id);
+
+        var dto = _mapper.Map<DocumentDetailDto>(document);
+        var decision = _accessService.Evaluate(document);
+
+        return new DocumentDetailDto
+        {
+            Id = dto.Id,
+            Title = dto.Title,
+            Category = dto.Category,
+            PageCount = dto.PageCount,
+            AccessTier = dto.AccessTier,
+            MimeType = dto.MimeType,
+            CreatedAt = dto.CreatedAt,
+            CanDownload = decision.CanDownload,
+            PageLimit = decision.PageLimit
+        };
+    }
+
+    public async Task<DocumentPreviewDto> GetPreviewAsync(Guid id, int page, CancellationToken cancellationToken = default)
+    {
+        _accessService.EnsureAuthenticated();
+        var document = await _documentRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Document", id);
+
+        if (page < 1 || page > document.PageCount)
+        {
+            throw new NotFoundException($"Page {page} is out of range.");
+        }
+
+        _accessService.EnsureCanPreview(document, page);
+        var decision = _accessService.Evaluate(document);
+
+        var contentUrl = DocumentFileAccess.UsesDrive(document)
+            ? BuildContentApiUrl(document.Id, page)
+            : await _fileStorage.GetSignedUrlAsync(
+                $"{document.FilePath}#page={page}",
+                TimeSpan.FromMinutes(15),
+                cancellationToken);
+
+        await LogAccessAsync(document.Id, "Preview", cancellationToken);
+
+        return new DocumentPreviewDto
+        {
+            Page = page,
+            TotalPages = document.PageCount,
+            PageLimit = decision.PageLimit,
+            ContentUrl = contentUrl
+        };
+    }
+
+    public async Task<string> GetDownloadUrlAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        _accessService.EnsureAuthenticated();
+        var document = await _documentRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Document", id);
+
+        _accessService.EnsureCanDownload(document);
+        await LogAccessAsync(document.Id, "Download", cancellationToken);
+
+        if (DocumentFileAccess.UsesDrive(document))
+        {
+            return BuildContentApiUrl(document.Id, page: null);
+        }
+
+        return await _fileStorage.GetSignedUrlAsync(document.FilePath, TimeSpan.FromMinutes(30), cancellationToken);
+    }
+
+    public async Task<DocumentContentResult> GetContentAsync(Guid id, int? page, CancellationToken cancellationToken = default)
+    {
+        _accessService.EnsureAuthenticated();
+        var document = await _documentRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Document", id);
+
+        if (page is >= 1)
+        {
+            _accessService.EnsureCanPreview(document, page.Value);
+            await LogAccessAsync(document.Id, "Content", cancellationToken);
+        }
+        else
+        {
+            _accessService.EnsureCanDownload(document);
+            await LogAccessAsync(document.Id, "Content", cancellationToken);
+        }
+
+        var stream = await DocumentFileAccess.OpenReadAsync(document, _fileStorage, _cloudStorage, cancellationToken);
+        return new DocumentContentResult
+        {
+            Stream = stream,
+            ContentType = document.MimeType,
+            FileName = DocumentFileAccess.ResolveDownloadFileName(document)
+        };
+    }
+
+    private string BuildContentApiUrl(Guid documentId, int? page)
+    {
+        var path = page is >= 1
+            ? $"/api/v1/documents/{documentId}/content?page={page.Value}"
+            : $"/api/v1/documents/{documentId}/content";
+
+        return $"{_apiBaseUrl}{path}";
+    }
+
+    private async Task LogAccessAsync(Guid documentId, string action, CancellationToken cancellationToken)
+    {
+        var userId = _currentUser.UserId;
+        if (userId is null)
+        {
+            return;
+        }
+
+        await _accessLogRepository.AddAsync(new DocumentAccessLog
+        {
+            Id = Guid.NewGuid(),
+            DocumentId = documentId,
+            UserId = userId.Value,
+            Action = action,
+            IpAddress = _clientContext.IpAddress,
+            CreatedAt = DateTime.UtcNow
+        }, cancellationToken);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+}

@@ -1,0 +1,269 @@
+@host = http://localhost:5006
+@api = {{host}}/api/v1
+
+# SEHub FE API quickstart — REST Client (VS Code / Cursor)
+# Import Postman: postman/SEHub-FE.postman_collection.json
+# Swagger UI: {{host}}/swagger
+
+@adminEmail = admin@sehub.local
+@adminPassword = Admin@123
+@studentEmail = demo.student@sehub.local
+@studentPassword = Demo@12345
+@freeStudentEmail = free.student@sehub.local
+@freeStudentPassword = Free@12345
+@moderatorEmail = moderator@sehub.local
+@moderatorPassword = Mod@12345
+
+### Health (no envelope)
+GET {{host}}/health
+
+### Register — password must include upper, lower, digit, special (e.g. Student@123)
+# @name register
+POST {{api}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "fe.test.user@fpt.edu.vn",
+  "username": "fetestuser",
+  "password": "Student@123",
+  "displayName": "FE Test User"
+}
+
+### Register — weak password (expect 400 VALIDATION_FAILED)
+POST {{api}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "weak.pass@fpt.edu.vn",
+  "username": "weakpassuser",
+  "password": "hauvip123",
+  "displayName": "Weak Pass"
+}
+
+### Login — Admin
+# @name loginAdmin
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "emailOrUsername": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### Login — Premium student (after DemoDataSeeder)
+# @name loginStudent
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "emailOrUsername": "{{studentEmail}}",
+  "password": "{{studentPassword}}"
+}
+
+### Login — Free student
+# @name loginFreeStudent
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "emailOrUsername": "{{freeStudentEmail}}",
+  "password": "{{freeStudentPassword}}"
+}
+
+### Login — Moderator
+# @name loginModerator
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "emailOrUsername": "{{moderatorEmail}}",
+  "password": "{{moderatorPassword}}"
+}
+
+@token = {{loginAdmin.response.body.data.accessToken}}
+
+### Current user
+GET {{api}}/auth/me
+Authorization: Bearer {{token}}
+
+### Feed (guest-readable list; like/comment need token)
+# @name getPosts
+GET {{api}}/posts?page=1&pageSize=10
+
+### Feed — filter by tag, major, semester, search
+GET {{api}}/posts?page=1&pageSize=10&tag=demo-seed&major=SE&semester=1&search=SEHUB
+
+### Featured posts
+GET {{api}}/posts/featured
+
+### Post detail (guest)
+# @name getPostDetail
+GET {{api}}/posts/{{getPosts.response.body.data.items[0].id}}
+
+### Create post (student)
+# @name createFeedPost
+POST {{api}}/posts
+Authorization: Bearer {{loginFreeStudent.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+  "title": "Chia sẻ kinh nghiệm ôn SE",
+  "content": "Markdown content up to 10k chars.",
+  "tags": ["sehub", "exam"]
+}
+
+### Like / unlike post
+POST {{api}}/posts/{{createFeedPost.response.body.data.id}}/like
+Authorization: Bearer {{loginFreeStudent.response.body.data.accessToken}}
+
+DELETE {{api}}/posts/{{createFeedPost.response.body.data.id}}/like
+Authorization: Bearer {{loginFreeStudent.response.body.data.accessToken}}
+
+### Comments
+GET {{api}}/posts/{{createFeedPost.response.body.data.id}}/comments?page=1&pageSize=20
+
+POST {{api}}/posts/{{createFeedPost.response.body.data.id}}/comments
+Authorization: Bearer {{loginFreeStudent.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+  "content": "Bài viết hữu ích!"
+}
+
+### Report post
+POST {{api}}/posts/{{createFeedPost.response.body.data.id}}/report
+Authorization: Bearer {{loginFreeStudent.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+  "reason": "Spam / misleading"
+}
+
+### Feature post (moderator)
+PATCH {{api}}/posts/{{createFeedPost.response.body.data.id}}/feature
+Authorization: Bearer {{loginModerator.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+  "isFeatured": true
+}
+
+### Moderation — pending reports
+GET {{api}}/admin/moderation/reports?status=Pending&page=1&pageSize=20
+Authorization: Bearer {{loginModerator.response.body.data.accessToken}}
+
+### Moderation — stats
+GET {{api}}/admin/moderation/stats
+Authorization: Bearer {{loginModerator.response.body.data.accessToken}}
+
+### Moderation — pending posts queue
+GET {{api}}/admin/moderation/posts?status=Pending&page=1&pageSize=20
+Authorization: Bearer {{loginModerator.response.body.data.accessToken}}
+
+### Moderation — approve pending post (demo)
+PATCH {{api}}/admin/moderation/posts/f6666666-6666-6666-6666-666666666601
+Authorization: Bearer {{loginModerator.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+  "action": "approve",
+  "note": "Nội dung học thuật phù hợp."
+}
+
+### Moderation — reject post
+PATCH {{api}}/admin/moderation/posts/{{createFeedPost.response.body.data.id}}
+Authorization: Bearer {{loginModerator.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+  "action": "reject",
+  "note": "Vi phạm quy định cộng đồng."
+}
+
+### Moderation — violating accounts
+GET {{api}}/admin/moderation/violations?page=1&pageSize=20&sort=violations-desc&status=all
+Authorization: Bearer {{loginModerator.response.body.data.accessToken}}
+
+### Moderation — violating account detail (demo spammer)
+GET {{api}}/admin/moderation/violations/f3333333-3333-3333-3333-333333333333
+Authorization: Bearer {{loginModerator.response.body.data.accessToken}}
+
+### Moderation — temp ban user (1 day)
+POST {{api}}/admin/moderation/users/{{loginFreeStudent.response.body.data.user.id}}/ban
+Authorization: Bearer {{loginModerator.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+  "durationDays": 1,
+  "reason": "Spam nhiều lần trong feed."
+}
+
+### Moderation — warn user
+POST {{api}}/admin/moderation/users/{{loginFreeStudent.response.body.data.user.id}}/warn
+Authorization: Bearer {{loginModerator.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+  "reason": "Cảnh báo lần đầu — nội dung không phù hợp."
+}
+
+### Moderation — lift temp ban
+POST {{api}}/admin/moderation/users/{{loginFreeStudent.response.body.data.user.id}}/unban
+Authorization: Bearer {{loginModerator.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+  "note": "Đã cam kết tuân thủ quy định."
+}
+
+### Moderation — practice submissions queue
+GET {{api}}/admin/moderation/practice-submissions?status=Submitted&page=1&pageSize=20
+Authorization: Bearer {{loginModerator.response.body.data.accessToken}}
+
+### Moderation — report detail (demo spam report)
+GET {{api}}/admin/moderation/reports/f5555555-5555-5555-5555-555555555501
+Authorization: Bearer {{loginModerator.response.body.data.accessToken}}
+
+### Admin dashboard summary
+GET {{api}}/admin/dashboard
+Authorization: Bearer {{loginAdmin.response.body.data.accessToken}}
+
+### Premium plans (anonymous)
+GET {{api}}/premium/plans
+
+### Create premium order (premium student)
+# @name createPremiumOrder
+POST {{api}}/premium/orders
+Authorization: Bearer {{loginStudent.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+  "planCode": "1m"
+}
+
+### Get order status
+GET {{api}}/premium/orders/{{createPremiumOrder.response.body.data.orderId}}
+Authorization: Bearer {{loginStudent.response.body.data.accessToken}}
+
+### Dev: confirm PayOS payment (Development only)
+POST {{api}}/premium/orders/{{createPremiumOrder.response.body.data.orderId}}/dev/confirm
+Authorization: Bearer {{loginStudent.response.body.data.accessToken}}
+
+### Subscription status
+GET {{api}}/premium/subscription
+Authorization: Bearer {{loginStudent.response.body.data.accessToken}}
+
+### Documents (authenticated — expect 401 without token)
+GET {{api}}/documents
+
+### Documents (with token)
+GET {{api}}/documents
+Authorization: Bearer {{token}}
+
+### Profile stats
+GET {{api}}/profiles/me/stats
+Authorization: Bearer {{token}}
+
+### Logout
+POST {{api}}/auth/logout
+Authorization: Bearer {{token}}

@@ -1,6 +1,5 @@
 /**
- * Metadata màn Admin — Roadmap Giai đoạn 1 (SEHUB_PhanTichNghiepVu.md).
- * P2 (Chatbot) không có UI Admin GĐ1.
+ * Metadata màn Admin — Roadmap Giai đoạn 1 + Chatbot (Phase 3).
  */
 
 export const ADMIN_SCREENS = [
@@ -139,6 +138,14 @@ export const ADMIN_SCREENS = [
     subtitle: "CRUD cấp hạng, danh hiệu và quy tắc cộng điểm — engine quét event khi SV có hành động.",
     group: "Hệ thống",
     phase: "GĐ1",
+  },
+  {
+    id: "chatbot",
+    path: "/admin/settings/chatbot",
+    title: "Chatbot tư vấn",
+    subtitle: "Cấu hình prompt, welcome message, knowledge base và xem hội thoại Premium.",
+    group: "Hệ thống",
+    phase: "P3",
   },
   {
     id: "vouchers",

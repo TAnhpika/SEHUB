@@ -1,3 +1,16 @@
+import * as adminApi from "@/api/adminApi";
+import { mapAdminReportListItem } from "@/api/adminMapper";
+import {
+  resolveReportDeleteViaApi,
+  resolveReportDismissViaApi,
+} from "@/features/admin/moderation/adminReportData";
+import { isValidGuid } from "@/features/feed/postUtils";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+
+/** Số báo cáo chờ từ API — tránh fallback mock (3) làm badge nhấp nháy. */
+let cachedPendingReportsCount = null;
+
 export const REPORT_STATUS_TABS = [
   { value: "all", label: "Tất cả" },
   { value: "pending", label: "Chờ xử lý" },
@@ -106,4 +119,174 @@ export const REPORTS_MOCK = [
 export function filterReports(reports, statusTab) {
   if (statusTab === "all") return reports;
   return reports.filter((report) => report.status === statusTab);
+}
+
+function getReportSortTimestamp(report) {
+  const raw = report.createdAtIso ?? report.reportedAt;
+  const ms = new Date(raw).getTime();
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
+/** Pending: FIFO (cũ trước). Resolved/all: mới trước. */
+export function sortModeratorReports(reports, tab = "all") {
+  return [...reports].sort((a, b) => {
+    const aMs = getReportSortTimestamp(a);
+    const bMs = getReportSortTimestamp(b);
+    if (tab === "pending") return aMs - bMs;
+    return bMs - aMs;
+  });
+}
+
+function formatReportCode(id) {
+  const short = String(id ?? "")
+    .replace(/-/g, "")
+    .slice(0, 4)
+    .toUpperCase();
+  return short ? `RP-${short}` : "RP-0000";
+}
+
+function inferReasonId(reasonText) {
+  const text = String(reasonText ?? "").toLowerCase();
+  if (text.includes("spam")) return "spam";
+  if (text.includes("quấy") || text.includes("harass")) return "harassment";
+  if (text.includes("sai") || text.includes("fake")) return "misinformation";
+  if (text.includes("độc") || text.includes("toxic")) return "harmful";
+  return "other";
+}
+
+function toInitials(value) {
+  const parts = String(value ?? "")
+    .replace(/^@/, "")
+    .split(/[\s_]+/);
+  const initials = parts
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+  return initials || "?";
+}
+
+function formatTimeLabel(dateStr) {
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "—";
+  const diffMs = Date.now() - date.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 60) return `${Math.max(1, mins)} phút trước`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} giờ trước`;
+  return `${Math.floor(hours / 24)} ngày trước`;
+}
+
+function formatReportedAt(dateStr) {
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+function mapResolutionFromAdminReport(adminReport) {
+  if (adminReport.status !== "resolved") return undefined;
+  const action = String(adminReport.resolution?.action ?? "").toLowerCase();
+  if (action === "rejected") return "ignored";
+  if (action === "approved") return "deleted";
+  return action.includes("reject") ? "ignored" : "deleted";
+}
+
+function mergeResolvedCommunityReport(reports, resolvedReport) {
+  const next = reports.filter((report) => report.id !== resolvedReport.id);
+  return [resolvedReport, ...next];
+}
+
+export function mapAdminReportToModeratorCommunityReport(adminReport) {
+  const reporter = adminReport.reporter ?? "unknown";
+  const reportedUser = adminReport.reportedUser ?? reporter;
+  const createdAtIso = adminReport.createdAtIso ?? adminReport.createdAt;
+
+  return {
+    id: adminReport.id,
+    apiId: adminReport.id,
+    code: formatReportCode(adminReport.id),
+    category: "community",
+    status: adminReport.status,
+    reason: inferReasonId(adminReport.reason),
+    reporterUsername: `@${reporter}`,
+    reporterInitial: toInitials(reporter),
+    timeLabel: formatTimeLabel(createdAtIso),
+    reportedAt: formatReportedAt(createdAtIso),
+    createdAtIso,
+    snippet: adminReport.post?.excerpt ?? adminReport.post?.title ?? adminReport.reason,
+    reportedUser: {
+      username: `@${reportedUser}`,
+      initial: toInitials(reportedUser),
+      joinedAt: "—",
+      trustScore: 50,
+    },
+    violatingContent:
+      adminReport.post?.excerpt ?? adminReport.post?.title ?? adminReport.reason ?? "—",
+    reporterReason: adminReport.reason,
+    resolution: mapResolutionFromAdminReport(adminReport),
+  };
+}
+
+export function getCommunityReportsMock() {
+  return REPORTS_MOCK.map((report) => ({ ...report, category: "community" }));
+}
+
+export async function loadModeratorCommunityReports() {
+  if (USE_MOCK) {
+    return getCommunityReportsMock();
+  }
+
+  const page = await adminApi.listReports({ pageSize: 100 });
+  const items = (page.items ?? [])
+    .map(mapAdminReportListItem)
+    .map(mapAdminReportToModeratorCommunityReport);
+  cachedPendingReportsCount = items.filter((report) => report.status === "pending").length;
+  return items;
+}
+
+export async function reloadModeratorCommunityReportsAfterResolve(id, action) {
+  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+    return null;
+  }
+
+  const dto =
+    action === "delete"
+      ? await resolveReportDeleteViaApi(id)
+      : await resolveReportDismissViaApi(id);
+
+  if (!dto) {
+    return null;
+  }
+
+  const resolvedReport = mapAdminReportToModeratorCommunityReport(mapAdminReportListItem(dto));
+  const list = await loadModeratorCommunityReports();
+  return mergeResolvedCommunityReport(list, resolvedReport);
+}
+
+export function syncCachedPendingReportsCount(count) {
+  if (!USE_MOCK) {
+    cachedPendingReportsCount = count;
+  }
+}
+
+export function getCommunityReportsPendingCount() {
+  if (USE_MOCK) {
+    return REPORTS_MOCK.filter((report) => report.status === "pending").length;
+  }
+  return cachedPendingReportsCount ?? 0;
+}
+
+export async function loadCommunityReportsPendingCount() {
+  if (USE_MOCK) {
+    return getCommunityReportsPendingCount();
+  }
+
+  const stats = await adminApi.getModerationStats();
+  cachedPendingReportsCount = stats.pendingReports ?? 0;
+  return cachedPendingReportsCount;
 }

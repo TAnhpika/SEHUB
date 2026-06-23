@@ -1,15 +1,14 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBullseye,
-  faComment,
   faGem,
   faMedal,
-  faPlus,
 } from "@fortawesome/free-solid-svg-icons";
-import Button from "@/common/Button/Button";
+import FollowButton from "@/features/social/FollowButton/FollowButton";
+import MessageUserButton from "@/features/social/MessageUserButton/MessageUserButton";
 import styles from "./FriendProfileCard.module.css";
 
-function FriendProfileCard({ profile }) {
+function FriendProfileCard({ profile, onFollowChange }) {
   return (
     <aside className={styles.card}>
       <div className={styles.hero}>
@@ -17,9 +16,13 @@ function FriendProfileCard({ profile }) {
           <FontAwesomeIcon icon={faGem} />
         </span>
         <span className={styles.avatar} aria-hidden="true">
-          {profile.initial}
+          {profile.avatarUrl ? (
+            <img src={profile.avatarUrl} alt="" className={styles["avatar-image"]} />
+          ) : (
+            profile.initial
+          )}
         </span>
-        <h1 className={styles.username}>{profile.username}</h1>
+        <h1 className={styles.username}>{profile.displayName ?? profile.username}</h1>
       </div>
 
       <div className={styles.social}>
@@ -35,14 +38,13 @@ function FriendProfileCard({ profile }) {
       </div>
 
       <div className={styles.actions}>
-        <Button size="sm" className={styles["follow-btn"]}>
-          <FontAwesomeIcon icon={faPlus} />
-          Theo dõi
-        </Button>
-        <Button look="outline" size="sm" className={styles["message-btn"]}>
-          <FontAwesomeIcon icon={faComment} />
-          Nhắn tin
-        </Button>
+        <FollowButton
+          userId={profile.userId}
+          initialIsFollowing={profile.isFollowing}
+          className={styles["follow-btn"]}
+          onChange={onFollowChange}
+        />
+        <MessageUserButton userId={profile.userId} className={styles["message-btn"]} />
       </div>
 
       <div className={styles.progress}>
@@ -50,7 +52,7 @@ function FriendProfileCard({ profile }) {
           <span className={styles["progress-title"]}>Đến {profile.nextLevel}</span>
           <span className={styles["progress-meta"]}>{profile.pointsToNext} điểm nữa</span>
         </div>
-        <div className={styles["progress-bar"]}>
+        <div className={styles.progress-bar}>
           <span
             className={styles["progress-fill"]}
             style={{ width: `${profile.levelProgress}%` }}

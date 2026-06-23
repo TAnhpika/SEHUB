@@ -1,7 +1,12 @@
 /** Mock store — hàng chờ báo cáo Admin */
 
+import * as adminApi from "@/api/adminApi";
+import { mapAdminReportListItem } from "@/api/adminMapper";
 import { addBannedUserFromReport } from "@/features/admin/moderation/adminBannedData";
 import { syncUserBanStatus } from "@/features/admin/users/adminUserStore";
+import { isValidGuid } from "@/features/feed/postUtils";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 export const REPORT_REASON_LABELS = {
   spam: "Spam hoặc quảng cáo",
@@ -199,4 +204,56 @@ export function banReportedUser(id, durationLabel) {
     return { ...resolved, bannedEntry: user };
   }
   return resolved;
+}
+
+export async function loadAdminReports() {
+  if (USE_MOCK) {
+    return getAdminReports();
+  }
+
+  const page = await adminApi.listReports({ pageSize: 100 });
+  return (page.items ?? [])
+    .map(mapAdminReportListItem)
+    .sort((a, b) =>
+      String(b.createdAtIso ?? b.createdAt).localeCompare(String(a.createdAtIso ?? a.createdAt)),
+    );
+}
+
+export async function loadAdminReportById(id) {
+  const mockReport = getAdminReportById(id);
+  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+    return mockReport;
+  }
+
+  try {
+    const dto = await adminApi.getReport(id);
+    return mapAdminReportListItem(dto);
+  } catch {
+    return mockReport;
+  }
+}
+
+export async function resolveAdminReportViaApi(id, body) {
+  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+    return null;
+  }
+
+  try {
+    const dto = await adminApi.resolveReport(id, body);
+    return mapAdminReportListItem(dto);
+  } catch {
+    return null;
+  }
+}
+
+export async function resolveReportDeleteViaApi(id) {
+  return resolveAdminReportViaApi(id, { status: "Approved", action: "delete_post" });
+}
+
+export async function resolveReportDismissViaApi(id) {
+  return resolveAdminReportViaApi(id, { status: "Rejected" });
+}
+
+export async function resolveReportBanViaApi(id) {
+  return resolveAdminReportViaApi(id, { status: "Approved" });
 }

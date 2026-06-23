@@ -7,7 +7,7 @@ import Pagination from "@/common/Pagination/Pagination";
 import PostCard from "@/features/feed/PostCard/PostCard";
 import PostDetailModal from "@/features/feed/PostDetailModal/PostDetailModal";
 import PostFeedFilters from "@/features/feed/PostFeedFilters/PostFeedFilters";
-import { MOCK_POSTS, POSTS_PER_PAGE } from "@/features/feed/feedData";
+import { loadPosts, POSTS_PER_PAGE, removePost } from "@/features/feed/feedData";
 import { filterPosts } from "@/features/feed/feedFilterData";
 import { parsePostId } from "@/features/feed/postUtils";
 import { useAuth } from "@/context";
@@ -17,7 +17,9 @@ import styles from "./HomePage.module.css";
 function HomePage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [posts, setPosts] = useState(() => [...MOCK_POSTS]);
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedPost, setSelectedPost] = useState(null);
   const [editOnOpen, setEditOnOpen] = useState(false);
   const [semesterFilter, setSemesterFilter] = useState("all");
@@ -30,6 +32,34 @@ function HomePage() {
     if (!linkedPostId) return;
     navigate(`/home/posts/${linkedPostId}`, { replace: true });
   }, [searchParams, navigate]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchPosts() {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await loadPosts({ pageSize: 100 });
+        if (!cancelled) {
+          setPosts(result.items);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message ?? "Không tải được danh sách bài viết.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchPosts();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredPosts = useMemo(
     () => filterPosts(posts, semesterFilter, majorFilter),
@@ -76,13 +106,18 @@ function HomePage() {
     setEditOnOpen(false);
   }
 
-  function handleDeletePost(post) {
+  async function handleDeletePost(post) {
     const confirmed = window.confirm("Bạn có chắc muốn xóa bài viết này?");
     if (!confirmed) return;
 
-    setPosts((prev) => prev.filter((item) => item.id !== post.id));
-    setSelectedPost(null);
-    setEditOnOpen(false);
+    try {
+      await removePost(post.id);
+      setPosts((prev) => prev.filter((item) => item.id !== post.id));
+      setSelectedPost(null);
+      setEditOnOpen(false);
+    } catch (err) {
+      window.alert(err.message ?? "Không xóa được bài viết.");
+    }
   }
 
   return (
@@ -116,7 +151,13 @@ function HomePage() {
       </header>
 
       <div className={styles.list}>
-        {pagePosts.length > 0 ? (
+        {loading ? (
+          <p className={styles.empty}>Đang tải bài viết...</p>
+        ) : error ? (
+          <p className={styles.empty} role="alert">
+            {error}
+          </p>
+        ) : pagePosts.length > 0 ? (
           pagePosts.map((post) => (
             <PostCard
               key={post.id}

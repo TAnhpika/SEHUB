@@ -1,30 +1,136 @@
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDownload, faLock } from "@fortawesome/free-solid-svg-icons";
+import {
+  faChevronLeft,
+  faChevronRight,
+  faDownload,
+  faLock,
+} from "@fortawesome/free-solid-svg-icons";
+import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import {
   buildMockPageLabels,
   getDocumentAccessState,
 } from "@/features/documents/documentAccessPolicy";
+import {
+  downloadStudentDocument,
+  isSlideDocument,
+} from "@/features/documents/documentDownload";
+import {
+  getDocumentOverview,
+  loadDocumentOverview,
+  loadDocumentPageContent,
+} from "@/features/documents/documentPageContent";
+import { loadDocumentDetail } from "@/features/documents/studentDocumentsData";
 import styles from "./StudentDocumentViewer.module.css";
 
 function StudentDocumentViewer({ document: doc }) {
+  const { pathname, search } = useLocation();
   const { isPremium, isAuthenticated } = useAuth();
-  const access = getDocumentAccessState(doc, { isPremium, isAuthenticated });
+  const { showToast } = useToast();
+  const [enrichedDoc, setEnrichedDoc] = useState(doc);
+  const [overview, setOverview] = useState(() => getDocumentOverview(doc));
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageContent, setPageContent] = useState(null);
+  const [downloading, setDownloading] = useState(false);
 
-  const pages = buildMockPageLabels(
-    access.totalPages,
-    access.canView ? access.visiblePages : 0,
-  );
+  useEffect(() => {
+    setEnrichedDoc(doc);
+    setOverview(getDocumentOverview(doc));
+    setCurrentPage(1);
+  }, [doc]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadDocumentDetail(doc)
+      .then((detail) => {
+        if (cancelled || !detail) return;
+        setEnrichedDoc(detail);
+      })
+      .catch(() => {
+        /* keep prop doc */
+      });
+
+    loadDocumentOverview(doc)
+      .then((nextOverview) => {
+        if (!cancelled && nextOverview) {
+          setOverview(nextOverview);
+        }
+      })
+      .catch(() => {
+        /* keep local overview */
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [doc]);
+
+  const access = getDocumentAccessState(enrichedDoc, { isPremium, isAuthenticated });
+  const isSlide = isSlideDocument(enrichedDoc);
+  const pageLabels = buildMockPageLabels(access.totalPages, access.visiblePages);
+  const activePageLabel = pageLabels[currentPage - 1];
+  const canShowCurrentPage = Boolean(activePageLabel?.visible);
+
+  useEffect(() => {
+    if (!access.canView || !canShowCurrentPage) {
+      setPageContent(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    loadDocumentPageContent(enrichedDoc, currentPage)
+      .then((content) => {
+        if (!cancelled) {
+          setPageContent(content);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPageContent(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [access.canView, canShowCurrentPage, currentPage, enrichedDoc]);
+
+  async function handleDownload() {
+    if (!access.canDownload || downloading) return;
+
+    setDownloading(true);
+    try {
+      await downloadStudentDocument(enrichedDoc);
+      showToast(`Đã tải ${enrichedDoc.name} về máy.`);
+    } catch (error) {
+      showToast(error?.message ?? "Không tải được tài liệu.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  function goToPage(nextPage) {
+    const label = pageLabels[nextPage - 1];
+    if (!label?.visible) return;
+    setCurrentPage(nextPage);
+  }
 
   return (
     <section className={styles.viewer} aria-label="Xem tài liệu">
       <header className={styles.header}>
         <div>
-          <h2 className={styles.fileName}>{doc.name}</h2>
+          <h2 className={styles.fileName}>{enrichedDoc.name}</h2>
           <p className={styles.meta}>
-            {doc.pages} trang · Quyền Admin: <strong>{doc.access}</strong>
+            {isSlide ? "Slide · " : ""}
+            {enrichedDoc.uploadedAt ? `Tải lên ${enrichedDoc.uploadedAt}` : ""}
           </p>
+          {enrichedDoc.description ? (
+            <p className={styles.description}>{enrichedDoc.description}</p>
+          ) : null}
         </div>
         <span
           className={`${styles.planBadge} ${
@@ -40,54 +146,120 @@ function StudentDocumentViewer({ document: doc }) {
       {!access.canView ? (
         <div className={styles.locked}>
           <FontAwesomeIcon icon={faLock} className={styles.lockIcon} />
-          <h3>Tài liệu Premium</h3>
-          <p>Gói Basic không mở được file này. Nâng cấp Premium để xem & tải đầy đủ.</p>
-          <Link to="/home/premium" className={styles.upgradeBtn}>
-            Xem gói Premium
-          </Link>
+          <h3>
+            {access.reason === "login"
+              ? "Cần đăng nhập"
+              : "Tài liệu dành cho Premium"}
+          </h3>
+          <p>
+            {access.reason === "login"
+              ? "Đăng nhập để xem tài liệu học tập theo môn."
+              : "Gói Basic không mở được file này. Nâng cấp Premium để xem & tải đầy đủ."}
+          </p>
+          {access.reason === "login" ? (
+            <Link
+              to="/login"
+              state={{ from: `${pathname}${search}` }}
+              className={styles.upgradeBtn}
+            >
+              Đăng nhập
+            </Link>
+          ) : null}
+          {access.reason === "premium_required" ? (
+            <Link to="/home/premium" className={styles.upgradeBtn}>
+              Xem gói Premium
+            </Link>
+          ) : null}
         </div>
       ) : (
         <>
-          <div className={styles.pages}>
-            {pages.map((page) => (
-              <article
-                key={page.pageNum}
-                className={`${styles.page} ${
-                  page.visible ? styles.pageVisible : styles.pageLocked
-                }`}
-              >
-                <span className={styles.pageLabel}>Trang {page.pageNum}</span>
-                {page.visible ? (
-                  <p className={styles.pageBody}>
-                    [Mock] Nội dung trang {page.pageNum} của <em>{doc.name}</em>…
-                  </p>
-                ) : (
-                  <p className={styles.pageBlocked}>
-                    <FontAwesomeIcon icon={faLock} /> Trang bị khóa — nâng cấp Premium để xem tiếp
-                  </p>
-                )}
-              </article>
-            ))}
-          </div>
-
-          <footer className={styles.footer}>
-            {access.limited ? (
-              <p className={styles.limitNote}>
-                Bạn đang xem {access.visiblePages}/{access.totalPages} trang (giới hạn Basic).
+          <article className={styles.overview}>
+            <h4 className={styles.overviewTitle}>{overview.title}</h4>
+            <p className={styles.overviewSummary}>{overview.summary}</p>
+            <p className={styles.overviewHeading}>
+              {isSlide ? "Nội dung slide gồm:" : "Nội dung gồm:"}
+            </p>
+            <ul className={styles.overviewList}>
+              {overview.topics.map((topic) => (
+                <li key={topic}>{topic}</li>
+              ))}
+            </ul>
+            {!isPremium && access.limited ? (
+              <p className={styles.overviewHint}>
+                <FontAwesomeIcon icon={faLock} /> Tài khoản Basic xem tối đa{" "}
+                {access.visiblePages} trang —{" "}
+                <Link to="/home/premium">Premium</Link> để tải file đầy đủ.
               </p>
             ) : null}
+          </article>
+
+          {canShowCurrentPage ? (
+            <div className={styles.pageView}>
+              <h4 className={styles.pageTitle}>{pageContent?.title ?? "Đang tải trang..."}</h4>
+              {pageContent?.contentUrl ? (
+                <iframe
+                  title={`${enrichedDoc.name} trang ${currentPage}`}
+                  src={pageContent.contentUrl}
+                  className={styles.previewFrame}
+                />
+              ) : (
+                <div className={styles.pageBody}>
+                  {(pageContent?.lines ?? []).map((line) => (
+                    <p key={line}>{line}</p>
+                  ))}
+                </div>
+              )}
+
+              <div className={styles.pageNav}>
+                <button
+                  type="button"
+                  className={styles.navBtn}
+                  disabled={currentPage <= 1}
+                  onClick={() => goToPage(currentPage - 1)}
+                  aria-label="Trang trước"
+                >
+                  <FontAwesomeIcon icon={faChevronLeft} />
+                </button>
+                <span className={styles.pageIndicator}>
+                  {isSlide ? "Slide" : "Trang"} {currentPage} / {access.totalPages}
+                </span>
+                <button
+                  type="button"
+                  className={styles.navBtn}
+                  disabled={
+                    currentPage >= access.totalPages ||
+                    !pageLabels[currentPage]?.visible
+                  }
+                  onClick={() => goToPage(currentPage + 1)}
+                  aria-label="Trang sau"
+                >
+                  <FontAwesomeIcon icon={faChevronRight} />
+                </button>
+              </div>
+
+              {!isPremium && access.limited ? (
+                <p className={styles.limitBanner}>
+                  Basic chỉ xem được {access.visiblePages} trang đầu.{" "}
+                  <Link to="/home/premium">Nâng cấp Premium</Link> để xem & tải toàn bộ.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          <footer className={styles.footer}>
             <button
               type="button"
-              className={styles.downloadBtn}
-              disabled={!access.canDownload}
+              className={`${styles.downloadBtn} ${access.canDownload ? styles.downloadBtnActive : ""}`}
+              disabled={!access.canDownload || downloading}
               title={
                 access.canDownload
-                  ? "Tải file đầy đủ"
+                  ? "Tải toàn bộ tài liệu về máy"
                   : "Chỉ Premium mới được tải tài liệu"
               }
+              onClick={handleDownload}
             >
-              <FontAwesomeIcon icon={faDownload} />
-              {access.canDownload ? "Tải tài liệu" : "Tải xuống (Premium)"}
+              <FontAwesomeIcon icon={access.canDownload ? faDownload : faLock} />
+              Tải xuống
             </button>
           </footer>
         </>

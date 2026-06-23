@@ -48,7 +48,7 @@ function RefundedPaymentsPanel({
         <div className={payStyles.refundPanelActions}>
           {refundableCount > 0 ? (
             <button type="button" className={payStyles.refundPanelPrimary} onClick={onStartRefund}>
-              Hoàn đơn mới ({refundableCount})
+              Hoàn đơn chờ duyệt ({refundableCount})
             </button>
           ) : null}
           <button type="button" className={payStyles.refundPanelLink} onClick={onViewInTable}>

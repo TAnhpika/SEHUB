@@ -19,6 +19,7 @@ import StatusBadge from "@/features/admin/shared/StatusBadge";
 import {
   BAN_TYPE_LABELS,
   getAdminBannedUsers,
+  loadAdminBannedUsers,
   unbanUser,
 } from "@/features/admin/moderation/adminBannedData";
 import { unbanFromBannedList } from "@/features/admin/users/adminUserStore";
@@ -38,6 +39,16 @@ function AdminBannedPage() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [lastUnbanned, setLastUnbanned] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadAdminBannedUsers().then((items) => {
+      if (!cancelled) setBanned(items);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const tempCount = banned.filter((b) => b.type === "temporary").length;
   const permCount = banned.filter((b) => b.type === "permanent").length;
@@ -78,7 +89,7 @@ function AdminBannedPage() {
   const selected = banned.find((b) => b.id === selectedId) ?? null;
 
   function refresh() {
-    setBanned(getAdminBannedUsers());
+    loadAdminBannedUsers().then(setBanned);
   }
 
   function selectUser(id) {
@@ -101,8 +112,10 @@ function AdminBannedPage() {
     refresh();
     setLastUnbanned(removed);
     showToast(`Đã mở khóa @${removed.username}.`);
-    const next = getAdminBannedUsers();
-    setSelectedId(next[0]?.id ?? null);
+    loadAdminBannedUsers().then((next) => {
+      setBanned(next);
+      setSelectedId(next[0]?.id ?? null);
+    });
   }
 
   return (

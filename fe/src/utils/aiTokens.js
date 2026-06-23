@@ -4,6 +4,9 @@ import { isStaffRole, resolveIsPremium } from "@/utils/studentPlan";
 export const AI_EXPLAIN_TOKEN_COST = 10;
 
 const STORAGE_PREFIX = "sehubs_ai_usage_";
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+
+let serverSnapshot = null;
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -26,6 +29,42 @@ export function getAiDailyTokenLimit(user) {
   return 10;
 }
 
+export function clearServerAiTokenSnapshot() {
+  serverSnapshot = null;
+}
+
+export function setServerAiTokenSnapshot(dto) {
+  if (!dto) {
+    serverSnapshot = null;
+    return;
+  }
+
+  serverSnapshot = {
+    limit: Number(dto.limit ?? 0),
+    used: Number(dto.used ?? 0),
+    remaining: Number(dto.remaining ?? 0),
+    costExplain: Number(dto.costExplain ?? AI_EXPLAIN_TOKEN_COST),
+    costChat: Number(dto.costChat ?? AI_EXPLAIN_TOKEN_COST),
+    canExplain: Boolean(dto.canExplain),
+    canChat: Boolean(dto.canChat),
+  };
+}
+
+export function applyServerRemainingTokens(remaining, cost = AI_EXPLAIN_TOKEN_COST) {
+  if (serverSnapshot == null || !Number.isFinite(remaining)) {
+    return;
+  }
+
+  const safeRemaining = Math.max(0, Number(remaining));
+  serverSnapshot = {
+    ...serverSnapshot,
+    remaining: safeRemaining,
+    used: Math.max(0, serverSnapshot.limit - safeRemaining),
+    canExplain: safeRemaining >= cost,
+    canChat: safeRemaining >= (serverSnapshot.costChat ?? cost),
+  };
+}
+
 function readUsage(userKey) {
   if (!userKey) return { date: todayKey(), used: 0 };
 
@@ -45,10 +84,7 @@ function writeUsage(userKey, usage) {
   localStorage.setItem(`${STORAGE_PREFIX}${userKey}`, JSON.stringify(usage));
 }
 
-/**
- * @returns {{ limit: number, used: number, remaining: number, canExplain: boolean, cost: number }}
- */
-export function getAiTokenSnapshot(user) {
+function getMockSnapshot(user) {
   const limit = getAiDailyTokenLimit(user);
   const cost = AI_EXPLAIN_TOKEN_COST;
 
@@ -70,23 +106,46 @@ export function getAiTokenSnapshot(user) {
 }
 
 /**
- * Lazy reset theo ngày — §4.2
+ * @returns {{ limit: number, used: number, remaining: number, canExplain: boolean, cost: number }}
+ */
+export function getAiTokenSnapshot(user) {
+  if (!user) {
+    return { limit: 0, used: 0, remaining: 0, canExplain: false, cost: AI_EXPLAIN_TOKEN_COST };
+  }
+
+  if (!USE_MOCK && serverSnapshot) {
+    return {
+      limit: serverSnapshot.limit,
+      used: serverSnapshot.used,
+      remaining: serverSnapshot.remaining,
+      canExplain: serverSnapshot.canExplain,
+      cost: serverSnapshot.costExplain ?? AI_EXPLAIN_TOKEN_COST,
+    };
+  }
+
+  return getMockSnapshot(user);
+}
+
+/**
  * @returns {{ ok: boolean, snapshot: ReturnType<typeof getAiTokenSnapshot> }}
  */
 export function consumeAiExplainTokens(user) {
   const snapshot = getAiTokenSnapshot(user);
   if (!user) return { ok: false, snapshot };
   if (!Number.isFinite(snapshot.limit)) return { ok: true, snapshot };
+  if (!snapshot.canExplain) return { ok: false, snapshot };
 
-  const userKey = getUserKey(user);
-  if (!userKey || !snapshot.canExplain) return { ok: false, snapshot };
+  if (USE_MOCK) {
+    const userKey = getUserKey(user);
+    if (!userKey) return { ok: false, snapshot };
 
-  const usage = readUsage(userKey);
-  const nextUsage = {
-    date: todayKey(),
-    used: usage.used + AI_EXPLAIN_TOKEN_COST,
-  };
-  writeUsage(userKey, nextUsage);
+    const usage = readUsage(userKey);
+    writeUsage(userKey, {
+      date: todayKey(),
+      used: usage.used + AI_EXPLAIN_TOKEN_COST,
+    });
+    return { ok: true, snapshot: getAiTokenSnapshot(user) };
+  }
 
-  return { ok: true, snapshot: getAiTokenSnapshot(user) };
+  return { ok: true, snapshot };
 }

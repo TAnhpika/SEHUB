@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import {
-  getStudentSubmission,
   getSubmissionStatusLabel,
   isValidGithubUrl,
-  submitPracticeExam,
+  loadStudentSubmission,
+  submitPracticeExamAsync,
 } from "@/features/exams/practiceExamSubmissions";
 import styles from "./PracticeExamSubmitPanel.module.css";
 
@@ -17,9 +17,35 @@ function PracticeExamSubmitPanel({ courseCode, examId, examTitle }) {
   const { user, isAuthenticated, isPremium } = useAuth();
   const { showToast } = useToast();
   const [githubUrl, setGithubUrl] = useState("");
-  const [submission, setSubmission] = useState(() =>
-    user ? getStudentSubmission(courseCode, examId, user.username) : null,
-  );
+  const [submission, setSubmission] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setSubmission(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    loadStudentSubmission(courseCode, examId, user.username)
+      .then((result) => {
+        if (cancelled) return;
+        setSubmission(result);
+        if (result?.githubUrl) {
+          setGithubUrl(result.githubUrl);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSubmission(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [courseCode, examId, user?.username]);
 
   if (!isAuthenticated) {
     return (
@@ -45,23 +71,32 @@ function PracticeExamSubmitPanel({ courseCode, examId, examTitle }) {
     );
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     if (!isValidGithubUrl(githubUrl)) {
       showToast("Nhập link GitHub hợp lệ (https://github.com/...).");
       return;
     }
 
-    const saved = submitPracticeExam({
-      courseCode,
-      examId,
-      student: user.username,
-      displayName: user.displayName ?? user.username,
-      githubUrl,
-    });
-    setSubmission(saved);
-    setGithubUrl(saved.githubUrl);
-    showToast(submission ? "Đã cập nhật bài nộp." : "Đã nộp bài — chờ Mod/Admin chấm.");
+    const hadSubmission = Boolean(submission);
+    setSubmitting(true);
+
+    try {
+      const saved = await submitPracticeExamAsync({
+        courseCode,
+        examId,
+        student: user.username,
+        displayName: user.displayName ?? user.username,
+        githubUrl,
+      });
+      setSubmission(saved);
+      setGithubUrl(saved.githubUrl);
+      showToast(hadSubmission ? "Đã cập nhật bài nộp." : "Đã nộp bài — chờ Mod/Admin chấm.");
+    } catch (error) {
+      showToast(error?.message ?? "Không nộp được bài. Vui lòng thử lại.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const statusClass =
@@ -129,10 +164,13 @@ function PracticeExamSubmitPanel({ courseCode, examId, examTitle }) {
             value={githubUrl || submission?.githubUrl || ""}
             onChange={(e) => setGithubUrl(e.target.value)}
             required
+            disabled={submitting}
           />
         </label>
         <div className={styles.actions}>
-          <Button type="submit">{submission ? "Gửi lại bài nộp" : "Nộp bài"}</Button>
+          <Button type="submit" disabled={submitting}>
+            {submission ? "Gửi lại bài nộp" : "Nộp bài"}
+          </Button>
         </div>
       </form>
 

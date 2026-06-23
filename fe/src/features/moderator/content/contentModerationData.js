@@ -1,5 +1,10 @@
+import * as adminApi from "@/api/adminApi";
+import { mapModerationPostDetail, mapModerationPostListItem } from "@/api/adminMapper";
+
 export const CONTENT_QUEUE_PAGE_SIZE = 4;
 export const CONTENT_HISTORY_PAGE_SIZE = 5;
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 export const SORT_OPTIONS = [
   { value: "newest", label: "Mới nhất trước" },
@@ -38,7 +43,7 @@ export const CONTENT_QUEUE_MOCK = [
 
 Mình đang ôn theo slide của thầy tuần 1–8, phần đệ quy và cây nhị phân hơi yếu. FE thường ra dạng trace code hay implement BST không ạ?
 
-Mình attach slide ôn và vài bài tập mẫu bên dưới. Cảm ơn mọi người!`,
+Xem thêm tài liệu ôn: https://fpt.edu.vn — cảm ơn mọi người!`,
     semester: "Fall 2025",
     major: "SE",
     tags: ["CSD", "FE"],
@@ -392,7 +397,10 @@ Xin hỏi lịch thi chính thức MAE101 kỳ Summer 2025 và phòng thi FE ạ
 ];
 
 export function buildDefaultContentItems() {
-  return [...CONTENT_QUEUE_MOCK, ...CONTENT_HISTORY_MOCK];
+  return [...CONTENT_QUEUE_MOCK, ...CONTENT_HISTORY_MOCK].map((item) => ({
+    ...item,
+    attachments: [],
+  }));
 }
 
 function buildItemHaystack(item) {
@@ -408,7 +416,6 @@ function buildItemHaystack(item) {
     item.moderation?.reason,
     item.moderation?.note,
     ...(item.tags ?? []),
-    ...(item.attachments ?? []).map((file) => file.name),
   ]
     .filter(Boolean)
     .join(" ")
@@ -444,4 +451,26 @@ export function countContentByStatus(items) {
     rejected: items.filter((item) => item.status === "rejected").length,
     all: items.filter((item) => item.type === "post").length,
   };
+}
+
+export async function loadModerationContentItems({ status, sort = "newest" } = {}) {
+  if (USE_MOCK) {
+    return buildDefaultContentItems();
+  }
+
+  const params = { pageSize: 100, sort };
+  if (status && status !== "all") {
+    if (status === "pending") params.status = "Pending";
+    else if (status === "approved") params.status = "Published";
+    else if (status === "rejected") params.status = "Rejected";
+  }
+
+  const page = await adminApi.listModerationPosts(params);
+  return (page.items ?? []).map(mapModerationPostListItem);
+}
+
+export async function fetchModerationContentDetail(id) {
+  if (USE_MOCK) return null;
+  const dto = await adminApi.getModerationPost(id);
+  return mapModerationPostDetail(dto);
 }

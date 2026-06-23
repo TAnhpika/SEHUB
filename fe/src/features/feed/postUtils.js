@@ -23,8 +23,17 @@ export function getPostShareUrl(postId) {
   return `${origin}/home/posts/${postId}`;
 }
 
+export function isValidGuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    String(value ?? ""),
+  );
+}
+
 export function parsePostId(value) {
-  const id = Number(value);
+  if (value == null || value === "") return null;
+  const str = String(value).trim();
+  if (isValidGuid(str)) return str;
+  const id = Number(str);
   return Number.isFinite(id) && id > 0 ? id : null;
 }
 

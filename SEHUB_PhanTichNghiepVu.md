@@ -118,11 +118,11 @@ Hệ thống có 4 actor chính, phân quyền theo tầng:
 ### Gói Premium
 
 
-| Gói     | Thời hạn             | Voucher kèm       |
-| ------- | -------------------- | ----------------- |
-| 1 tháng | Trải nghiệm ngắn hạn | Không có          |
-| 8 tháng | 1 học kỳ             | Voucher FTES 20%  |
-| 4 năm   | Toàn khóa học        | Voucher FTES 100% |
+| Gói     | Thời hạn             | Giá (VNĐ) | Voucher kèm       |
+| ------- | -------------------- | --------- | ----------------- |
+| 1 tháng | Trải nghiệm ngắn hạn | 48.000    | Không có          |
+| 8 tháng | 1 học kỳ             | 200.000   | Voucher FTES 20%  |
+| 4 năm   | Toàn khóa học        | 650.000   | Voucher FTES 100% |
 
 
 ---

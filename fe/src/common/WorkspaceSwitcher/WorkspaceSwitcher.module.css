@@ -13,17 +13,16 @@
   list-style: none;
 }
 
-.list li {
-  width: 100%;
+.item,
+.itemCurrent {
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 10px;
 }
 
 .item {
   display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  width: 100%;
-  padding: 0.625rem 0.75rem;
-  border-radius: 10px;
+  align-items: flex-start;
   color: inherit;
   text-decoration: none;
   cursor: pointer;
@@ -33,15 +32,12 @@
   transition: background 0.12s ease;
 }
 
-.item:hover {
-  background: #f1f5f9;
-}
-
-.item:active {
-  background: #e2e8f0;
-}
-
-.itemActive {
+.itemCurrent {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.75rem;
+  row-gap: 0.25rem;
+  align-items: center;
   background: #eff6ff;
   border-color: #dbeafe;
 }
@@ -54,6 +50,28 @@
 .itemActive .icon {
   color: #1d4ed8;
   background: #dbeafe;
+}
+
+.itemCurrent .icon {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  align-self: center;
+}
+
+.itemCurrent .copy {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.itemCurrent .badge {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: start;
+}
+
+.item:hover {
+  background: #f1f5f9;
 }
 
 .icon {
@@ -173,19 +191,10 @@
   background: #f1f5f9;
 }
 
-.menuCompact .itemActive {
-  background: #eff6ff;
-  border-color: #dbeafe;
+.menuCompact .item {
+  align-items: center;
 }
 
-.menuCompact .itemActive:hover {
-  background: #dbeafe;
-}
-
-.menuCompact .label {
+.menuCompact .itemCurrent .label {
   white-space: nowrap;
-}
-
-.menuCompact .desc {
-  display: none;
 }

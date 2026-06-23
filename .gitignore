@@ -1,0 +1,3 @@
+# Local secret backups — never commit
+LOCAL_SECRETS.private.md
+LOCAL_SECRETS*.private.md

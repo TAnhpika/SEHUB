@@ -1,4 +1,9 @@
-/** Mock store — tài khoản bị khóa (Mod tạm / Admin vĩnh viễn) */
+/** Mock store — tài liệu bị khóa (Mod tạm / Admin vĩnh viễn) */
+
+import * as adminApi from "@/api/adminApi";
+import { mapAdminBannedUser } from "@/api/adminMapper";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 export const BAN_TYPE_LABELS = {
   temporary: "Khóa tạm thời",
@@ -174,4 +179,15 @@ export function addBannedUserFromReport(username, durationLabel, reportMeta) {
   };
   bannedStore = [entry, ...bannedStore];
   return entry;
+}
+
+export async function loadAdminBannedUsers() {
+  if (USE_MOCK) {
+    return getAdminBannedUsers();
+  }
+
+  const items = await adminApi.listBannedUsers();
+  const apiBanned = (items ?? []).map(mapAdminBannedUser);
+  bannedStore = apiBanned.map((row) => ({ ...row }));
+  return apiBanned;
 }

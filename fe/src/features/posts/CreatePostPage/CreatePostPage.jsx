@@ -21,9 +21,11 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import PostContentPreview from "@/common/PostContentPreview/PostContentPreview";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
+import { submitPost } from "@/features/feed/feedData";
 import { MAJORS, MAX_CONTENT_LENGTH, SEMESTERS } from "@/features/posts/createPostData";
 import styles from "./CreatePostPage.module.css";
 
@@ -39,6 +41,7 @@ function CreatePostPage() {
   const [contentMode, setContentMode] = useState("edit");
   const [coverMode, setCoverMode] = useState("upload");
   const [coverUrl, setCoverUrl] = useState("");
+  const [coverFile, setCoverFile] = useState(null);
   const [coverFileName, setCoverFileName] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState([]);
@@ -67,16 +70,29 @@ function CreatePostPage() {
   function handleCoverFileChange(event) {
     const file = event.target.files?.[0];
     if (!file) return;
+    setCoverFile(file);
     setCoverFileName(file.name);
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    if (!title.trim() || !content.trim()) return;
+    if (!title.trim() || !content.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
-    showToast("Bài viết đã được gửi và đang chờ admin phê duyệt.");
-    navigate("/home");
+    try {
+      await submitPost({
+        title: title.trim(),
+        content: content.trim(),
+        tags,
+        coverFile: coverMode === "upload" ? coverFile : null,
+      });
+      showToast("Đã gửi bài viết — chờ moderator duyệt trước khi hiển thị.", 5500);
+      window.setTimeout(() => navigate("/home"), 1200);
+    } catch (err) {
+      showToast(err.message ?? "Không đăng được bài viết.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -89,8 +105,8 @@ function CreatePostPage() {
       <header className={styles.header}>
         <h1 className={styles.title}>Tạo bài viết mới</h1>
         <p className={styles.subtitle}>
-          Chia sẻ kiến thức của bạn với cộng đồng. Bài viết sẽ được admin xem xét trước khi xuất
-          bản.
+          Chia sẻ kiến thức với cộng đồng. Bài viết hỗ trợ văn bản, liên kết và ảnh bìa — không đính kèm
+          file PDF/ZIP. Nội dung sẽ được moderator xem xét trước khi xuất bản.
         </p>
       </header>
 
@@ -233,7 +249,7 @@ function CreatePostPage() {
           ) : (
             <div className={styles.preview}>
               {content.trim() ? (
-                <p className={styles["preview-text"]}>{content}</p>
+                <PostContentPreview text={content} className={styles["preview-text"]} />
               ) : (
                 <p className={styles["preview-empty"]}>Chưa có nội dung để xem trước.</p>
               )}
@@ -272,7 +288,7 @@ function CreatePostPage() {
                   onChange={handleCoverFileChange}
                 />
               </label>
-              <p className={styles.hint}>PNG, JPG, GIF (tối đa 5MB)</p>
+              <p className={styles.hint}>PNG, JPG, GIF (tối đa 5MB). Chỉ ảnh bìa — không upload file đính kèm.</p>
               {coverFileName && <p className={styles["file-name"]}>{coverFileName}</p>}
             </div>
           ) : (
@@ -349,8 +365,8 @@ function CreatePostPage() {
           <div>
             <p className={styles["notice-title"]}>Chờ phê duyệt</p>
             <p className={styles["notice-text"]}>
-              Bài viết của bạn sẽ được admin xem xét trước khi xuất bản. Bạn sẽ nhận được thông
-              báo khi bài viết được duyệt.
+              Bài viết của bạn sẽ được moderator duyệt trước khi hiển thị trên feed. Bạn sẽ nhận
+              được thông báo khi bài viết được duyệt.
             </p>
           </div>
         </div>

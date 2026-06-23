@@ -21,6 +21,10 @@ import {
   deleteReportedPost,
   dismissReport,
   getAdminReports,
+  loadAdminReports,
+  resolveReportBanViaApi,
+  resolveReportDeleteViaApi,
+  resolveReportDismissViaApi,
 } from "@/features/admin/moderation/adminReportData";
 import AdminTableFooter from "@/features/admin/shared/AdminTableFooter";
 import { ADMIN_PAGE_SIZES } from "@/features/admin/shared/adminPaginationConstants";
@@ -41,6 +45,16 @@ function AdminModerationPage() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [lastResolved, setLastResolved] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadAdminReports().then((items) => {
+      if (!cancelled) setReports(items);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const pendingCount = reports.filter((r) => r.status === "pending").length;
   const urgentCount = reports.filter((r) => r.status === "pending" && r.urgent).length;
@@ -89,10 +103,6 @@ function AdminModerationPage() {
     ? getAdminUserDetailUrl(selected.reportedUser)
     : null;
 
-  function refresh() {
-    setReports(getAdminReports());
-  }
-
   function selectReport(id) {
     setSelectedId(id);
     setSearchParams(
@@ -105,15 +115,24 @@ function AdminModerationPage() {
     );
   }
 
-  function handleResolve(fn, toastMsg) {
+  async function handleResolve(mockFn, toastMsg, apiResolveFn) {
     if (!selected) return;
-    const result = fn(selected.id);
+    let result = null;
+    if (apiResolveFn) {
+      result = await apiResolveFn(selected.id);
+    }
+    if (!result) {
+      result = mockFn(selected.id);
+    } else if (mockFn !== dismissReport && mockFn !== deleteReportedPost) {
+      mockFn(selected.id);
+    }
     if (!result) return;
-    refresh();
+    const next = await loadAdminReports();
+    setReports(next);
     setLastResolved(result);
     showToast(toastMsg);
     if (result.status === "resolved") {
-      const nextPending = getAdminReports().filter((r) => r.status === "pending");
+      const nextPending = next.filter((r) => r.status === "pending");
       setSelectedId(nextPending[0]?.id ?? null);
     }
   }
@@ -380,7 +399,11 @@ function AdminModerationPage() {
                     <>
                       <Button
                         onClick={() =>
-                          handleResolve(deleteReportedPost, "Đã xóa bài viết.")
+                          handleResolve(
+                            deleteReportedPost,
+                            "Đã xóa bài viết.",
+                            resolveReportDeleteViaApi,
+                          )
                         }
                       >
                         Xóa bài viết
@@ -388,7 +411,11 @@ function AdminModerationPage() {
                       <Button
                         look="outline"
                         onClick={() =>
-                          handleResolve(dismissReport, "Đã từ chối báo cáo — giữ bài.")
+                          handleResolve(
+                            dismissReport,
+                            "Đã từ chối báo cáo — giữ bài.",
+                            resolveReportDismissViaApi,
+                          )
                         }
                       >
                         Giữ nguyên bài
@@ -399,6 +426,7 @@ function AdminModerationPage() {
                           handleResolve(
                             (id) => banReportedUser(id, "7 ngày"),
                             "Đã khóa tài khoản 7 ngày.",
+                            resolveReportBanViaApi,
                           )
                         }
                       >
@@ -411,6 +439,7 @@ function AdminModerationPage() {
                           handleResolve(
                             (id) => banReportedUser(id, "vĩnh viễn"),
                             "Đã khóa vĩnh viễn.",
+                            resolveReportBanViaApi,
                           )
                         }
                       >

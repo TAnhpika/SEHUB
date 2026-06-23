@@ -13,7 +13,8 @@ import {
 import { faGithub } from "@fortawesome/free-brands-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
-import { buildExamQuestions } from "@/features/exams/examDetailData";
+import { useAuth } from "@/context";
+import { buildExamQuestions, loadExamMeta } from "@/features/exams/examDetailData";
 import PracticeBriefPanel from "@/features/exams/PracticeBriefPanel/PracticeBriefPanel";
 import { getPracticeBrief } from "@/features/exams/practiceBriefData";
 import { formatDuration } from "@/features/exams/examSession";
@@ -26,6 +27,7 @@ import {
   savePracticeSubmission,
   submitPracticeSession,
 } from "@/features/exams/practiceSession";
+import { submitPracticeExamAsync } from "@/features/exams/practiceExamSubmissions";
 import {
   getExamById,
   getSubjectDetailConfig,
@@ -46,16 +48,51 @@ function PracticeDoPage() {
   const navigate = useNavigate();
   const { pathname, state: locationState } = useLocation();
   const { showToast } = useToast();
+  const { user, isPremium } = useAuth();
   const fileInputRef = useRef(null);
   const scope = resolveExamScope(pathname, locationState);
   const config = getSubjectDetailConfig("practice", scope);
   const decodedExamId = decodeURIComponent(examId ?? "");
   const questionNumber = Math.max(1, Number(questionIndex) || 1);
 
-  const exam = useMemo(
-    () => getExamById(courseCode, decodedExamId, "practice", scope),
-    [courseCode, decodedExamId, scope],
-  );
+  const [exam, setExam] = useState(null);
+  const [examReady, setExamReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchExam() {
+      setExamReady(false);
+      const mockExam = getExamById(courseCode, decodedExamId, "practice", scope);
+      if (mockExam) {
+        if (!cancelled) {
+          setExam(mockExam);
+          setExamReady(true);
+        }
+        return;
+      }
+
+      try {
+        const meta = await loadExamMeta(courseCode, decodedExamId, "practice", scope);
+        if (!cancelled) {
+          setExam(meta?.exam ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setExam(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setExamReady(true);
+        }
+      }
+    }
+
+    fetchExam();
+    return () => {
+      cancelled = true;
+    };
+  }, [courseCode, decodedExamId, scope]);
 
   const questions = useMemo(
     () => (exam ? buildExamQuestions(exam.questionCount, "practice") : []),
@@ -133,6 +170,14 @@ function PracticeDoPage() {
     return () => window.clearInterval(timer);
   }, [sessionReady, startedAt]);
 
+  if (!examReady) {
+    return (
+      <div className={styles.page}>
+        <p>Đang tải bài thực hành...</p>
+      </div>
+    );
+  }
+
   if (!exam) {
     return <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />;
   }
@@ -189,7 +234,7 @@ function PracticeDoPage() {
     }
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (isExpired) {
       showToast(`Đã hết thời gian làm bài (${PRACTICE_DURATION_MINUTES} phút).`);
       return;
@@ -222,6 +267,21 @@ function PracticeDoPage() {
     }
 
     submitPracticeSession(exam.id, question.id, question, submission);
+
+    if (submitMode === "github" && isPremium && user) {
+      try {
+        await submitPracticeExamAsync({
+          courseCode,
+          examId: exam.id,
+          student: user.username,
+          displayName: user.displayName ?? user.username,
+          githubUrl: githubUrl.trim(),
+        });
+      } catch {
+        /* local session saved; ExamDetail panel reflects API state when available */
+      }
+    }
+
     showToast("Đã nộp bài thành công.");
     navigate(resultPath);
   }

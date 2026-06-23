@@ -15,7 +15,7 @@ function ExamQuestionReportButton({
   const [open, setOpen] = useState(false);
 
   function handleClick() {
-    if (!requireAuth("Vui lòng đăng nhập để báo cáo câu hỏi.")) return;
+    if (!requireAuth("Vui lòng đăng nhập để báo cáo câu hỏi.", { guestOnly: true })) return;
     setOpen(true);
   }
 

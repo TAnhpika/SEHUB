@@ -8,17 +8,20 @@ import {
   faCheck,
   faCircleCheck,
   faClock,
+  faDownload,
   faRotateRight,
+  faWandMagicSparkles,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import { useToast } from "@/common/Toast/ToastProvider";
 import {
   getMockPeerComparison,
   getPassStatus,
   getScoreGrade,
   getScoreOnTen,
 } from "@/features/exams/examResultInsights";
-import { buildExamQuestions } from "@/features/exams/examDetailData";
+import { buildExamQuestions, loadExamMeta } from "@/features/exams/examDetailData";
 import {
   clearExamSession,
   createExamSession,
@@ -43,6 +46,92 @@ import {
   resolveExamScope,
 } from "@/utils/examFocusPaths";
 import styles from "./ExamResultPage.module.css";
+
+function getReviewExamTitle(exam) {
+  return `${exam.termLabel} ${exam.year} Final Examination`;
+}
+
+function getReviewAccuracyPercent(correctCount, total) {
+  if (!total) return 0;
+  return Math.round((correctCount / total) * 1000) / 10;
+}
+
+function getReviewScoreOnTen(correctCount, total) {
+  if (!total) return "0.00";
+  return ((correctCount / total) * 10).toFixed(2);
+}
+
+function getOptionReviewState(item, optionKey) {
+  const isCorrect = optionKey === item.correctAnswer;
+  const isSelected = optionKey === item.selectedAnswer;
+
+  if (isCorrect && isSelected) return "correct-selected";
+  if (isCorrect) return "correct";
+  if (isSelected) return "wrong";
+  return "neutral";
+}
+
+function ReviewQuestionCard({ item, index, onOpenExplanation }) {
+  const isCorrect = item.isCorrect;
+  const status = !item.selectedAnswer ? "empty" : isCorrect ? "correct" : "wrong";
+
+  return (
+    <article
+      className={`${styles["review-question"]} ${styles[`review-question-${status}`]}`}
+    >
+      <header className={styles["review-question-head"]}>
+        <div className={styles["review-question-title-wrap"]}>
+          <span
+            className={`${styles["review-question-index"]} ${styles[`review-question-index-${status}`]}`}
+          >
+            {index + 1}
+          </span>
+          <p className={styles["review-question-text"]}>{item.text}</p>
+        </div>
+        <span
+          className={`${styles["review-status-badge"]} ${
+            isCorrect ? styles["review-status-correct"] : styles["review-status-wrong"]
+          }`}
+        >
+          <FontAwesomeIcon icon={isCorrect ? faCheck : faXmark} />
+          {isCorrect ? "CHÍNH XÁC" : "CHƯA ĐÚNG"}
+        </span>
+      </header>
+
+      <ul className={styles["review-options"]}>
+        {(item.options ?? []).map((option) => {
+          const optionState = getOptionReviewState(item, option.key);
+          return (
+            <li
+              key={option.key}
+              className={`${styles["review-option"]} ${styles[`review-option-${optionState}`]}`}
+            >
+              <span className={styles["review-option-key"]}>{option.key}</span>
+              <div className={styles["review-option-body"]}>
+                <span className={styles["review-option-label"]}>{option.label}</span>
+                {optionState === "wrong" && (
+                  <span className={styles["review-option-tag-wrong"]}>LỰA CHỌN CỦA BẠN</span>
+                )}
+                {optionState === "correct" && (
+                  <span className={styles["review-option-tag-correct"]}>ĐÁP ÁN ĐÚNG</span>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <button
+        type="button"
+        className={styles["review-explain-link"]}
+        onClick={() => onOpenExplanation(index)}
+      >
+        <FontAwesomeIcon icon={faWandMagicSparkles} />
+        Xem giải thích chi tiết
+      </button>
+    </article>
+  );
+}
 
 function ScoreRing({ percent }) {
   const radius = 54;
@@ -79,6 +168,7 @@ function ExamResultPage({ page = "review" }) {
   const { courseCode, examId, questionIndex } = useParams();
   const navigate = useNavigate();
   const { pathname, state: locationState } = useLocation();
+  const { showToast } = useToast();
   const [showDetail, setShowDetail] = useState(false);
   const isReviewFocusMode = page === "review" && isExamFocusPath(pathname);
   const scope = resolveExamScope(pathname, locationState);
@@ -87,10 +177,44 @@ function ExamResultPage({ page = "review" }) {
   const decodedExamId = decodeURIComponent(examId ?? "");
   const questionNumber = Math.max(1, Number(questionIndex) || 1);
 
-  const exam = useMemo(
-    () => getExamById(courseCode, decodedExamId, page, scope),
-    [courseCode, decodedExamId, page, scope],
-  );
+  const [exam, setExam] = useState(null);
+  const [examReady, setExamReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchExam() {
+      setExamReady(false);
+      const mockExam = getExamById(courseCode, decodedExamId, page, scope);
+      if (mockExam) {
+        if (!cancelled) {
+          setExam(mockExam);
+          setExamReady(true);
+        }
+        return;
+      }
+
+      try {
+        const meta = await loadExamMeta(courseCode, decodedExamId, page, scope);
+        if (!cancelled) {
+          setExam(meta?.exam ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setExam(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setExamReady(true);
+        }
+      }
+    }
+
+    fetchExam();
+    return () => {
+      cancelled = true;
+    };
+  }, [courseCode, decodedExamId, page, scope]);
 
   const questions = useMemo(
     () => (exam ? buildExamQuestions(exam.questionCount, page) : []),
@@ -119,6 +243,14 @@ function ExamResultPage({ page = "review" }) {
     return <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />;
   }
 
+  if (!examReady) {
+    return (
+      <div className={styles.page}>
+        <p>Đang tải kết quả...</p>
+      </div>
+    );
+  }
+
   if (!exam) {
     return <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />;
   }
@@ -135,14 +267,12 @@ function ExamResultPage({ page = "review" }) {
   if (!session?.submitted || !session.result) {
     const fallbackPath = isPracticeExam
       ? getPracticeDoPath(exam.courseCode, exam.id, questionNumber, scope)
-      : isReviewFocusMode
-        ? getExamFocusDoPath(exam.courseCode, exam.id)
-        : getExamDetailPath(exam.courseCode, exam.id, scope);
+      : getExamFocusDoPath(exam.courseCode, exam.id);
     return (
       <Navigate
         to={fallbackPath}
         replace
-        state={isReviewFocusMode ? { scope } : undefined}
+        state={!isPracticeExam ? { scope } : undefined}
       />
     );
   }
@@ -156,9 +286,7 @@ function ExamResultPage({ page = "review" }) {
   );
   const doPath = isPracticeExam
     ? getPracticeDoPath(exam.courseCode, exam.id, questionNumber, scope)
-    : isReviewFocusMode
-      ? getExamFocusDoPath(exam.courseCode, exam.id)
-      : `${getExamDetailPath(exam.courseCode, exam.id, scope, "review")}/do`;
+    : getExamFocusDoPath(exam.courseCode, exam.id);
   const durationMs = submittedAt - startedAt;
   const feedback = getScoreFeedback(result.scorePercent);
   const grade = getScoreGrade(result.scorePercent);
@@ -180,7 +308,34 @@ function ExamResultPage({ page = "review" }) {
       clearExamSession(exam.id);
       createExamSession(exam.id);
     }
-    navigate(doPath, isReviewFocusMode ? { state: { scope } } : undefined);
+    navigate(doPath, !isPracticeExam ? { state: { scope } } : undefined);
+  }
+
+  function handleExportReport() {
+    const lines = [
+      `Kết quả kỳ thi — ${exam.id}`,
+      getReviewExamTitle(exam),
+      `Tổng số câu hỏi: ${result.total}`,
+      `Điểm: ${getReviewScoreOnTen(result.correctCount, result.total)} (${grade.label})`,
+      `Đúng: ${result.correctCount} · Sai: ${result.total - result.correctCount}`,
+      "",
+      ...result.items.map((item, index) => {
+        const mark = item.isCorrect ? "Đúng" : "Sai";
+        return `Câu ${index + 1} [${mark}]: ${item.text}`;
+      }),
+    ];
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${exam.id}-ket-qua.txt`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    showToast("Đã xuất báo cáo kết quả.");
+  }
+
+  function handleOpenExplanation(questionIndex) {
+    navigate(detailPath, { state: { questionIndex } });
   }
 
   function getQuestionStatus(item) {
@@ -195,6 +350,94 @@ function ExamResultPage({ page = "review" }) {
   const explorePath = isPracticeExam
     ? `${scope === "home" ? "/home" : "/community"}/pratical-exam`
     : `${scope === "home" ? "/home" : "/community"}/final-exam`;
+  const subjectPath = `${config.detailBase}/${exam.courseCode}`;
+  const reviewWrongCount = result.total - result.correctCount;
+  const reviewAccuracy = getReviewAccuracyPercent(result.correctCount, result.total);
+
+  if (!isPracticeExam) {
+    return (
+      <div className={`${styles.page} ${styles.pageReview}`}>
+        <Link to={detailPath} className={styles["review-back"]}>
+          <FontAwesomeIcon icon={faArrowLeft} />
+          Quay lại
+        </Link>
+
+        <header className={styles["review-header"]}>
+          <h1 className={styles["review-title"]}>Kết quả kỳ thi</h1>
+          <nav className={styles["review-breadcrumbs"]} aria-label="Breadcrumb">
+            <Link to={explorePath}>Môn học</Link>
+            <span aria-hidden="true">/</span>
+            <Link to={subjectPath}>{exam.courseCode}</Link>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">Kết quả thi cuối kỳ</span>
+          </nav>
+        </header>
+
+        <section className={styles["review-summary"]} aria-label="Tổng quan kết quả">
+          <div className={styles["review-summary-top"]}>
+            <div className={styles["review-summary-info"]}>
+              <span className={styles["review-exam-code"]}>MÃ ĐỀ THI: {exam.id}</span>
+              <h2 className={styles["review-exam-title"]}>{getReviewExamTitle(exam)}</h2>
+              <p className={styles["review-exam-meta"]}>Tổng số câu hỏi: {result.total}</p>
+            </div>
+            <button
+              type="button"
+              className={styles["review-export-btn"]}
+              onClick={handleExportReport}
+            >
+              <FontAwesomeIcon icon={faDownload} />
+              Xuất báo cáo
+            </button>
+          </div>
+
+          <div className={styles["review-metrics"]}>
+            <article className={`${styles["review-metric"]} ${styles["review-metric-score"]}`}>
+              <p className={styles["review-metric-label"]}>ĐIỂM SỐ</p>
+              <p className={styles["review-metric-value"]}>
+                {getReviewScoreOnTen(result.correctCount, result.total)}
+              </p>
+              <p className={styles["review-metric-sub"]}>Xếp loại: {grade.label}</p>
+            </article>
+            <article className={`${styles["review-metric"]} ${styles["review-metric-correct"]}`}>
+              <p className={styles["review-metric-label"]}>ĐÚNG</p>
+              <p className={styles["review-metric-value"]}>{result.correctCount}</p>
+              <p className={styles["review-metric-sub"]}>Độ chính xác {reviewAccuracy}%</p>
+            </article>
+            <article className={`${styles["review-metric"]} ${styles["review-metric-wrong"]}`}>
+              <p className={styles["review-metric-label"]}>SAI</p>
+              <p className={styles["review-metric-value"]}>{reviewWrongCount}</p>
+              <p className={styles["review-metric-sub"]}>Cần ôn tập lại</p>
+            </article>
+          </div>
+        </section>
+
+        <section className={styles["review-questions"]} aria-label="Chi tiết từng câu hỏi">
+          {result.items.map((item, index) => (
+            <ReviewQuestionCard
+              key={item.questionId}
+              item={item}
+              index={index}
+              onOpenExplanation={handleOpenExplanation}
+            />
+          ))}
+        </section>
+
+        <section className={styles.actions} aria-label="Hành động">
+          <Button onClick={handleRetry}>
+            <FontAwesomeIcon icon={faRotateRight} />
+            Làm lại
+          </Button>
+          <Button look="outline" to={detailPath}>
+            <FontAwesomeIcon icon={faBookOpen} />
+            Xem lại đề thi
+          </Button>
+          <Button look="soft" to={explorePath}>
+            Khám phá đề khác
+          </Button>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className={`${styles.page} ${isReviewFocusMode ? styles.pageFocus : ""}`}>
