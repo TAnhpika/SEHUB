@@ -1,0 +1,38 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.logo {
+  display: block;
+  width: auto;
+  height: 2rem;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.desc {
+  margin: 0.625rem 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.link {
+  align-self: flex-start;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--color-premium);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.link:hover {
+  color: var(--color-premium-mid);
+  text-decoration: underline;
+}

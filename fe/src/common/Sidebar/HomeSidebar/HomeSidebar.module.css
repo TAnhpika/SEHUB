@@ -124,6 +124,12 @@
   border-color: var(--color-primary);
 }
 
+.ftes {
+  flex-shrink: 0;
+  padding: 0.875rem 0.75rem;
+  border-radius: var(--radius-xl);
+}
+
 .title {
   flex-shrink: 0;
   font-size: 0.8125rem;
