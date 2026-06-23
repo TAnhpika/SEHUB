@@ -1,5 +1,15 @@
 import * as adminApi from "@/api/adminApi";
-import { ANSWER_KEYS } from "@/features/moderator/finalExams/finalExamData";
+import {
+  mapExamDetailToWizard,
+  mapFinalExamWizardToResubmitRequest,
+  mapWizardQuestionsToCreateItems,
+} from "@/api/adminMapper";
+import {
+  buildExamDisplayFields,
+  enrichRevisionExamEntries,
+  normalizeCourseSubjectCode,
+} from "@/utils/examDisplay";
+import { invalidateExamPaperCodeCache } from "@/utils/examPaperCode";
 import {
   CONTRIBUTION_STATUS_LABELS,
   EXAM_CONTRIBUTION_TYPE_LABELS,
@@ -12,10 +22,13 @@ function parseSemesterId(semesterLabel) {
   return match ? match[0] : "1";
 }
 
-function mapApiStatusToContribution(status) {
+function mapApiStatusToContribution(status, revisionOfExamId) {
   const value = String(status ?? "").toLowerCase();
-  if (value === "pendingapproval") return "pending_admin";
+  if (value === "pendingapproval") {
+    return revisionOfExamId ? "pending_admin" : "pending_admin";
+  }
   if (value === "published") return "approved";
+  if (value === "rejected") return "rejected";
   if (value === "archived") return "rejected";
   if (value === "draft") return "draft_saved";
   return "pending_admin";
@@ -27,66 +40,74 @@ function mapApiExamType(examType) {
 
 export function mapApiExamToContributionEntry(dto, moderatorUsername) {
   const examType = mapApiExamType(dto.examType);
-  const status = mapApiStatusToContribution(dto.status);
+  const revisionOfExamId = dto.revisionOfExamId ?? null;
+  const status = mapApiStatusToContribution(dto.status, revisionOfExamId);
 
   return {
     id: dto.id,
-    at: dto.createdAt,
+    at: dto.updatedAt ?? dto.createdAt,
     moderator: moderatorUsername,
     examType,
-    action: "submitted",
+    action: revisionOfExamId ? "revision_submitted" : "submitted",
     subjectCode: dto.major ?? dto.code?.split("-")?.[0] ?? "",
     semester: dto.semester ? `Học kỳ ${dto.semester}` : "",
     title: dto.title,
     description: dto.description ?? "",
     pendingId: dto.id,
+    examApiId: dto.id,
     examCode: dto.code,
     questionCount: dto.questionCount ?? null,
     status,
     statusLabel: CONTRIBUTION_STATUS_LABELS[status],
     typeLabel: EXAM_CONTRIBUTION_TYPE_LABELS[examType],
-    adminNote: null,
-    adminDetail: null,
+    adminNote: dto.rejectionReasonDetail ?? null,
+    adminDetail: dto.rejectionReasonCode ?? null,
+    canResubmit: dto.canResubmit ?? false,
+    isContentLocked: dto.isContentLocked ?? false,
+    revisionOfExamId,
+    revisionSourceCode: dto.revisionSourceCode ?? null,
+    revisionSourceTitle: dto.revisionSourceTitle ?? null,
+    ...buildExamDisplayFields(dto),
   };
 }
 
-export function buildFinalExamCreateBody(examInfo, questions) {
-  const apiQuestions = questions
-    .filter((question) => question.content.trim())
-    .map((question, index) => {
-      const options = ANSWER_KEYS.map((key) => ({
-        id: crypto.randomUUID(),
-        label: key,
-        text: question.answers[key]?.trim() ?? "",
-      }));
-      const correctOption = options.find((option) => option.label === question.correctAnswer) ?? options[0];
+export function enrichRevisionContributionEntries(entries) {
+  return enrichRevisionExamEntries(entries).map((entry) => ({
+    ...entry,
+    displayTitle: entry.displayTitle,
+    displayExamCode: entry.displayExamCode,
+  }));
+}
 
-      return {
-        orderIndex: index + 1,
-        content: question.content.trim(),
-        options,
-        correctOptionId: correctOption.id,
-      };
-    });
+export function buildFinalExamCreateBody(examInfo, questions) {
+  const apiQuestions = mapWizardQuestionsToCreateItems(questions);
+
+  const subjectCode =
+    normalizeCourseSubjectCode(examInfo.subjectCode) ?? examInfo.subjectCode.trim();
+  const paperCode = examInfo.examCode?.trim();
 
   return {
-    code: examInfo.examCode,
-    title: examInfo.subjectName || examInfo.examCode,
+    code: paperCode,
+    title: paperCode || examInfo.subjectName || subjectCode,
     examType: "Final",
     semester: parseSemesterId(examInfo.semesterLabel),
-    major: examInfo.subjectCode,
-    description: `${examInfo.subjectName} · ${examInfo.durationMinutes} phút`,
+    major: subjectCode,
+    description: `${examInfo.subjectName ?? subjectCode} · ${examInfo.durationMinutes} phút`,
     questions: apiQuestions,
   };
 }
 
 export function buildPracticeExamCreateBody(payload) {
+  const subjectCode =
+    normalizeCourseSubjectCode(payload.subjectCode) ?? payload.subjectCode.trim();
+  const paperCode = payload.title.trim();
+
   return {
-    code: `${payload.subjectCode}-PRAC-${Date.now()}`,
-    title: payload.title.trim(),
+    code: paperCode,
+    title: paperCode,
     examType: "Practice",
     semester: parseSemesterId(payload.semester),
-    major: payload.subjectCode,
+    major: subjectCode,
     description: payload.description?.trim() ?? "",
     questions: [],
   };
@@ -115,12 +136,13 @@ export async function fetchModeratorExamContributions(moderatorUsername, filters
   if (filters.examType === "practice") params.type = "Practice";
   if (filters.status === "pending_admin") params.status = "PendingApproval";
   if (filters.status === "approved") params.status = "Published";
-  if (filters.status === "rejected") params.status = "Archived";
+  if (filters.status === "rejected") params.status = "Rejected";
 
   const result = await adminApi.listExams(params);
   let entries = (result.items ?? []).map((dto) =>
     mapApiExamToContributionEntry(dto, moderatorUsername),
   );
+  entries = enrichRevisionContributionEntries(entries);
 
   if (filters.status && filters.status !== "all" && filters.status !== "draft_saved") {
     entries = entries.filter((entry) => entry.status === filters.status);
@@ -133,6 +155,7 @@ export async function createFinalExamViaApi(examInfo, questions, confirmDuplicat
   const body = buildFinalExamCreateBody(examInfo, questions);
   const dto = await adminApi.createExam(body, confirmDuplicate);
   await uploadExamPdfIfPresent(dto.id, examInfo);
+  invalidateExamPaperCodeCache();
   return dto;
 }
 
@@ -140,5 +163,23 @@ export async function createPracticeExamViaApi(payload, confirmDuplicate = false
   const body = buildPracticeExamCreateBody(payload);
   const dto = await adminApi.createExam(body, confirmDuplicate);
   await uploadExamPdfIfPresent(dto.id, payload);
+  invalidateExamPaperCodeCache();
   return dto;
+}
+
+export async function loadExamForWizardEdit(examId) {
+  const dto = await adminApi.getExam(examId);
+  return {
+    examId: dto.id,
+    ...mapExamDetailToWizard(dto),
+  };
+}
+
+export async function resubmitFinalExamViaApi(examId, examInfo, questions, { isRevision = false } = {}) {
+  const body = mapFinalExamWizardToResubmitRequest(examInfo, questions, { isRevision });
+  return adminApi.resubmitExam(examId, body);
+}
+
+export async function createExamRevisionViaApi(publishedExamId) {
+  return adminApi.createExamRevision(publishedExamId);
 }

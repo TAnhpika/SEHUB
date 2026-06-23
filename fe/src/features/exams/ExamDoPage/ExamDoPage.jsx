@@ -21,8 +21,10 @@ import {
   createExamSession,
   formatDuration,
   getExamSession,
-  saveExamAnswer,
+  getOrCreateExamSession,
+  saveExamAnswers,
   submitExamSession,
+  usesApiAttempt,
 } from "@/features/exams/examSession";
 import {
   getExamById,
@@ -35,6 +37,13 @@ import {
   isExamFocusPath,
   resolveExamScope,
 } from "@/utils/examFocusPaths";
+import {
+  getSelectedAnswerKeys,
+  isMultiSelectQuestion,
+  isQuestionAnswered,
+  setSingleSelectAnswer,
+  toggleMultiSelectAnswer,
+} from "@/features/exams/examQuestionTypes";
 import styles from "./ExamDoPage.module.css";
 
 /** §3.3 — Làm bài trực tuyến: 45 phút (mock; production có thể cấu hình theo đề) */
@@ -116,9 +125,23 @@ function ExamDoPage({ page = "review" }) {
     async (auto = false) => {
       if (!exam) return;
 
+      const session = getExamSession(exam.id);
+      const effectiveApiExamId = apiExamId ?? session?.apiExamId;
+      const effectiveAttemptId = attemptId ?? session?.attemptId;
+      const shouldUseApi =
+        Boolean(effectiveApiExamId && effectiveAttemptId)
+        && (useApiFlow || usesApiAttempt(session));
+
       try {
-        if (useApiFlow && apiExamId && attemptId) {
-          await submitApiAttempt(exam.id, apiExamId, attemptId, questions, startedAt);
+        if (shouldUseApi) {
+          await submitApiAttempt(
+            exam.id,
+            effectiveApiExamId,
+            effectiveAttemptId,
+            questions,
+            startedAt,
+            session?.answers ?? {},
+          );
         } else {
           submitExamSession(exam.id, questions);
         }
@@ -176,8 +199,8 @@ function ExamDoPage({ page = "review" }) {
             );
 
             if (loadedQuestions.length > 0) {
-              nextQuestions = loadedQuestions;
               const attempt = await startOrResumeAttempt(nextApiExamId);
+              nextQuestions = loadedQuestions;
               nextAttemptId = attempt.id;
               nextAnswers = syncAttemptAnswersToUi(nextQuestions, attempt);
               nextStartedAt = attempt.startedAt
@@ -269,12 +292,30 @@ function ExamDoPage({ page = "review" }) {
   const currentQuestion = questions[currentIndex];
   const isFirstQuestion = currentIndex === 0;
   const isLastQuestion = currentIndex === questions.length - 1;
-  const answeredCount = Object.keys(answers).length;
+  const answeredCount = questions.filter((question) =>
+    isQuestionAnswered(question.id, answers, question),
+  ).length;
+  const isMultiQuestion = isMultiSelectQuestion(currentQuestion);
+  const selectedKeys = currentQuestion
+    ? getSelectedAnswerKeys(currentQuestion.id, answers)
+    : [];
+  const requiredSelectCount =
+    currentQuestion?.requiredSelectCount ?? currentQuestion?.correctAnswers?.length ?? 2;
   const typeLabel = EXAM_TYPE_LABELS[page] ?? exam.type;
   const isTimeCritical = timeRemainingMs <= 5 * 60 * 1000;
 
   async function handleSelectAnswer(answerKey) {
-    const next = saveExamAnswer(exam.id, currentQuestion.id, answerKey);
+    const session = getOrCreateExamSession(exam.id);
+    const nextAnswers = isMultiQuestion
+      ? toggleMultiSelectAnswer(
+          currentQuestion.id,
+          answerKey,
+          session.answers,
+          requiredSelectCount,
+        )
+      : setSingleSelectAnswer(currentQuestion.id, answerKey, session.answers);
+
+    const next = saveExamAnswers(exam.id, nextAnswers);
     setAnswers({ ...next.answers });
 
     if (useApiFlow && apiExamId && attemptId) {
@@ -411,10 +452,15 @@ function ExamDoPage({ page = "review" }) {
             <article className={styles["question-card"]}>
               <p className={styles["question-label"]}>Câu {currentIndex + 1}</p>
               <h3 className={styles["question-text"]}>{currentQuestion.text}</h3>
+              {isMultiQuestion ? (
+                <p className={styles["multi-hint"]}>
+                  Chọn đúng {requiredSelectCount} đáp án ({selectedKeys.length}/{requiredSelectCount}).
+                </p>
+              ) : null}
 
               <ul className={styles.options}>
                 {currentQuestion.options.map((option) => {
-                  const isSelected = answers[String(currentQuestion.id)] === option.key;
+                  const isSelected = selectedKeys.includes(option.key);
 
                   return (
                     <li key={option.key}>
@@ -485,7 +531,7 @@ function ExamDoPage({ page = "review" }) {
 
             <div className={styles.grid}>
               {questions.map((question, index) => {
-                const isAnswered = Boolean(answers[String(question.id)]);
+                const isAnswered = isQuestionAnswered(question.id, answers, question);
                 const isActive = index === currentIndex;
 
                 return (

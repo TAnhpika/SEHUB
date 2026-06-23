@@ -1,5 +1,3 @@
-import { MOCK_EXAM_COMMENTS } from "@/features/exams/examCommentsData";
-
 const STORAGE_KEY = "sehubs_exam_comments";
 
 function threadKey(examId, questionId) {
@@ -37,25 +35,13 @@ function withDisplayFields(comment) {
   };
 }
 
-function seedThread(examId, questionId) {
-  const now = Date.now();
-  return MOCK_EXAM_COMMENTS.map((item, index) => ({
-    ...item,
-    id: `seed-${examId}-${questionId}-${item.id}`,
-    examId,
-    questionId,
-    createdAt: new Date(now - (index + 1) * 3600000).toISOString(),
-    likedByMe: false,
-  }));
-}
-
 /** @returns {Array} */
 export function getExamComments(examId, questionId) {
   const key = threadKey(examId, questionId);
   const store = readStore();
 
   if (!store[key]) {
-    store[key] = seedThread(examId, questionId);
+    store[key] = [];
     writeStore(store);
   }
 
@@ -70,7 +56,7 @@ export function addExamComment(examId, questionId, user, content) {
   const store = readStore();
 
   if (!store[key]) {
-    store[key] = seedThread(examId, questionId);
+    store[key] = [];
   }
 
   const displayName = user.displayName ?? user.username ?? "Sinh viên";

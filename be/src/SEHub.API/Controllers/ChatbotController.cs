@@ -2,13 +2,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SEHub.Application.Chatbot;
 using SEHub.Contracts.Chatbot;
-using SEHub.Shared.Constants;
 
 namespace SEHub.API.Controllers;
-
 [ApiController]
 [Route("api/v1/chatbot")]
-[Authorize(Policy = PolicyNames.RequirePremium)]
+[Authorize]
 public sealed class ChatbotController : ControllerBase
 {
     private readonly IChatbotApplicationService _chatbotService;

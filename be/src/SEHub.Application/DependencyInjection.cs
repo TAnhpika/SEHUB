@@ -70,6 +70,7 @@ public static class DependencyInjection
         services.AddScoped<IN8nPremiumActivationService, N8nPremiumActivationService>();
         services.AddScoped<IValidator<N8NPremiumActivationDto>, N8nPremiumActivationValidator>();
         services.AddScoped<IValidator<PremiumRefundRequestDto>, PremiumRefundRequestValidator>();
+        services.AddScoped<IValidator<PremiumRefundBankDetailsRequest>, PremiumRefundBankDetailsValidator>();
 
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IProfileStatsService, ProfileStatsService>();
@@ -94,6 +95,7 @@ public static class DependencyInjection
         services.AddScoped<IAdminExportService, AdminExportService>();
         services.AddScoped<IAdminOverviewService, AdminOverviewService>();
         services.AddScoped<IOcrExamService, OcrExamService>();
+        services.AddScoped<IExamMarkdownImportService, ExamMarkdownImportService>();
 
         services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
         services.AddScoped<IValidator<RegisterRequest>, RegisterRequestValidator>();

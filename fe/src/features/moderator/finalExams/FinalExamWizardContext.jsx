@@ -4,8 +4,11 @@ import {
   EMPTY_FINAL_EXAM_INFO,
   buildEmptyQuestions,
   createEmptyQuestion,
+  getWizardSteps,
+  isQuestionComplete,
   parseTotalQuestions,
 } from "@/features/moderator/finalExams/finalExamData";
+import { loadExamForWizardEdit } from "@/features/moderator/exams/moderatorExamService";
 
 const FinalExamWizardContext = createContext(null);
 
@@ -13,16 +16,22 @@ export function FinalExamWizardProvider({ children }) {
   const [examInfo, setExamInfo] = useState(EMPTY_FINAL_EXAM_INFO);
   const [questions, setQuestions] = useState([]);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
+  const [editingExamId, setEditingExamId] = useState(null);
+  const [revisionOfExamId, setRevisionOfExamId] = useState(null);
+  const [loadingExam, setLoadingExam] = useState(false);
+  const [loadExamError, setLoadExamError] = useState(null);
+
+  const basePath = editingExamId
+    ? `/moderator/final-exams/edit/${editingExamId}`
+    : "/moderator/final-exams/add";
+  const wizardSteps = useMemo(() => getWizardSteps(basePath), [basePath]);
+  const isEditMode = Boolean(editingExamId);
+  const isRevisionEdit = Boolean(revisionOfExamId);
 
   const totalQuestions = examInfo.totalQuestions;
 
   const completeCount = useMemo(
-    () =>
-      questions.filter(
-        (question) =>
-          question.content.trim() &&
-          ANSWER_KEYS.every((key) => question.answers[key]?.trim()),
-      ).length,
+    () => questions.filter(isQuestionComplete).length,
     [questions],
   );
 
@@ -54,6 +63,34 @@ export function FinalExamWizardProvider({ children }) {
     setActiveQuestionIndex((prev) => Math.min(prev, target - 1));
   }, [totalQuestions]);
 
+  const resetWizard = useCallback(() => {
+    setExamInfo(EMPTY_FINAL_EXAM_INFO);
+    setQuestions([]);
+    setActiveQuestionIndex(0);
+    setEditingExamId(null);
+    setRevisionOfExamId(null);
+    setLoadExamError(null);
+  }, []);
+
+  const loadExamForEdit = useCallback(async (examId) => {
+    setLoadingExam(true);
+    setLoadExamError(null);
+    try {
+      const loaded = await loadExamForWizardEdit(examId);
+      setEditingExamId(loaded.examId);
+      setRevisionOfExamId(loaded.revisionOfExamId ?? null);
+      setExamInfo(loaded.examInfo);
+      setQuestions(loaded.questions ?? buildEmptyQuestions(loaded.examInfo.totalQuestions));
+      setActiveQuestionIndex(0);
+      return loaded;
+    } catch (error) {
+      setLoadExamError(error?.message ?? "Không tải được đề để chỉnh sửa.");
+      throw error;
+    } finally {
+      setLoadingExam(false);
+    }
+  }, []);
+
   const value = useMemo(
     () => ({
       examInfo,
@@ -67,6 +104,16 @@ export function FinalExamWizardProvider({ children }) {
       progressPercent:
         totalQuestions > 0 ? Math.round((completeCount / totalQuestions) * 100) : 0,
       ensureQuestionSlots,
+      editingExamId,
+      revisionOfExamId,
+      isEditMode,
+      isRevisionEdit,
+      basePath,
+      wizardSteps,
+      loadingExam,
+      loadExamError,
+      loadExamForEdit,
+      resetWizard,
       updateActiveQuestion(patch) {
         setQuestions((prev) =>
           prev.map((item, index) =>
@@ -91,6 +138,16 @@ export function FinalExamWizardProvider({ children }) {
       completeCount,
       totalQuestions,
       ensureQuestionSlots,
+      editingExamId,
+      revisionOfExamId,
+      isEditMode,
+      isRevisionEdit,
+      basePath,
+      wizardSteps,
+      loadingExam,
+      loadExamError,
+      loadExamForEdit,
+      resetWizard,
     ],
   );
 

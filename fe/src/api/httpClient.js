@@ -3,6 +3,31 @@ export const REFRESH_TOKEN_KEY = "sehubs_refresh_token";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5006";
 
+const API_ERROR_MESSAGES = {
+  STORAGE_NOT_CONFIGURED:
+    "Chưa cấu hình Google Drive trên server. Dev: restart BE (Development) để dùng lưu file local; prod: thêm GoogleDrive trong appsettings.",
+  STORAGE_UPLOAD_FAILED: "Không upload được file lên storage. Kiểm tra cấu hình Google Drive hoặc thử lại.",
+};
+
+function resolveApiErrorMessage(payload, status) {
+  const firstError = payload?.errors?.[0];
+  const code = firstError?.code ?? payload?.message;
+  if (code && API_ERROR_MESSAGES[code]) {
+    return API_ERROR_MESSAGES[code];
+  }
+
+  const message = payload?.message || firstError?.message || firstError?.code;
+  if (message) {
+    return message;
+  }
+
+  if (status === 403) {
+    return "Tính năng yêu cầu gói Premium.";
+  }
+
+  return "Yêu cầu thất bại.";
+}
+
 let refreshInFlight = null;
 export class ApiError extends Error {
   constructor(message, { status, errors } = {}) {
@@ -57,13 +82,7 @@ async function parseResponse(response) {
   const isSuccess = isEnvelope ? payload.success : response.ok;
 
   if (!response.ok || isSuccess === false) {
-    const firstError = payload?.errors?.[0];
-    const message =
-      payload?.message ||
-      firstError?.message ||
-      firstError?.code ||
-      "Yêu cầu thất bại.";
-    throw new ApiError(message, {
+    throw new ApiError(resolveApiErrorMessage(payload, response.status), {
       status: response.status,
       errors: payload?.errors ?? [],
     });
@@ -153,7 +172,7 @@ export async function refreshSession() {
   return refreshInFlight;
 }
 
-export async function apiRequest(path, { method = "GET", body, auth = true, retryOnUnauthorized = true } = {}) {
+export async function apiRequest(path, { method = "GET", body, auth = true, retryOnUnauthorized = true, signal } = {}) {
   const headers = {
     Accept: "application/json",
   };
@@ -174,6 +193,7 @@ export async function apiRequest(path, { method = "GET", body, auth = true, retr
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal,
     });
     return parseResponse(response);
   }

@@ -124,4 +124,62 @@ public sealed class SubscriptionServiceTests
 
         status.IsActive.Should().BeFalse();
     }
+
+    [Fact]
+    public async Task RevokePlanDurationForRefundAsync_WhenStackedSubscription_SubtractsOnlyRefundedPlanDays()
+    {
+        var now = DateTime.UtcNow;
+        var subscription = new Subscription
+        {
+            Id = Guid.NewGuid(),
+            UserId = UserId,
+            PlanId = PlanId,
+            StartAt = now.AddDays(-34),
+            EndAt = now.AddDays(56),
+            IsActive = true,
+            CreatedAt = now.AddDays(-34),
+        };
+
+        _subscriptionRepository
+            .Setup(r => r.GetActiveByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(subscription);
+
+        var sut = CreateSut();
+        var isStillPremium = await sut.RevokePlanDurationForRefundAsync(UserId, 30);
+
+        isStillPremium.Should().BeTrue();
+        subscription.IsActive.Should().BeTrue();
+        subscription.EndAt.Should().BeCloseTo(now.AddDays(26), TimeSpan.FromSeconds(2));
+
+        _subscriptionRepository.Verify(
+            r => r.UpdateAsync(subscription, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RevokePlanDurationForRefundAsync_WhenOnlyOnePackage_DeactivatesPremium()
+    {
+        var now = DateTime.UtcNow;
+        var subscription = new Subscription
+        {
+            Id = Guid.NewGuid(),
+            UserId = UserId,
+            PlanId = PlanId,
+            StartAt = now.AddDays(-4),
+            EndAt = now.AddDays(26),
+            IsActive = true,
+            CreatedAt = now.AddDays(-4),
+        };
+
+        _subscriptionRepository
+            .Setup(r => r.GetActiveByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(subscription);
+
+        var sut = CreateSut();
+        var isStillPremium = await sut.RevokePlanDurationForRefundAsync(UserId, 30);
+
+        isStillPremium.Should().BeFalse();
+        subscription.IsActive.Should().BeFalse();
+        subscription.EndAt.Should().BeCloseTo(now.AddDays(-4), TimeSpan.FromSeconds(2));
+    }
 }

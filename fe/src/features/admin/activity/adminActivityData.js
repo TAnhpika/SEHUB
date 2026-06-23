@@ -1,5 +1,5 @@
 import * as adminApi from "@/api/adminApi";
-import { getPaymentAuditActionLabel, mapPaymentAuditLogItem } from "@/api/adminMapper";
+import { mapPaymentAuditLogItem } from "@/api/adminMapper";
 import { getMergedActivityLog } from "@/features/admin/adminMockData";
 import { getPermissionsAudit } from "@/features/admin/permissions/adminPermissionsData";
 import { getPaymentAuditLog } from "@/features/admin/payments/adminPaymentData";
@@ -63,14 +63,10 @@ function mapLocalPaymentAudit(row) {
 }
 
 function mapApiPaymentAudit(row) {
-  const label = getPaymentAuditActionLabel(row.action);
-  const actor = row.username && row.username !== "—" ? `@${row.username}` : null;
-  const text = actor ? `${label} — ${actor}: ${row.detail}` : `${label}: ${row.detail}`;
-
   return {
     id: row.id,
     time: formatActivityTime(row.at),
-    text,
+    text: `${row.action ?? "payment"} — ${row.detail}`,
     type: "payment",
     sortKey: row.at,
   };

@@ -197,6 +197,12 @@
   color: #191c1e;
 }
 
+.multi-hint {
+  margin: -0.75rem 0 1rem;
+  font-size: 0.875rem;
+  color: #004ac6;
+}
+
 .options {
   display: flex;
   flex-direction: column;

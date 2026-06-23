@@ -53,6 +53,11 @@
   color: var(--color-text);
 }
 
+.question-tag {
+  font-weight: 600;
+  color: var(--color-text-subtle);
+}
+
 .count {
   padding: 0.125rem 0.5rem;
   font-size: 0.75rem;

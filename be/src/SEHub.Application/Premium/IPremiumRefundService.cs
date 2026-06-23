@@ -12,4 +12,13 @@ public interface IPremiumRefundService
         Guid orderId,
         string? adminNote,
         CancellationToken cancellationToken = default);
+
+    Task<PremiumRefundFormDto> GetRefundFormAsync(
+        string orderCode,
+        CancellationToken cancellationToken = default);
+
+    Task<PremiumRefundResultDto> SubmitRefundBankDetailsAsync(
+        PremiumRefundBankDetailsRequest request,
+        IReadOnlyList<RefundPaymentProofUpload> paymentProofs,
+        CancellationToken cancellationToken = default);
 }

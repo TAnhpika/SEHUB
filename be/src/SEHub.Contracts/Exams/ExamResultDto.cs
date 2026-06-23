@@ -11,7 +11,7 @@ public sealed class ExamResultDto
 public sealed class ExamResultAnswerDto
 {
     public Guid QuestionId { get; init; }
-    public Guid? SelectedOptionId { get; init; }
-    public Guid? CorrectOptionId { get; init; }
+    public IReadOnlyList<Guid> SelectedOptionIds { get; init; } = [];
+    public IReadOnlyList<Guid> CorrectOptionIds { get; init; } = [];
     public bool IsCorrect { get; init; }
 }

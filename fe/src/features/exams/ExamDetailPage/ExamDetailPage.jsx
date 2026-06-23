@@ -18,6 +18,7 @@ import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import { useRequirePremium } from "@/hooks/useRequirePremium";
 import ExamAiExplanation from "@/features/exams/ExamAiExplanation/ExamAiExplanation";
+import ExamAttachmentViewer from "@/features/exams/ExamAttachmentViewer/ExamAttachmentViewer";
 import ExamCommentsPanel from "@/features/exams/ExamCommentsPanel/ExamCommentsPanel";
 import { getExamSession } from "@/features/exams/examSession";
 import { getPracticeSession } from "@/features/exams/practiceSession";
@@ -52,8 +53,13 @@ import {
   getReviewSession,
   isReviewCorrectAnswerRevealed,
   shuffleReviewQuestions,
+  ensureReviewOptionOrder,
   toggleReviewCorrectAnswerReveal,
 } from "@/features/exams/examReviewSessionStore";
+import {
+  buildDisplayOptions,
+  mapCorrectAnswersToDisplay,
+} from "@/features/exams/examReviewOptions";
 import {
   getExamFocusDoPath,
   getExamResultPath,
@@ -105,7 +111,9 @@ function ExamDetailPage({ page }) {
       }
 
       try {
-        const meta = await loadExamMeta(courseCode, decodedExamId, page, scope);
+        const meta = await loadExamMeta(courseCode, decodedExamId, page, scope, {
+          apiExamId: locationState?.apiExamId,
+        });
         if (!cancelled) {
           setExam(meta?.exam ?? null);
           setApiExamId(meta?.apiExamId ?? null);
@@ -126,7 +134,7 @@ function ExamDetailPage({ page }) {
     return () => {
       cancelled = true;
     };
-  }, [courseCode, decodedExamId, page, scope]);
+  }, [courseCode, decodedExamId, page, scope, locationState?.apiExamId]);
 
   useEffect(() => {
     if (!exam) return undefined;
@@ -200,7 +208,7 @@ function ExamDetailPage({ page }) {
   const isReviewExam = page === "review";
 
   const reviewSession = useMemo(() => {
-    if (!exam || !isReviewExam) return { correctAnswerRevealed: false, order: null };
+    if (!exam || !isReviewExam) return { correctAnswerRevealed: false, order: null, optionOrders: {} };
     return getReviewSession(exam.id, username);
   }, [exam, isReviewExam, username, sessionTick]);
 
@@ -209,6 +217,32 @@ function ExamDetailPage({ page }) {
     if (!isReviewExam) return questions;
     return getOrderedReviewQuestions(questions, reviewSession);
   }, [exam, isReviewExam, questions, reviewSession]);
+
+  const currentQuestion = orderedQuestions[currentIndex];
+
+  useEffect(() => {
+    if (!isReviewExam || !exam || !currentQuestion?.options?.length) return;
+
+    const session = getReviewSession(exam.id, username);
+    const key = String(currentQuestion.id);
+    if (session.optionOrders?.[key]?.length === currentQuestion.options.length) {
+      return;
+    }
+
+    ensureReviewOptionOrder(exam.id, username, currentQuestion.id, currentQuestion.options.length);
+    setSessionTick((tick) => tick + 1);
+  }, [isReviewExam, exam, currentQuestion?.id, currentQuestion?.options?.length, username]);
+
+  const currentDisplayOptions = useMemo(() => {
+    if (!currentQuestion?.options?.length || !exam) return [];
+    const permutation = reviewSession.optionOrders?.[String(currentQuestion.id)];
+    return buildDisplayOptions(currentQuestion.options, permutation);
+  }, [currentQuestion, exam, reviewSession]);
+
+  const displayCorrectAnswers = useMemo(
+    () => mapCorrectAnswersToDisplay(currentQuestion, currentDisplayOptions),
+    [currentQuestion, currentDisplayOptions],
+  );
 
   const showCorrectAnswer = isReviewExam && canViewExamAnswers(user);
   const correctAnswerRevealed = isReviewExam
@@ -294,7 +328,6 @@ function ExamDetailPage({ page }) {
     );
   }
 
-  const currentQuestion = orderedQuestions[currentIndex];
   const isFirstQuestion = currentIndex === 0;
   const isLastQuestion = currentIndex >= orderedQuestions.length - 1;
   const isPracticeExam = page === "practice";
@@ -321,6 +354,7 @@ function ExamDetailPage({ page }) {
   const practiceBrief = isPracticeExam && currentQuestion
     ? getPracticeBrief(exam.id, currentIndex + 1, exam.courseCode, currentQuestion.text)
     : null;
+  const resolvedApiExamId = apiExamId ?? exam.apiId ?? null;
 
   function bumpReviewSession() {
     setSessionTick((tick) => tick + 1);
@@ -411,6 +445,17 @@ function ExamDetailPage({ page }) {
         </section>
       ) : null}
 
+      {!isDocumentsRoute && resolvedApiExamId && (exam.attachments?.length ?? 0) > 0 ? (
+        <ExamAttachmentViewer examApiId={resolvedApiExamId} attachments={exam.attachments} />
+      ) : null}
+
+      {!isDocumentsRoute && resolvedApiExamId && (exam.attachments?.length ?? 0) === 0 ? (
+        <section className={styles["info-card"]} aria-label="File đề gốc">
+          <h2 className={styles["info-title"]}>File đề gốc</h2>
+          <p className={styles.subtitle}>Đề này chưa có file đính kèm trên Drive.</p>
+        </section>
+      ) : null}
+
       {isDocumentPage ? (
         <>
           <section className={styles["info-card"]} aria-label="Thông tin tài liệu">
@@ -494,11 +539,16 @@ function ExamDetailPage({ page }) {
               )}
               {isReviewExam && currentQuestion && (
                 <p className={styles["preview-label"]}>
-                  Câu {currentQuestion.id} · {currentIndex + 1}/{orderedQuestions.length}
+                  Câu {currentIndex + 1} / {orderedQuestions.length}
                   {correctAnswerRevealed ? " · Đáp án đã hiện" : ""}
                 </p>
               )}
               <h3 className={styles["question-text"]}>{currentQuestion?.text}</h3>
+              {currentQuestion?.questionType === "MultiSelect" && currentQuestion?.requiredSelectCount ? (
+                <p className={styles["multi-hint"]}>
+                  Chọn đúng {currentQuestion.requiredSelectCount} đáp án.
+                </p>
+              ) : null}
 
               {isPracticeExam && practiceBrief ? (
                 <PracticeBriefPanel
@@ -509,14 +559,14 @@ function ExamDetailPage({ page }) {
                 />
               ) : null}
 
-              {isReviewExam && currentQuestion?.options && (
+              {isReviewExam && currentDisplayOptions.length > 0 && (
                 <ul className={styles.options}>
-                  {currentQuestion.options.map((option) => {
+                  {currentDisplayOptions.map((option) => {
                     const isCorrect =
-                      revealCorrectAnswer && option.key === currentQuestion.correctAnswer;
+                      revealCorrectAnswer && displayCorrectAnswers.includes(option.key);
 
                     return (
-                      <li key={option.key}>
+                      <li key={option.optionId ?? option.key}>
                         <div
                           className={`${styles.option} ${isCorrect ? styles["option-correct"] : ""}`}
                         >
@@ -640,6 +690,7 @@ function ExamDetailPage({ page }) {
               reason={!isAuthenticated ? "guest" : "premium"}
               examId={exam.id}
               questionId={currentQuestion.id}
+              questionLabel={`Câu ${currentIndex + 1}`}
             />
           )}
         </div>

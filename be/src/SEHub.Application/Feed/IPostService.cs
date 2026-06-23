@@ -12,9 +12,20 @@ public interface IPostService
         string? search,
         int candidatePageSize = 100,
         CancellationToken cancellationToken = default);
+    Task<PinnedPostsStateDto> GetPinnedModeratorStateAsync(
+        string? search,
+        int candidatePageSize = 100,
+        CancellationToken cancellationToken = default);
     Task<PostDetailDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<PostDetailDto> CreateAsync(CreatePostRequest request, CancellationToken cancellationToken = default);
     Task<PostDetailDto> UpdateAsync(Guid id, UpdatePostRequest request, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     Task<PostDetailDto> SetFeaturedAsync(Guid id, FeaturePostRequest request, CancellationToken cancellationToken = default);
+    Task<PostDetailDto> SetPinnedAsync(Guid id, PinPostRequest request, CancellationToken cancellationToken = default);
+    Task<PostCoverUploadDto> UploadCoverAsync(
+        Stream fileContent,
+        string fileName,
+        string contentType,
+        long fileSizeBytes,
+        CancellationToken cancellationToken = default);
 }

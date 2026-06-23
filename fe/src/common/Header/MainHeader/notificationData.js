@@ -39,4 +39,8 @@ export const NOTIFICATION_META = {
     label: "Danh hiệu",
     tone: "purple",
   },
+  refund: {
+    label: "Hoàn tiền",
+    tone: "amber",
+  },
 };

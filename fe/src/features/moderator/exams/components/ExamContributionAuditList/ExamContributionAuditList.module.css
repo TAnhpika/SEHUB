@@ -152,3 +152,42 @@
   color: #991b1b;
   background: #fee2e2;
 }
+
+.revisionBadge {
+  padding: 0.15rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #92400e;
+  background: #fef3c7;
+  border-radius: 9999px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #004ac6;
+  text-decoration: none;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid rgba(0, 74, 198, 0.25);
+  border-radius: 8px;
+}
+
+.actionBtn:hover:not(:disabled) {
+  background: #eff6ff;
+}
+
+.actionBtn:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}

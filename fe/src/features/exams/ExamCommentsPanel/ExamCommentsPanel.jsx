@@ -11,15 +11,19 @@ import {
 } from "@/features/exams/examCommentsStore";
 import styles from "./ExamCommentsPanel.module.css";
 
-function ExamCommentsPanel({ locked = false, reason = "premium", examId, questionId }) {
+function ExamCommentsPanel({ locked = false, reason = "premium", examId, questionId, questionLabel }) {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [draft, setDraft] = useState("");
   const [comments, setComments] = useState([]);
 
   useEffect(() => {
-    if (locked || !examId || questionId == null) return;
+    if (locked || !examId || questionId == null) {
+      setComments([]);
+      return;
+    }
     setComments(getExamComments(examId, questionId));
+    setDraft("");
   }, [locked, examId, questionId]);
 
   if (locked) {
@@ -69,7 +73,10 @@ function ExamCommentsPanel({ locked = false, reason = "premium", examId, questio
     <aside className={styles.panel} aria-label="Bình luận">
       <header className={styles.header}>
         <div className={styles["title-row"]}>
-          <h3 className={styles.title}>Bình luận</h3>
+          <h3 className={styles.title}>
+            Bình luận
+            {questionLabel ? <span className={styles["question-tag"]}> · {questionLabel}</span> : null}
+          </h3>
           <span className={styles.count}>{comments.length}</span>
         </div>
       </header>

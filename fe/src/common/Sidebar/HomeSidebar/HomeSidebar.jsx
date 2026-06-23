@@ -1,7 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFire, faTrophy } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
-import FtesPromoPanel from "@/common/Sidebar/FtesPromoPanel/FtesPromoPanel";
 import FeaturedPostsPanel from "@/common/Sidebar/FeaturedPostsPanel/FeaturedPostsPanel";
 import styles from "./HomeSidebar.module.css";
 
@@ -45,8 +44,6 @@ function HomeSidebar() {
           </p>
         </div>
       </div>
-
-      <FtesPromoPanel className={`${styles.panel} ${styles.ftes}`} />
 
       <FeaturedPostsPanel className={`${styles.panel} ${styles.featured}`} />
     </aside>

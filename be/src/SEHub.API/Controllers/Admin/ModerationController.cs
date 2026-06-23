@@ -36,6 +36,16 @@ public sealed class ModerationController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("pinned-posts")]
+    public async Task<IActionResult> GetPinnedPosts(
+        [FromQuery] string? search,
+        [FromQuery] int pageSize = 100,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _postService.GetPinnedModeratorStateAsync(search, pageSize, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpGet("violations/export.csv")]
     public async Task<IActionResult> ExportViolationsCsv(CancellationToken cancellationToken)
     {

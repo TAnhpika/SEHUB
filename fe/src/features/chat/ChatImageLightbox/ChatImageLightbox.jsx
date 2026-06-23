@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import styles from "./ChatImageLightbox.module.css";
 
-function ChatImageLightbox({ image, onClose }) {
+function ChatImageLightbox({ image, onClose, onBackdropClick, onImageClick }) {
   useEffect(() => {
     if (!image) return undefined;
 
@@ -24,19 +24,34 @@ function ChatImageLightbox({ image, onClose }) {
 
   if (!image?.url) return null;
 
+  function handleBackdropClick() {
+    if (onBackdropClick) {
+      onBackdropClick();
+      return;
+    }
+    onClose?.();
+  }
+
+  function handleImageClick(event) {
+    event.stopPropagation();
+    if (onImageClick) {
+      onImageClick();
+    }
+  }
+
   return (
     <div
       className={styles.overlay}
       role="dialog"
       aria-modal="true"
       aria-label="Xem ảnh phóng to"
-      onClick={() => onClose?.()}
+      onClick={handleBackdropClick}
     >
       <button
         type="button"
         className={styles.close}
         aria-label="Đóng"
-        onClick={() => onClose?.()}
+        onClick={handleBackdropClick}
       >
         <FontAwesomeIcon icon={faXmark} />
       </button>
@@ -45,7 +60,7 @@ function ChatImageLightbox({ image, onClose }) {
         src={image.url}
         alt={image.alt || "Ảnh đính kèm"}
         className={styles.image}
-        onClick={(event) => event.stopPropagation()}
+        onClick={handleImageClick}
       />
     </div>
   );

@@ -58,14 +58,17 @@ public class PostRepository : IPostRepository
         }
 
         var sortDescending = !string.Equals(query.SortDir, "asc", StringComparison.OrdinalIgnoreCase);
-        var orderedQuery = (query.SortBy?.Trim().ToLowerInvariant()) switch
+        IOrderedQueryable<Post> orderedQuery = dbQuery
+            .OrderByDescending(p => p.IsPinned);
+
+        orderedQuery = (query.SortBy?.Trim().ToLowerInvariant()) switch
         {
             "title" => sortDescending
-                ? dbQuery.OrderByDescending(p => p.Title)
-                : dbQuery.OrderBy(p => p.Title),
+                ? orderedQuery.ThenByDescending(p => p.Title)
+                : orderedQuery.ThenBy(p => p.Title),
             _ => sortDescending
-                ? dbQuery.OrderByDescending(p => p.CreatedAt)
-                : dbQuery.OrderBy(p => p.CreatedAt),
+                ? orderedQuery.ThenByDescending(p => p.CreatedAt)
+                : orderedQuery.ThenBy(p => p.CreatedAt),
         };
 
         var total = await dbQuery.CountAsync(cancellationToken);
@@ -139,6 +142,45 @@ public class PostRepository : IPostRepository
         _context.Posts.CountAsync(
             p => p.IsFeatured && p.Status == PostStatus.Published,
             cancellationToken);
+
+    public async Task<IReadOnlyList<Post>> GetPinnedAsync(int limit, CancellationToken cancellationToken = default) =>
+        await _context.Posts
+            .Where(p => p.IsPinned && p.Status == PostStatus.Published)
+            .OrderByDescending(p => p.CreatedAt)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+    public Task<int> CountPinnedAsync(CancellationToken cancellationToken = default) =>
+        _context.Posts.CountAsync(
+            p => p.IsPinned && p.Status == PostStatus.Published,
+            cancellationToken);
+
+    public async Task<(IReadOnlyList<Post> Items, int TotalCount)> GetPublishedCandidatesForPinningAsync(
+        string? search,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var dbQuery = _context.Posts.Where(p => p.Status == PostStatus.Published && !p.IsPinned);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            dbQuery = dbQuery.Where(p =>
+                p.Title.Contains(term) ||
+                p.Content.Contains(term) ||
+                _context.Users.Any(u => u.Id == p.AuthorId && (u.UserName!.Contains(term) || u.DisplayName.Contains(term))));
+        }
+
+        var total = await dbQuery.CountAsync(cancellationToken);
+        var items = await dbQuery
+            .OrderByDescending(p => p.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, total);
+    }
 
     public async Task<(IReadOnlyList<Post> Items, int TotalCount)> GetPublishedCandidatesForFeaturingAsync(
         string? search,

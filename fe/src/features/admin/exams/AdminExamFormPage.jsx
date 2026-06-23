@@ -14,6 +14,7 @@ import {
   findDuplicateBySha,
   getSemesterLabel,
   getTrackLabel,
+  importExamQuestionsFromMarkdown,
   loadAdminExamById,
   loadAdminExams,
   mockComputeSha256,
@@ -73,6 +74,9 @@ function AdminExamFormPage() {
   const [ocrDone, setOcrDone] = useState(false);
   const [ocrConfirmed, setOcrConfirmed] = useState(false);
   const [forceUniqueSha, setForceUniqueSha] = useState(false);
+  const [markdownText, setMarkdownText] = useState("");
+  const [importedQuestions, setImportedQuestions] = useState([]);
+  const [importingMarkdown, setImportingMarkdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -136,8 +140,8 @@ function AdminExamFormPage() {
 
   function validateStep1() {
     if (isFinal) {
-      if (!fileName && !isEdit) {
-        showToast("Chọn file PDF/ảnh để OCR.");
+      if (!fileName && importedQuestions.length === 0 && !isEdit) {
+        showToast("Chọn file OCR hoặc import câu hỏi bằng Markdown.");
         return false;
       }
       return true;
@@ -190,10 +194,53 @@ function AdminExamFormPage() {
     showToast("OCR hoàn tất — Admin rà soát đáp án trước khi lưu.");
   }
 
+  async function handleImportMarkdown() {
+    if (!markdownText.trim()) {
+      showToast("Dán nội dung Markdown câu hỏi trước khi import.");
+      return;
+    }
+
+    setImportingMarkdown(true);
+    try {
+      const result = await importExamQuestionsFromMarkdown(markdownText);
+      const questions = result?.questions ?? [];
+      if (!questions.length) {
+        showToast("Không parse được câu hỏi từ Markdown.");
+        return;
+      }
+      setImportedQuestions(questions);
+      setOcrDone(true);
+      setOcrConfirmed(false);
+      setStep(2);
+      showToast(`Đã import ${questions.length} câu hỏi từ Markdown.`);
+    } catch (err) {
+      showToast(err.message ?? "Import Markdown thất bại.");
+    } finally {
+      setImportingMarkdown(false);
+    }
+  }
+
+  const reviewQuestions = useMemo(() => {
+    if (importedQuestions.length > 0) {
+      return importedQuestions.map((question, index) => {
+        const options = question.options ?? [];
+        const correctIndex = options.findIndex((opt) => opt.id === question.correctOptionId);
+        return {
+          id: question.orderIndex ?? index + 1,
+          text: question.content,
+          options: options.map((opt) => opt.text),
+          correct: correctIndex >= 0 ? correctIndex : 0,
+        };
+      });
+    }
+
+    return MOCK_OCR_QUESTIONS;
+  }, [importedQuestions]);
+
   function goNext() {
     if (step === 0 && !validateStep0()) return;
     if (step === 1 && !validateStep1()) return;
-    if (step === 1 && isFinal && fileName && !ocrDone) {
+    if (step === 1 && isFinal && fileName && !ocrDone && importedQuestions.length === 0) {
       runOcr();
       return;
     }
@@ -203,7 +250,12 @@ function AdminExamFormPage() {
   async function persist(status) {
     const saveOptions = {
       status,
-      ocrQuestions: isFinal && ocrDone ? MOCK_OCR_QUESTIONS : [],
+      ocrQuestions:
+        isFinal && ocrDone
+          ? importedQuestions.length > 0
+            ? importedQuestions
+            : MOCK_OCR_QUESTIONS
+          : [],
       pdfFile,
       confirmDuplicate: forceUniqueSha,
     };
@@ -523,10 +575,9 @@ function AdminExamFormPage() {
 
         {step === 1 && isFinal ? (
           <>
-            <h2 className={styles.panelTitle}>Upload đề & OCR</h2>
+            <h2 className={styles.panelTitle}>Upload đề, OCR hoặc Markdown</h2>
             <p className={styles.panelDesc}>
-              Bắt buộc upload PDF/ảnh scan đề — không nhập câu hỏi thủ công. OCR → normalize text
-              → SHA-256 kiểm tra trùng. Tên file có &quot;dup&quot; để demo cảnh báo trùng.
+              Upload PDF/ảnh để OCR, hoặc dán file Markdown câu hỏi (## Câu 1, A./B./C./D., **Đáp án: X**).
             </p>
             <div className={styles.divider} />
 
@@ -546,9 +597,26 @@ function AdminExamFormPage() {
               </div>
             </label>
 
+            <label className={styles.field}>
+              <span className={styles.label}>Import câu hỏi bằng Markdown</span>
+              <textarea
+                className={styles.textarea}
+                rows={10}
+                value={markdownText}
+                onChange={(e) => setMarkdownText(e.target.value)}
+                placeholder={`## Câu 1\nNội dung câu hỏi?\n\nA. Phương án A\nB. Phương án B\nC. Phương án C\nD. Phương án D\n\n**Đáp án: B**`}
+              />
+              <p className={styles.hint}>
+                Mỗi câu bắt đầu bằng ## Câu N (hoặc phân tách bằng ---). Dòng cuối: **Đáp án: X**.
+              </p>
+            </label>
+
             <div className={formStyles.formActions}>
               <Button type="button" look="outline" onClick={() => setStep(0)}>
                 Quay lại
+              </Button>
+              <Button type="button" onClick={handleImportMarkdown} disabled={importingMarkdown}>
+                {importingMarkdown ? "Đang import..." : "Import Markdown"}
               </Button>
               <Button type="button" onClick={runOcr} disabled={!fileName}>
                 Chạy OCR &amp; sang bước xác nhận
@@ -658,10 +726,10 @@ function AdminExamFormPage() {
             {isFinal && ocrDone ? (
               <div className={examStyles.ocrPanel}>
                 <p className={examStyles.ocrPanelTitle}>
-                  {MOCK_OCR_QUESTIONS.length} câu OCR — rà soát đáp án đúng
+                  {reviewQuestions.length} câu {importedQuestions.length > 0 ? "Markdown" : "OCR"} — rà soát đáp án đúng
                 </p>
                 <ul className={examStyles.questionList}>
-                  {MOCK_OCR_QUESTIONS.map((q, index) => (
+                  {reviewQuestions.map((q, index) => (
                     <li key={q.id} className={examStyles.questionItem}>
                       <p className={examStyles.questionText}>
                         Câu {index + 1}. {q.text}

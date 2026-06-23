@@ -8,6 +8,7 @@ public sealed class FeaturedPostModeratorItemDto
     public string AuthorUsername { get; init; } = string.Empty;
     public string AuthorDisplayName { get; init; } = string.Empty;
     public bool IsFeatured { get; init; }
+    public bool IsPinned { get; init; }
     public int LikeCount { get; init; }
     public int CommentCount { get; init; }
     public DateTime CreatedAt { get; init; }

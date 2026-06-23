@@ -45,15 +45,46 @@ export function saveExamAnswer(examId, questionId, answerKey) {
     session.answers[key] = answerKey;
   }
 
-  session.answers[String(questionId)] = answerKey;
   writeSession(examId, session);
   return session;
+}
+
+export function saveExamAnswers(examId, answers) {
+  const session = getOrCreateExamSession(examId);
+  session.answers = answers;
+  writeSession(examId, session);
+  return session;
+}
+
+function isGradedAnswerCorrect(question, selected) {
+  if (selected == null || selected === "") {
+    return false;
+  }
+
+  if (Array.isArray(selected)) {
+    const correctKeys = question.correctAnswers ?? [];
+    if (correctKeys.length === 0) {
+      return false;
+    }
+
+    const selectedKeys = selected.filter(Boolean);
+    return (
+      selectedKeys.length === correctKeys.length
+      && selectedKeys.every((key) => correctKeys.includes(key))
+    );
+  }
+
+  if (question.correctAnswer == null) {
+    return false;
+  }
+
+  return selected === question.correctAnswer;
 }
 
 export function gradeExam(questions, answers) {
   const items = questions.map((question) => {
     const selected = answers[String(question.id)] ?? null;
-    const isCorrect = selected === question.correctAnswer;
+    const isCorrect = isGradedAnswerCorrect(question, selected);
 
     return {
       questionId: question.id,

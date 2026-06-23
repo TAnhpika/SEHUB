@@ -73,15 +73,9 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  align-items: center;
+  align-items: flex-end;
+  justify-content: space-between;
   padding-bottom: 0.5rem;
-}
-
-.pinnedTitleRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.625rem;
-  align-items: center;
 }
 
 .sectionTitle {
@@ -233,78 +227,13 @@
 .searchPanel {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  max-height: min(72vh, 640px);
-  min-height: 420px;
-  padding: 0;
-  overflow: hidden;
+  gap: 1rem;
+  min-height: 600px;
+  padding: 1.5625rem;
   background: #fff;
   border: 1px solid rgba(195, 198, 215, 0.2);
   border-radius: 12px;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
-}
-
-.searchPanelHead {
-  display: flex;
-  flex-shrink: 0;
-  flex-direction: column;
-  gap: 0.875rem;
-  padding: 1.25rem 1.5625rem 0.875rem;
-  background: #fff;
-  border-bottom: 1px solid rgba(195, 198, 215, 0.2);
-}
-
-.searchPanelHead .sectionTitle {
-  font-size: 1.25rem;
-}
-
-.searchTabBar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin: 0 -0.25rem;
-  border-bottom: 1px solid rgba(195, 198, 215, 0.25);
-}
-
-.searchTab {
-  position: relative;
-  top: 1px;
-  padding: 0.5rem 0.875rem;
-  margin-bottom: -1px;
-  font-family: inherit;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: #64748b;
-  cursor: pointer;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-
-.searchTab:hover {
-  color: #191c1e;
-}
-
-.searchTabActive {
-  font-weight: 600;
-  color: var(--moderator-primary, #004ac6);
-  border-bottom-color: var(--moderator-primary, #004ac6);
-}
-
-.searchToolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.searchSummary {
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: #64748b;
 }
 
 .search {
@@ -343,14 +272,45 @@
   outline-offset: 1px;
 }
 
+.tagFilters {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+  overflow-x: auto;
+}
+
+.tag {
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #434655;
+  cursor: pointer;
+  background: #eceef0;
+  border: none;
+  border-radius: 9999px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.tag:hover {
+  color: #191c1e;
+}
+
+.tagActive {
+  color: #fff;
+  background: var(--moderator-primary, #004ac6);
+}
+
 .results {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 0.875rem;
+  gap: 1rem;
   min-height: 0;
-  padding: 1rem 1.5625rem 1.25rem;
   overflow-y: auto;
+  padding-right: 0.25rem;
 }
 
 .resultCard {

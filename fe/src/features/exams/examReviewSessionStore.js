@@ -3,7 +3,7 @@
 const STORAGE_PREFIX = "sehubs_review_session";
 
 /**
- * @typedef {{ correctAnswerRevealed: boolean; order: number[] | null }} ReviewSession
+ * @typedef {{ correctAnswerRevealed: boolean; order: number[] | null; optionOrders: Record<string, number[]> }} ReviewSession
  */
 
 function storageKey(examId, username) {
@@ -15,6 +15,10 @@ function normalizeSession(parsed) {
     return {
       correctAnswerRevealed: parsed.correctAnswerRevealed,
       order: Array.isArray(parsed?.order) ? parsed.order : null,
+      optionOrders:
+        parsed?.optionOrders && typeof parsed.optionOrders === "object"
+          ? parsed.optionOrders
+          : {},
     };
   }
 
@@ -22,16 +26,20 @@ function normalizeSession(parsed) {
   return {
     correctAnswerRevealed: false,
     order: Array.isArray(parsed?.order) ? parsed.order : null,
+    optionOrders:
+      parsed?.optionOrders && typeof parsed.optionOrders === "object"
+        ? parsed.optionOrders
+        : {},
   };
 }
 
 function readSession(examId, username) {
   try {
     const raw = localStorage.getItem(storageKey(examId, username));
-    if (!raw) return { correctAnswerRevealed: false, order: null };
+    if (!raw) return { correctAnswerRevealed: false, order: null, optionOrders: {} };
     return normalizeSession(JSON.parse(raw));
   } catch {
-    return { correctAnswerRevealed: false, order: null };
+    return { correctAnswerRevealed: false, order: null, optionOrders: {} };
   }
 }
 
@@ -94,10 +102,53 @@ export function toggleReviewCorrectAnswerReveal(examId, username) {
   return session;
 }
 
+function questionKey(questionId) {
+  return String(questionId);
+}
+
+/**
+ * Lấy hoặc tạo thứ tự xáo nội dung đáp án (giữ nhãn A/B/C/D cố định).
+ * @param {number} optionCount
+ */
+export function ensureReviewOptionOrder(examId, username, questionId, optionCount) {
+  if (!optionCount) return [];
+
+  const session = readSession(examId, username);
+  const key = questionKey(questionId);
+  const existing = session.optionOrders?.[key];
+
+  if (existing?.length === optionCount) {
+    return existing;
+  }
+
+  session.optionOrders = {
+    ...(session.optionOrders ?? {}),
+    [key]: shuffleIds([...Array(optionCount).keys()]),
+  };
+  writeSession(examId, username, session);
+  return session.optionOrders[key];
+}
+
+/**
+ * Xáo lại nội dung đáp án của một câu (nhãn A/B/C/D không đổi).
+ */
+export function shuffleReviewQuestionOptions(examId, username, questionId, optionCount) {
+  if (optionCount < 2) return readSession(examId, username);
+
+  const session = readSession(examId, username);
+  const key = questionKey(questionId);
+  session.optionOrders = {
+    ...(session.optionOrders ?? {}),
+    [key]: shuffleIds([...Array(optionCount).keys()]),
+  };
+  writeSession(examId, username, session);
+  return session;
+}
+
 /** @param {string} examId @param {string | undefined} username */
 export function resetReviewSession(examId, username) {
-  writeSession(examId, username, { correctAnswerRevealed: false, order: null });
-  return { correctAnswerRevealed: false, order: null };
+  writeSession(examId, username, { correctAnswerRevealed: false, order: null, optionOrders: {} });
+  return { correctAnswerRevealed: false, order: null, optionOrders: {} };
 }
 
 /** @deprecated — dùng getOrderedReviewQuestions */

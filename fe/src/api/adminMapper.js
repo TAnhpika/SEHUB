@@ -1,7 +1,16 @@
 import { FE_ID_BY_PLAN_CODE } from "@/api/premiumMapper";
 import { resolveAssetUrl } from "@/api/assetUrl";
-import { mapModerationPostImages } from "@/utils/mapModerationPostImages";
+import {
+  buildExamDisplayFields,
+  extractCourseSubjectCode,
+  normalizeCourseSubjectCode,
+  resolvePublicExamName,
+} from "@/utils/examDisplay";
 import { getExamAssetFileName } from "@/utils/examAssetUrl";
+import {
+  mapImportedExamQuestions,
+  sanitizeWizardQuestionContent,
+} from "@/features/moderator/finalExams/finalExamData";
 
 const ROLE_MAP = {
   student: "student",
@@ -42,7 +51,8 @@ function mapAccessTierLabel(accessTier) {
 function mapExamStatus(status) {
   const value = String(status ?? "").toLowerCase();
   if (value === "published") return "published";
-  if (value === "pendingapproval") return "draft";
+  if (value === "pendingapproval") return "pending_approval";
+  if (value === "rejected") return "rejected";
   if (value === "archived") return "draft";
   return "draft";
 }
@@ -164,6 +174,8 @@ export function mapAdminExamListItem(dto) {
       ? (dto.attachments ?? []).map((attachment) => ({
           id: attachment.id,
           name: attachment.originalFileName,
+          contentType: attachment.contentType ?? "",
+          fileSize: attachment.fileSize ?? 0,
           size: attachment.fileSize ?? 0,
           viewPath: attachment.viewPath,
           viewUrl: resolveAssetUrl(attachment.viewPath),
@@ -171,6 +183,15 @@ export function mapAdminExamListItem(dto) {
       : assetUrl
         ? [{ id: "asset", name: assetUrl.split("/").pop() ?? "asset", url: assetUrl }]
         : [],
+    revisionOfExamId: dto.revisionOfExamId ?? null,
+    revisionSourceCode: dto.revisionSourceCode ?? null,
+    revisionSourceTitle: dto.revisionSourceTitle ?? null,
+    rejectionReasonCode: dto.rejectionReasonCode ?? null,
+    rejectionReasonDetail: dto.rejectionReasonDetail ?? null,
+    rejectedAt: dto.rejectedAt ?? null,
+    canResubmit: dto.canResubmit ?? false,
+    isContentLocked: dto.isContentLocked ?? false,
+    ...buildExamDisplayFields(dto),
   };
 }
 
@@ -188,11 +209,19 @@ export function mapAdminExamDetail(dto) {
   };
 }
 
-const WIZARD_ANSWER_KEYS = ["A", "B", "C", "D"];
+const WIZARD_ANSWER_KEYS = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
 function parseSemesterNumber(semesterLabel) {
   const match = String(semesterLabel ?? "").match(/\d+/);
   return match ? match[0] : "1";
+}
+
+function getWizardOptionLabels(question) {
+  const labels = (question.optionLabels ?? WIZARD_ANSWER_KEYS.slice(0, 4))
+    .map((label) => String(label).trim().toUpperCase())
+    .filter((label) => WIZARD_ANSWER_KEYS.includes(label));
+
+  return labels.length > 0 ? labels : WIZARD_ANSWER_KEYS.slice(0, 4);
 }
 
 export function mapWizardQuestionsToCreateItems(questions) {
@@ -200,35 +229,99 @@ export function mapWizardQuestionsToCreateItems(questions) {
     .filter(
       (question) =>
         question.content?.trim() &&
-        WIZARD_ANSWER_KEYS.some((key) => question.answers?.[key]?.trim()),
+        getWizardOptionLabels(question).some((key) => question.answers?.[key]?.trim()),
     )
     .map((question, index) => {
-      const options = WIZARD_ANSWER_KEYS.map((key) => ({
+      const optionLabels = getWizardOptionLabels(question);
+      const options = optionLabels.map((key) => ({
         id: crypto.randomUUID(),
         label: key,
         text: question.answers[key]?.trim() ?? "",
       }));
-      const correct =
-        options.find((option) => option.label === question.correctAnswer) ?? options[0];
+
+      const isMulti = String(question.questionType ?? "").toLowerCase() === "multiselect";
+      const correctLabels = isMulti
+        ? (question.correctAnswers ?? []).filter((label) => optionLabels.includes(label))
+        : [question.correctAnswer].filter(Boolean);
+
+      const correctOptions = options.filter((option) => correctLabels.includes(option.label));
+      const fallbackCorrect = correctOptions[0] ?? options[0];
 
       return {
         orderIndex: index + 1,
-        content: question.content.trim(),
+        content: sanitizeWizardQuestionContent(question.content).trim(),
+        questionType: isMulti ? "MultiSelect" : "SingleChoice",
+        requiredSelectCount: isMulti
+          ? question.requiredSelectCount ?? correctOptions.length
+          : null,
         options,
-        correctOptionId: correct.id,
+        correctOptionId: fallbackCorrect?.id,
+        correctOptionIds: correctOptions.map((option) => option.id),
       };
     });
 }
 
 export function mapFinalExamWizardToCreateRequest(examInfo, questions) {
+  const subjectCode =
+    normalizeCourseSubjectCode(examInfo.subjectCode) ?? examInfo.subjectCode.trim();
+  const paperCode = examInfo.examCode?.trim();
+
   return {
-    code: examInfo.subjectCode.trim(),
-    title: examInfo.examCode?.trim() || `${examInfo.subjectCode} — Cuối kỳ`,
+    code: paperCode,
+    title: paperCode || `${subjectCode} — Cuối kỳ`,
     examType: "Final",
     semester: parseSemesterNumber(examInfo.semesterLabel),
-    major: "SE",
-    description: examInfo.subjectName ?? "",
+    major: subjectCode,
+    description: `${examInfo.subjectName ?? subjectCode} · ${examInfo.durationMinutes} phút`,
     questions: mapWizardQuestionsToCreateItems(questions),
+  };
+}
+
+export function mapFinalExamWizardToResubmitRequest(examInfo, questions, { isRevision = false } = {}) {
+  const title = isRevision
+    ? resolvePublicExamName({
+        revisionSourceCode: examInfo.revisionSourceCode,
+        revisionSourceTitle: examInfo.revisionSourceTitle,
+        code: examInfo.examCode,
+        title: examInfo.subjectName,
+      })
+    : examInfo.examCode?.trim() || examInfo.subjectName?.trim() || examInfo.subjectCode.trim();
+
+  return {
+    title,
+    description: `${examInfo.subjectName ?? examInfo.subjectCode} · ${examInfo.durationMinutes} phút`,
+    questions: mapWizardQuestionsToCreateItems(questions),
+  };
+}
+
+export function mapExamDetailToWizard(dto) {
+  const rawQuestions = dto.questions ?? dto.questionsData ?? [];
+  const wizardQuestions = mapImportedExamQuestions(rawQuestions);
+
+  const durationMatch = String(dto.description ?? "").match(/(\d+)\s*phút/);
+  const durationMinutes = durationMatch ? Number(durationMatch[1]) : 60;
+  const questionCount = Math.max(dto.questionCount ?? 0, wizardQuestions.length, 1);
+  const publicName = resolvePublicExamName(dto);
+  const subjectCode =
+    extractCourseSubjectCode(dto.major, dto.revisionSourceCode, dto.code, dto.title) ??
+    dto.major ??
+    "";
+
+  return {
+    examInfo: {
+      subjectCode,
+      subjectName: String(dto.description ?? "").split(" · ")[0]?.trim() || publicName,
+      semesterLabel: dto.semester ? `Học kỳ ${dto.semester}` : "",
+      examCode: publicName,
+      revisionSourceCode: dto.revisionSourceCode ?? null,
+      revisionSourceTitle: dto.revisionSourceTitle ?? null,
+      durationMinutes,
+      totalQuestions: questionCount,
+    },
+    questions: wizardQuestions.length ? wizardQuestions : undefined,
+    revisionOfExamId: dto.revisionOfExamId ?? null,
+    canResubmit: dto.canResubmit ?? false,
+    isContentLocked: dto.isContentLocked ?? false,
   };
 }
 
@@ -292,13 +385,13 @@ export function mapPracticeExamFormToCreateRequest(form) {
   const githubGuide =
     form.githubGuide ??
     "Nộp link repository GitHub công khai. README ghi rõ MSSV, họ tên và hướng dẫn chạy project.";
-  const subjectCode = form.subjectCode.trim();
-  const examCode =
-    form.examCode?.trim() || `${subjectCode}-PRAC-${Date.now()}`;
+  const subjectCode =
+    normalizeCourseSubjectCode(form.subjectCode) ?? form.subjectCode.trim();
+  const paperCode = form.title.trim();
 
   return {
-    code: examCode,
-    title: form.title.trim(),
+    code: paperCode,
+    title: paperCode,
     examType: "Practice",
     semester: parseSemesterNumber(form.semester),
     major: subjectCode,
@@ -368,127 +461,14 @@ export function mapAdminDocumentListItem(dto) {
   };
 }
 
-const PAYMENT_AUDIT_ACTION_LABEL = {
-  order_created: "Tạo đơn thanh toán",
-  waiting_confirmation: "Chờ xác nhận PayOS",
-  payment_expired: "Đơn thanh toán hết hạn",
-  manualverification: "Xác nhận thủ công",
-  n8n_activate: "Kích hoạt Premium (N8N)",
-  refund_request: "Yêu cầu hoàn tiền",
-  refund_approved: "Duyệt hoàn tiền",
-  payos_confirm: "Xác nhận PayOS",
-  payos_refund: "Hoàn tiền PayOS",
-  webhook_paid: "Thanh toán PayOS thành công",
-  webhook_duplicate_ignored: "Webhook trùng — bỏ qua",
-};
-
-function normalizePaymentAuditAction(action) {
-  return String(action ?? "")
-    .trim()
-    .replace(/([a-z])([A-Z])/g, "$1_$2")
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
-}
-
-function readPayloadField(payload, ...keys) {
-  for (const key of keys) {
-    if (payload[key] != null && payload[key] !== "") return payload[key];
-  }
-  return null;
-}
-
-function formatVndAmount(amount) {
-  const value = Number(amount);
-  if (!Number.isFinite(value)) return null;
-  return `${value.toLocaleString("vi-VN")} đ`;
-}
-
-export function formatPaymentAuditPayload(action, payloadJson) {
-  if (!payloadJson) return "—";
-
-  let payload = payloadJson;
-  if (typeof payloadJson === "string") {
-    try {
-      payload = JSON.parse(payloadJson);
-    } catch {
-      const trimmed = payloadJson.trim();
-      return trimmed.length > 100 ? `${trimmed.slice(0, 97)}...` : trimmed;
-    }
-  }
-
-  if (!payload || typeof payload !== "object") {
-    return String(payloadJson);
-  }
-
-  const key = normalizePaymentAuditAction(action);
-
-  if (key === "order_created") {
-    const plan = readPayloadField(payload, "PlanCode", "planCode") ?? "—";
-    const amount = readPayloadField(payload, "FinalAmount", "finalAmount");
-    const discount = readPayloadField(payload, "DiscountPercent", "discountPercent");
-    const parts = [`Gói ${plan}`];
-    const amountLabel = formatVndAmount(amount);
-    if (amountLabel) parts.push(amountLabel);
-    if (Number(discount) > 0) parts.push(`giảm ${discount}%`);
-    return parts.join(" · ");
-  }
-
-  if (key === "payment_expired") {
-    const orderCode = readPayloadField(payload, "PayOsOrderCode", "payOsOrderCode");
-    return orderCode ? `Mã đơn ${orderCode}` : "Đơn đã hết hạn thanh toán";
-  }
-
-  if (key === "waiting_confirmation") {
-    return "SV đã chuyển khoản — chờ admin xác nhận";
-  }
-
-  if (key === "refund_request") {
-    const reason = readPayloadField(payload, "Reason", "reason");
-    return reason ? `Lý do: ${reason}` : "Sinh viên yêu cầu hoàn tiền";
-  }
-
-  if (key === "refund_approved" || key === "payos_refund") {
-    const amount = readPayloadField(payload, "Amount", "amount", "RefundAmount", "refundAmount");
-    const amountLabel = formatVndAmount(amount);
-    return amountLabel ? `Hoàn ${amountLabel}` : "Đã xử lý hoàn tiền";
-  }
-
-  if (key === "manualverification") {
-    const note = readPayloadField(payload, "Note", "note");
-    return note ? `Ghi chú: ${note}` : "Admin xác nhận thanh toán thủ công";
-  }
-
-  if (key === "webhook_paid" || key === "n8n_activate") {
-    const plan = readPayloadField(payload, "PlanCode", "planCode");
-    const username = readPayloadField(payload, "Username", "username");
-    const parts = [];
-    if (plan) parts.push(`Gói ${plan}`);
-    if (username) parts.push(`@${username}`);
-    return parts.length ? parts.join(" · ") : "Kích hoạt Premium thành công";
-  }
-
-  const note = readPayloadField(payload, "Note", "note", "Reason", "reason");
-  if (note) return String(note);
-
-  return "Cập nhật trạng thái thanh toán";
-}
-
-export function getPaymentAuditActionLabel(action) {
-  const key = normalizePaymentAuditAction(action);
-  return PAYMENT_AUDIT_ACTION_LABEL[key] ?? String(action ?? "Thanh toán");
-}
-
 export function mapPaymentAuditLogItem(dto) {
-  const action = normalizePaymentAuditAction(dto.action);
-  const actor = dto.actorUsername?.trim();
-
   return {
     id: dto.id,
     at: dto.createdAt,
-    admin: actor ?? "admin",
-    action,
-    username: actor ?? "—",
-    detail: formatPaymentAuditPayload(action, dto.payloadJson),
+    admin: dto.actorUsername ?? "admin",
+    action: String(dto.action ?? "").toLowerCase(),
+    username: dto.actorUsername ?? "—",
+    detail: dto.payloadJson ?? dto.action ?? "—",
     sortKey: dto.createdAt,
     type: "payment",
   };
@@ -553,7 +533,6 @@ function toModerationInitials(name) {
 export function mapModerationPostListItem(dto) {
   const status = mapModerationPostStatus(dto.status);
   const createdMs = new Date(dto.createdAt).getTime();
-  const { coverImage, inlineImages } = mapModerationPostImages(dto.images ?? []);
 
   return {
     id: dto.id,
@@ -576,8 +555,8 @@ export function mapModerationPostListItem(dto) {
     allowComments: true,
     anonymous: false,
     attachments: [],
-    coverImage,
-    inlineImages,
+    coverImage: null,
+    inlineImages: [],
     resubmission: status === "pending" && Boolean(dto.moderatedAt),
     moderation: dto.moderatedAt
       ? {

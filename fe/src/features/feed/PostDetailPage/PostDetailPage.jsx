@@ -2,34 +2,23 @@ import { useEffect, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faAlignLeft,
   faArrowLeft,
-  faBold,
-  faCode,
   faComment,
   faEye,
   faHeart,
-  faHighlighter,
-  faImage,
-  faItalic,
-  faLink,
-  faLinkSlash,
-  faListOl,
-  faListUl,
-  faQuoteLeft,
   faReply,
   faShareNodes,
-  faStrikethrough,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
+import RichTextEditor from "@/common/RichTextEditor/RichTextEditor";
+import RichTextContent from "@/common/RichTextEditor/RichTextContent";
 import {
   loadPostById,
   removeComment,
   submitComment,
   toggleLike,
 } from "@/features/feed/feedData";
-import PostContentPreview from "@/common/PostContentPreview/PostContentPreview";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
 import { copyPostLink, formatDisplayTitle, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
@@ -248,14 +237,7 @@ function PostDetailPage() {
         <h1 className={styles.title}>
           <span className={styles.hash}>#</span> {displayTitle}
         </h1>
-        {post.images?.length > 0 ? (
-          <div className={styles.images}>
-            {post.images.map((image) => (
-              <img key={image.id} className={styles.image} src={image.url} alt="" loading="lazy" />
-            ))}
-          </div>
-        ) : null}
-        <PostContentPreview text={post.body ?? post.excerpt} className={styles.body} />
+        <RichTextContent value={post.body ?? post.excerpt} className={styles.body} />
 
         {post.tags?.length > 0 && (
           <ul className={styles.tags} aria-label="Thẻ bài viết">
@@ -332,11 +314,15 @@ function PostDetailPage() {
 
               {isEditingComment ? (
                 <div className={styles["comment-edit"]}>
-                  <textarea
-                    className={styles["comment-edit-input"]}
+                  <RichTextEditor
                     value={editCommentDraft}
-                    onChange={(event) => setEditCommentDraft(event.target.value)}
+                    onChange={setEditCommentDraft}
+                    variant="comment"
                     rows={3}
+                    bordered={false}
+                    textareaClassName={styles["comment-edit-input"]}
+                    toolbarAriaLabel="Định dạng bình luận"
+                    aria-label="Chỉnh sửa bình luận"
                   />
                   <div className={styles["comment-edit-actions"]}>
                     <button
@@ -356,7 +342,7 @@ function PostDetailPage() {
                   </div>
                 </div>
               ) : (
-                <PostContentPreview text={comment.content} className={styles["comment-content"]} />
+                <RichTextContent value={comment.content} className={styles["comment-content"]} />
               )}
 
               {!isEditingComment && (
@@ -371,51 +357,16 @@ function PostDetailPage() {
 
         <div className={styles.editor}>
           <div className={styles["editor-panel"]}>
-            <div className={styles.toolbar} aria-label="Định dạng bình luận">
-              <button type="button" className={styles.tool} aria-label="In đậm">
-                <FontAwesomeIcon icon={faBold} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="In nghiêng">
-                <FontAwesomeIcon icon={faItalic} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Gạch ngang">
-                <FontAwesomeIcon icon={faStrikethrough} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Đánh dấu">
-                <FontAwesomeIcon icon={faHighlighter} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Mã">
-                <FontAwesomeIcon icon={faCode} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Liên kết">
-                <FontAwesomeIcon icon={faLink} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Gỡ liên kết">
-                <FontAwesomeIcon icon={faLinkSlash} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Hình ảnh (URL)">
-                <FontAwesomeIcon icon={faImage} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Danh sách">
-                <FontAwesomeIcon icon={faListUl} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Danh sách đánh số">
-                <FontAwesomeIcon icon={faListOl} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Trích dẫn">
-                <FontAwesomeIcon icon={faQuoteLeft} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Căn trái">
-                <FontAwesomeIcon icon={faAlignLeft} />
-              </button>
-            </div>
-
-            <textarea
-              className={styles.input}
-              placeholder="Viết bình luận của bạn (chỉ văn bản và link, không đính kèm file)..."
+            <RichTextEditor
               value={draft}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={setDraft}
+              placeholder="Viết bình luận của bạn..."
+              variant="comment"
               rows={4}
+              bordered={false}
+              textareaClassName={styles.input}
+              toolbarAriaLabel="Định dạng bình luận"
+              aria-label="Viết bình luận của bạn"
             />
 
             <div className={styles["editor-footer"]}>

@@ -11,7 +11,9 @@ public sealed class PostDetailDto
     public int LikeCount { get; init; }
     public int CommentCount { get; init; }
     public int ViewCount { get; init; }
+    public bool IsPinned { get; init; }
     public bool IsFeatured { get; init; }
+    public string? CoverImageUrl { get; init; }
     public bool? IsLiked { get; init; }
     public IReadOnlyList<PostImageDto> Images { get; init; } = [];
     public DateTime CreatedAt { get; init; }

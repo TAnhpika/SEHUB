@@ -85,6 +85,31 @@
   overflow: hidden;
 }
 
+.excerpt strong,
+.excerpt b {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.excerpt em,
+.excerpt i {
+  font-style: italic;
+}
+
+.excerpt u {
+  text-decoration: underline;
+}
+
+.excerpt del,
+.excerpt s {
+  text-decoration: line-through;
+}
+
+.excerpt p {
+  margin: 0;
+  display: inline;
+}
+
 .tags {
   display: flex;
   flex-wrap: wrap;
@@ -175,4 +200,41 @@
 .report:hover {
   color: var(--color-danger);
   background: var(--color-danger-bg);
+}
+
+.pinnedBadge {
+  display: inline-block;
+  margin-right: 0.5rem;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border-radius: var(--radius-full);
+  vertical-align: middle;
+}
+
+.coverWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-height: min(320px, 45vh);
+  margin: 0.75rem 0;
+  background: var(--color-surface-muted, #f1f5f9);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.cover {
+  display: block;
+  max-width: 100%;
+  max-height: min(320px, 45vh);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.statActive {
+  color: var(--color-danger);
 }

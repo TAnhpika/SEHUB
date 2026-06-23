@@ -1,22 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowUpFromBracket,
-  faBold,
   faCloudArrowUp,
-  faCode,
   faFileArchive,
   faFilePdf,
   faGear,
-  faItalic,
-  faLink,
-  faListOl,
-  faListUl,
   faTrash,
-  faUnderline,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import RichTextEditor from "@/common/RichTextEditor/RichTextEditor";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
@@ -30,9 +24,13 @@ import {
 } from "@/features/moderator/exams/moderatorExamContributionStore";
 import {
   DEMO_DRAFT,
+  getSubjectOptionsForSemester,
   PRACTICE_SEMESTER_OPTIONS,
-  PRACTICE_SUBJECT_OPTIONS,
 } from "@/features/moderator/practiceExams/practiceExamData";
+import {
+  generateExamPaperCode,
+  loadExistingExamPaperIdentifiers,
+} from "@/utils/examPaperCode";
 import {
   createPracticeAttachmentEntry,
   PRACTICE_UPLOAD_ACCEPT,
@@ -75,6 +73,35 @@ function AddPracticeExamPage() {
   const [pinExam, setPinExam] = useState(DEMO_DRAFT.pinExam);
   const [isDragging, setIsDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [existingPaperCodes, setExistingPaperCodes] = useState([]);
+
+  const subjectOptions = useMemo(
+    () => getSubjectOptionsForSemester(semester),
+    [semester],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    loadExistingExamPaperIdentifiers()
+      .then((codes) => {
+        if (!cancelled) setExistingPaperCodes(codes);
+      })
+      .catch(() => {
+        if (!cancelled) setExistingPaperCodes([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!subject.trim()) {
+      setTitle("");
+      return;
+    }
+    const nextTitle = generateExamPaperCode("practice", subject, existingPaperCodes);
+    setTitle((prev) => (prev === nextTitle ? prev : nextTitle));
+  }, [subject, existingPaperCodes]);
 
   useEffect(() => {
     let cancelled = false;
@@ -256,18 +283,22 @@ function AddPracticeExamPage() {
                 <div className={styles.row}>
                   <label className={styles.field}>
                     <span className={styles.label}>
-                      Môn học <span className={styles.required}>*</span>
+                      Học kỳ <span className={styles.required}>*</span>
                     </span>
                     <select
                       className={styles.select}
-                      value={subject}
-                      onChange={(event) => setSubject(event.target.value)}
+                      value={semester}
+                      onChange={(event) => {
+                        setSemester(event.target.value);
+                        setSubject("");
+                        setTitle("");
+                      }}
                       required
                     >
-                      <option value="">Chọn môn học</option>
-                      {PRACTICE_SUBJECT_OPTIONS.map((code) => (
-                        <option key={code} value={code}>
-                          {code}
+                      <option value="">Chọn học kỳ</option>
+                      {PRACTICE_SEMESTER_OPTIONS.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
                         </option>
                       ))}
                     </select>
@@ -275,18 +306,19 @@ function AddPracticeExamPage() {
 
                   <label className={styles.field}>
                     <span className={styles.label}>
-                      Học kỳ <span className={styles.required}>*</span>
+                      Môn học <span className={styles.required}>*</span>
                     </span>
                     <select
                       className={styles.select}
-                      value={semester}
-                      onChange={(event) => setSemester(event.target.value)}
+                      value={subject}
+                      onChange={(event) => setSubject(event.target.value)}
+                      disabled={!semester}
                       required
                     >
-                      <option value="">Chọn học kỳ</option>
-                      {PRACTICE_SEMESTER_OPTIONS.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
+                      <option value="">{semester ? "Chọn môn học" : "Chọn học kỳ trước"}</option>
+                      {subjectOptions.map((code) => (
+                        <option key={code} value={code}>
+                          {code}
                         </option>
                       ))}
                     </select>
@@ -300,9 +332,9 @@ function AddPracticeExamPage() {
                   <input
                     type="text"
                     className={styles.input}
-                    placeholder="VD: Đề thi giữa kỳ môn Lập trình Web"
+                    placeholder="Tự động sinh khi chọn môn học"
                     value={title}
-                    onChange={(event) => setTitle(event.target.value)}
+                    readOnly
                     required
                   />
                 </label>
@@ -311,39 +343,15 @@ function AddPracticeExamPage() {
                   <span className={styles.label}>
                     Mô tả &amp; Yêu cầu <span className={styles.required}>*</span>
                   </span>
-                  <div className={styles.editor}>
-                    <div className={styles.toolbar} aria-label="Định dạng văn bản">
-                      <button type="button" className={styles.tool} aria-label="In đậm">
-                        <FontAwesomeIcon icon={faBold} />
-                      </button>
-                      <button type="button" className={styles.tool} aria-label="In nghiêng">
-                        <FontAwesomeIcon icon={faItalic} />
-                      </button>
-                      <button type="button" className={styles.tool} aria-label="Gạch chân">
-                        <FontAwesomeIcon icon={faUnderline} />
-                      </button>
-                      <button type="button" className={styles.tool} aria-label="Danh sách">
-                        <FontAwesomeIcon icon={faListUl} />
-                      </button>
-                      <button type="button" className={styles.tool} aria-label="Danh sách đánh số">
-                        <FontAwesomeIcon icon={faListOl} />
-                      </button>
-                      <button type="button" className={styles.tool} aria-label="Liên kết">
-                        <FontAwesomeIcon icon={faLink} />
-                      </button>
-                      <button type="button" className={styles.tool} aria-label="Mã">
-                        <FontAwesomeIcon icon={faCode} />
-                      </button>
-                    </div>
-                    <textarea
-                      className={styles.textarea}
-                      placeholder="Nhập nội dung mô tả, yêu cầu đề bài, định dạng nộp bài..."
-                      value={description}
-                      onChange={(event) => setDescription(event.target.value)}
-                      rows={10}
-                      required
-                    />
-                  </div>
+                  <RichTextEditor
+                    value={description}
+                    onChange={setDescription}
+                    placeholder="Nhập nội dung mô tả, yêu cầu đề bài, định dạng nộp bài..."
+                    variant="basic"
+                    rows={10}
+                    required
+                    toolbarAriaLabel="Định dạng văn bản"
+                  />
                 </div>
               </div>
 

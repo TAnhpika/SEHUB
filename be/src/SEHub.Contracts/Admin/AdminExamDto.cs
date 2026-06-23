@@ -18,6 +18,14 @@ public sealed class AdminExamDto
     public IReadOnlyList<ExamAttachmentDto> Attachments { get; init; } = [];
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
+    public Guid? RevisionOfExamId { get; init; }
+    public string? RejectionReasonCode { get; init; }
+    public string? RejectionReasonDetail { get; init; }
+    public DateTime? RejectedAt { get; init; }
+    public bool CanResubmit { get; init; }
+    public bool IsContentLocked { get; init; }
+    public string? RevisionSourceCode { get; init; }
+    public string? RevisionSourceTitle { get; init; }
     public IReadOnlyList<AdminExamQuestionDto> Questions { get; init; } = [];
 }
 
@@ -26,7 +34,10 @@ public sealed class AdminExamQuestionDto
     public Guid Id { get; init; }
     public int OrderIndex { get; init; }
     public string Content { get; init; } = string.Empty;
+    public string QuestionType { get; init; } = "SingleChoice";
+    public int? RequiredSelectCount { get; init; }
     public Guid CorrectOptionId { get; init; }
+    public IReadOnlyList<Guid> CorrectOptionIds { get; init; } = [];
     public IReadOnlyList<AdminExamOptionDto> Options { get; init; } = [];
 }
 

@@ -10,7 +10,6 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
-import FilterDropdown from "@/common/FilterDropdown/FilterDropdown";
 import { useToast } from "@/common/Toast/ToastProvider";
 import {
   filterReports,
@@ -27,10 +26,16 @@ import {
 import { EXAM_REPORT_ROUTING } from "@/features/exams/examQuestionReportData";
 import styles from "./ReportsPage.module.css";
 
-const CATEGORY_FILTER_OPTIONS = [
-  { value: "all", label: "Tất cả loại" },
-  { value: "community", label: "Cộng đồng" },
-  { value: "exam_question", label: "Câu hỏi đề" },
+const TAB_OPTIONS = [
+  { id: "pending", label: "Chờ xử lý" },
+  { id: "resolved", label: "Đã xử lý" },
+  { id: "all", label: "Tất cả" },
+];
+
+const CATEGORY_OPTIONS = [
+  { id: "all", label: "Tất cả loại" },
+  { id: "community", label: "Cộng đồng" },
+  { id: "exam_question", label: "Câu hỏi đề" },
 ];
 
 const CATEGORY_LABELS = {
@@ -120,15 +125,6 @@ function ReportsPage() {
 
   const pendingCount = reports.filter((r) => r.status === "pending").length;
   const resolvedCount = reports.filter((r) => r.status === "resolved").length;
-
-  const statusFilterOptions = useMemo(
-    () => [
-      { value: "pending", label: `Chờ xử lý (${pendingCount})` },
-      { value: "resolved", label: "Đã xử lý" },
-      { value: "all", label: "Tất cả" },
-    ],
-    [pendingCount],
-  );
 
   const filtered = useMemo(() => {
     const statusFiltered = filterReports(reports, tab === "all" ? "all" : tab);
@@ -376,19 +372,30 @@ function ReportsPage() {
               onChange={(e) => setQuery(e.target.value)}
               aria-label="Tìm báo cáo"
             />
-            <div className={styles.filterRow}>
-              <FilterDropdown
-                options={statusFilterOptions}
-                value={tab}
-                onChange={setTab}
-                ariaLabel="Lọc trạng thái báo cáo"
-              />
-              <FilterDropdown
-                options={CATEGORY_FILTER_OPTIONS}
-                value={category}
-                onChange={setCategory}
-                ariaLabel="Lọc loại báo cáo"
-              />
+            <div className={styles.filterTrack} role="group" aria-label="Lọc trạng thái">
+              {TAB_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  className={`${styles.filterBtn} ${tab === opt.id ? styles.filterBtnActive : ""}`}
+                  onClick={() => setTab(opt.id)}
+                >
+                  {opt.label}
+                  {opt.id === "pending" ? ` (${pendingCount})` : ""}
+                </button>
+              ))}
+            </div>
+            <div className={styles.filterTrack} role="group" aria-label="Lọc loại báo cáo">
+              {CATEGORY_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  className={`${styles.filterBtn} ${category === opt.id ? styles.filterBtnActive : ""}`}
+                  onClick={() => setCategory(opt.id)}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -397,7 +404,7 @@ function ReportsPage() {
               <div className={styles.emptyQueue}>
                 <FontAwesomeIcon icon={faInbox} className={styles.emptyIcon} />
                 <p className={styles.emptyTitle}>Không có báo cáo</p>
-                <p className={styles.emptyDesc}>Thử đổi bộ lọc hoặc từ khóa tìm kiếm.</p>
+                <p className={styles.emptyDesc}>Thử đổi tab hoặc từ khóa tìm kiếm.</p>
               </div>
             ) : (
               <ul className={styles.queueList}>

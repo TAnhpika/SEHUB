@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.Extensions.Options;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Exams;
 using SEHub.Contracts.Exams;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Exceptions;
@@ -181,13 +182,14 @@ public sealed class AiExamChatApplicationService : IAiExamChatApplicationService
 
     private static string BuildSystemInstruction(Question question)
     {
+        var correctOptionIds = QuestionCorrectAnswers.GetCorrectOptionIds(question).ToHashSet();
         var optionsText = string.Join(
             "\n",
             question.Options
                 .OrderBy(option => option.Label)
                 .Select(option =>
                 {
-                    var marker = question.CorrectOptionId == option.Id ? " (đáp án đúng)" : string.Empty;
+                    var marker = correctOptionIds.Contains(option.Id) ? " (đáp án đúng)" : string.Empty;
                     return $"- {option.Label}: {option.Text}{marker}";
                 }));
 

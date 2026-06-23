@@ -1,5 +1,32 @@
+import { resolveAssetUrl } from "@/api/assetUrl";
+import {
+  isMultiSelectQuestion,
+  optionIdsToLabels,
+} from "@/features/exams/examQuestionTypes";
+
+export function mapExamAttachmentDto(attachment, examId) {
+  const viewPath =
+    attachment.viewPath ??
+    (attachment.id && examId
+      ? `/api/v1/exams/${examId}/attachments/${attachment.id}/view`
+      : null);
+
+  return {
+    id: attachment.id,
+    name: attachment.originalFileName ?? attachment.name ?? "exam-attachment",
+    contentType: attachment.contentType ?? "",
+    fileSize: attachment.fileSize ?? 0,
+    viewPath,
+    viewUrl: resolveAssetUrl(viewPath),
+  };
+}
+
 export function mapExamDetailDtoToFeExam(dto, courseCode) {
   const examTypeLabel = dto.examType === "Practice" ? "Thực hành" : "Cuối kỳ";
+  const attachments = (dto.attachments ?? []).map((attachment) =>
+    mapExamAttachmentDto(attachment, dto.id),
+  );
+  const primaryAttachment = attachments[0];
 
   return {
     id: dto.code || dto.id,
@@ -10,7 +37,8 @@ export function mapExamDetailDtoToFeExam(dto, courseCode) {
     questionCount: dto.questionCount ?? 0,
     title: dto.title,
     description: dto.description,
-    assetUrl: dto.assetUrl,
+    assetUrl: dto.assetUrl ?? primaryAttachment?.viewUrl ?? primaryAttachment?.viewPath ?? null,
+    attachments,
     semester: dto.semester,
     major: dto.major,
     status: dto.status,
@@ -23,7 +51,10 @@ export function mapQuestionPublicDto(dto) {
     orderIndex: dto.orderIndex,
     kind: "review",
     text: dto.content,
+    questionType: dto.questionType ?? "SingleChoice",
+    requiredSelectCount: dto.requiredSelectCount ?? null,
     correctAnswer: null,
+    correctAnswers: [],
     options: (dto.options ?? []).map(mapQuestionOptionDto),
   };
 }
@@ -38,25 +69,44 @@ export function mapQuestionOptionDto(dto) {
 
 export function mapQuestionAnswerDto(dto) {
   const question = mapQuestionPublicDto(dto);
-  const correctOption = question.options.find((option) => option.optionId === dto.correctOptionId);
+  const options = question.options;
+  const correctOptionIds = dto.correctOptionIds ?? [];
+  const correctLabels = optionIdsToLabels(options, correctOptionIds);
+
+  if (correctLabels.length === 0 && dto.correctOptionId) {
+    const single = options.find((option) => option.optionId === dto.correctOptionId);
+    if (single?.key) {
+      correctLabels.push(single.key);
+    }
+  }
+
+  const isMulti = isMultiSelectQuestion({ questionType: dto.questionType });
 
   return {
     ...question,
-    correctAnswer: correctOption?.key ?? null,
+    correctAnswer: correctLabels[0] ?? null,
+    correctAnswers: isMulti ? correctLabels : [],
   };
+}
+
+function mapApiAnswerEntryToUiKeys(question, apiValue) {
+  const optionIds = Array.isArray(apiValue) ? apiValue : apiValue ? [apiValue] : [];
+  return optionIds
+    .map((optionId) => question.options.find((item) => item.optionId === optionId)?.key)
+    .filter(Boolean);
 }
 
 export function mapAttemptAnswersToUi(questions, apiAnswers = {}) {
   const answers = {};
 
   for (const question of questions) {
-    const selectedOptionId = apiAnswers[question.id];
-    if (!selectedOptionId) continue;
+    const rawValue = apiAnswers[question.id];
+    if (!rawValue) continue;
 
-    const option = question.options.find((item) => item.optionId === selectedOptionId);
-    if (option) {
-      answers[String(question.id)] = option.key;
-    }
+    const keys = mapApiAnswerEntryToUiKeys(question, rawValue);
+    if (keys.length === 0) continue;
+
+    answers[String(question.id)] = isMultiSelectQuestion(question) ? keys : keys[0];
   }
 
   return answers;
@@ -66,12 +116,16 @@ export function buildSaveAnswersPayload(questions, uiAnswers) {
   const answers = {};
 
   for (const question of questions) {
-    const selectedKey = uiAnswers[String(question.id)];
-    if (!selectedKey) continue;
+    const rawValue = uiAnswers[String(question.id)];
+    if (!rawValue) continue;
 
-    const option = question.options.find((item) => item.key === selectedKey);
-    if (option?.optionId) {
-      answers[question.id] = option.optionId;
+    const selectedKeys = Array.isArray(rawValue) ? rawValue : [rawValue];
+    const optionIds = selectedKeys
+      .map((key) => question.options.find((item) => item.key === key)?.optionId)
+      .filter(Boolean);
+
+    if (optionIds.length > 0) {
+      answers[question.id] = optionIds;
     }
   }
 
@@ -83,27 +137,27 @@ export function mapExamResultToLocalResult(apiResult, questions) {
 
   const items = (apiResult.answers ?? []).map((answer) => {
     const question = questionMap.get(String(answer.questionId));
-    const selectedOption = question?.options.find(
-      (option) => option.optionId === answer.selectedOptionId,
-    );
-    const correctOption = question?.options.find(
-      (option) => option.optionId === answer.correctOptionId,
-    );
+    const selectedLabels = optionIdsToLabels(question?.options ?? [], answer.selectedOptionIds ?? []);
+    const correctLabels = optionIdsToLabels(question?.options ?? [], answer.correctOptionIds ?? []);
+    const isMulti = isMultiSelectQuestion(question);
 
     return {
       questionId: answer.questionId,
       text: question?.text ?? "",
       options: question?.options ?? [],
-      correctAnswer: correctOption?.key ?? question?.correctAnswer ?? null,
-      selectedAnswer: selectedOption?.key ?? null,
+      questionType: question?.questionType ?? "SingleChoice",
+      correctAnswer: isMulti ? correctLabels.join(", ") : correctLabels[0] ?? question?.correctAnswer ?? null,
+      correctAnswers: correctLabels,
+      selectedAnswer: isMulti ? selectedLabels.join(", ") : selectedLabels[0] ?? null,
+      selectedAnswers: selectedLabels,
       isCorrect: answer.isCorrect,
     };
   });
 
   const total = apiResult.totalQuestions ?? items.length;
   const correctCount = apiResult.correctCount ?? 0;
-  const wrongCount = items.filter((item) => item.selectedAnswer && !item.isCorrect).length;
-  const unansweredCount = items.filter((item) => !item.selectedAnswer).length;
+  const wrongCount = items.filter((item) => (item.selectedAnswers?.length || item.selectedAnswer) && !item.isCorrect).length;
+  const unansweredCount = items.filter((item) => !item.selectedAnswers?.length && !item.selectedAnswer).length;
 
   return {
     total,
@@ -130,7 +184,7 @@ export function mapAiExplainResponse(response) {
       label: `Ghi chú ${index + 1}`,
       text,
     })),
-    note: "Giải thích từ SEHub AI (Gemini).",
+    note: "Giải thích từ SEHub AI.",
     tokensUsed: response.tokensUsed,
     remainingTokens: response.remainingTokens,
   };

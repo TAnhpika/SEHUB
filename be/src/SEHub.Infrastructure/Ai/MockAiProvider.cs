@@ -10,7 +10,7 @@ public sealed class MockAiProvider : IAiProvider
         var reply =
             "[Mock AI Chat] SEHub trả lời demo. " +
             $"Câu hỏi của bạn: \"{lastUserMessage.Trim()}\". " +
-            "Khi bật Gemini provider, phản hồi sẽ được tạo bởi Gemini Flash.";
+            "Khi bật OpenRouter provider, phản hồi sẽ được tạo bởi Nemotron.";
 
         return Task.FromResult(new AiProviderResult
         {

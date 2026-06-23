@@ -121,25 +121,16 @@ public sealed class ChatbotApplicationService : IChatbotApplicationService
         var billingCost = _settings.TokenCostChat;
         await _aiTokenService.EnsureCanConsumeAsync(userId, billingCost, cancellationToken);
 
-        ChatbotConversation conversation;
+        ChatbotConversation? conversation = null;
+        IReadOnlyList<ChatbotMessage> history = [];
+
         if (request.ConversationId is Guid conversationId)
         {
             conversation = await _chatbotRepository.GetConversationAsync(conversationId, userId, cancellationToken)
                 ?? throw new NotFoundException("ChatbotConversation", conversationId);
-        }
-        else
-        {
-            conversation = new ChatbotConversation
-            {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                Title = messageText.Length > 80 ? $"{messageText[..80]}..." : messageText,
-                CreatedAt = DateTime.UtcNow,
-            };
-            await _chatbotRepository.AddConversationAsync(conversation, cancellationToken);
+            history = await _chatbotRepository.GetMessagesAsync(conversation.Id, cancellationToken);
         }
 
-        var history = await _chatbotRepository.GetMessagesAsync(conversation.Id, cancellationToken);
         var knowledge = await _chatbotRepository.SearchKnowledgeAsync(messageText, 5, cancellationToken);
         var knowledgeContext = BuildKnowledgeContext(knowledge);
 
@@ -163,6 +154,18 @@ public sealed class ChatbotApplicationService : IChatbotApplicationService
             },
             cancellationToken);
 
+        if (conversation is null)
+        {
+            conversation = new ChatbotConversation
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                Title = messageText.Length > 80 ? $"{messageText[..80]}..." : messageText,
+                CreatedAt = DateTime.UtcNow,
+            };
+            await _chatbotRepository.AddConversationAsync(conversation, cancellationToken);
+        }
+
         var now = DateTime.UtcNow;
         var userMessage = new ChatbotMessage
         {
@@ -182,6 +185,7 @@ public sealed class ChatbotApplicationService : IChatbotApplicationService
         };
 
         conversation.UpdatedAt = now;
+        await _chatbotRepository.UpdateConversationAsync(conversation, cancellationToken);
         await _chatbotRepository.AddMessageAsync(userMessage, cancellationToken);
         await _chatbotRepository.AddMessageAsync(assistantMessage, cancellationToken);
 
