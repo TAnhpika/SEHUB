@@ -13,6 +13,16 @@
   color: #191c1e;
 }
 
+.revisionNote {
+  margin: -1rem 0 1.5rem;
+  padding: 0.75rem 0.875rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #92400e;
+  background: #fef3c7;
+  border-radius: 8px;
+}
+
 .list {
   position: relative;
   display: flex;
@@ -120,4 +130,19 @@
 
 .stepTitle-active + .stepHint {
   color: #434655;
+}
+
+.historyLink {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 2rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--moderator-primary, #004ac6);
+  text-decoration: none;
+}
+
+.historyLink:hover {
+  text-decoration: underline;
 }

@@ -1,11 +1,42 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMessage } from "@fortawesome/free-solid-svg-icons";
+import { faMessage, faRobot } from "@fortawesome/free-solid-svg-icons";
+import { loadUnreadCount } from "@/features/chat/messagesData";
+import { useChatHub } from "@/hooks/useChatHub";
 
-export const UNREAD_MESSAGES_COUNT = 3;
+function InteractionNavSection({ pathname, styles, isPremium = false }) {
+  const isMessagesActive =
+    pathname === "/home/messages" || pathname.startsWith("/home/messages/");
+  const isAdvisorActive = pathname === "/home/advisor" || pathname.startsWith("/home/advisor/");
+  const [unreadCount, setUnreadCount] = useState(0);
 
-function InteractionNavSection({ pathname, styles }) {
-  const isActive = pathname === "/home/messages" || pathname.startsWith("/home/messages/");
+  useChatHub({
+    onUnreadCountUpdated: setUnreadCount,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchUnread() {
+      try {
+        const count = await loadUnreadCount();
+        if (!cancelled) {
+          setUnreadCount(count);
+        }
+      } catch {
+        if (!cancelled) {
+          setUnreadCount(0);
+        }
+      }
+    }
+
+    fetchUnread();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
 
   return (
     <>
@@ -17,19 +48,30 @@ function InteractionNavSection({ pathname, styles }) {
           <li>
             <Link
               to="/home/messages"
-              className={`${styles["subject-link"]} ${styles["badge-link"]} ${isActive ? styles.active : ""}`}
+              className={`${styles["subject-link"]} ${styles["badge-link"]} ${isMessagesActive ? styles.active : ""}`}
             >
               <span className={styles["link-content"]}>
                 <FontAwesomeIcon icon={faMessage} className={styles.icon} />
                 Nhắn tin
               </span>
-              {UNREAD_MESSAGES_COUNT > 0 && (
-                <span className={styles["message-badge"]} aria-label={`${UNREAD_MESSAGES_COUNT} tin nhắn chưa đọc`}>
-                  {UNREAD_MESSAGES_COUNT}
+              {unreadCount > 0 && (
+                <span className={styles["message-badge"]} aria-label={`${unreadCount} tin nhắn chưa đọc`}>
+                  {unreadCount}
                 </span>
               )}
             </Link>
           </li>
+          {isPremium ? (
+            <li>
+              <Link
+                to="/home/advisor"
+                className={`${styles["subject-link"]} ${isAdvisorActive ? styles.active : ""}`}
+              >
+                <FontAwesomeIcon icon={faRobot} className={styles.icon} />
+                Tư vấn AI
+              </Link>
+            </li>
+          ) : null}
         </ul>
       </div>
     </>

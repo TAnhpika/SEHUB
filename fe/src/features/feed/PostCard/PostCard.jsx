@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faComment,
@@ -11,15 +12,22 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
 import { copyPostLink, isOwnPost } from "@/features/feed/postUtils";
+import { toggleLike } from "@/features/feed/feedData";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
+import RichTextContent from "@/common/RichTextEditor/RichTextContent";
+import { resolvePostPreviewImage } from "@/features/feed/postContentPreview";
 import styles from "./PostCard.module.css";
 
-function PostCard({ post, interactive = false, onOpen, onEdit, onDelete }) {
+function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeChange }) {
   const { user, isPremium } = useAuth();
   const { showCopyToast } = useToast();
   const { needsLoginPrompt, requireAuth } = useRequireAuth();
   const canInteract = interactive || !needsLoginPrompt;
   const isOwner = isOwnPost(post, user);
+  const [liked, setLiked] = useState(Boolean(post.isLiked));
+  const [likes, setLikes] = useState(post.likes ?? 0);
+  const [liking, setLiking] = useState(false);
+  const previewImageUrl = resolvePostPreviewImage(post);
 
   function handleOpenPost() {
     if (!canInteract) {
@@ -53,6 +61,32 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete }) {
       showCopyToast();
     } catch {
       showCopyToast();
+    }
+  }
+
+  async function handleLike(event) {
+    event.stopPropagation();
+    if (!canInteract) {
+      requireAuth("Vui lòng đăng nhập để thích bài viết.");
+      return;
+    }
+    if (liking) return;
+
+    const nextLiked = !liked;
+    setLiked(nextLiked);
+    setLikes((count) => (liked ? Math.max(0, count - 1) : count + 1));
+    setLiking(true);
+
+    try {
+      const result = await toggleLike(post.id, liked);
+      setLiked(result.isLiked);
+      setLikes(result.likeCount);
+      onLikeChange?.(post.id, result);
+    } catch {
+      setLiked(liked);
+      setLikes(post.likes ?? 0);
+    } finally {
+      setLiking(false);
     }
   }
 
@@ -95,8 +129,20 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete }) {
         )}
       </header>
 
-      <h2 className={styles.title}>{post.title}</h2>
-      <p className={styles.excerpt}>{post.excerpt}</p>
+      <h2 className={styles.title}>
+        {post.isPinned ? <span className={styles.pinnedBadge}>Ghim</span> : null}
+        {post.title}
+      </h2>
+      {previewImageUrl ? (
+        <div className={styles.coverWrap}>
+          <img src={previewImageUrl} alt="" className={styles.cover} loading="lazy" />
+        </div>
+      ) : null}
+      <RichTextContent
+        value={post.contentPreview ?? post.body ?? post.excerpt}
+        className={styles.excerpt}
+        emptyFallback={null}
+      />
 
       <ul className={styles.tags} aria-label="Thẻ bài viết">
         {post.tags.map((tag) => (
@@ -110,12 +156,14 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete }) {
         <div className={styles.stats}>
           <button
             type="button"
-            className={styles.stat}
+            className={`${styles.stat} ${liked ? styles.statActive : ""}`}
             aria-label="Thích bài viết"
-            onClick={handleInteract}
+            aria-pressed={liked}
+            disabled={liking}
+            onClick={handleLike}
           >
             <FontAwesomeIcon icon={faHeart} />
-            {post.likes}
+            {likes}
           </button>
           <button
             type="button"

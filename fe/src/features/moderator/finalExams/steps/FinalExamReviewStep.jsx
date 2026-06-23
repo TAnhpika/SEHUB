@@ -1,5 +1,14 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { useAuth } from "@/context";
+import {
+  ApiError,
+  buildFinalExamContributionPayload,
+  recordExamDraft,
+  submitExamForApproval,
+} from "@/features/moderator/exams/moderatorExamContributionStore";
+import { resubmitFinalExamViaApi } from "@/features/moderator/exams/moderatorExamService";
 import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
 import styles from "./FinalExamReviewStep.module.css";
@@ -7,27 +16,100 @@ import styles from "./FinalExamReviewStep.module.css";
 function FinalExamReviewStep() {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { examInfo, questions, enteredCount, completeCount, totalQuestions } =
-    useFinalExamWizard();
+  const { user } = useAuth();
+  const moderator = user?.username ?? "mod_sehub";
+  const {
+    examInfo,
+    questions,
+    completeCount,
+    totalQuestions,
+    editingExamId,
+    isEditMode,
+    isRevisionEdit,
+    basePath,
+  } = useFinalExamWizard();
+  const [submitting, setSubmitting] = useState(false);
 
   function handleSaveDraft() {
+    recordExamDraft(
+      buildFinalExamContributionPayload(moderator, examInfo, completeCount, "Bước 3: Xem lại"),
+    );
     showToast("Đã lưu nháp. Đề chờ Admin duyệt trước khi xuất bản.");
   }
 
-  function handlePublish() {
-    showToast(
-      "Đề thi cuối kỳ đã được gửi. Trạng thái: chờ Admin duyệt trước khi public (theo nghiệp vụ).",
+  async function handlePublish() {
+    if (completeCount < 1) {
+      showToast("Cần ít nhất một câu hỏi hoàn chỉnh trước khi gửi duyệt.");
+      return;
+    }
+
+    const payload = buildFinalExamContributionPayload(
+      moderator,
+      examInfo,
+      completeCount,
+      "Bước 3: Xem lại",
     );
-    navigate("/moderator/final-exams/add");
+
+    async function send(confirmDuplicate = false) {
+      if (isEditMode && editingExamId) {
+        await resubmitFinalExamViaApi(editingExamId, examInfo, questions, {
+          isRevision: isRevisionEdit,
+        });
+        showToast(
+          isRevisionEdit
+            ? "Bản cập nhật đã gửi Admin duyệt. Đề đang public giữ nguyên cho đến khi được duyệt."
+            : "Đề đã được sửa và gửi lại Admin duyệt.",
+        );
+      } else {
+        await submitExamForApproval(payload, { examInfo, questions, confirmDuplicate });
+        showToast(
+          "Đề thi cuối kỳ đã được gửi. Trạng thái: chờ Admin duyệt trước khi public (theo nghiệp vụ).",
+        );
+      }
+      navigate("/moderator/exams/history?type=final");
+    }
+
+    setSubmitting(true);
+    try {
+      await send(false);
+    } catch (error) {
+      if (!isEditMode && error instanceof ApiError && error.status === 409) {
+        const confirmed = window.confirm(
+          "Đề trùng nội dung (SHA-256) với đề đã có. Gửi duyệt anyway?",
+        );
+        if (confirmed) {
+          try {
+            await send(true);
+            return;
+          } catch (retryError) {
+            showToast(retryError?.message ?? "Không gửi được đề.");
+            return;
+          }
+        }
+        return;
+      }
+      showToast(error?.message ?? "Không gửi được đề.");
+    } finally {
+      setSubmitting(false);
+    }
   }
+
+  const submitLabel = submitting
+    ? "Đang gửi..."
+    : isEditMode
+      ? isRevisionEdit
+        ? "Gửi bản cập nhật"
+        : "Gửi lại Admin duyệt"
+      : "Gửi duyệt";
 
   return (
     <div className={styles.step}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Xem lại & xuất bản</h1>
+        <h1 className={styles.title}>{isEditMode ? "Xem lại & gửi lại" : "Xem lại & xuất bản"}</h1>
         <p className={styles.subtitle}>
-          Kiểm tra thông tin trước khi gửi duyệt. Moderator không thể tự public — Admin sẽ duyệt
-          theo quy trình SEHUB.
+          {isRevisionEdit
+            ? "Kiểm tra bản cập nhật trước khi gửi Admin. Sinh viên vẫn làm đề public hiện tại cho đến khi Admin duyệt."
+            : "Kiểm tra thông tin trước khi gửi duyệt. Moderator không thể tự public — Admin sẽ duyệt theo quy trình SEHUB."}
         </p>
       </header>
 
@@ -55,7 +137,7 @@ function FinalExamReviewStep() {
           <div>
             <dt>Số câu</dt>
             <dd>
-              {completeCount}/{totalQuestions} câu hoàn thiện · {enteredCount} câu đã thêm vào đề
+              {completeCount}/{totalQuestions} câu hoàn thiện
             </dd>
           </div>
         </dl>
@@ -68,7 +150,13 @@ function FinalExamReviewStep() {
             <li key={question.id}>
               <strong>Câu {index + 1}:</strong>{" "}
               {question.content.trim() || "(Chưa nhập nội dung)"}
-              <span className={styles.correct}> — Đáp án: {question.correctAnswer}</span>
+              <span className={styles.correct}>
+                {" "}
+                — Đáp án:{" "}
+                {String(question.questionType ?? "").toLowerCase() === "multiselect"
+                  ? (question.correctAnswers ?? []).join(", ")
+                  : question.correctAnswer}
+              </span>
             </li>
           ))}
         </ol>
@@ -79,9 +167,10 @@ function FinalExamReviewStep() {
 
       <WizardBottomActions
         onSaveDraft={handleSaveDraft}
-        onBack={() => navigate("/moderator/final-exams/add/questions")}
+        onBack={() => navigate(`${basePath}/questions`)}
         onContinue={handlePublish}
-        continueLabel="Gửi duyệt"
+        continueLabel={submitLabel}
+        continueDisabled={submitting}
       />
     </div>
   );

@@ -1,21 +1,27 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck } from "@fortawesome/free-solid-svg-icons";
-import { WIZARD_STEPS } from "@/features/moderator/finalExams/finalExamData";
+import { faCheck, faClockRotateLeft } from "@fortawesome/free-solid-svg-icons";
+import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
 import styles from "./ExamWizardStepper.module.css";
 
 function ExamWizardStepper() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { wizardSteps, isRevisionEdit } = useFinalExamWizard();
 
   const currentStep =
-    WIZARD_STEPS.find((step) => step.path === location.pathname)?.id ?? 1;
+    wizardSteps.find((step) => step.path === location.pathname)?.id ?? 1;
 
   return (
     <aside className={styles.stepper}>
       <h2 className={styles.title}>Tiến trình</h2>
+      {isRevisionEdit ? (
+        <p className={styles.revisionNote}>
+          Đề đang public không thay đổi cho đến khi Admin duyệt bản cập nhật.
+        </p>
+      ) : null}
       <ol className={styles.list}>
-        {WIZARD_STEPS.map((step) => {
+        {wizardSteps.map((step) => {
           const isCompleted = step.id < currentStep;
           const isActive = step.id === currentStep;
           const isPending = step.id > currentStep;
@@ -61,6 +67,10 @@ function ExamWizardStepper() {
           );
         })}
       </ol>
+      <Link to="/moderator/exams/history?type=final" className={styles.historyLink}>
+        <FontAwesomeIcon icon={faClockRotateLeft} />
+        Lịch sử đóng góp đề
+      </Link>
     </aside>
   );
 }

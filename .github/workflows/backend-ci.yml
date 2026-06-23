@@ -1,0 +1,43 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'be/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'be/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        working-directory: be
+        run: dotnet restore
+
+      - name: Build
+        working-directory: be
+        run: dotnet build --no-restore -c Release
+
+      - name: Test
+        working-directory: be
+        run: dotnet test --no-build -c Release --verbosity normal
+
+      - name: EF migrations bundle (review)
+        working-directory: be
+        run: |
+          dotnet tool install --global dotnet-ef --version 8.0.11
+          dotnet ef migrations bundle --project src/SEHub.Infrastructure --startup-project src/SEHub.API --self-contained -r linux-x64 -o migrations-bundle || echo "Bundle step skipped if SQL Server tools unavailable"

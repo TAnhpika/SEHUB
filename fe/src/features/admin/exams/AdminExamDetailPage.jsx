@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
@@ -14,10 +14,12 @@ import {
   getExamSubmissions,
   getSemesterLabel,
   getTrackLabel,
+  loadAdminExamById,
   removeAdminExam,
 } from "@/features/admin/exams/adminExamData";
 import examStyles from "@/features/admin/exams/AdminExam.module.css";
 import styles from "@/features/admin/shared/adminPage.module.css";
+import { getPrimaryExamAttachment } from "@/utils/examAssetUrl";
 
 function AdminExamDetailPage() {
   const { id } = useParams();
@@ -25,12 +27,43 @@ function AdminExamDetailPage() {
   const { showToast } = useToast();
   const { user } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
-  const exam = getAdminExamById(id);
+  const [exam, setExam] = useState(() => getAdminExamById(id));
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    loadAdminExamById(id).then((item) => {
+      if (!cancelled) {
+        setExam(item);
+        setLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, refreshKey]);
+
   const questions = exam ? getExamQuestions(exam.id) : [];
   const submissions = useMemo(() => {
     void refreshKey;
     return exam?.typeKey === "practice" ? getExamSubmissions(exam.id) : [];
   }, [exam, refreshKey]);
+
+  if (loading) {
+    return (
+      <AdminPageLayout
+        title="Đang tải..."
+        breadcrumbs={[
+          { label: "Dashboard", to: "/admin" },
+          { label: "Quản lý đề thi", to: "/admin/exams" },
+          { label: "Chi tiết" },
+        ]}
+      >
+        <p className={styles.hint}>Đang tải đề thi...</p>
+      </AdminPageLayout>
+    );
+  }
 
   if (!exam) {
     return (
@@ -56,6 +89,8 @@ function AdminExamDetailPage() {
   function handleGraded() {
     setRefreshKey((k) => k + 1);
   }
+
+  const practiceAttachment = getPrimaryExamAttachment(exam);
 
   return (
     <AdminPageLayout
@@ -107,7 +142,21 @@ function AdminExamDetailPage() {
               </div>
               <div className={styles.detailItem}>
                 <dt>File đính kèm</dt>
-                <dd>{exam.attachments?.length ?? 0} file</dd>
+                <dd>
+                  {practiceAttachment ? (
+                    <a
+                      href={practiceAttachment.url}
+                      className={examStyles.linkExternal}
+                      download
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {practiceAttachment.name}
+                    </a>
+                  ) : (
+                    "—"
+                  )}
+                </dd>
               </div>
             </>
           )}

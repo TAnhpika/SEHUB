@@ -1,7 +1,18 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { useAuth } from "@/context";
+import { importExamQuestionsFromMarkdown } from "@/features/admin/exams/adminExamData";
+import {
+  buildFinalExamContributionPayload,
+  recordExamDraft,
+} from "@/features/moderator/exams/moderatorExamContributionStore";
+import {
+  isQuestionComplete,
+  MARKDOWN_IMPORT_PLACEHOLDER,
+  mapImportedExamQuestions,
+} from "@/features/moderator/finalExams/finalExamData";
 import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
 import QuestionEditorCard from "@/features/moderator/finalExams/components/QuestionEditorCard";
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
@@ -10,36 +21,46 @@ import styles from "./FinalExamQuestionsStep.module.css";
 function FinalExamQuestionsStep() {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { user } = useAuth();
+  const moderator = user?.username ?? "mod_sehub";
   const {
     examInfo,
     questions,
     activeQuestionIndex,
-    enteredCount,
     completeCount,
     totalQuestions,
     progressPercent,
+    ensureQuestionSlots,
     updateActiveQuestion,
     updateActiveAnswer,
-    addQuestion,
-    removeActiveQuestion,
     setActiveQuestionIndex,
+    setQuestions,
+    setExamInfo,
+    basePath,
   } = useFinalExamWizard();
+
+  const [markdownText, setMarkdownText] = useState("");
+  const [importingMarkdown, setImportingMarkdown] = useState(false);
+  const [inputMode, setInputMode] = useState("manual");
+
+  useEffect(() => {
+    ensureQuestionSlots(totalQuestions);
+  }, [ensureQuestionSlots, totalQuestions]);
 
   const activeQuestion = questions[activeQuestionIndex];
   const questionNumber = activeQuestionIndex + 1;
   const examSubtitle = `Cấu trúc đề thi ${examInfo.subjectName} (${examInfo.subjectCode}) - ${examInfo.semesterLabel}`;
 
   function handleSaveDraft() {
+    recordExamDraft(
+      buildFinalExamContributionPayload(
+        moderator,
+        examInfo,
+        completeCount,
+        "Bước 2: Soạn câu hỏi",
+      ),
+    );
     showToast("Đã lưu nháp danh sách câu hỏi.");
-  }
-
-  function handleAddQuestion() {
-    const added = addQuestion();
-    if (!added) {
-      showToast(`Đề thi đã đạt tối đa ${totalQuestions} câu.`);
-      return;
-    }
-    showToast(`Đã thêm câu ${questions.length + 1}.`);
   }
 
   function handleContinue() {
@@ -47,10 +68,42 @@ function FinalExamQuestionsStep() {
       showToast("Cần ít nhất một câu hỏi hoàn chỉnh trước khi tiếp tục.");
       return;
     }
-    navigate("/moderator/final-exams/add/review");
+    navigate(`${basePath}/review`);
   }
 
-  if (!activeQuestion) {
+  async function handleImportMarkdown() {
+    if (!markdownText.trim()) {
+      showToast("Dán nội dung Markdown câu hỏi trước khi import.");
+      return;
+    }
+
+    setImportingMarkdown(true);
+    try {
+      const result = await importExamQuestionsFromMarkdown(markdownText);
+      const imported = result?.questions ?? [];
+      if (!imported.length) {
+        showToast("Không parse được câu hỏi từ Markdown.");
+        return;
+      }
+
+      const warnings = result?.warnings ?? [];
+      const mapped = mapImportedExamQuestions(imported, warnings);
+      setQuestions(mapped);
+      setExamInfo((prev) => ({ ...prev, totalQuestions: mapped.length }));
+      setActiveQuestionIndex(0);
+      setInputMode("manual");
+
+      if (warnings.length === 0) {
+        showToast(`Đã import ${mapped.length} câu hỏi từ Markdown.`);
+      }
+    } catch (err) {
+      showToast(err.message ?? "Import Markdown thất bại.");
+    } finally {
+      setImportingMarkdown(false);
+    }
+  }
+
+  if (!activeQuestion && inputMode === "manual") {
     return null;
   }
 
@@ -63,7 +116,7 @@ function FinalExamQuestionsStep() {
             <p className={styles.subtitle}>{examSubtitle}</p>
           </div>
           <p className={styles.count}>
-            Đã nhập: {enteredCount}/{totalQuestions} câu
+            Hoàn thiện: {completeCount}/{totalQuestions} câu
           </p>
         </div>
         <div
@@ -77,46 +130,99 @@ function FinalExamQuestionsStep() {
         </div>
       </section>
 
-      <QuestionEditorCard
-        questionNumber={questionNumber}
-        question={activeQuestion}
-        onChange={updateActiveQuestion}
-        onAnswerChange={updateActiveAnswer}
-        onCorrectAnswerChange={(key) => updateActiveQuestion({ correctAnswer: key })}
-        onToggleExplanation={() =>
-          updateActiveQuestion({ showExplanation: !activeQuestion.showExplanation })
-        }
-        onRemove={removeActiveQuestion}
-      />
+      <div className={styles.modeSwitch} role="tablist" aria-label="Cách nhập câu hỏi">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={inputMode === "manual"}
+          className={`${styles.modeBtn} ${inputMode === "manual" ? styles.modeBtnActive : ""}`}
+          onClick={() => setInputMode("manual")}
+        >
+          Nhập thủ công
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={inputMode === "markdown"}
+          className={`${styles.modeBtn} ${inputMode === "markdown" ? styles.modeBtnActive : ""}`}
+          onClick={() => setInputMode("markdown")}
+        >
+          Import Markdown
+        </button>
+      </div>
 
-      <button type="button" className={styles.addQuestion} onClick={handleAddQuestion}>
-        <FontAwesomeIcon icon={faPlus} />
-        Thêm câu hỏi
-      </button>
+      {inputMode === "manual" ? (
+        <>
+          <QuestionEditorCard
+            questionNumber={questionNumber}
+            question={activeQuestion}
+            importWarnings={activeQuestion.importWarnings}
+            onChange={updateActiveQuestion}
+            onAnswerChange={updateActiveAnswer}
+            onCorrectAnswerChange={(key) => updateActiveQuestion({ correctAnswer: key })}
+            onCorrectAnswersChange={(correctAnswers) => updateActiveQuestion({ correctAnswers })}
+            onToggleExplanation={() =>
+              updateActiveQuestion({ showExplanation: !activeQuestion.showExplanation })
+            }
+          />
 
-      {questions.length > 1 && (
-        <div className={styles.picker}>
-          <span className={styles.pickerLabel}>Chuyển câu:</span>
-          <div className={styles.pickerList}>
-            {questions.map((item, index) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`${styles.pickerBtn} ${
-                  index === activeQuestionIndex ? styles["pickerBtn-active"] : ""
-                }`}
-                onClick={() => setActiveQuestionIndex(index)}
-              >
-                {index + 1}
-              </button>
-            ))}
+          {questions.length > 1 && (
+            <div className={styles.picker}>
+              <span className={styles.pickerLabel}>Chuyển câu ({questions.length} câu):</span>
+              <div className={styles.pickerList}>
+                {questions.map((item, index) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`${styles.pickerBtn} ${
+                      index === activeQuestionIndex ? styles["pickerBtn-active"] : ""
+                    } ${isQuestionComplete(item) ? styles["pickerBtn-complete"] : ""} ${
+                      item.importWarnings?.length ? styles["pickerBtn-warning"] : ""
+                    }`}
+                    onClick={() => setActiveQuestionIndex(index)}
+                    title={
+                      item.importWarnings?.length
+                        ? item.importWarnings.join(" · ")
+                        : undefined
+                    }
+                  >
+                    {index + 1}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <section className={styles.markdownPanel}>
+          <h2 className={styles.markdownTitle}>Import câu hỏi bằng Markdown</h2>
+          <p className={styles.markdownDesc}>
+            Dán nội dung theo mẫu <code>## Câu 1</code>, <code>A.</code>–<code>H.</code>,{" "}
+            <code>**Đáp án: X**</code> hoặc <code>## Câu 2 [MULTI:3]</code> với{" "}
+            <code>**Đáp án: A, C, E**</code>.
+          </p>
+          <textarea
+            className={styles.markdownInput}
+            rows={14}
+            value={markdownText}
+            onChange={(event) => setMarkdownText(event.target.value)}
+            placeholder={MARKDOWN_IMPORT_PLACEHOLDER}
+          />
+          <p className={styles.markdownHint}>
+            Mỗi câu bắt đầu bằng <strong>## Câu N</strong> hoặc phân tách bằng <strong>---</strong>.
+            Câu chọn nhiều: thêm <strong>[MULTI:3]</strong> và <strong>**Đáp án: A, C, E**</strong>.
+          </p>
+          <div className={styles.markdownActions}>
+            <Button type="button" onClick={handleImportMarkdown} disabled={importingMarkdown}>
+              {importingMarkdown ? "Đang import..." : "Import Markdown vào đề"}
+            </Button>
           </div>
-        </div>
+        </section>
       )}
 
       <WizardBottomActions
         onSaveDraft={handleSaveDraft}
-        onBack={() => navigate("/moderator/final-exams/add")}
+        onBack={() => navigate(basePath)}
         onContinue={handleContinue}
       />
     </div>

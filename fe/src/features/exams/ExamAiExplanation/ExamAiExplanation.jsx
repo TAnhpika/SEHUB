@@ -4,7 +4,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRobot } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import { getAiExplanation } from "@/features/exams/examAiExplainData";
+import { loadAiExplanation } from "@/features/exams/examDetailData";
 import ExamAiChat from "@/features/exams/ExamAiChat/ExamAiChat";
+import { isValidGuid } from "@/features/feed/postUtils";
 import {
   canUseExamAiChat,
   getExamAiAccess,
@@ -12,30 +14,93 @@ import {
 } from "@/utils/examAccess";
 import styles from "./ExamAiExplanation.module.css";
 
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+
 function ExamAiExplanation({ examId, question }) {
-  const { user, isAuthenticated, isPremium, aiTokens, spendAiExplainTokens } = useAuth();
+  const { user, isAuthenticated, isPremium, aiTokens, applyAiTokenRemaining } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  const [apiExplanation, setApiExplanation] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const aiAccess = getExamAiAccess(user);
   const showPremiumChat = canUseExamAiChat(user);
+  const canCallApi = !USE_MOCK && isValidGuid(String(question?.id ?? ""));
 
   useEffect(() => {
     setRevealed(shouldAutoRevealAiExplanation(user));
     setRefreshKey(0);
+    setApiExplanation(null);
+    setLoadError(null);
   }, [question?.id, user?.username, user?.plan, user?.role]);
 
-  function handleReveal() {
-    const result = spendAiExplainTokens();
-    if (result.ok) {
-      setRevealed(true);
+  useEffect(() => {
+    if (!revealed || !question?.id) {
+      setApiExplanation(null);
+      setLoadError(null);
+      setIsLoading(false);
+      return undefined;
     }
+
+    if (USE_MOCK) {
+      setApiExplanation(null);
+      setLoadError(null);
+      setIsLoading(false);
+      return undefined;
+    }
+
+    if (!canCallApi) {
+      setApiExplanation(null);
+      setLoadError("Câu hỏi demo không hỗ trợ AI. Hãy mở đề thi từ kho hệ thống (Admin).");
+      setIsLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setIsLoading(true);
+    setLoadError(null);
+
+    async function fetchExplanation() {
+      try {
+        const result = await loadAiExplanation(question.id, question.text);
+        if (cancelled) return;
+
+        if (!result?.intro) {
+          setApiExplanation(null);
+          setLoadError("AI không trả về nội dung giải thích.");
+          return;
+        }
+
+        setApiExplanation(result);
+        if (result.remainingTokens != null) {
+          applyAiTokenRemaining(result.remainingTokens);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setApiExplanation(null);
+          setLoadError(error?.message ?? "Không tải được giải thích AI.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    fetchExplanation();
+    return () => {
+      cancelled = true;
+    };
+  }, [revealed, question?.id, question?.text, refreshKey, canCallApi, applyAiTokenRemaining]);
+
+  function handleReveal() {
+    if (aiTokens.remaining < aiTokens.cost) return;
+    setRevealed(true);
   }
 
   function handleRefresh() {
-    const result = spendAiExplainTokens();
-    if (result.ok) {
-      setRefreshKey((key) => key + 1);
-    }
+    if (aiTokens.remaining < aiTokens.cost) return;
+    setRefreshKey((key) => key + 1);
   }
 
   function renderPremiumChat() {
@@ -107,7 +172,36 @@ function ExamAiExplanation({ examId, question }) {
     );
   }
 
-  const explanation = getAiExplanation(question);
+  if (!USE_MOCK && isLoading) {
+    return (
+      <div className={styles.stack}>
+        <section className={styles.panel} aria-label="AI giải thích chi tiết">
+          <p className={styles.intro}>Đang gọi SEHub AI để giải thích câu hỏi...</p>
+        </section>
+        {renderPremiumChat()}
+      </div>
+    );
+  }
+
+  if (!USE_MOCK && (loadError || !apiExplanation)) {
+    return (
+      <div className={styles.stack}>
+        <section className={styles.locked} aria-label="AI giải thích — lỗi">
+          <div className={styles["locked-inner"]}>
+            <FontAwesomeIcon icon={faRobot} className={styles["locked-icon"]} />
+            <p className={styles["locked-title"]}>Không tải được giải thích AI</p>
+            <p className={styles["locked-desc"]}>{loadError ?? "Vui lòng thử lại."}</p>
+            <button type="button" className={styles.cta} onClick={handleRefresh}>
+              Thử lại
+            </button>
+          </div>
+        </section>
+        {renderPremiumChat()}
+      </div>
+    );
+  }
+
+  const explanation = USE_MOCK ? getAiExplanation(question) : apiExplanation;
 
   return (
     <section className={styles.panel} aria-label="AI giải thích chi tiết" key={refreshKey}>
@@ -132,15 +226,17 @@ function ExamAiExplanation({ examId, question }) {
 
       <p className={styles.intro}>{explanation.intro}</p>
 
-      <ul className={styles.bullets}>
-        {explanation.bullets.map((item) => (
-          <li key={item.label}>
-            <strong>{item.label}</strong>: {item.text}
-          </li>
-        ))}
-      </ul>
+      {explanation.bullets?.length ? (
+        <ul className={styles.bullets}>
+          {explanation.bullets.map((item) => (
+            <li key={item.label}>
+              <strong>{item.label}</strong>: {item.text}
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
-      <p className={styles.note}>{explanation.note}</p>
+      {explanation.note ? <p className={styles.note}>{explanation.note}</p> : null}
 
       {renderPremiumChat()}
     </section>
@@ -148,3 +244,4 @@ function ExamAiExplanation({ examId, question }) {
 }
 
 export default ExamAiExplanation;
+

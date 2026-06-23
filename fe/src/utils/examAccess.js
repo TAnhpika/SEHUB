@@ -29,6 +29,11 @@ export function canCommentOnExamQuestion(user) {
   return canViewExamAnswers(user);
 }
 
+/** Xáo câu / hiện đáp án đúng khi ôn tập — Premium + staff (§3.3) */
+export function canUseReviewStudyTools(user) {
+  return canViewExamAnswers(user);
+}
+
 /** Guest không dùng AI; Free 10 token/ngày; Premium 1000 (§6) */
 export function getExamAiAccess(user) {
   if (!user) {

@@ -1,27 +1,37 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell } from "@fortawesome/free-solid-svg-icons";
 import {
   getAdminHeaderNotifications,
   getAdminNotificationCount,
+  loadAdminHeaderNotifications,
+  loadAdminNotificationCount,
 } from "@/features/admin/adminHeaderNotifications";
 import styles from "./AdminHeader.module.css";
 
 function AdminNotificationDropdown() {
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState(() => getAdminHeaderNotifications());
+  const [unreadCount, setUnreadCount] = useState(() => getAdminNotificationCount());
   const rootRef = useRef(null);
   const panelId = useId();
 
-  const notifications = useMemo(
-    () => getAdminHeaderNotifications(),
-    [location.pathname, location.key],
-  );
-  const unreadCount = useMemo(
-    () => getAdminNotificationCount(),
-    [location.pathname, location.key],
-  );
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([loadAdminHeaderNotifications(), loadAdminNotificationCount()]).then(
+      ([items, count]) => {
+        if (!cancelled) {
+          setNotifications(items);
+          setUnreadCount(count);
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [location.pathname, location.key]);
 
   useEffect(() => {
     if (!open) return undefined;

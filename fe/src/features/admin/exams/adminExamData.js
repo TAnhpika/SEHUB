@@ -1,7 +1,22 @@
 /** Mock data & helpers — quản lý đề thi Admin */
 
+import * as adminApi from "@/api/adminApi";
+import {
+  mapAdminExamDetail,
+  mapAdminExamFormToCreateRequest,
+  mapAdminExamFormToUpdateRequest,
+  mapAdminExamListItem,
+  mapMockOcrQuestionsToCreateItems,
+  mapPendingExamFromCreate,
+  mapPendingExamListItem,
+  mapPracticeExamFormToCreateRequest,
+} from "@/api/adminMapper";
 import { addAdminDocumentFromApprovedExam } from "@/features/admin/documents/adminDocumentData";
 import { getSubmissionsByCourseCode } from "@/features/exams/practiceExamSubmissions";
+import { isValidGuid } from "@/features/feed/postUtils";
+import { enrichRevisionExamEntries } from "@/utils/examDisplay";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 export const ADMIN_EXAMS_PAGE_SIZE = 5;
 
@@ -234,6 +249,9 @@ let pendingStore = [
   },
 ];
 
+/** Cache đề chờ duyệt từ API (API mode) */
+let apiPendingCache = [];
+
 export const MOCK_OCR_QUESTIONS = [
   {
     id: "q1",
@@ -264,7 +282,169 @@ export function getAdminExamById(id) {
 }
 
 export function getAdminPendingExams() {
-  return [...pendingStore];
+  if (USE_MOCK) {
+    return [...pendingStore];
+  }
+  return [...apiPendingCache];
+}
+
+export async function loadAdminPendingExams() {
+  if (USE_MOCK) {
+    return getAdminPendingExams();
+  }
+
+  const page = await adminApi.listExams({ status: "PendingApproval", pageSize: 100 });
+  apiPendingCache = enrichRevisionExamEntries(
+    (page.items ?? []).map((dto) => mapPendingExamListItem(dto)),
+  );
+  return apiPendingCache;
+}
+
+async function createExamViaApi(body, confirmDuplicate = false) {
+  return adminApi.createExam(body, confirmDuplicate);
+}
+
+export async function importExamQuestionsFromMarkdown(markdown) {
+  if (USE_MOCK) {
+    return {
+      questions: MOCK_OCR_QUESTIONS.map((q, index) => ({
+        orderIndex: index + 1,
+        content: q.text,
+        options: q.options.map((text, optionIndex) => ({
+          id: crypto.randomUUID(),
+          label: String.fromCharCode(65 + optionIndex),
+          text,
+        })),
+        correctOptionId: null,
+      })),
+      questionCount: MOCK_OCR_QUESTIONS.length,
+      warnings: [],
+    };
+  }
+
+  return adminApi.importExamMarkdown({ markdown });
+}
+
+function pickExamUploadFile(form, pdfFile) {
+  if (pdfFile instanceof File) {
+    return pdfFile;
+  }
+
+  if (form.typeKey === "practice") {
+    const pdfAttachment = (form.attachments ?? []).find(
+      (item) => item.file instanceof File && item.file.type === "application/pdf",
+    );
+    return pdfAttachment?.file ?? null;
+  }
+
+  return null;
+}
+
+async function uploadExamPdfIfPresent(examId, form, pdfFile) {
+  const file = pickExamUploadFile(form, pdfFile);
+  if (!file) {
+    return null;
+  }
+
+  try {
+    await adminApi.uploadExamAttachment(examId, file);
+    return null;
+  } catch (error) {
+    return error instanceof Error
+      ? error.message
+      : "Không upload được file PDF lên Drive. Đề vẫn đã được lưu.";
+  }
+}
+
+function upsertExamInStore(mappedListItem) {
+  examsStore = [mappedListItem, ...examsStore.filter((exam) => exam.id !== mappedListItem.id)];
+}
+
+/**
+ * Tạo đề qua API, publish nếu cần, upload PDF lên Drive khi có file.
+ */
+export async function saveAdminExamViaApi(form, options = {}) {
+  const {
+    status = "draft",
+    ocrQuestions = [],
+    pdfFile = null,
+    confirmDuplicate = false,
+  } = options;
+
+  if (USE_MOCK) {
+    const created = createAdminExam({
+      ...form,
+      status,
+      questionCount: form.typeKey === "final" ? ocrQuestions.length : 0,
+      sha256: mockComputeSha256Unique(),
+      ocrConfirmed: form.typeKey === "final",
+    });
+    return { exam: created, uploadWarning: null, listItem: created };
+  }
+
+  const questions =
+    form.typeKey === "final" ? mapMockOcrQuestionsToCreateItems(ocrQuestions) : [];
+  const body = mapAdminExamFormToCreateRequest(form, { questions });
+  const dto = await adminApi.createExam(body, confirmDuplicate);
+
+  if (status === "published") {
+    await adminApi.approveExam(dto.id);
+  }
+
+  const uploadWarning = await uploadExamPdfIfPresent(dto.id, form, pdfFile);
+
+  const refreshed = await adminApi.getExam(dto.id);
+  const listItem = mapAdminExamListItem(refreshed);
+  upsertExamInStore(listItem);
+  return {
+    exam: mapAdminExamDetail(refreshed),
+    uploadWarning,
+    listItem,
+  };
+}
+
+/**
+ * Cập nhật đề qua API, publish nếu cần, upload PDF khi có file mới.
+ */
+export async function updateAdminExamViaApi(examId, form, options = {}) {
+  const {
+    status = "draft",
+    ocrQuestions = [],
+    pdfFile = null,
+    confirmDuplicate = false,
+  } = options;
+
+  if (USE_MOCK) {
+    const updated = updateAdminExam(examId, {
+      ...form,
+      status,
+      questionCount: form.typeKey === "final" ? ocrQuestions.length : 0,
+    });
+    return { exam: updated, uploadWarning: null, listItem: updated };
+  }
+
+  const questions =
+    form.typeKey === "final" && ocrQuestions.length > 0
+      ? mapMockOcrQuestionsToCreateItems(ocrQuestions)
+      : null;
+  const body = mapAdminExamFormToUpdateRequest(form, { questions });
+
+  await adminApi.updateExam(examId, body);
+
+  if (status === "published") {
+    await adminApi.approveExam(examId);
+  }
+
+  const uploadWarning = await uploadExamPdfIfPresent(examId, form, pdfFile);
+
+  const refreshed = await adminApi.getExam(examId);
+  const listItem = mapAdminExamListItem(refreshed);
+  upsertExamInStore(listItem);
+  return {
+    exam: mapAdminExamDetail(refreshed),
+    uploadWarning,
+    listItem,
+  };
 }
 
 export function removeAdminExam(id) {
@@ -346,43 +526,199 @@ export function mockComputeSha256Unique() {
 let approvedStore = [];
 let rejectedStore = [];
 
-export function approvePendingExam(pendingId) {
-  const item = pendingStore.find((p) => p.id === pendingId);
+/**
+ * Moderator gửi đề thực hành vào hàng chờ Admin duyệt (§2.4).
+ * @param {{
+ *   subject: string;
+ *   semesterId: string;
+ *   title: string;
+ *   description: string;
+ *   submittedBy: string;
+ *   attachments?: Array<{ name?: string }>;
+ *   allowDiscussion?: boolean;
+ *   pinExam?: boolean;
+ * }} payload
+ */
+export async function submitModeratorPracticeExam(payload, createRequest, { confirmDuplicate = false } = {}) {
+  const readyFiles = (payload.attachments ?? []).filter((file) => file.status === "done" && file.file);
+  const primaryFile = readyFiles[0];
+  const fileName = primaryFile?.name ?? payload.attachments?.find((f) => f.name)?.name ?? `${payload.subject}-practice-exam.pdf`;
+
+  if (USE_MOCK) {
+    const entry = {
+      id: `p${Date.now()}`,
+      code: payload.subject?.trim() ?? "",
+      title: payload.title?.trim() ?? "",
+      submittedBy: payload.submittedBy,
+      submittedAt: todayIso(),
+      type: TYPE_PRACTICE,
+      typeKey: "practice",
+      track: "SE",
+      semester: payload.semesterId ?? "5",
+      urgent: false,
+      fileName,
+      assetUrl: primaryFile
+        ? `/uploads/exams/mock-${encodeURIComponent(primaryFile.name ?? fileName)}`
+        : null,
+      description: payload.description?.trim() ?? "",
+      githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
+      allowDiscussion: payload.allowDiscussion ?? false,
+      pinExam: payload.pinExam ?? false,
+    };
+
+    pendingStore = [entry, ...pendingStore];
+    return entry;
+  }
+
+  const body =
+    createRequest ??
+    mapPracticeExamFormToCreateRequest({
+      subjectCode: payload.subject,
+      semester: payload.semesterId,
+      title: payload.title,
+      description: payload.description,
+      githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
+    });
+
+  const dto = await createExamViaApi(body, confirmDuplicate);
+
+  for (const attachment of readyFiles) {
+    await adminApi.uploadExamAttachment(dto.id, attachment.file);
+  }
+
+  const refreshed = readyFiles.length > 0 ? await adminApi.getExam(dto.id) : dto;
+  const entry = mapPendingExamFromCreate(refreshed, {
+    submittedBy: payload.submittedBy,
+    fileName,
+    githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
+    allowDiscussion: payload.allowDiscussion,
+    pinExam: payload.pinExam,
+  });
+  apiPendingCache = [entry, ...apiPendingCache.filter((item) => item.id !== entry.id)];
+  return entry;
+}
+
+/**
+ * Moderator gửi đề cuối kỳ vào hàng chờ Admin duyệt (§2.4).
+ * @param {{
+ *   subjectCode: string;
+ *   subjectName?: string;
+ *   semesterId: string;
+ *   title: string;
+ *   description?: string;
+ *   submittedBy: string;
+ *   examCode?: string;
+ *   durationMinutes?: number;
+ *   questionCount?: number;
+ *   fileName?: string;
+ * }} payload
+ */
+export async function submitModeratorFinalExam(payload, createRequest, { confirmDuplicate = false } = {}) {
+  const fileName = payload.fileName ?? `${payload.subjectCode}-final.pdf`;
+
+  if (USE_MOCK) {
+    const entry = {
+      id: `p${Date.now()}`,
+      code: payload.subjectCode?.trim() ?? "",
+      title: payload.title?.trim() ?? "",
+      submittedBy: payload.submittedBy,
+      submittedAt: todayIso(),
+      type: TYPE_FINAL,
+      typeKey: "final",
+      track: "SE",
+      semester: payload.semesterId ?? "5",
+      urgent: false,
+      fileName,
+      description:
+        payload.description?.trim() ??
+        `${payload.subjectName ?? payload.subjectCode} · ${payload.questionCount ?? 0} câu trắc nghiệm`,
+      githubGuide: "",
+      examCode: payload.examCode ?? "",
+      durationMinutes: payload.durationMinutes ?? FINAL_EXAM_DEFAULTS.durationMinutes,
+      questionCount: payload.questionCount ?? 0,
+    };
+
+    pendingStore = [entry, ...pendingStore];
+    return entry;
+  }
+
+  if (!createRequest) {
+    throw new Error("Thiếu dữ liệu câu hỏi để gửi đề cuối kỳ.");
+  }
+
+  const dto = await createExamViaApi(createRequest, confirmDuplicate);
+  const entry = mapPendingExamFromCreate(dto, {
+    submittedBy: payload.submittedBy,
+    fileName,
+  });
+  apiPendingCache = [entry, ...apiPendingCache.filter((item) => item.id !== entry.id)];
+  return entry;
+}
+
+export async function approvePendingExam(pendingId) {
+  if (USE_MOCK) {
+    const item = pendingStore.find((p) => p.id === pendingId);
+    if (!item) return null;
+    pendingStore = pendingStore.filter((p) => p.id !== pendingId);
+    const isFinal = item.typeKey === "final";
+    const questionCount = isFinal ? MOCK_OCR_QUESTIONS.length : 0;
+    const newExam = {
+      id: `ex${Date.now()}`,
+      code: item.code,
+      title: item.title,
+      type: item.type,
+      typeKey: item.typeKey,
+      track: item.track,
+      semester: item.semester,
+      status: "published",
+      questions: questionCount,
+      questionCount,
+      updatedAt: new Date().toISOString().slice(0, 10),
+      createdAt: item.submittedAt,
+      sha256: mockComputeSha256Unique(),
+      description: isFinal
+        ? `Duyệt từ Mod — ${item.fileName}`
+        : item.description || `Duyệt từ Mod — ${item.fileName}`,
+      githubGuide: isFinal ? "" : item.githubGuide || PRACTICE_EXAM_DEFAULTS.githubGuide,
+      durationMinutes: isFinal ? FINAL_EXAM_DEFAULTS.durationMinutes : undefined,
+      attachments: item.assetUrl
+        ? [{ id: "mod-file", name: item.fileName, size: 0, url: item.assetUrl }]
+        : [{ id: "mod-file", name: item.fileName, size: 0 }],
+      assetUrl: item.assetUrl ?? null,
+      ocrConfirmed: isFinal,
+    };
+    examsStore = [newExam, ...examsStore];
+    addAdminDocumentFromApprovedExam(newExam);
+    const historyEntry = {
+      ...item,
+      approvedAt: new Date().toISOString().slice(0, 10),
+      publishedExamId: newExam.id,
+      questionCount,
+    };
+    approvedStore = [historyEntry, ...approvedStore];
+    return newExam;
+  }
+
+  const item =
+    apiPendingCache.find((p) => p.id === pendingId) ??
+    (await loadAdminPendingExams()).find((p) => p.id === pendingId);
   if (!item) return null;
-  pendingStore = pendingStore.filter((p) => p.id !== pendingId);
-  const isFinal = item.typeKey === "final";
-  const questionCount = isFinal ? MOCK_OCR_QUESTIONS.length : 0;
-  const newExam = {
-    id: `ex${Date.now()}`,
-    code: item.code,
-    title: item.title,
-    type: item.type,
-    typeKey: item.typeKey,
-    track: item.track,
-    semester: item.semester,
-    status: "published",
-    questions: questionCount,
-    questionCount,
-    updatedAt: new Date().toISOString().slice(0, 10),
-    createdAt: item.submittedAt,
-    sha256: mockComputeSha256Unique(),
-    description: isFinal
-      ? `Duyệt từ Mod — ${item.fileName}`
-      : item.description || `Duyệt từ Mod — ${item.fileName}`,
-    githubGuide: isFinal ? "" : item.githubGuide || PRACTICE_EXAM_DEFAULTS.githubGuide,
-    durationMinutes: isFinal ? FINAL_EXAM_DEFAULTS.durationMinutes : undefined,
-    attachments: [{ id: "mod-file", name: item.fileName, size: 0 }],
-    ocrConfirmed: isFinal,
-  };
-  examsStore = [newExam, ...examsStore];
-  addAdminDocumentFromApprovedExam(newExam);
-  const historyEntry = {
-    ...item,
-    approvedAt: new Date().toISOString().slice(0, 10),
-    publishedExamId: newExam.id,
-    questionCount,
-  };
-  approvedStore = [historyEntry, ...approvedStore];
+
+  await adminApi.approveExam(pendingId);
+  apiPendingCache = apiPendingCache.filter((p) => p.id !== pendingId);
+  const newExam = await loadAdminExamById(pendingId);
+  if (newExam) {
+    examsStore = [newExam, ...examsStore.filter((exam) => exam.id !== newExam.id)];
+  }
+  approvedStore = [
+    {
+      ...item,
+      approvedAt: todayIso(),
+      publishedExamId: pendingId,
+      questionCount: item.questionCount ?? newExam?.questionCount ?? 0,
+    },
+    ...approvedStore,
+  ];
   return newExam;
 }
 
@@ -394,13 +730,37 @@ export function getAdminRejectedExams() {
   return [...rejectedStore];
 }
 
-export function rejectPendingExam(pendingId, reasonPayload) {
-  const item = pendingStore.find((p) => p.id === pendingId);
+export async function rejectPendingExam(pendingId, reasonPayload) {
+  if (USE_MOCK) {
+    const item = pendingStore.find((p) => p.id === pendingId);
+    if (!item) return null;
+    pendingStore = pendingStore.filter((p) => p.id !== pendingId);
+    const entry = {
+      ...item,
+      rejectedAt: new Date().toISOString().slice(0, 10),
+      rejectReasonId: reasonPayload.reasonId,
+      rejectReasonLabel: reasonPayload.reasonLabel,
+      rejectReasonDetail: reasonPayload.reasonDetail ?? "",
+      rejectReasonFull: reasonPayload.reasonFull,
+    };
+    rejectedStore = [entry, ...rejectedStore];
+    return entry;
+  }
+
+  const item =
+    apiPendingCache.find((p) => p.id === pendingId) ??
+    (await loadAdminPendingExams()).find((p) => p.id === pendingId);
   if (!item) return null;
-  pendingStore = pendingStore.filter((p) => p.id !== pendingId);
+
+  await adminApi.rejectExam(pendingId, {
+    reasonCode: reasonPayload.reasonId,
+    reasonLabel: reasonPayload.reasonLabel,
+    detail: reasonPayload.reasonDetail ?? "",
+  });
+  apiPendingCache = apiPendingCache.filter((p) => p.id !== pendingId);
   const entry = {
     ...item,
-    rejectedAt: new Date().toISOString().slice(0, 10),
+    rejectedAt: todayIso(),
     rejectReasonId: reasonPayload.reasonId,
     rejectReasonLabel: reasonPayload.reasonLabel,
     rejectReasonDetail: reasonPayload.reasonDetail ?? "",
@@ -438,4 +798,33 @@ export function getSemesterLabel(id) {
 
 export function getTrackLabel(id) {
   return EXAM_TRACKS.find((t) => t.id === id)?.label ?? id;
+}
+
+export async function loadAdminExams() {
+  if (USE_MOCK) {
+    return getAdminExams();
+  }
+
+  try {
+    const page = await adminApi.listExams({ pageSize: 100 });
+    const apiExams = (page.items ?? []).map(mapAdminExamListItem);
+    examsStore = apiExams.map((exam) => ({ ...exam }));
+    return apiExams;
+  } catch {
+    return getAdminExams();
+  }
+}
+
+export async function loadAdminExamById(id) {
+  const mockExam = getAdminExamById(id);
+  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+    return mockExam;
+  }
+
+  try {
+    const dto = await adminApi.getExam(id);
+    return mapAdminExamDetail(dto);
+  } catch {
+    return mockExam;
+  }
 }

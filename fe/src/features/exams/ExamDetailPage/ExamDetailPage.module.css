@@ -197,6 +197,12 @@
   color: #191c1e;
 }
 
+.multi-hint {
+  margin: -0.75rem 0 1rem;
+  font-size: 0.875rem;
+  color: #004ac6;
+}
+
 .options {
   display: flex;
   flex-direction: column;
@@ -398,6 +404,66 @@
   color: #dc2626;
   background: rgba(220, 38, 38, 0.06);
   border-color: rgba(220, 38, 38, 0.35);
+}
+
+.tool-btn-clickable {
+  color: #434655;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.tool-btn-clickable:hover:not(:disabled) {
+  color: #004ac6;
+  background: rgba(0, 74, 198, 0.06);
+  border-color: rgba(0, 74, 198, 0.25);
+}
+
+.tool-btn-clickable:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.tool-btn-answers-revealed {
+  color: #004ac6;
+  background: rgba(0, 74, 198, 0.08);
+  border-color: rgba(0, 74, 198, 0.25);
+}
+
+.review-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.review-empty-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #191c1e;
+}
+
+.review-empty-desc {
+  margin: 0.5rem 0 1rem;
+  font-size: 0.875rem;
+  color: #737686;
+}
+
+.review-empty-btn {
+  padding: 0.5rem 1rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #004ac6;
+  cursor: pointer;
+  background: rgba(0, 74, 198, 0.08);
+  border: 1px solid rgba(0, 74, 198, 0.2);
+  border-radius: 8px;
+}
+
+.review-empty-btn:hover {
+  background: rgba(0, 74, 198, 0.12);
 }
 
 .page-btn:not(:disabled) {

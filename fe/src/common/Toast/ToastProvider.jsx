@@ -12,7 +12,7 @@ import { faCircleInfo, faXmark } from "@fortawesome/free-solid-svg-icons";
 import styles from "./Toast.module.css";
 
 const ToastContext = createContext(null);
-const COPY_TOAST_DURATION = 3200;
+const DEFAULT_TOAST_DURATION = 3200;
 
 function ToastViewport({ toast, onClose }) {
   if (!toast) return null;
@@ -81,14 +81,14 @@ export function ToastProvider({ children }) {
   }, [clearTimers]);
 
   const showToast = useCallback(
-    (message) => {
+    (message, duration = DEFAULT_TOAST_DURATION) => {
       clearTimers();
       setToast({ message });
 
       timerRef.current = setTimeout(() => {
         setToast(null);
         timerRef.current = null;
-      }, COPY_TOAST_DURATION);
+      }, duration);
     },
     [clearTimers],
   );
@@ -97,6 +97,7 @@ export function ToastProvider({ children }) {
     ({
       title = "Đã sao chép",
       message = "Link bài viết đã được sao chép vào clipboard",
+      duration = DEFAULT_TOAST_DURATION,
     } = {}) => {
       clearTimers();
       setToast({ variant: "copy", title, message });
@@ -104,7 +105,7 @@ export function ToastProvider({ children }) {
       timerRef.current = setTimeout(() => {
         setToast(null);
         timerRef.current = null;
-      }, COPY_TOAST_DURATION);
+      }, duration);
     },
     [clearTimers],
   );

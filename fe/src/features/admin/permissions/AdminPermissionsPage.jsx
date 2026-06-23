@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faShieldHalved,
@@ -10,13 +10,10 @@ import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import {
-  getModeratorCandidates,
-  getModerators,
-  getPermissionsAudit,
-  getPermissionsStats,
-  grantModerator,
+  grantModeratorViaApi,
+  loadPermissionsData,
   MOD_PERMISSIONS,
-  revokeModerator,
+  revokeModeratorViaApi,
 } from "@/features/admin/permissions/adminPermissionsData";
 import PermissionConfirmModal from "@/features/admin/permissions/PermissionConfirmModal";
 import permStyles from "@/features/admin/permissions/AdminPermissions.module.css";
@@ -32,7 +29,13 @@ function formatAuditTime(iso) {
 function AdminPermissionsPage() {
   const { showToast } = useToast();
   const { user } = useAuth();
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [permissionsState, setPermissionsState] = useState({
+    moderators: [],
+    candidates: [],
+    stats: { activeMods: 0, candidates: 0, permissionCount: MOD_PERMISSIONS.length, totalHandled: 0 },
+    audit: [],
+  });
+  const [loading, setLoading] = useState(true);
   const [modSearch, setModSearch] = useState("");
   const [candidateSearch, setCandidateSearch] = useState("");
   const [confirm, setConfirm] = useState({
@@ -42,14 +45,32 @@ function AdminPermissionsPage() {
     user: null,
   });
 
-  const stats = useMemo(() => getPermissionsStats(), [refreshKey]);
-  const moderators = useMemo(() => getModerators(), [refreshKey]);
-  const candidates = useMemo(() => getModeratorCandidates(), [refreshKey]);
-  const auditLog = useMemo(() => getPermissionsAudit(), [refreshKey]);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    loadPermissionsData()
+      .then((data) => {
+        if (!cancelled) setPermissionsState(data);
+      })
+      .catch((err) => {
+        if (!cancelled) showToast(err.message ?? "Không tải được dữ liệu phân quyền.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showToast]);
+
+  const stats = permissionsState.stats;
+  const moderators = permissionsState.moderators;
+  const candidates = permissionsState.candidates;
+  const auditLog = permissionsState.audit;
   const auditPage = useAdminPagination(
     auditLog,
     ADMIN_PAGE_SIZES.permissionsAudit,
-    [refreshKey],
+    [permissionsState],
   );
 
   const filteredMods = useMemo(() => {
@@ -74,10 +95,6 @@ function AdminPermissionsPage() {
     );
   }, [candidates, candidateSearch]);
 
-  function bump() {
-    setRefreshKey((k) => k + 1);
-  }
-
   function openConfirm(mode, target) {
     setConfirm({
       open: true,
@@ -91,21 +108,32 @@ function AdminPermissionsPage() {
     });
   }
 
+  function refreshPermissions() {
+    loadPermissionsData()
+      .then(setPermissionsState)
+      .catch((err) => showToast(err.message ?? "Không tải được dữ liệu phân quyền."));
+  }
+
   function handleConfirm() {
     const admin = user?.username ?? "admin_sehub";
-    const result =
+    const action =
       confirm.mode === "grant"
-        ? grantModerator(confirm.username, admin)
-        : revokeModerator(confirm.username, admin);
+        ? () => grantModeratorViaApi(confirm.username, admin)
+        : () => revokeModeratorViaApi(confirm.username, admin);
 
-    if (!result.ok) {
-      showToast(result.message);
-      return;
-    }
-
-    showToast(result.message);
-    setConfirm({ open: false, mode: "grant", username: null, user: null });
-    bump();
+    action()
+      .then((result) => {
+        if (!result.ok) {
+          showToast(result.message);
+          return;
+        }
+        showToast(result.message);
+        setConfirm({ open: false, mode: "grant", username: null, user: null });
+        refreshPermissions();
+      })
+      .catch((err) => {
+        showToast(err.message ?? "Không cập nhật được quyền Moderator.");
+      });
   }
 
   return (
@@ -113,6 +141,7 @@ function AdminPermissionsPage() {
       title="Phân quyền Mod"
       breadcrumbs={[{ label: "Dashboard", to: "/admin" }, { label: "Phân quyền Mod" }]}
     >
+      {loading ? <p>Đang tải dữ liệu phân quyền…</p> : null}
       <div className={permStyles.statsStrip}>
         <div className={permStyles.statCard}>
           <span className={permStyles.statIcon} aria-hidden>

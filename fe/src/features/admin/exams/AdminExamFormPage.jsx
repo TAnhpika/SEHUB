@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
@@ -11,14 +11,16 @@ import {
   FINAL_EXAM_DEFAULTS,
   MOCK_OCR_QUESTIONS,
   PRACTICE_EXAM_DEFAULTS,
-  createAdminExam,
   findDuplicateBySha,
-  getAdminExamById,
   getSemesterLabel,
   getTrackLabel,
+  importExamQuestionsFromMarkdown,
+  loadAdminExamById,
+  loadAdminExams,
   mockComputeSha256,
   mockComputeSha256Unique,
-  updateAdminExam,
+  saveAdminExamViaApi,
+  updateAdminExamViaApi,
 } from "@/features/admin/exams/adminExamData";
 import examStyles from "@/features/admin/exams/AdminExam.module.css";
 import formStyles from "@/features/admin/exams/AdminExamFormPage.module.css";
@@ -61,17 +63,47 @@ function AdminExamFormPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const isEdit = Boolean(id);
-  const exam = isEdit ? getAdminExamById(id) : null;
+  const [exam, setExam] = useState(null);
+  const [loadingExam, setLoadingExam] = useState(isEdit);
 
-  const [form, setForm] = useState(() => buildInitialForm(exam));
+  const [form, setForm] = useState(() => buildInitialForm(null));
   const [step, setStep] = useState(0);
   const [fileName, setFileName] = useState("");
-  const [sha256, setSha256] = useState(exam?.sha256 ?? "");
-  const [ocrDone, setOcrDone] = useState(Boolean(exam?.questionCount && exam.typeKey === "final"));
-  const [ocrConfirmed, setOcrConfirmed] = useState(
-    Boolean(exam?.ocrConfirmed ?? (exam?.typeKey === "final" && exam?.questionCount > 0)),
-  );
+  const [pdfFile, setPdfFile] = useState(null);
+  const [sha256, setSha256] = useState("");
+  const [ocrDone, setOcrDone] = useState(false);
+  const [ocrConfirmed, setOcrConfirmed] = useState(false);
   const [forceUniqueSha, setForceUniqueSha] = useState(false);
+  const [markdownText, setMarkdownText] = useState("");
+  const [importedQuestions, setImportedQuestions] = useState([]);
+  const [importingMarkdown, setImportingMarkdown] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isEdit) {
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingExam(true);
+    loadAdminExamById(id).then((loaded) => {
+      if (cancelled) return;
+      setExam(loaded);
+      if (loaded) {
+        setForm(buildInitialForm(loaded));
+        setSha256(loaded.sha256 ?? "");
+        setOcrDone(Boolean(loaded.questionCount && loaded.typeKey === "final"));
+        setOcrConfirmed(
+          Boolean(loaded.ocrConfirmed ?? (loaded.typeKey === "final" && loaded.questionCount > 0)),
+        );
+      }
+      setLoadingExam(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, isEdit]);
 
   const isFinal = form.typeKey === "final";
   const isPractice = form.typeKey === "practice";
@@ -91,6 +123,7 @@ function AdminExamFormPage() {
     patchForm({ typeKey });
     setStep(0);
     setFileName("");
+    setPdfFile(null);
     setSha256("");
     setOcrDone(false);
     setOcrConfirmed(false);
@@ -107,8 +140,8 @@ function AdminExamFormPage() {
 
   function validateStep1() {
     if (isFinal) {
-      if (!fileName && !isEdit) {
-        showToast("Chọn file PDF/ảnh để OCR.");
+      if (!fileName && importedQuestions.length === 0 && !isEdit) {
+        showToast("Chọn file OCR hoặc import câu hỏi bằng Markdown.");
         return false;
       }
       return true;
@@ -129,6 +162,7 @@ function AdminExamFormPage() {
         id: `f-${Date.now()}-${index}`,
         name: file.name,
         size: file.size,
+        file,
       }));
       patchForm({ attachments: [...form.attachments, ...next] });
       event.target.value = "";
@@ -137,6 +171,7 @@ function AdminExamFormPage() {
 
     const file = fileList[0];
     setFileName(file.name);
+    setPdfFile(file);
     const isDupDemo = file.name.toLowerCase().includes("dup");
     setSha256(isDupDemo ? DEMO_DUPLICATE_SHA : mockComputeSha256Unique());
     setForceUniqueSha(false);
@@ -159,50 +194,118 @@ function AdminExamFormPage() {
     showToast("OCR hoàn tất — Admin rà soát đáp án trước khi lưu.");
   }
 
+  async function handleImportMarkdown() {
+    if (!markdownText.trim()) {
+      showToast("Dán nội dung Markdown câu hỏi trước khi import.");
+      return;
+    }
+
+    setImportingMarkdown(true);
+    try {
+      const result = await importExamQuestionsFromMarkdown(markdownText);
+      const questions = result?.questions ?? [];
+      if (!questions.length) {
+        showToast("Không parse được câu hỏi từ Markdown.");
+        return;
+      }
+      setImportedQuestions(questions);
+      setOcrDone(true);
+      setOcrConfirmed(false);
+      setStep(2);
+      showToast(`Đã import ${questions.length} câu hỏi từ Markdown.`);
+    } catch (err) {
+      showToast(err.message ?? "Import Markdown thất bại.");
+    } finally {
+      setImportingMarkdown(false);
+    }
+  }
+
+  const reviewQuestions = useMemo(() => {
+    if (importedQuestions.length > 0) {
+      return importedQuestions.map((question, index) => {
+        const options = question.options ?? [];
+        const correctIndex = options.findIndex((opt) => opt.id === question.correctOptionId);
+        return {
+          id: question.orderIndex ?? index + 1,
+          text: question.content,
+          options: options.map((opt) => opt.text),
+          correct: correctIndex >= 0 ? correctIndex : 0,
+        };
+      });
+    }
+
+    return MOCK_OCR_QUESTIONS;
+  }, [importedQuestions]);
+
   function goNext() {
     if (step === 0 && !validateStep0()) return;
     if (step === 1 && !validateStep1()) return;
-    if (step === 1 && isFinal && fileName && !ocrDone) {
+    if (step === 1 && isFinal && fileName && !ocrDone && importedQuestions.length === 0) {
       runOcr();
       return;
     }
     setStep((s) => Math.min(s + 1, steps.length - 1));
   }
 
-  function persist(status) {
-    const questionCount = isFinal && ocrDone ? MOCK_OCR_QUESTIONS.length : 0;
-    const payload = {
-      ...form,
+  async function persist(status) {
+    const saveOptions = {
       status,
-      questionCount,
-      sha256: sha256 || mockComputeSha256Unique(),
-      ocrConfirmed: isFinal ? ocrConfirmed : true,
-      attachments: form.attachments,
+      ocrQuestions:
+        isFinal && ocrDone
+          ? importedQuestions.length > 0
+            ? importedQuestions
+            : MOCK_OCR_QUESTIONS
+          : [],
+      pdfFile,
+      confirmDuplicate: forceUniqueSha,
     };
 
     if (isEdit) {
-      updateAdminExam(id, payload);
-    } else {
-      createAdminExam(payload);
+      return updateAdminExamViaApi(id, form, saveOptions);
     }
+
+    return saveAdminExamViaApi(form, saveOptions);
   }
 
-  function handleDraft() {
+  async function navigateAfterSave(targetPath, result, { published = false } = {}) {
+    const items = await loadAdminExams();
+    navigate(targetPath, {
+      replace: !isEdit,
+      state: {
+        refreshExams: Date.now(),
+        preloadedExams: items.length > 0 ? items : result?.listItem ? [result.listItem] : [],
+        openStatusFilter: published ? "published" : "draft",
+        fromExamSave: true,
+      },
+    });
+  }
+
+  async function handleDraft() {
     if (!form.code.trim() || !form.title.trim()) {
       showToast("Cần ít nhất mã môn và tiêu đề để lưu nháp.");
       return;
     }
-    persist("draft");
-    showToast("Đã lưu nháp.");
-    navigate(isEdit ? `/admin/exams/${id}` : "/admin/exams");
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const result = await persist("draft");
+      showToast("Đã lưu nháp.");
+      navigateAfterSave(isEdit ? `/admin/exams/${id}` : "/admin/exams", result);
+    } catch (err) {
+      showToast(err.message ?? "Không lưu được bản nháp.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     if (blockSave) {
       showToast("Đề trùng SHA-256 — không thể lưu.");
       return;
     }
+    if (isSubmitting) return;
 
     if (isFinal) {
       if (!ocrDone && !(isEdit && exam?.questionCount > 0)) {
@@ -218,9 +321,21 @@ function AdminExamFormPage() {
       return;
     }
 
-    persist("published");
-    showToast(isEdit ? "Đã cập nhật và xuất bản." : "Đã tạo và xuất bản đề.");
-    navigate(isEdit ? `/admin/exams/${id}` : "/admin/exams");
+    setIsSubmitting(true);
+    try {
+      const result = await persist("published");
+      showToast(isEdit ? "Đã cập nhật và xuất bản." : "Đã tạo và xuất bản đề.");
+      if (result?.uploadWarning) {
+        showToast(result.uploadWarning);
+      }
+      navigateAfterSave(isEdit ? `/admin/exams/${id}` : "/admin/exams", result, {
+        published: true,
+      });
+    } catch (err) {
+      showToast(err.message ?? "Không xuất bản được đề thi.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   const summaryItems = useMemo(
@@ -239,6 +354,20 @@ function AdminExamFormPage() {
     ],
     [form, isFinal, ocrDone],
   );
+
+  if (isEdit && loadingExam) {
+    return (
+      <AdminPageLayout
+        title="Đang tải đề..."
+        breadcrumbs={[
+          { label: "Dashboard", to: "/admin" },
+          { label: "Quản lý đề thi", to: "/admin/exams" },
+        ]}
+      >
+        <p className={styles.hint}>Đang tải thông tin đề thi.</p>
+      </AdminPageLayout>
+    );
+  }
 
   if (isEdit && !exam) {
     return (
@@ -446,10 +575,9 @@ function AdminExamFormPage() {
 
         {step === 1 && isFinal ? (
           <>
-            <h2 className={styles.panelTitle}>Upload đề & OCR</h2>
+            <h2 className={styles.panelTitle}>Upload đề, OCR hoặc Markdown</h2>
             <p className={styles.panelDesc}>
-              Bắt buộc upload PDF/ảnh scan đề — không nhập câu hỏi thủ công. OCR → normalize text
-              → SHA-256 kiểm tra trùng. Tên file có &quot;dup&quot; để demo cảnh báo trùng.
+              Upload PDF/ảnh để OCR, hoặc dán file Markdown câu hỏi (## Câu 1, A./B./C./D., **Đáp án: X**).
             </p>
             <div className={styles.divider} />
 
@@ -469,9 +597,26 @@ function AdminExamFormPage() {
               </div>
             </label>
 
+            <label className={styles.field}>
+              <span className={styles.label}>Import câu hỏi bằng Markdown</span>
+              <textarea
+                className={styles.textarea}
+                rows={10}
+                value={markdownText}
+                onChange={(e) => setMarkdownText(e.target.value)}
+                placeholder={`## Câu 1\nNội dung câu hỏi?\n\nA. Phương án A\nB. Phương án B\nC. Phương án C\nD. Phương án D\n\n**Đáp án: B**`}
+              />
+              <p className={styles.hint}>
+                Mỗi câu bắt đầu bằng ## Câu N (hoặc phân tách bằng ---). Dòng cuối: **Đáp án: X**.
+              </p>
+            </label>
+
             <div className={formStyles.formActions}>
               <Button type="button" look="outline" onClick={() => setStep(0)}>
                 Quay lại
+              </Button>
+              <Button type="button" onClick={handleImportMarkdown} disabled={importingMarkdown}>
+                {importingMarkdown ? "Đang import..." : "Import Markdown"}
               </Button>
               <Button type="button" onClick={runOcr} disabled={!fileName}>
                 Chạy OCR &amp; sang bước xác nhận
@@ -581,10 +726,10 @@ function AdminExamFormPage() {
             {isFinal && ocrDone ? (
               <div className={examStyles.ocrPanel}>
                 <p className={examStyles.ocrPanelTitle}>
-                  {MOCK_OCR_QUESTIONS.length} câu OCR — rà soát đáp án đúng
+                  {reviewQuestions.length} câu {importedQuestions.length > 0 ? "Markdown" : "OCR"} — rà soát đáp án đúng
                 </p>
                 <ul className={examStyles.questionList}>
-                  {MOCK_OCR_QUESTIONS.map((q, index) => (
+                  {reviewQuestions.map((q, index) => (
                     <li key={q.id} className={examStyles.questionItem}>
                       <p className={examStyles.questionText}>
                         Câu {index + 1}. {q.text}

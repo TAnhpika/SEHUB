@@ -26,7 +26,7 @@ export const PREMIUM_PLANS = [
     label: "1 tháng",
     durationLabel: "30 ngày",
     days: 30,
-    amount: 49000,
+    amount: 48000,
     voucher: null,
   },
   {
@@ -34,7 +34,7 @@ export const PREMIUM_PLANS = [
     label: "2 học kỳ (8 tháng)",
     durationLabel: "240 ngày",
     days: 240,
-    amount: 280000,
+    amount: 200000,
     voucher: "Voucher FTES 20%",
   },
   {
@@ -42,7 +42,7 @@ export const PREMIUM_PLANS = [
     label: "4 năm (toàn khóa)",
     durationLabel: "1.460 ngày",
     days: 1460,
-    amount: 960000,
+    amount: 650000,
     voucher: "Voucher FTES 100%",
   },
 ];
@@ -51,7 +51,12 @@ export const PAYMENT_STATUS_META = {
   pending_payment: {
     status: "pending",
     label: "Chờ thanh toán",
-    desc: "Đơn PayOS đã tạo — SV chưa chuyển khoản",
+    desc: "Đơn PayOS đã tạo — sinh viên chưa hoàn tất thanh toán",
+  },
+  waiting_confirmation: {
+    status: "pending",
+    label: "Chờ Admin xác nhận",
+    desc: "Sinh viên đã thanh toán — Admin đối chiếu ngân hàng rồi xác nhận thủ công",
   },
   webhook_ok: {
     status: "pending",
@@ -68,12 +73,31 @@ export const PAYMENT_STATUS_META = {
     label: "Thất bại",
     desc: "Hết hạn / lỗi callback PayOS",
   },
+  expired: {
+    status: "banned",
+    label: "Hết hạn xác nhận",
+    desc: "Quá 24 giờ chờ Admin xác nhận — không kích hoạt Premium",
+  },
   refunded: {
     status: "refunded",
     label: "Đã hoàn tiền",
     desc: "Giao dịch đã hoàn — Premium thu hồi nếu có",
   },
+  refund_requested: {
+    status: "pending",
+    label: "Chờ duyệt hoàn tiền",
+    desc: "Sinh viên đã gửi yêu cầu — cần Admin duyệt",
+  },
+  processing_refund: {
+    status: "pending",
+    label: "Đang xử lý hoàn tiền",
+    desc: "Admin đã duyệt — chờ PayOS / n8n hoàn tiền",
+  },
 };
+
+export function canAdminConfirmPayment(status) {
+  return status === "waiting_confirmation" || status === "webhook_ok";
+}
 
 export function formatVnd(amount) {
   return `${Number(amount).toLocaleString("vi-VN")} đ`;

@@ -1,17 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faChevronDown,
-  faMagnifyingGlass,
-  faRightFromBracket,
-  faUser,
-} from "@fortawesome/free-solid-svg-icons";
-import WorkspaceSwitcher from "@/common/WorkspaceSwitcher/WorkspaceSwitcher";
+import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+import HeaderUserActions from "@/common/Header/HeaderUserActions/HeaderUserActions";
 import { useAuth } from "@/context";
-import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
-import NotificationDropdown from "./NotificationDropdown";
-import StreakDropdown from "./StreakDropdown";
 import logoSrc from "@/img/logo.png";
 import styles from "./MainHeader.module.css";
 
@@ -19,7 +11,7 @@ function MainHeader() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { user, logout, isAdmin, isPremium } = useAuth();
+  const { isAdmin } = useAuth();
   const brandTo = isAdmin ? "/admin" : "/home";
   const isSearchPage = location.pathname === "/home/search";
   const [searchQuery, setSearchQuery] = useState(() =>
@@ -31,14 +23,6 @@ function MainHeader() {
       setSearchQuery(searchParams.get("q") ?? "");
     }
   }, [isSearchPage, searchParams]);
-
-  const displayName = user?.displayName ?? "Anhpika";
-  const initial = user?.initial ?? displayName.charAt(0).toUpperCase();
-
-  function handleLogout() {
-    logout();
-    navigate("/");
-  }
 
   function handleSearchSubmit(event) {
     event.preventDefault();
@@ -77,42 +61,7 @@ function MainHeader() {
         </form>
 
         <div className={styles.actions}>
-          <NotificationDropdown />
-
-          <StreakDropdown />
-
-          <div className={styles.profile}>
-            <button type="button" className={styles["profile-trigger"]} aria-haspopup="menu">
-              <span className={styles.avatar} aria-hidden="true">
-                {initial}
-              </span>
-              <span className={withPremiumUsernameClass(styles.email, isPremium)}>
-                {displayName}
-              </span>
-              <FontAwesomeIcon icon={faChevronDown} className={styles.chevron} />
-            </button>
-
-            <div className={styles["profile-menu"]} role="menu">
-              <WorkspaceSwitcher variant="menu-compact" showHeading />
-              <Link
-                to={`/profile/${user?.username ?? "anhcoding12345"}`}
-                className={styles["menu-item"]}
-                role="menuitem"
-              >
-                <FontAwesomeIcon icon={faUser} />
-                Hồ sơ cá nhân
-              </Link>
-              <button
-                type="button"
-                className={styles["menu-item"]}
-                role="menuitem"
-                onClick={handleLogout}
-              >
-                <FontAwesomeIcon icon={faRightFromBracket} />
-                Đăng xuất
-              </button>
-            </div>
-          </div>
+          <HeaderUserActions />
         </div>
       </div>
     </header>

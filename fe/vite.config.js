@@ -18,6 +18,7 @@ export default defineConfig({
     open: "/",
     host: true,
     port: 5173,
-    strictPort: false,
+    // Giữ cố định 5173 để khớp Authorized JavaScript origins trên Google Cloud Console.
+    strictPort: true,
   },
 });

@@ -1,45 +1,29 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faAlignLeft,
   faArrowLeft,
-  faBold,
-  faCode,
   faComment,
   faEye,
   faHeart,
-  faHighlighter,
-  faImage,
-  faItalic,
-  faLink,
-  faLinkSlash,
-  faListOl,
-  faListUl,
-  faPaperclip,
-  faQuoteLeft,
   faReply,
   faShareNodes,
-  faStrikethrough,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
-import { getPostById } from "@/features/feed/feedData";
+import RichTextEditor from "@/common/RichTextEditor/RichTextEditor";
+import RichTextContent from "@/common/RichTextEditor/RichTextContent";
+import {
+  loadPostById,
+  removeComment,
+  submitComment,
+  toggleLike,
+} from "@/features/feed/feedData";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
 import { copyPostLink, formatDisplayTitle, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./PostDetailPage.module.css";
-
-function formatCommentTime(date) {
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-
-  return `${hours}:${minutes} ${day}/${month}/${year}`;
-}
 
 function formatShortDate(publishedAt) {
   if (!publishedAt) return "";
@@ -54,23 +38,72 @@ function PostDetailPage() {
   const { user, isPremium } = useAuth();
   const { showCopyToast } = useToast();
 
-  const post = useMemo(() => getPostById(postId), [postId]);
+  const [post, setPost] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [likes, setLikes] = useState(0);
   const [liked, setLiked] = useState(false);
   const [comments, setComments] = useState([]);
   const [draft, setDraft] = useState("");
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editCommentDraft, setEditCommentDraft] = useState("");
+  const [submittingComment, setSubmittingComment] = useState(false);
 
   useEffect(() => {
-    if (!post) return;
-    setLikes(post.likes);
-    setLiked(false);
-    setComments(post.commentsList ?? []);
-    setDraft("");
-    setEditingCommentId(null);
-    setEditCommentDraft("");
-  }, [post]);
+    let cancelled = false;
+
+    async function fetchPost() {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const data = await loadPostById(postId);
+        if (cancelled) return;
+        if (!data) {
+          setPost(null);
+          return;
+        }
+        setPost(data);
+        setLikes(data.likes);
+        setLiked(Boolean(data.isLiked));
+        setComments(data.commentsList ?? []);
+        setDraft("");
+        setEditingCommentId(null);
+        setEditCommentDraft("");
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(err.message ?? "Không tải được bài viết.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchPost();
+    return () => {
+      cancelled = true;
+    };
+  }, [postId]);
+
+  if (loading) {
+    return (
+      <div className={styles.page}>
+        <p>Đang tải bài viết...</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className={styles.page}>
+        <p role="alert">{loadError}</p>
+        <button type="button" className={styles.back} onClick={() => navigate(-1)}>
+          Quay lại
+        </button>
+      </div>
+    );
+  }
 
   if (!post) {
     return <Navigate to="/home" replace />;
@@ -81,11 +114,19 @@ function PostDetailPage() {
   const shortDate = formatShortDate(post.publishedAt);
   const displayTitle = formatDisplayTitle(post.title);
 
-  function handleLike() {
-    setLiked((prev) => {
-      setLikes((count) => (prev ? count - 1 : count + 1));
-      return !prev;
-    });
+  async function handleLike() {
+    const nextLiked = !liked;
+    setLiked(nextLiked);
+    setLikes((count) => (liked ? count - 1 : count + 1));
+
+    try {
+      const result = await toggleLike(post.id, liked);
+      setLiked(result.isLiked);
+      setLikes(result.likeCount);
+    } catch {
+      setLiked(liked);
+      setLikes(post.likes);
+    }
   }
 
   async function handleShare() {
@@ -97,24 +138,20 @@ function PostDetailPage() {
     }
   }
 
-  function handleSubmitComment() {
+  async function handleSubmitComment() {
     const content = draft.trim();
-    if (!content) return;
+    if (!content || submittingComment) return;
 
-    setComments((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        author: {
-          name: user?.displayName ?? "Anhpika",
-          initial: user?.initial ?? "A",
-          username: user?.username,
-        },
-        time: formatCommentTime(new Date()),
-        content,
-      },
-    ]);
-    setDraft("");
+    setSubmittingComment(true);
+    try {
+      const newComment = await submitComment(post.id, content);
+      setComments((prev) => [...prev, newComment]);
+      setDraft("");
+    } catch (err) {
+      window.alert(err.message ?? "Không gửi được bình luận.");
+    } finally {
+      setSubmittingComment(false);
+    }
   }
 
   function handleStartEditComment(comment) {
@@ -138,14 +175,19 @@ function PostDetailPage() {
     setEditCommentDraft("");
   }
 
-  function handleDeleteComment(commentId) {
+  async function handleDeleteComment(commentId) {
     const confirmed = window.confirm("Bạn có chắc muốn xóa bình luận này?");
     if (!confirmed) return;
 
-    setComments((prev) => prev.filter((item) => item.id !== commentId));
-    if (editingCommentId === commentId) {
-      setEditingCommentId(null);
-      setEditCommentDraft("");
+    try {
+      await removeComment(post.id, commentId);
+      setComments((prev) => prev.filter((item) => item.id !== commentId));
+      if (editingCommentId === commentId) {
+        setEditingCommentId(null);
+        setEditCommentDraft("");
+      }
+    } catch (err) {
+      window.alert(err.message ?? "Không xóa được bình luận.");
     }
   }
 
@@ -195,7 +237,7 @@ function PostDetailPage() {
         <h1 className={styles.title}>
           <span className={styles.hash}>#</span> {displayTitle}
         </h1>
-        <p className={styles.body}>{post.body ?? post.excerpt}</p>
+        <RichTextContent value={post.body ?? post.excerpt} className={styles.body} />
 
         {post.tags?.length > 0 && (
           <ul className={styles.tags} aria-label="Thẻ bài viết">
@@ -272,11 +314,15 @@ function PostDetailPage() {
 
               {isEditingComment ? (
                 <div className={styles["comment-edit"]}>
-                  <textarea
-                    className={styles["comment-edit-input"]}
+                  <RichTextEditor
                     value={editCommentDraft}
-                    onChange={(event) => setEditCommentDraft(event.target.value)}
+                    onChange={setEditCommentDraft}
+                    variant="comment"
                     rows={3}
+                    bordered={false}
+                    textareaClassName={styles["comment-edit-input"]}
+                    toolbarAriaLabel="Định dạng bình luận"
+                    aria-label="Chỉnh sửa bình luận"
                   />
                   <div className={styles["comment-edit-actions"]}>
                     <button
@@ -296,7 +342,7 @@ function PostDetailPage() {
                   </div>
                 </div>
               ) : (
-                <p className={styles["comment-content"]}>{comment.content}</p>
+                <RichTextContent value={comment.content} className={styles["comment-content"]} />
               )}
 
               {!isEditingComment && (
@@ -311,54 +357,16 @@ function PostDetailPage() {
 
         <div className={styles.editor}>
           <div className={styles["editor-panel"]}>
-            <div className={styles.toolbar} aria-label="Định dạng bình luận">
-              <button type="button" className={styles.tool} aria-label="In đậm">
-                <FontAwesomeIcon icon={faBold} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="In nghiêng">
-                <FontAwesomeIcon icon={faItalic} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Gạch ngang">
-                <FontAwesomeIcon icon={faStrikethrough} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Đánh dấu">
-                <FontAwesomeIcon icon={faHighlighter} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Mã">
-                <FontAwesomeIcon icon={faCode} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Liên kết">
-                <FontAwesomeIcon icon={faLink} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Gỡ liên kết">
-                <FontAwesomeIcon icon={faLinkSlash} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Hình ảnh">
-                <FontAwesomeIcon icon={faImage} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Đính kèm">
-                <FontAwesomeIcon icon={faPaperclip} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Danh sách">
-                <FontAwesomeIcon icon={faListUl} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Danh sách đánh số">
-                <FontAwesomeIcon icon={faListOl} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Trích dẫn">
-                <FontAwesomeIcon icon={faQuoteLeft} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Căn trái">
-                <FontAwesomeIcon icon={faAlignLeft} />
-              </button>
-            </div>
-
-            <textarea
-              className={styles.input}
-              placeholder="Viết bình luận của bạn..."
+            <RichTextEditor
               value={draft}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={setDraft}
+              placeholder="Viết bình luận của bạn..."
+              variant="comment"
               rows={4}
+              bordered={false}
+              textareaClassName={styles.input}
+              toolbarAriaLabel="Định dạng bình luận"
+              aria-label="Viết bình luận của bạn"
             />
 
             <div className={styles["editor-footer"]}>

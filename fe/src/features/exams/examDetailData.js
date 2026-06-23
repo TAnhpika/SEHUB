@@ -1,3 +1,22 @@
+import * as examsApi from "@/api/examsApi";
+import {
+  mapAiExplainResponse,
+  mapExamDetailDtoToFeExam,
+  mapQuestionAnswerDto,
+  mapQuestionPublicDto,
+} from "@/api/examMapper";
+import { getExamById as getMockExamById } from "@/features/subjects/SubjectDetailPage/subjectDetailData";
+import { isValidGuid } from "@/features/feed/postUtils";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+
+export { USE_MOCK as EXAM_USE_MOCK };
+
+export const DEMO_API_EXAM_CODES = {
+  final: "SE301-FINAL-01",
+  practice: "SE301-LAB-01",
+};
+
 export const SAMPLE_QUESTION = {
   text: "Which is a function in C language?",
   correctAnswer: "B",
@@ -154,3 +173,89 @@ export const EXAM_PREVIEW_LABELS = {
   practice: "Bài thực hành",
   documents: "Tài liệu",
 };
+
+export async function resolveExamApiId(examIdOrCode) {
+  if (USE_MOCK) return null;
+
+  const value = String(examIdOrCode ?? "").trim();
+  if (!value) return null;
+  if (isValidGuid(value)) return value;
+
+  const list = await examsApi.listExams({ pageSize: 100 });
+  const match = (list.items ?? []).find(
+    (item) => item.code?.toLowerCase() === value.toLowerCase(),
+  );
+  return match?.id ?? null;
+}
+
+export async function loadExamMeta(courseCode, examId, pageKey, scope = "community", options = {}) {
+  if (!USE_MOCK) {
+    let apiExamId = options.apiExamId ?? null;
+    if (!apiExamId) {
+      apiExamId = await resolveExamApiId(examId);
+    }
+
+    if (apiExamId) {
+      try {
+        const detail = await examsApi.getExam(apiExamId);
+        return {
+          exam: mapExamDetailDtoToFeExam(detail, courseCode),
+          apiExamId,
+          source: "api",
+        };
+      } catch {
+        /* fall back to mock below */
+      }
+    }
+  }
+
+  const mockExam = getMockExamById(courseCode, examId, pageKey, scope);
+  if (mockExam) {
+    return { exam: mockExam, apiExamId: null, source: "mock" };
+  }
+
+  return null;
+}
+
+export async function loadReviewQuestions(apiExamId, fallbackCount, pageKey) {
+  if (pageKey !== "review") {
+    return buildExamQuestions(fallbackCount, pageKey);
+  }
+
+  if (USE_MOCK || !apiExamId) {
+    return buildExamQuestions(fallbackCount, pageKey);
+  }
+
+  try {
+    const questionDtos = await examsApi.getQuestions(apiExamId);
+    if ((questionDtos ?? []).length > 0) {
+      return questionDtos.map(mapQuestionPublicDto);
+    }
+  } catch {
+    /* API mode: no mock fallback */
+  }
+
+  return [];
+}
+
+export async function loadQuestionWithAnswer(apiExamId, questionId) {
+  if (USE_MOCK || !apiExamId || !questionId) {
+    return null;
+  }
+
+  const dto = await examsApi.getQuestionWithAnswer(apiExamId, questionId);
+  return mapQuestionAnswerDto(dto);
+}
+
+export async function loadAiExplanation(questionId, context) {
+  if (USE_MOCK || !questionId || !isValidGuid(String(questionId))) {
+    return null;
+  }
+
+  const response = await examsApi.aiExplain(questionId, { questionId, context });
+  return mapAiExplainResponse(response);
+}
+
+export async function loadPracticeExamMeta(courseCode, examId, scope = "community") {
+  return loadExamMeta(courseCode, examId, "practice", scope);
+}

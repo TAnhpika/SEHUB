@@ -1,4 +1,11 @@
+import * as postsApi from "@/api/postsApi";
+import * as adminApi from "@/api/adminApi";
+import { FEATURED_POSTS_UPDATED_EVENT } from "@/features/feed/feedData";
+import { formatRelativeTimeFromApi } from "@/utils/parseApiDate";
+
 export const MAX_PINNED_POSTS = 5;
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 export const FEATURE_SEARCH_SORT_OPTIONS = [
   { value: "newest", label: "Mới nhất" },
@@ -305,10 +312,84 @@ export function filterSearchPosts(posts, { query, sort = "newest", pinnedIds }) 
       return getFeaturedInteractionCount(b) - getFeaturedInteractionCount(a);
     }
     if (sort === "oldest") {
-      return (b.sortOrder ?? 0) - (a.sortOrder ?? 0);
+      return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
     }
-    return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+    return (b.sortOrder ?? 0) - (a.sortOrder ?? 0);
   });
 
   return result;
+}
+
+function mapModeratorFeaturedItem(dto) {
+  const createdMs = new Date(dto.createdAt).getTime();
+
+  return {
+    id: dto.id,
+    authorName: dto.authorDisplayName || dto.authorUsername,
+    authorInitial: (dto.authorDisplayName || dto.authorUsername || "?").charAt(0).toUpperCase(),
+    timeLabel: formatRelativeTimeFromApi(dto.createdAt),
+    categoryLabel: "Cộng đồng",
+    tag: "document",
+    title: dto.title,
+    excerpt: dto.excerpt,
+    likes: dto.likeCount ?? 0,
+    comments: dto.commentCount ?? 0,
+    status: "approved",
+    sortOrder: Number.isNaN(createdMs) ? 0 : createdMs,
+    isFeatured: dto.isFeatured ?? false,
+  };
+}
+
+export async function loadFeaturedPostsState() {
+  if (USE_MOCK) {
+    return {
+      pinned: PINNED_POSTS_INITIAL,
+      searchPool: SEARCH_POSTS_INITIAL,
+    };
+  }
+
+  const state = await adminApi.getPinnedPosts({ pageSize: 100 });
+  const pinned = (state.pinned ?? []).map(mapModeratorFeaturedItem);
+  const searchPool = (state.candidates ?? []).map(mapModeratorFeaturedItem);
+
+  return { pinned, searchPool };
+}
+
+export async function loadFeaturedPostDetail(id) {
+  if (USE_MOCK) {
+    return findFeaturedPost(id, PINNED_POSTS_INITIAL, SEARCH_POSTS_INITIAL);
+  }
+
+  const dto = await postsApi.getPost(id);
+  const card = mapModeratorFeaturedItem({
+    id: dto.id,
+    title: dto.title,
+    excerpt: dto.excerpt,
+    authorUsername: dto.author?.username,
+    authorDisplayName: dto.author?.displayName,
+    likeCount: dto.likeCount,
+    commentCount: dto.commentCount,
+    createdAt: dto.createdAt,
+    isFeatured: dto.isFeatured,
+  });
+
+  return enrichFeaturedPost({
+    ...card,
+    content: dto.content ?? dto.excerpt,
+    tags: dto.tags ?? [],
+    allowComments: true,
+    anonymous: false,
+  });
+}
+
+export async function setPostFeatured(id, isFeatured) {
+  if (USE_MOCK) return;
+  await postsApi.featurePost(id, { isFeatured });
+  window.dispatchEvent(new CustomEvent(FEATURED_POSTS_UPDATED_EVENT));
+}
+
+export async function setPostPinned(id, isPinned) {
+  if (USE_MOCK) return;
+  await postsApi.pinPost(id, { isPinned });
+  window.dispatchEvent(new CustomEvent("sehub-feed-pinned-updated"));
 }

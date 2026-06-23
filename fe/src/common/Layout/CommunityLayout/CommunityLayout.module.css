@@ -13,7 +13,7 @@
   box-sizing: border-box;
   display: grid;
   grid-template-columns: var(--feed-sidebar-fixed) minmax(0, 1fr);
-  gap: 0;
+  gap: 1.25rem;
   align-items: stretch;
   min-height: calc(100vh - var(--header-height));
 }
@@ -46,12 +46,16 @@
 .col-center {
   min-width: 0;
   width: 100%;
-  padding: 1rem var(--layout-gutter) 1.5rem 0;
+  padding: 1rem var(--layout-gutter) 1.5rem var(--layout-gutter);
 }
 
 .workspace-feed {
   grid-template-columns: var(--feed-sidebar-fixed) minmax(0, 1fr) minmax(240px, 280px);
   gap: 1.25rem;
+}
+
+.col-center-balanced {
+  padding-right: calc(var(--layout-gutter) + 1.25rem);
 }
 
 .workspace-auth {
@@ -99,7 +103,8 @@
     display: none;
   }
 
-  .col-center {
-    padding: 1rem 0 1.5rem;
+  .col-center,
+  .col-center-balanced {
+    padding: 1rem var(--layout-gutter) 1.5rem;
   }
 }

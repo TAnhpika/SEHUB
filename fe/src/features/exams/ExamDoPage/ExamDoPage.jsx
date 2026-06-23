@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -10,13 +10,21 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
-import { buildExamQuestions, EXAM_TYPE_LABELS } from "@/features/exams/examDetailData";
+import { buildExamQuestions, EXAM_TYPE_LABELS, loadExamMeta, loadReviewQuestions, resolveExamApiId } from "@/features/exams/examDetailData";
+import {
+  persistAttemptAnswers,
+  startOrResumeAttempt,
+  submitApiAttempt,
+  syncAttemptAnswersToUi,
+} from "@/features/exams/examApiSession";
 import {
   createExamSession,
   formatDuration,
   getExamSession,
-  saveExamAnswer,
+  getOrCreateExamSession,
+  saveExamAnswers,
   submitExamSession,
+  usesApiAttempt,
 } from "@/features/exams/examSession";
 import {
   getExamById,
@@ -25,10 +33,17 @@ import {
 import { canTakeReviewExam } from "@/utils/examAccess";
 import {
   getExamDetailPath,
-  getExamFocusResultPath,
+  getExamResultPath,
   isExamFocusPath,
   resolveExamScope,
 } from "@/utils/examFocusPaths";
+import {
+  getSelectedAnswerKeys,
+  isMultiSelectQuestion,
+  isQuestionAnswered,
+  setSingleSelectAnswer,
+  toggleMultiSelectAnswer,
+} from "@/features/exams/examQuestionTypes";
 import styles from "./ExamDoPage.module.css";
 
 /** §3.3 — Làm bài trực tuyến: 45 phút (mock; production có thể cấu hình theo đề) */
@@ -49,53 +64,179 @@ function ExamDoPage({ page = "review" }) {
   const config = getSubjectDetailConfig(page, scope);
   const decodedExamId = decodeURIComponent(examId ?? "");
 
-  const exam = useMemo(
-    () => getExamById(courseCode, decodedExamId, page, scope),
-    [courseCode, decodedExamId, page, scope],
-  );
-
-  const questions = useMemo(
-    () => (exam ? buildExamQuestions(exam.questionCount, page) : []),
-    [exam, page],
-  );
-
+  const [exam, setExam] = useState(null);
+  const [examReady, setExamReady] = useState(false);
+  const [apiExamId, setApiExamId] = useState(null);
+  const [attemptId, setAttemptId] = useState(null);
+  const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [startedAt, setStartedAt] = useState(Date.now());
   const [elapsedMs, setElapsedMs] = useState(0);
   const [sessionReady, setSessionReady] = useState(false);
+  const [useApiFlow, setUseApiFlow] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchExam() {
+      setExamReady(false);
+      const mockExam = getExamById(courseCode, decodedExamId, page, scope);
+      if (mockExam) {
+        if (!cancelled) {
+          setExam(mockExam);
+          setApiExamId(null);
+          setExamReady(true);
+        }
+        return;
+      }
+
+      try {
+        const meta = await loadExamMeta(courseCode, decodedExamId, page, scope);
+        if (!cancelled) {
+          setExam(meta?.exam ?? null);
+          setApiExamId(meta?.apiExamId ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setExam(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setExamReady(true);
+        }
+      }
+    }
+
+    fetchExam();
+    return () => {
+      cancelled = true;
+    };
+  }, [courseCode, decodedExamId, page, scope]);
 
   const detailPath = exam
     ? getExamDetailPath(exam.courseCode, exam.id, scope)
     : config?.detailBase ?? "/home/final-exam";
-  const resultPath = isFocusMode
-    ? getExamFocusResultPath(exam?.courseCode ?? courseCode ?? "", exam?.id ?? decodedExamId)
-    : `${detailPath}/result`;
+  const resultPath = exam
+    ? getExamResultPath(exam.courseCode, exam.id, scope)
+    : getExamResultPath(courseCode ?? "", decodedExamId, scope);
 
   const submitExam = useCallback(
-    (auto = false) => {
+    async (auto = false) => {
       if (!exam) return;
-      submitExamSession(exam.id, questions);
+
+      const session = getExamSession(exam.id);
+      const effectiveApiExamId = apiExamId ?? session?.apiExamId;
+      const effectiveAttemptId = attemptId ?? session?.attemptId;
+      const shouldUseApi =
+        Boolean(effectiveApiExamId && effectiveAttemptId)
+        && (useApiFlow || usesApiAttempt(session));
+
+      try {
+        if (shouldUseApi) {
+          await submitApiAttempt(
+            exam.id,
+            effectiveApiExamId,
+            effectiveAttemptId,
+            questions,
+            startedAt,
+            session?.answers ?? {},
+          );
+        } else {
+          submitExamSession(exam.id, questions);
+        }
+      } catch (error) {
+        showToast(error.message ?? "Không nộp được bài thi.");
+        return;
+      }
+
       showToast(auto ? "Hết giờ — hệ thống đã nộp bài tự động." : "Đã nộp bài thành công.");
-      navigate(resultPath, isFocusMode ? { state: { scope } } : undefined);
+      navigate(resultPath);
     },
-    [exam, isFocusMode, navigate, questions, resultPath, scope, showToast],
+    [
+      exam,
+      useApiFlow,
+      apiExamId,
+      attemptId,
+      questions,
+      startedAt,
+      navigate,
+      resultPath,
+      showToast,
+    ],
   );
 
   useEffect(() => {
-    if (!exam) return;
+    if (!exam || !examReady || !canTakeReviewExam(user)) return undefined;
 
-    const existing = getExamSession(exam.id);
-    if (existing?.submitted) {
-      navigate(resultPath, { replace: true });
-      return;
+    let cancelled = false;
+
+    async function initSession() {
+      const existing = getExamSession(exam.id);
+      if (existing?.submitted) {
+        navigate(resultPath, { replace: true });
+        return;
+      }
+
+      let nextQuestions = buildExamQuestions(exam.questionCount, page);
+      let nextApiExamId = apiExamId;
+      let nextAttemptId = existing?.attemptId ?? null;
+      let nextAnswers = existing?.answers ?? {};
+      let nextStartedAt = existing?.startedAt ?? Date.now();
+      let apiEnabled = false;
+
+      if (canTakeReviewExam(user) && page === "review") {
+        try {
+          if (!nextApiExamId) {
+            nextApiExamId = exam.apiId ?? (await resolveExamApiId(exam.id));
+          }
+
+          if (nextApiExamId) {
+            const loadedQuestions = await loadReviewQuestions(
+              nextApiExamId,
+              exam.questionCount,
+              page,
+            );
+
+            if (loadedQuestions.length > 0) {
+              const attempt = await startOrResumeAttempt(nextApiExamId);
+              nextQuestions = loadedQuestions;
+              nextAttemptId = attempt.id;
+              nextAnswers = syncAttemptAnswersToUi(nextQuestions, attempt);
+              nextStartedAt = attempt.startedAt
+                ? new Date(attempt.startedAt).getTime()
+                : Date.now();
+              apiEnabled = true;
+            }
+          }
+        } catch {
+          apiEnabled = false;
+        }
+      }
+
+      if (cancelled) return;
+
+      setQuestions(nextQuestions);
+      setApiExamId(nextApiExamId);
+      setAttemptId(nextAttemptId);
+      setAnswers(nextAnswers);
+      setStartedAt(nextStartedAt);
+      setUseApiFlow(apiEnabled);
+
+      createExamSession(exam.id, {
+        apiExamId: nextApiExamId,
+        attemptId: nextAttemptId,
+        startedAt: nextStartedAt,
+        answers: nextAnswers,
+      });
+      setSessionReady(true);
     }
 
-    const session = existing ?? createExamSession(exam.id);
-    setAnswers(session.answers ?? {});
-    setStartedAt(session.startedAt ?? Date.now());
-    setSessionReady(true);
-  }, [exam, navigate, resultPath]);
+    initSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [exam, examReady, apiExamId, page, user, navigate, resultPath]);
 
   useEffect(() => {
     if (!sessionReady) return;
@@ -142,22 +283,48 @@ function ExamDoPage({ page = "review" }) {
     return <Navigate to="/home/premium" replace />;
   }
 
-  if (!exam || !sessionReady) {
-    return exam ? null : (
+  if (!examReady || !exam || !sessionReady) {
+    return examReady && !exam ? (
       <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />
-    );
+    ) : null;
   }
 
   const currentQuestion = questions[currentIndex];
   const isFirstQuestion = currentIndex === 0;
   const isLastQuestion = currentIndex === questions.length - 1;
-  const answeredCount = Object.keys(answers).length;
+  const answeredCount = questions.filter((question) =>
+    isQuestionAnswered(question.id, answers, question),
+  ).length;
+  const isMultiQuestion = isMultiSelectQuestion(currentQuestion);
+  const selectedKeys = currentQuestion
+    ? getSelectedAnswerKeys(currentQuestion.id, answers)
+    : [];
+  const requiredSelectCount =
+    currentQuestion?.requiredSelectCount ?? currentQuestion?.correctAnswers?.length ?? 2;
   const typeLabel = EXAM_TYPE_LABELS[page] ?? exam.type;
   const isTimeCritical = timeRemainingMs <= 5 * 60 * 1000;
 
-  function handleSelectAnswer(answerKey) {
-    const next = saveExamAnswer(exam.id, currentQuestion.id, answerKey);
+  async function handleSelectAnswer(answerKey) {
+    const session = getOrCreateExamSession(exam.id);
+    const nextAnswers = isMultiQuestion
+      ? toggleMultiSelectAnswer(
+          currentQuestion.id,
+          answerKey,
+          session.answers,
+          requiredSelectCount,
+        )
+      : setSingleSelectAnswer(currentQuestion.id, answerKey, session.answers);
+
+    const next = saveExamAnswers(exam.id, nextAnswers);
     setAnswers({ ...next.answers });
+
+    if (useApiFlow && apiExamId && attemptId) {
+      try {
+        await persistAttemptAnswers(apiExamId, attemptId, questions, next.answers);
+      } catch (error) {
+        showToast(error.message ?? "Không lưu được câu trả lời.");
+      }
+    }
   }
 
   function goToQuestion(index) {
@@ -285,10 +452,15 @@ function ExamDoPage({ page = "review" }) {
             <article className={styles["question-card"]}>
               <p className={styles["question-label"]}>Câu {currentIndex + 1}</p>
               <h3 className={styles["question-text"]}>{currentQuestion.text}</h3>
+              {isMultiQuestion ? (
+                <p className={styles["multi-hint"]}>
+                  Chọn đúng {requiredSelectCount} đáp án ({selectedKeys.length}/{requiredSelectCount}).
+                </p>
+              ) : null}
 
               <ul className={styles.options}>
                 {currentQuestion.options.map((option) => {
-                  const isSelected = answers[String(currentQuestion.id)] === option.key;
+                  const isSelected = selectedKeys.includes(option.key);
 
                   return (
                     <li key={option.key}>
@@ -359,7 +531,7 @@ function ExamDoPage({ page = "review" }) {
 
             <div className={styles.grid}>
               {questions.map((question, index) => {
-                const isAnswered = Boolean(answers[String(question.id)]);
+                const isAnswered = isQuestionAnswered(question.id, answers, question);
                 const isActive = index === currentIndex;
 
                 return (

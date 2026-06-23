@@ -1,9 +1,20 @@
-/** Giá gốc tham chiếu — gói Trải nghiệm 1 tháng (SEHUB §3.8: 1m / 8m / 4y) */
-export const BASE_MONTHLY_PRICE = 49000;
+import * as premiumApi from "@/api/premiumApi";
+import {
+  mapApiPlansToFePlans,
+  mapPaymentOrderDto,
+  mapRankVoucherPreviewDto,
+  mapSubscriptionStatusDto,
+  resolvePlanCodeFromFeId,
+} from "@/api/premiumMapper";
 
-function buildCheckout({ months, days, monthlyPrice, packageTitle, tagline }) {
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+
+/** Giá gốc tham chiếu — gói Trải nghiệm 1 tháng (SEHUB §3.8: 1m / 8m / 4y) */
+export const BASE_MONTHLY_PRICE = 48000;
+
+function buildCheckout({ months, days, totalPrice, packageTitle, tagline }) {
+  const monthlyPrice = Math.round(totalPrice / months);
   const originalPrice = BASE_MONTHLY_PRICE * months;
-  const totalPrice = monthlyPrice * months;
   const savingsAmount = originalPrice - totalPrice;
   const savingsPercent =
     savingsAmount > 0 ? Math.round((savingsAmount / originalPrice) * 100) : 0;
@@ -25,7 +36,7 @@ function createPlan({
   id,
   name,
   duration,
-  monthlyPrice,
+  totalPrice,
   months,
   days,
   packageTitle,
@@ -38,10 +49,12 @@ function createPlan({
   const checkout = buildCheckout({
     months,
     days,
-    monthlyPrice,
+    totalPrice,
     packageTitle,
     tagline,
   });
+
+  const monthlyPrice = checkout.monthlyPrice;
 
   return {
     id,
@@ -62,7 +75,7 @@ export const PRICING_PLANS = [
     id: "trial",
     name: "Trải nghiệm",
     duration: "1 tháng",
-    monthlyPrice: 49000,
+    totalPrice: 48000,
     months: 1,
     days: 30,
     packageTitle: "Gói Trải nghiệm (1 tháng)",
@@ -81,7 +94,7 @@ export const PRICING_PLANS = [
     id: "semester",
     name: "2 Học kỳ",
     duration: "8 tháng",
-    monthlyPrice: 35000,
+    totalPrice: 200000,
     months: 8,
     days: 240,
     packageTitle: "Gói 2 Học kỳ (8 tháng)",
@@ -99,7 +112,7 @@ export const PRICING_PLANS = [
     id: "full",
     name: "Toàn khóa học",
     duration: "4 năm",
-    monthlyPrice: 20000,
+    totalPrice: 650000,
     months: 48,
     days: 1460,
     packageTitle: "Gói Toàn khóa học (4 năm)",
@@ -159,9 +172,9 @@ export const FEATURE_COMPARISON = [
 ];
 
 export const PAYMENT_INFO = {
-  bank: "MB Bank (Quân Đội)",
-  accountNumber: "123456789",
-  accountName: "SEHUB PLATFORM",
+  bank: "MB Bank",
+  accountNumber: "0001137880784",
+  accountName: "MAC TU HAU",
   transferPrefix: "SEHUB",
 };
 
@@ -183,4 +196,166 @@ export function buildTransactionId() {
   const date = new Date();
   const stamp = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
   return `SEH_${stamp}_CONFIRMED`;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+export function resolvePlanCode(planId) {
+  return resolvePlanCodeFromFeId(planId);
+}
+
+export async function loadPricingPlans() {
+  if (USE_MOCK) {
+    return PRICING_PLANS;
+  }
+
+  try {
+    const apiPlans = await premiumApi.getPlans();
+    if ((apiPlans ?? []).length > 0) {
+      return mapApiPlansToFePlans(apiPlans, PRICING_PLANS);
+    }
+  } catch {
+    /* fallback below */
+  }
+
+  return PRICING_PLANS;
+}
+
+export async function loadPlanById(planId) {
+  const plans = await loadPricingPlans();
+  return plans.find((plan) => plan.id === planId) ?? getPlanById(planId);
+}
+
+export async function loadRankVoucherPreview(planId) {
+  if (USE_MOCK) {
+    return null;
+  }
+
+  const planCode = resolvePlanCode(planId);
+  if (!planCode) {
+    return null;
+  }
+
+  try {
+    const dto = await premiumApi.getRankVoucherPreview({ planCode });
+    return mapRankVoucherPreviewDto(dto);
+  } catch {
+    return null;
+  }
+}
+
+export async function createCheckoutOrder(planId) {
+  if (USE_MOCK) {
+    return null;
+  }
+
+  const planCode = resolvePlanCode(planId);
+  if (!planCode) {
+    return null;
+  }
+
+  const dto = await premiumApi.createOrder({ planCode });
+  return mapPaymentOrderDto(dto);
+}
+
+export async function getCheckoutOrder(orderId, { markWaitingConfirmation = false } = {}) {
+  if (USE_MOCK || !orderId) {
+    return null;
+  }
+
+  const dto = await premiumApi.getOrder(orderId, { markWaitingConfirmation });
+  return mapPaymentOrderDto(dto);
+}
+
+export async function loadSubscriptionStatus() {
+  if (USE_MOCK) {
+    return {
+      isActive: false,
+      expiresAt: null,
+      planName: null,
+      latestPaidOrderCode: null,
+      lastPaidAt: null,
+      canRequestRefund: false,
+      hasPendingRefundRequest: false,
+    };
+  }
+
+  try {
+    const dto = await premiumApi.getSubscription();
+    return mapSubscriptionStatusDto(dto);
+  } catch {
+    return {
+      isActive: false,
+      expiresAt: null,
+      planName: null,
+      latestPaidOrderCode: null,
+      lastPaidAt: null,
+      canRequestRefund: false,
+      hasPendingRefundRequest: false,
+    };
+  }
+}
+
+export async function requestPremiumRefund({ orderCode, reason }) {
+  if (USE_MOCK) {
+    await sleep(400);
+    return {
+      orderCode,
+      status: "RefundRequested",
+      isPremium: true,
+      aiDailyTokenLimit: 1000,
+      message: "Mock: Yêu cầu hoàn tiền đã được gửi, chờ admin duyệt.",
+    };
+  }
+
+  const dto = await premiumApi.requestRefund({ orderCode, reason });
+  return {
+    orderCode: dto.orderCode ?? orderCode,
+    status: dto.status ?? "RefundRequested",
+    isPremium: Boolean(dto.isPremium),
+    aiDailyTokenLimit: Number(dto.aiDailyTokenLimit ?? 10),
+    message:
+      dto.message ??
+      "Yêu cầu hoàn tiền đã được gửi. Admin sẽ duyệt trong thời gian sớm nhất.",
+  };
+}
+
+export async function pollPremiumActivation(
+  orderId,
+  { maxAttempts = 40, intervalMs = 3000, markWaitingConfirmation = false } = {},
+) {
+  if (USE_MOCK) {
+    return false;
+  }
+
+  if (!orderId) {
+    return false;
+  }
+
+  let markedWaiting = false;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      const shouldMark = markWaitingConfirmation && !markedWaiting;
+      const order = await getCheckoutOrder(orderId, { markWaitingConfirmation: shouldMark });
+      if (order?.status === "Paid") {
+        return true;
+      }
+      if (shouldMark && order?.status === "WaitingConfirmation") {
+        markedWaiting = true;
+      }
+    } catch {
+      /* continue polling */
+    }
+
+    if (attempt < maxAttempts - 1) {
+      await sleep(intervalMs);
+    }
+  }
+
+  return false;
 }

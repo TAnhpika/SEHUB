@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getAllPracticeSubmissions } from "@/features/exams/practiceExamSubmissions";
+import { loadAllPracticeSubmissions } from "@/features/exams/practiceExamSubmissions";
 
 export const PRACTICE_SUBMISSIONS_PAGE_SIZE = 5;
 
@@ -88,11 +88,39 @@ export function usePracticeSubmissionsList(refreshKey = 0) {
   const [courseFilter, setCourseFilter] = useState("all");
   const [sortPreset, setSortPreset] = useState("submittedAt:desc");
   const [page, setPage] = useState(1);
+  const [allSubmissions, setAllSubmissions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const allSubmissions = useMemo(() => {
-    void refreshKey;
-    return getAllPracticeSubmissions();
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+
+    loadAllPracticeSubmissions()
+      .then((items) => {
+        if (!cancelled) {
+          setAllSubmissions(items);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAllSubmissions([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [refreshKey]);
+
+  const pendingCount = useMemo(
+    () => allSubmissions.filter((item) => item.status === "pending").length,
+    [allSubmissions],
+  );
 
   const courseOptions = useMemo(() => {
     return [...new Set(allSubmissions.map((s) => s.courseCode))].sort();
@@ -163,5 +191,7 @@ export function usePracticeSubmissionsList(refreshKey = 0) {
     hasActiveFilters,
     resetFilters,
     handlePageChange,
+    loading,
+    pendingCount,
   };
 }

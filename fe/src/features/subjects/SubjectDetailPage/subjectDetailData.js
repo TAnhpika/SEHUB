@@ -14,8 +14,20 @@ export const TERM_OPTIONS = [
   { value: "FA", label: "Fall" },
 ];
 
+import * as examsApi from "@/api/examsApi";
 import { getStudentDocumentsBySubject } from "@/features/admin/documents/adminDocumentData";
+import { normalizeCourseSubjectCode } from "@/utils/examDisplay";
+import { parseExamPaperCode } from "@/utils/examPaperCode";
 import { getSubjectCatalogPath } from "@/utils/subjectPaths";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+
+const PAGE_EXAM_API_META = {
+  review: { apiType: "Final", typeLabel: "Cuối kỳ" },
+  practice: { apiType: "Practice", typeLabel: "Thực hành" },
+};
+
+const TERM_LABELS = { SP: "Spring", SU: "Summer", FA: "Fall" };
 
 const SUBJECT_DETAIL_META = {
   review: {
@@ -101,7 +113,7 @@ export function getDocumentItemsForCourse(courseCode) {
       term: "SP",
       termLabel: "Spring",
       uploadedAt: doc.uploadedAt,
-      type: doc.access.includes("Premium") ? "Premium" : "Free (3 trang)",
+      type: doc.name?.match(/\.([^.]+)$/)?.[1]?.toUpperCase() ?? "—",
       questionCount: doc.pages,
       document: doc,
     }));
@@ -153,6 +165,90 @@ export function filterExamPapers(exams, yearFilter, termFilter) {
     const matchTerm = termFilter === "all" || exam.term === termFilter;
     return matchYear && matchTerm;
   });
+}
+
+function formatExamUploadedAt(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  const pad = (part) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}, ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+function mapApiExamListItemToPaper(dto, courseCode, typeLabel) {
+  const code = dto.code || dto.id;
+  const parsed = parseExamPaperCode(code);
+  const createdAt = dto.createdAt ?? dto.updatedAt;
+
+  return {
+    id: code,
+    apiId: dto.id,
+    courseCode: courseCode.toUpperCase(),
+    year: parsed?.year ?? String(new Date(createdAt).getFullYear()),
+    term: parsed?.season ?? "SP",
+    termLabel: TERM_LABELS[parsed?.season] ?? parsed?.season ?? "—",
+    uploadedAt: formatExamUploadedAt(createdAt),
+    type: typeLabel,
+    questionCount: dto.questionCount ?? 0,
+  };
+}
+
+function buildMajorQueryValues(courseCode) {
+  const values = new Set();
+  const normalized = normalizeCourseSubjectCode(courseCode);
+  const upper = courseCode?.toUpperCase() ?? "";
+
+  if (normalized) {
+    values.add(normalized);
+  }
+  if (upper) {
+    values.add(upper);
+  }
+
+  return [...values];
+}
+
+export async function loadExamPapersForCourse(courseCode, pageKey) {
+  const meta = PAGE_EXAM_API_META[pageKey];
+  if (!meta) {
+    return [];
+  }
+
+  if (USE_MOCK) {
+    const config = SUBJECT_DETAIL_META[pageKey];
+    return getExamPapersForCourse(
+      courseCode?.toUpperCase() ?? "",
+      config?.examType ?? "Cuối kỳ",
+      config?.codePrefix ?? "FE",
+    );
+  }
+
+  const majors = buildMajorQueryValues(courseCode);
+  const collected = new Map();
+
+  for (const major of majors) {
+    const page = await examsApi.listExams({
+      major,
+      type: meta.apiType,
+      pageSize: 100,
+    });
+
+    for (const item of page.items ?? []) {
+      collected.set(item.id, item);
+    }
+  }
+
+  return [...collected.values()]
+    .map((dto) => mapApiExamListItemToPaper(dto, courseCode, meta.typeLabel))
+    .sort((a, b) => {
+      if (b.year !== a.year) {
+        return Number(b.year) - Number(a.year);
+      }
+      const termOrder = { SP: 0, SU: 1, FA: 2 };
+      return (termOrder[a.term] ?? 0) - (termOrder[b.term] ?? 0);
+    });
 }
 
 export function getExamById(courseCode, examId, pageKey, scope = "community") {

@@ -1,28 +1,135 @@
 import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import { useToast } from "@/common/Toast/ToastProvider";
-import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
+import { useAuth } from "@/context";
 import {
+  buildFinalExamContributionPayload,
+  recordExamDraft,
+} from "@/features/moderator/exams/moderatorExamContributionStore";
+import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
+import { parseTotalQuestions } from "@/features/moderator/finalExams/finalExamData";
+import {
+  getSubjectOptionsForSemester,
   PRACTICE_SEMESTER_OPTIONS,
-  PRACTICE_SUBJECT_OPTIONS,
 } from "@/features/moderator/practiceExams/practiceExamData";
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
+import {
+  generateExamPaperCode,
+  loadExistingExamPaperIdentifiers,
+} from "@/utils/examPaperCode";
 import styles from "./FinalExamInfoStep.module.css";
 
 function FinalExamInfoStep() {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { examInfo, setExamInfo } = useFinalExamWizard();
+  const { user } = useAuth();
+  const moderator = user?.username ?? "mod_sehub";
+  const { examInfo, setExamInfo, ensureQuestionSlots, basePath, isEditMode } = useFinalExamWizard();
+  const [questionCountInput, setQuestionCountInput] = useState(() =>
+    String(examInfo.totalQuestions ?? ""),
+  );
+  const [existingPaperCodes, setExistingPaperCodes] = useState([]);
+
+  const previewQuestionCount = parseTotalQuestions(questionCountInput);
+  const subjectOptions = useMemo(
+    () => getSubjectOptionsForSemester(examInfo.semesterLabel),
+    [examInfo.semesterLabel],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    loadExistingExamPaperIdentifiers()
+      .then((codes) => {
+        if (!cancelled) setExistingPaperCodes(codes);
+      })
+      .catch(() => {
+        if (!cancelled) setExistingPaperCodes([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isEditMode) return;
+    if (!examInfo.subjectCode.trim()) {
+      setExamInfo((prev) => (prev.examCode ? { ...prev, examCode: "" } : prev));
+      return;
+    }
+
+    const nextCode = generateExamPaperCode("final", examInfo.subjectCode, existingPaperCodes);
+    setExamInfo((prev) => (prev.examCode === nextCode ? prev : { ...prev, examCode: nextCode }));
+  }, [examInfo.subjectCode, existingPaperCodes, isEditMode, setExamInfo]);
+
+  function validateExamInfo() {
+    if (!examInfo.semesterLabel.trim()) {
+      showToast("Vui lòng chọn học kỳ.");
+      return false;
+    }
+    if (!examInfo.subjectCode.trim()) {
+      showToast("Vui lòng chọn mã môn học.");
+      return false;
+    }
+    if (!examInfo.examCode.trim()) {
+      showToast("Mã đề chưa được sinh tự động. Vui lòng chọn lại môn học.");
+      return false;
+    }
+    if (examInfo.durationMinutes < 15 || examInfo.durationMinutes > 180) {
+      showToast("Thời gian làm bài phải từ 15 đến 180 phút.");
+      return false;
+    }
+    if (examInfo.totalQuestions < 1 || examInfo.totalQuestions > 100) {
+      showToast("Số câu hỏi phải từ 1 đến 100.");
+      return false;
+    }
+    return true;
+  }
 
   function handleSaveDraft() {
+    if (!validateExamInfo()) return;
+    recordExamDraft(
+      buildFinalExamContributionPayload(moderator, examInfo, 0, "Bước 1: Thông tin đề"),
+    );
     showToast("Đã lưu nháp thông tin đề thi.");
   }
 
   function handleContinue() {
+    if (!examInfo.semesterLabel.trim()) {
+      showToast("Vui lòng chọn học kỳ.");
+      return;
+    }
     if (!examInfo.subjectCode.trim()) {
       showToast("Vui lòng chọn mã môn học.");
       return;
     }
-    navigate("/moderator/final-exams/add/questions");
+    const totalQuestions = parseTotalQuestions(questionCountInput);
+    if (totalQuestions === null) {
+      showToast("Số câu hỏi phải lớn hơn 0.");
+      return;
+    }
+    setExamInfo((prev) => ({ ...prev, totalQuestions }));
+    ensureQuestionSlots(totalQuestions);
+    navigate(`${basePath}/questions`);
+  }
+
+  function handleSemesterChange(event) {
+    const semesterLabel = event.target.value;
+    setExamInfo((prev) => ({
+      ...prev,
+      semesterLabel,
+      subjectCode: "",
+      subjectName: "",
+      examCode: "",
+    }));
+  }
+
+  function handleSubjectChange(event) {
+    const code = event.target.value;
+    setExamInfo((prev) => ({
+      ...prev,
+      subjectCode: code,
+      subjectName: code ? prev.subjectName || `Môn ${code}` : "",
+    }));
   }
 
   return (
@@ -31,7 +138,7 @@ function FinalExamInfoStep() {
         <h1 className={styles.title}>Thông tin đề thi</h1>
         <p className={styles.subtitle}>
           Nhập metadata đề trắc nghiệm cuối kỳ. Sinh viên Premium có thể làm bài online (
-          {examInfo.totalQuestions} câu theo nghiệp vụ).
+          {previewQuestionCount ?? "—"} câu theo nghiệp vụ).
         </p>
       </header>
 
@@ -39,25 +146,19 @@ function FinalExamInfoStep() {
         <div className={styles.row}>
           <label className={styles.field}>
             <span className={styles.label}>
-              Mã môn học <span className={styles.required}>*</span>
+              Học kỳ <span className={styles.required}>*</span>
             </span>
             <select
               className={styles.input}
-              value={examInfo.subjectCode}
-              onChange={(event) => {
-                const code = event.target.value;
-                setExamInfo((prev) => ({
-                  ...prev,
-                  subjectCode: code,
-                  subjectName: code ? `Môn ${code}` : "",
-                  examCode: code ? `FE-${code}-SP2024` : "",
-                }));
-              }}
+              value={examInfo.semesterLabel}
+              required
+              disabled={isEditMode}
+              onChange={handleSemesterChange}
             >
-              <option value="">Chọn môn học</option>
-              {PRACTICE_SUBJECT_OPTIONS.map((code) => (
-                <option key={code} value={code}>
-                  {code}
+              <option value="">Chọn học kỳ</option>
+              {PRACTICE_SEMESTER_OPTIONS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
                 </option>
               ))}
             </select>
@@ -65,19 +166,21 @@ function FinalExamInfoStep() {
 
           <label className={styles.field}>
             <span className={styles.label}>
-              Học kỳ <span className={styles.required}>*</span>
+              Mã môn học <span className={styles.required}>*</span>
             </span>
             <select
               className={styles.input}
-              value={examInfo.semesterLabel}
-              onChange={(event) =>
-                setExamInfo((prev) => ({ ...prev, semesterLabel: event.target.value }))
-              }
+              value={examInfo.subjectCode}
+              required
+              disabled={!examInfo.semesterLabel || isEditMode}
+              onChange={handleSubjectChange}
             >
-              <option value="">Chọn học kỳ</option>
-              {PRACTICE_SEMESTER_OPTIONS.map((item) => (
-                <option key={item} value={item}>
-                  {item}
+              <option value="">
+                {examInfo.semesterLabel ? "Chọn môn học" : "Chọn học kỳ trước"}
+              </option>
+              {subjectOptions.map((code) => (
+                <option key={code} value={code}>
+                  {code}
                 </option>
               ))}
             </select>
@@ -104,6 +207,8 @@ function FinalExamInfoStep() {
               type="text"
               className={styles.input}
               value={examInfo.examCode}
+              readOnly={!isEditMode}
+              placeholder="Tự động sinh khi chọn môn học"
               onChange={(event) =>
                 setExamInfo((prev) => ({ ...prev, examCode: event.target.value }))
               }
@@ -130,17 +235,12 @@ function FinalExamInfoStep() {
           <label className={styles.field}>
             <span className={styles.label}>Số câu hỏi</span>
             <input
-              type="number"
-              min={1}
-              max={100}
+              type="text"
+              inputMode="numeric"
               className={styles.input}
-              value={examInfo.totalQuestions}
-              onChange={(event) =>
-                setExamInfo((prev) => ({
-                  ...prev,
-                  totalQuestions: Number(event.target.value) || 50,
-                }))
-              }
+              value={questionCountInput}
+              onChange={(event) => setQuestionCountInput(event.target.value)}
+              placeholder="VD: 50"
             />
           </label>
         </div>

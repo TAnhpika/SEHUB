@@ -7,9 +7,15 @@ import {
   faStar,
   faUserSlash,
 } from "@fortawesome/free-solid-svg-icons";
+import * as adminApi from "@/api/adminApi";
 import { getPendingContentCount } from "@/features/moderator/content/contentModerationStore";
 import { getPendingExamQuestionReportCount } from "@/features/exams/examQuestionReportStore";
-import { REPORTS_MOCK } from "@/features/moderator/reports/reportsData";
+import {
+  getCommunityReportsPendingCount,
+  syncCachedPendingReportsCount,
+} from "@/features/moderator/reports/reportsData";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 /** Sau đăng nhập — hàng đợi báo cáo ưu tiên nghiệp vụ */
 export const MODERATOR_HOME_PATH = "/moderator/reports";
@@ -73,6 +79,13 @@ export const MODERATOR_NAV_SECTIONS = [
         end: false,
       },
       {
+        id: "exam-history",
+        label: "Lịch sử đóng góp đề",
+        to: "/moderator/exams/history",
+        icon: faClockRotateLeft,
+        end: true,
+      },
+      {
         id: "final-exam",
         label: "Thêm đề cuối kỳ",
         to: "/moderator/final-exams/add",
@@ -117,6 +130,8 @@ export function resolveModeratorPageTitle(pathname) {
 
   if (pathname === "/moderator") return "Xử lý báo cáo";
   if (pathname.startsWith("/moderator/content/history")) return "Lịch sử duyệt bài";
+  if (pathname.startsWith("/moderator/exams/history")) return "Lịch sử đóng góp đề";
+  if (pathname.includes("/final-exams/edit")) return "Sửa đề cuối kỳ";
   if (pathname.includes("/final-exams/add/questions")) return "Thêm đề cuối kỳ";
   if (pathname.includes("/final-exams/add/review")) return "Thêm đề cuối kỳ";
   return "Kiểm duyệt";
@@ -129,10 +144,28 @@ export function isModeratorNavActive(item, pathname) {
 }
 
 export function getModeratorNavBadgeCounts() {
-  const communityPending = REPORTS_MOCK.filter((report) => report.status === "pending").length;
+  const communityPending = getCommunityReportsPendingCount();
   const examPending = getPendingExamQuestionReportCount();
   return {
     reports: communityPending + examPending,
     content: getPendingContentCount(),
   };
+}
+
+export async function loadModeratorNavBadgeCounts() {
+  if (USE_MOCK) {
+    return getModeratorNavBadgeCounts();
+  }
+
+  try {
+    const stats = await adminApi.getModerationStats();
+    syncCachedPendingReportsCount(stats.pendingReports ?? 0);
+    const examPending = getPendingExamQuestionReportCount();
+    return {
+      reports: (stats.pendingReports ?? 0) + examPending,
+      content: stats.pendingPosts ?? 0,
+    };
+  } catch {
+    return getModeratorNavBadgeCounts();
+  }
 }

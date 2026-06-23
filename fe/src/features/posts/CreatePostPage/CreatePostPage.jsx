@@ -1,30 +1,22 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faAlignLeft,
   faArrowLeft,
-  faBold,
   faCircleInfo,
-  faCode,
-  faImage,
-  faItalic,
-  faLink,
-  faListOl,
-  faListUl,
-  faMinus,
-  faPalette,
   faPaperPlane,
-  faQuoteLeft,
-  faStrikethrough,
-  faTable,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import RichTextEditor from "@/common/RichTextEditor/RichTextEditor";
+import RichTextPreview from "@/common/RichTextEditor/RichTextPreview";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
+import * as postsApi from "@/api/postsApi";
+import { submitPost } from "@/features/feed/feedData";
 import { MAJORS, MAX_CONTENT_LENGTH, SEMESTERS } from "@/features/posts/createPostData";
+import { getPlainTextLength } from "@/common/RichTextEditor/richTextEditorWysiwyg";
 import styles from "./CreatePostPage.module.css";
 
 function CreatePostPage() {
@@ -37,14 +29,16 @@ function CreatePostPage() {
   const [major, setMajor] = useState("");
   const [content, setContent] = useState("");
   const [contentMode, setContentMode] = useState("edit");
-  const [coverMode, setCoverMode] = useState("upload");
-  const [coverUrl, setCoverUrl] = useState("");
-  const [coverFileName, setCoverFileName] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState([]);
   const [anonymous, setAnonymous] = useState(false);
   const [allowComments, setAllowComments] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleImageUpload = useCallback(async (file) => {
+    const result = await postsApi.uploadPostContentImage(file);
+    return result?.url ?? result?.Url ?? null;
+  }, []);
 
   function addTag(rawValue) {
     const value = rawValue.trim().replace(/^#/, "");
@@ -64,19 +58,24 @@ function CreatePostPage() {
     setTags((prev) => prev.filter((item) => item !== tag));
   }
 
-  function handleCoverFileChange(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setCoverFileName(file.name);
-  }
-
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    if (!title.trim() || !content.trim()) return;
+    if (!title.trim() || getPlainTextLength(content) === 0 || isSubmitting) return;
 
     setIsSubmitting(true);
-    showToast("Bài viết đã được gửi và đang chờ admin phê duyệt.");
-    navigate("/home");
+    try {
+      await submitPost({
+        title: title.trim(),
+        content: content.trim(),
+        tags,
+      });
+      showToast("Đã gửi bài viết — chờ moderator duyệt trước khi hiển thị.", 5500);
+      window.setTimeout(() => navigate("/home"), 1200);
+    } catch (err) {
+      showToast(err.message ?? "Không đăng được bài viết.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -89,8 +88,8 @@ function CreatePostPage() {
       <header className={styles.header}>
         <h1 className={styles.title}>Tạo bài viết mới</h1>
         <p className={styles.subtitle}>
-          Chia sẻ kiến thức của bạn với cộng đồng. Bài viết sẽ được admin xem xét trước khi xuất
-          bản.
+          Chia sẻ kiến thức của bạn với cộng đồng. Bài viết sẽ được moderator xem xét trước khi
+          xuất bản.
         </p>
       </header>
 
@@ -169,121 +168,27 @@ function CreatePostPage() {
           </div>
 
           {contentMode === "edit" ? (
-            <div className={styles.editor}>
-              <div className={styles.toolbar} aria-label="Định dạng nội dung">
-                <button type="button" className={styles.tool} aria-label="Đoạn văn">
-                  ¶
-                </button>
-                <button type="button" className={styles.tool} aria-label="In đậm">
-                  <FontAwesomeIcon icon={faBold} />
-                </button>
-                <button type="button" className={styles.tool} aria-label="In nghiêng">
-                  <FontAwesomeIcon icon={faItalic} />
-                </button>
-                <button type="button" className={styles.tool} aria-label="Gạch ngang">
-                  <FontAwesomeIcon icon={faStrikethrough} />
-                </button>
-                <button type="button" className={styles.tool} aria-label="Màu chữ">
-                  <FontAwesomeIcon icon={faPalette} />
-                </button>
-                <button type="button" className={styles.tool} aria-label="Mã">
-                  <FontAwesomeIcon icon={faCode} />
-                </button>
-                <button type="button" className={styles.tool} aria-label="Liên kết">
-                  <FontAwesomeIcon icon={faLink} />
-                </button>
-                <button type="button" className={styles.tool} aria-label="Hình ảnh">
-                  <FontAwesomeIcon icon={faImage} />
-                </button>
-                <button type="button" className={styles.tool} aria-label="Bảng">
-                  <FontAwesomeIcon icon={faTable} />
-                </button>
-                <button type="button" className={styles.tool} aria-label="Danh sách">
-                  <FontAwesomeIcon icon={faListUl} />
-                </button>
-                <button type="button" className={styles.tool} aria-label="Danh sách đánh số">
-                  <FontAwesomeIcon icon={faListOl} />
-                </button>
-                <button type="button" className={styles.tool} aria-label="Trích dẫn">
-                  <FontAwesomeIcon icon={faQuoteLeft} />
-                </button>
-                <button type="button" className={styles.tool} aria-label="Kẻ ngang">
-                  <FontAwesomeIcon icon={faMinus} />
-                </button>
-                <button type="button" className={styles.tool} aria-label="Căn trái">
-                  <FontAwesomeIcon icon={faAlignLeft} />
-                </button>
-              </div>
-
-              <textarea
-                className={styles.textarea}
-                placeholder="Viết nội dung bài viết của bạn tại đây..."
-                value={content}
-                onChange={(event) =>
-                  setContent(event.target.value.slice(0, MAX_CONTENT_LENGTH))
-                }
-                rows={12}
-                required
-              />
-
-              <p className={styles.counter}>
-                {content.length}/{MAX_CONTENT_LENGTH} ký tự
-              </p>
-            </div>
+            <RichTextEditor
+              value={content}
+              onChange={setContent}
+              placeholder="Viết nội dung bài viết của bạn tại đây..."
+              variant="full"
+              maxLength={MAX_CONTENT_LENGTH}
+              showCounter
+              rows={12}
+              required
+              toolbarAriaLabel="Định dạng nội dung"
+              onImageUpload={handleImageUpload}
+              onImageUploadError={(message) => showToast(message)}
+            />
           ) : (
             <div className={styles.preview}>
-              {content.trim() ? (
-                <p className={styles["preview-text"]}>{content}</p>
-              ) : (
-                <p className={styles["preview-empty"]}>Chưa có nội dung để xem trước.</p>
-              )}
+              <RichTextPreview value={content} />
             </div>
           )}
-        </section>
-
-        <section className={styles.card}>
-          <p className={styles.label}>Ảnh bìa (tùy chọn)</p>
-          <div className={styles.tabs}>
-            <button
-              type="button"
-              className={`${styles.tab} ${coverMode === "upload" ? styles["tab-active"] : ""}`}
-              onClick={() => setCoverMode("upload")}
-            >
-              Upload
-            </button>
-            <button
-              type="button"
-              className={`${styles.tab} ${coverMode === "url" ? styles["tab-active"] : ""}`}
-              onClick={() => setCoverMode("url")}
-            >
-              URL
-            </button>
-          </div>
-
-          {coverMode === "upload" ? (
-            <div className={styles.upload}>
-              <FontAwesomeIcon icon={faImage} className={styles["upload-icon"]} />
-              <label className={styles["upload-btn"]}>
-                Chọn ảnh bìa
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/gif"
-                  className={styles["file-input"]}
-                  onChange={handleCoverFileChange}
-                />
-              </label>
-              <p className={styles.hint}>PNG, JPG, GIF (tối đa 5MB)</p>
-              {coverFileName && <p className={styles["file-name"]}>{coverFileName}</p>}
-            </div>
-          ) : (
-            <input
-              type="url"
-              className={styles.input}
-              placeholder="https://example.com/image.jpg"
-              value={coverUrl}
-              onChange={(event) => setCoverUrl(event.target.value)}
-            />
-          )}
+          <p className={styles.hint}>
+            Dùng nút hình ảnh trên thanh công cụ để chèn ảnh vào nội dung (lưu trên Cloudinary).
+          </p>
         </section>
 
         <section className={styles.card}>
@@ -349,8 +254,8 @@ function CreatePostPage() {
           <div>
             <p className={styles["notice-title"]}>Chờ phê duyệt</p>
             <p className={styles["notice-text"]}>
-              Bài viết của bạn sẽ được admin xem xét trước khi xuất bản. Bạn sẽ nhận được thông
-              báo khi bài viết được duyệt.
+              Bài viết của bạn sẽ được moderator duyệt trước khi hiển thị trên feed. Bạn sẽ nhận
+              được thông báo khi bài viết được duyệt.
             </p>
           </div>
         </div>
@@ -359,7 +264,7 @@ function CreatePostPage() {
           <button type="button" className={styles.cancel} onClick={() => navigate("/home")}>
             Hủy
           </button>
-          <Button type="submit" disabled={isSubmitting || !title.trim() || !content.trim()}>
+          <Button type="submit" disabled={isSubmitting || !title.trim() || getPlainTextLength(content) === 0}>
             Đăng bài
             <FontAwesomeIcon icon={faPaperPlane} />
           </Button>

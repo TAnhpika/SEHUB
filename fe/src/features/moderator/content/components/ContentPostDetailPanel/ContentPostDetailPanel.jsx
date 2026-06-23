@@ -17,6 +17,7 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import ModeratorBadge from "@/features/moderator/components/ModeratorBadge/ModeratorBadge";
+import RichTextContent from "@/common/RichTextEditor/RichTextContent";
 import { STATUS_META, TYPE_META } from "@/features/moderator/content/contentModerationData";
 import styles from "./ContentPostDetailPanel.module.css";
 
@@ -185,7 +186,7 @@ function ContentPostDetailPanel({
 
         <div className={styles.detailPreview}>
           <p className={styles.detailPreviewLabel}>Nội dung bài viết</p>
-          <div className={styles.detailText}>{bodyText}</div>
+          <RichTextContent value={bodyText} className={styles.detailText} />
         </div>
 
         {hasInlineImages ? (

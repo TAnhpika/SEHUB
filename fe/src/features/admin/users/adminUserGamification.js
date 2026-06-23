@@ -1,4 +1,7 @@
 import { getActiveRankThresholds } from "@/features/admin/gamification/adminGamificationData";
+import { isValidGuid } from "@/features/feed/postUtils";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 /** Cấp độ gamification — §3.6 SEHUB_PhanTichNghiepVu */
 export const RANK_LEVELS = ["Bronze", "Silver", "Gold", "Platinum"];
@@ -10,13 +13,25 @@ const FALLBACK_THRESHOLDS = [
   { name: "Platinum", minPoints: 2150 },
 ];
 
-function getRankConfig() {
+/** Ngưỡng mặc định từ BE DbSeeder — dùng khi hiển thị user thật từ API */
+const BE_RANK_THRESHOLDS = [
+  { name: "Bronze", minPoints: 0 },
+  { name: "Silver", minPoints: 100 },
+  { name: "Gold", minPoints: 500 },
+  { name: "Platinum", minPoints: 2000 },
+];
+
+function getRankConfig(preferBackend = false) {
+  if (preferBackend) {
+    return BE_RANK_THRESHOLDS;
+  }
+
   const fromStore = getActiveRankThresholds();
   return fromStore.length > 0 ? fromStore : FALLBACK_THRESHOLDS;
 }
 
-function resolveLevelByPoints(points) {
-  const tiers = getRankConfig();
+function resolveLevelByPoints(points, { preferBackend = false } = {}) {
+  const tiers = getRankConfig(preferBackend);
   let current = tiers[0]?.name ?? "Bronze";
   for (const tier of tiers) {
     if (points >= tier.minPoints) current = tier.name;
@@ -35,8 +50,26 @@ function resolveLevelByPoints(points) {
 /**
  * @param {{ id?: string, username?: string, role?: string } | null | undefined} user
  */
+function usesApiGamification(user) {
+  return !USE_MOCK || Boolean(user.apiId) || isValidGuid(String(user.id ?? ""));
+}
+
 export function getUserGamification(user) {
   if (!user || user.role !== "student") return null;
+
+  if (usesApiGamification(user)) {
+    const points = user.points ?? 0;
+    const resolved = resolveLevelByPoints(points, { preferBackend: true });
+    const levelFromApi = user.levelName?.trim();
+
+    return {
+      level: levelFromApi || resolved.level,
+      points,
+      streak: user.streakCount ?? 0,
+      levelProgress: resolved.levelProgress,
+      nextLevel: resolved.nextLevel,
+    };
+  }
 
   if (user.username === "anhcoding12345") {
     const resolved = resolveLevelByPoints(240);

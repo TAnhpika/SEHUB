@@ -21,6 +21,7 @@ const ICONS = {
   revenue: faCoins,
   confirm: faClock,
   pending: faHourglassHalf,
+  pendingRefund: faClock,
   refund: faRotateLeft,
   failed: faCircleXmark,
   activated: faCircleCheck,
@@ -49,8 +50,8 @@ function PaymentStatsStrip({ stats, activeFilter, onFilter, eligibleTokenCount }
       label: "Chờ xác nhận",
       value: stats.awaitingConfirm,
       tone: "warn",
-      filter: "webhook_ok",
-      hint: "Webhook OK — bước 5",
+      filter: "waiting_confirmation",
+      hint: "Sinh viên đã thanh toán — Admin xác nhận thủ công",
     },
     {
       id: "activated",
@@ -67,6 +68,14 @@ function PaymentStatsStrip({ stats, activeFilter, onFilter, eligibleTokenCount }
       tone: "neutral",
       filter: "pending_payment",
       hint: "SV chưa chuyển khoản",
+    },
+    {
+      id: "pendingRefund",
+      label: "Chờ duyệt hoàn tiền",
+      value: stats.pendingRefund ?? 0,
+      tone: "warn",
+      filter: "refund_requested",
+      hint: "Yêu cầu từ sinh viên",
     },
     {
       id: "refund",

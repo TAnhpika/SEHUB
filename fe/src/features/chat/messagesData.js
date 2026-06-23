@@ -1,121 +1,39 @@
-export const CONVERSATIONS = [
-  {
-    id: "anhcoding12345",
-    name: "anhcoding12345",
-    initials: "A",
-    avatarBg: "#dbeafe",
-    avatarColor: "#2563eb",
-    preview: "Hiện tại thì ổn rồi đó...",
-    time: "14:20",
-    unread: 2,
-    online: true,
-    typing: true,
-    messages: [
-      { id: "d1", type: "date", label: "HÔM NAY" },
-      {
-        id: "m1",
-        type: "received",
-        text: "Chào bạn, mình thấy bài viết của bạn về AI rất hay. Bạn có thể chia sẻ thêm tài liệu không?",
-        time: "14:15",
-      },
-      {
-        id: "m2",
-        type: "sent",
-        text: "Hiện tại thì ổn rồi đó, mình gửi link Drive cho bạn nhé!",
-        time: "14:18",
-      },
-    ],
-  },
-  {
-    id: "phuong-thao",
-    name: "Phuong Thao",
-    initials: "PT",
-    avatarBg: "#dbeafe",
-    avatarColor: "#2563eb",
-    preview: "Mai mình học nhóm nhé",
-    time: "Hôm qua",
-    unread: 1,
-    online: true,
-    typing: false,
-    messages: [
-      { id: "d1", type: "date", label: "HÔM QUA" },
-      {
-        id: "m1",
-        type: "received",
-        text: "Mai mình học nhóm nhé, bạn rảnh lúc nào?",
-        time: "21:40",
-      },
-      {
-        id: "m2",
-        type: "sent",
-        text: "Mình rảnh buổi chiều, khoảng 2h nhé.",
-        time: "21:52",
-      },
-    ],
-  },
-  {
-    id: "le-anh",
-    name: "Lê Anh",
-    initials: "LA",
-    avatarBg: "#ffedd5",
-    avatarColor: "#ea580c",
-    preview: "Bạn: Ok nhé, mai gặp",
-    time: "2 ngày",
-    unread: 0,
-    online: false,
-    typing: false,
-    messages: [
-      { id: "d1", type: "date", label: "2 NGÀY TRƯỚC" },
-      {
-        id: "m1",
-        type: "received",
-        text: "Tuần sau có buổi review FE không?",
-        time: "09:10",
-      },
-      {
-        id: "m2",
-        type: "sent",
-        text: "Ok nhé, mai gặp",
-        time: "09:25",
-      },
-    ],
-  },
-  {
-    id: "unknown",
-    name: "Unknown User",
-    initials: null,
-    avatarBg: "#dbeafe",
-    avatarColor: "#2563eb",
-    preview: "ngonn",
-    time: "18 ngày trước",
-    unread: 0,
-    online: null,
-    typing: false,
-    messages: [
-      {
-        id: "m1",
-        type: "received",
-        text: "ngonn",
-        time: "10:05",
-      },
-    ],
-  },
-];
+import * as messagesApi from "@/api/messagesApi";
+import { mapConversationListItem, mapMessages } from "@/api/messagesMapper";
 
-export function getConversationById(id) {
-  return CONVERSATIONS.find((item) => item.id === id) ?? CONVERSATIONS[0];
+export async function loadConversations() {
+  const items = await messagesApi.getConversations();
+  return (items ?? []).map(mapConversationListItem);
 }
 
-/** Danh sách rút gọn cho popup chat nhanh */
-export const CHAT_CONVERSATIONS = CONVERSATIONS.map(
-  ({ id, name, initials, avatarBg, avatarColor, preview, time, online }) => ({
-    id,
-    name,
-    initials,
-    avatarBg,
-    avatarColor,
-    preview,
-    time,
-    online,
-  }),
-);
+export async function loadUnreadCount() {
+  const data = await messagesApi.getUnreadCount();
+  return data?.totalUnread ?? 0;
+}
+
+export async function openConversationWithUser(userId) {
+  const dto = await messagesApi.getOrCreateConversation(userId);
+  return mapConversationListItem(dto);
+}
+
+export async function loadConversationMessages(conversationId, { page = 1, pageSize = 50 } = {}) {
+  const data = await messagesApi.getMessages(conversationId, { page, pageSize });
+  return {
+    items: mapMessages(data?.items ?? []),
+    totalCount: data?.totalCount ?? 0,
+  };
+}
+
+export async function sendConversationMessage(conversationId, content) {
+  const dto = await messagesApi.sendMessage(conversationId, content);
+  return mapMessages([dto])[0];
+}
+
+export async function sendConversationAttachment(conversationId, file, content = "") {
+  const dto = await messagesApi.sendMessageAttachment(conversationId, file, content);
+  return mapMessages([dto])[0];
+}
+
+export async function markConversationAsRead(conversationId) {
+  await messagesApi.markConversationRead(conversationId);
+}

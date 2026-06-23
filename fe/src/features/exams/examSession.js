@@ -13,11 +13,13 @@ function writeSession(examId, session) {
   sessionStorage.setItem(`${SESSION_PREFIX}${examId}`, JSON.stringify(session));
 }
 
-export function createExamSession(examId) {
+export function createExamSession(examId, extras = {}) {
   const session = {
     examId,
-    startedAt: Date.now(),
-    answers: {},
+    apiExamId: extras.apiExamId ?? null,
+    attemptId: extras.attemptId ?? null,
+    startedAt: extras.startedAt ?? Date.now(),
+    answers: extras.answers ?? {},
     submitted: false,
     result: null,
   };
@@ -43,15 +45,46 @@ export function saveExamAnswer(examId, questionId, answerKey) {
     session.answers[key] = answerKey;
   }
 
-  session.answers[String(questionId)] = answerKey;
   writeSession(examId, session);
   return session;
+}
+
+export function saveExamAnswers(examId, answers) {
+  const session = getOrCreateExamSession(examId);
+  session.answers = answers;
+  writeSession(examId, session);
+  return session;
+}
+
+function isGradedAnswerCorrect(question, selected) {
+  if (selected == null || selected === "") {
+    return false;
+  }
+
+  if (Array.isArray(selected)) {
+    const correctKeys = question.correctAnswers ?? [];
+    if (correctKeys.length === 0) {
+      return false;
+    }
+
+    const selectedKeys = selected.filter(Boolean);
+    return (
+      selectedKeys.length === correctKeys.length
+      && selectedKeys.every((key) => correctKeys.includes(key))
+    );
+  }
+
+  if (question.correctAnswer == null) {
+    return false;
+  }
+
+  return selected === question.correctAnswer;
 }
 
 export function gradeExam(questions, answers) {
   const items = questions.map((question) => {
     const selected = answers[String(question.id)] ?? null;
-    const isCorrect = selected === question.correctAnswer;
+    const isCorrect = isGradedAnswerCorrect(question, selected);
 
     return {
       questionId: question.id,
@@ -130,6 +163,28 @@ export function submitExamSession(examId, questions) {
   };
   writeSession(examId, next);
   return next;
+}
+
+export function applyApiExamResult(
+  examId,
+  { apiExamId, attemptId, startedAt, submittedAt, answers, result },
+) {
+  const next = {
+    examId,
+    apiExamId: apiExamId ?? null,
+    attemptId: attemptId ?? null,
+    startedAt: startedAt ?? Date.now(),
+    submittedAt: submittedAt ?? Date.now(),
+    answers: answers ?? {},
+    submitted: true,
+    result,
+  };
+  writeSession(examId, next);
+  return next;
+}
+
+export function usesApiAttempt(session) {
+  return Boolean(session?.apiExamId && session?.attemptId);
 }
 
 export function clearExamSession(examId) {

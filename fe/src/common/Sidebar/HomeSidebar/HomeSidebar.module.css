@@ -121,11 +121,16 @@
 }
 
 .featured {
-  flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   border-color: var(--color-primary);
+}
+
+.ftes {
+  flex-shrink: 0;
+  padding: 0.875rem 0.75rem;
+  border-radius: var(--radius-xl);
 }
 
 .title {

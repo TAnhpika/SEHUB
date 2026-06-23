@@ -99,7 +99,7 @@ function LandingPage() {
           <div className={styles["hero-visual"]} aria-hidden="true">
             <span className={styles["points-badge"]}>
               <FontAwesomeIcon icon={faTrophy} />
-              +50 Điểm
+              500+ đề thi
             </span>
 
             <div className={styles["chat-card"]}>
@@ -138,7 +138,11 @@ function LandingPage() {
               </div>
             </div>
 
-            <span className={styles["exam-badge"]}>Đề thi đến hạn</span>
+            <span className={styles["exam-badge"]}>
+              <span className={styles["exam-badge-dot"]} aria-hidden="true" />
+              <FontAwesomeIcon icon={faRobot} />
+              Ôn thi cùng AI
+            </span>
           </div>
         </div>
       </section>
@@ -194,7 +198,7 @@ function LandingPage() {
             </div>
             <div className={styles["premium-side"]}>
               <div className={styles["premium-tags"]}>
-                <span className={styles["tag-outline"]}>Từ 49K/tháng</span>
+                <span className={styles["tag-outline"]}>Từ 48K/tháng</span>
                 <span className={styles["tag-filled"]}>
                   {SEMESTER_PLAN.savings} — {SEMESTER_PLAN.name}
                 </span>

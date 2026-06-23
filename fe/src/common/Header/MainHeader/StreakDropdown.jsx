@@ -1,7 +1,8 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFire } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
+import { useHoverDropdown } from "@/hooks/useHoverDropdown";
 import {
   buildDailyTasks,
   getCompletedTaskCount,
@@ -10,7 +11,7 @@ import styles from "./StreakDropdown.module.css";
 
 function StreakDropdown() {
   const { user } = useAuth();
-  const [open, setOpen] = useState(false);
+  const { open, setOpen, rootProps, handleTriggerClick } = useHoverDropdown();
   const rootRef = useRef(null);
   const panelId = useId();
   const streakDays = user?.streak ?? 0;
@@ -20,33 +21,25 @@ function StreakDropdown() {
   useEffect(() => {
     if (!open) return undefined;
 
-    function handlePointerDown(event) {
-      if (!rootRef.current?.contains(event.target)) {
-        setOpen(false);
-      }
-    }
-
     function handleKeyDown(event) {
       if (event.key === "Escape") {
         setOpen(false);
       }
     }
 
-    document.addEventListener("mousedown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open]);
+  }, [open, setOpen]);
 
   return (
-    <div className={styles.root} ref={rootRef}>
+    <div className={styles.root} ref={rootRef} {...rootProps}>
       <button
         type="button"
         className={`${styles.trigger} ${open ? styles["trigger-open"] : ""}`}
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={handleTriggerClick}
         aria-label={`Streak ${streakDays} ngày, ${completedCount}/${dailyTasks.length} nhiệm vụ hoàn thành`}
         aria-haspopup="dialog"
         aria-expanded={open}
