@@ -1,0 +1,25 @@
+.root {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.root a {
+  font-weight: 500;
+  color: #2563eb;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.root a:hover {
+  color: #1d4ed8;
+}
+
+.empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #94a3b8;
+}

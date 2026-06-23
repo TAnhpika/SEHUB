@@ -4,7 +4,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheck,
   faClockRotateLeft,
-  faFilePdf,
   faImage,
   faRotateRight,
   faXmark,
@@ -316,12 +315,6 @@ function ContentModerationPage() {
                                   <span className={styles.contentHint}>
                                     <FontAwesomeIcon icon={faImage} />
                                     {item.inlineImages.length} ảnh
-                                  </span>
-                                ) : null}
-                                {item.attachments?.length ? (
-                                  <span className={styles.contentHint}>
-                                    <FontAwesomeIcon icon={faFilePdf} />
-                                    {item.attachments.length} file
                                   </span>
                                 ) : null}
                               </div>

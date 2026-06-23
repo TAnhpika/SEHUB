@@ -16,7 +16,6 @@ import {
   faLinkSlash,
   faListOl,
   faListUl,
-  faPaperclip,
   faQuoteLeft,
   faReply,
   faShareNodes,
@@ -30,6 +29,7 @@ import {
   submitComment,
   toggleLike,
 } from "@/features/feed/feedData";
+import PostContentPreview from "@/common/PostContentPreview/PostContentPreview";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
 import ChatImageLightbox from "@/features/chat/ChatImageLightbox/ChatImageLightbox";
@@ -276,7 +276,7 @@ function PostDetailPage() {
             ))}
           </div>
         ) : null}
-        <p className={styles.body}>{post.body ?? post.excerpt}</p>
+        <PostContentPreview text={post.body ?? post.excerpt} className={styles.body} />
 
         {post.tags?.length > 0 && (
           <ul className={styles.tags} aria-label="Thẻ bài viết">
@@ -377,7 +377,7 @@ function PostDetailPage() {
                   </div>
                 </div>
               ) : (
-                <p className={styles["comment-content"]}>{comment.content}</p>
+                <PostContentPreview text={comment.content} className={styles["comment-content"]} />
               )}
 
               {!isEditingComment && (
@@ -414,11 +414,8 @@ function PostDetailPage() {
               <button type="button" className={styles.tool} aria-label="Gỡ liên kết">
                 <FontAwesomeIcon icon={faLinkSlash} />
               </button>
-              <button type="button" className={styles.tool} aria-label="Hình ảnh">
+              <button type="button" className={styles.tool} aria-label="Hình ảnh (URL)">
                 <FontAwesomeIcon icon={faImage} />
-              </button>
-              <button type="button" className={styles.tool} aria-label="Đính kèm">
-                <FontAwesomeIcon icon={faPaperclip} />
               </button>
               <button type="button" className={styles.tool} aria-label="Danh sách">
                 <FontAwesomeIcon icon={faListUl} />
@@ -436,7 +433,7 @@ function PostDetailPage() {
 
             <textarea
               className={styles.input}
-              placeholder="Viết bình luận của bạn..."
+              placeholder="Viết bình luận của bạn (chỉ văn bản và link, không đính kèm file)..."
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               rows={4}

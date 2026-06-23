@@ -5,7 +5,6 @@ import {
   faCheck,
   faClipboardList,
   faClock,
-  faFilePdf,
   faImage,
   faInbox,
   faXmark,
@@ -297,12 +296,6 @@ function ContentModerationHistoryPage() {
                                   <span className={styles.contentHint}>
                                     <FontAwesomeIcon icon={faImage} />
                                     Ảnh bìa
-                                  </span>
-                                ) : null}
-                                {item.attachments?.length ? (
-                                  <span className={styles.contentHint}>
-                                    <FontAwesomeIcon icon={faFilePdf} />
-                                    {item.attachments.length} file
                                   </span>
                                 ) : null}
                               </div>

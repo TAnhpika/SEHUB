@@ -21,6 +21,7 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import PostContentPreview from "@/common/PostContentPreview/PostContentPreview";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
@@ -126,8 +127,8 @@ function CreatePostPage() {
       <header className={styles.header}>
         <h1 className={styles.title}>Tạo bài viết mới</h1>
         <p className={styles.subtitle}>
-          Chia sẻ kiến thức của bạn với cộng đồng. Bài viết sẽ được moderator xem xét trước khi
-          xuất bản.
+          Chia sẻ kiến thức với cộng đồng. Bài viết hỗ trợ văn bản, liên kết và ảnh bìa — không đính kèm
+          file PDF/ZIP. Nội dung sẽ được moderator xem xét trước khi xuất bản.
         </p>
       </header>
 
@@ -270,7 +271,7 @@ function CreatePostPage() {
           ) : (
             <div className={styles.preview}>
               {content.trim() ? (
-                <p className={styles["preview-text"]}>{content}</p>
+                <PostContentPreview text={content} className={styles["preview-text"]} />
               ) : (
                 <p className={styles["preview-empty"]}>Chưa có nội dung để xem trước.</p>
               )}
@@ -309,7 +310,7 @@ function CreatePostPage() {
                   onChange={handleCoverFileChange}
                 />
               </label>
-              <p className={styles.hint}>PNG, JPG, GIF, WEBP (tối đa 5MB)</p>
+              <p className={styles.hint}>PNG, JPG, GIF, WEBP (tối đa 5MB). Chỉ ảnh bìa — không upload file đính kèm.</p>
               {coverFileName && <p className={styles["file-name"]}>{coverFileName}</p>}
             </div>
           ) : (

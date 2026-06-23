@@ -64,12 +64,6 @@ function Footer() {
               <li>
                 <span>Discord</span>
               </li>
-              <li>
-                <span>Sự kiện</span>
-              </li>
-              <li>
-                <span>Blog</span>
-              </li>
             </ul>
           </div>
 
