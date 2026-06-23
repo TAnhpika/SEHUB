@@ -2,11 +2,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChevronDown,
   faChevronUp,
-  faImage,
   faPlus,
-  faSquareRootVariable,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
+import RichTextEditor from "@/common/RichTextEditor/RichTextEditor";
 import {
   OPTION_LABELS,
   QUESTION_TYPES,
@@ -16,6 +15,7 @@ import styles from "./QuestionEditorCard.module.css";
 function QuestionEditorCard({
   questionNumber,
   question,
+  importWarnings = [],
   onChange,
   onAnswerChange,
   onCorrectAnswerChange,
@@ -78,6 +78,19 @@ function QuestionEditorCard({
         </button>
       </header>
 
+      {importWarnings.length > 0 && (
+        <div className={styles.importWarning} role="status">
+          <strong>Cảnh báo import:</strong>
+          <ul>
+            {importWarnings.map((warning) => (
+              <li key={warning}>
+                {warning.replace(/^Câu\s+\d+\s*:\s*/iu, "")}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <label className={styles.field}>
         <span className={styles.label}>Loại câu hỏi</span>
         <select
@@ -120,23 +133,19 @@ function QuestionEditorCard({
         <span className={styles.label}>
           Nội dung câu hỏi <span className={styles.required}>*</span>
         </span>
-        <div className={styles.textareaWrap}>
-          <textarea
-            className={styles.textarea}
-            placeholder="Nhập nội dung câu hỏi..."
-            value={question.content}
-            onChange={(event) => onChange({ content: event.target.value })}
-            rows={5}
-          />
-          <div className={styles.textareaTools}>
-            <button type="button" className={styles.toolBtn} aria-label="Chèn công thức">
-              <FontAwesomeIcon icon={faSquareRootVariable} />
-            </button>
-            <button type="button" className={styles.toolBtn} aria-label="Chèn hình ảnh">
-              <FontAwesomeIcon icon={faImage} />
-            </button>
-          </div>
-        </div>
+        <RichTextEditor
+          value={question.content}
+          onChange={(content) => onChange({ content })}
+          placeholder="Nhập nội dung câu hỏi..."
+          variant="minimal"
+          toolbarPlacement="floating"
+          rows={5}
+          bordered={false}
+          className={styles.textareaWrap}
+          textareaClassName={styles.textarea}
+          toolbarAriaLabel="Công cụ soạn câu hỏi"
+          aria-label="Nội dung câu hỏi"
+        />
       </label>
 
       <div className={styles.answers}>
@@ -210,12 +219,16 @@ function QuestionEditorCard({
       {question.showExplanation && (
         <label className={styles.field}>
           <span className={styles.label}>Giải thích đáp án</span>
-          <textarea
-            className={styles.textareaPlain}
-            placeholder="Nhập giải thích cho đáp án đúng..."
+          <RichTextEditor
             value={question.explanation}
-            onChange={(event) => onChange({ explanation: event.target.value })}
+            onChange={(explanation) => onChange({ explanation })}
+            placeholder="Nhập giải thích cho đáp án đúng..."
+            variant="basic"
             rows={4}
+            bordered={false}
+            textareaClassName={styles.textareaPlain}
+            toolbarAriaLabel="Định dạng giải thích"
+            aria-label="Giải thích đáp án"
           />
         </label>
       )}

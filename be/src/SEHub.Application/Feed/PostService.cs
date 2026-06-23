@@ -379,6 +379,8 @@ public sealed class PostService : IPostService
             Id = post.Id,
             Title = post.Title,
             Excerpt = BuildExcerpt(post.Content),
+            ContentPreview = PostContentPreview.BuildContentPreview(post.Content),
+            PreviewImageUrl = PostContentPreview.ExtractFirstImageUrl(post.Content),
             Author = await BuildAuthorAsync(post.AuthorId, cancellationToken),
             Tags = ParseTags(post.Tags),
             LikeCount = await _likeRepository.CountByPostIdAsync(post.Id, cancellationToken),
@@ -439,7 +441,7 @@ public sealed class PostService : IPostService
     }
 
     private static string BuildExcerpt(string content) =>
-        content.Length <= 200 ? content : content[..200] + "...";
+        PostContentPreview.BuildTextExcerpt(content);
 
     private static IReadOnlyList<string> ParseTags(string tags) =>
         string.IsNullOrWhiteSpace(tags) ? [] : tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

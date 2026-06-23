@@ -76,5 +76,5 @@ export function optionIdsToLabels(options, optionIds = []) {
   const idSet = new Set(optionIds.map(String));
   return options
     .filter((option) => idSet.has(String(option.id ?? option.optionId)))
-    .map((option) => option.label ?? option.key);
+    .map((option) => option.key ?? option.label);
 }

@@ -3,20 +3,14 @@ import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowUpFromBracket,
-  faBold,
   faCloudArrowUp,
-  faCode,
   faFileArchive,
   faFilePdf,
   faGear,
-  faItalic,
-  faLink,
-  faListOl,
-  faListUl,
   faTrash,
-  faUnderline,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import RichTextEditor from "@/common/RichTextEditor/RichTextEditor";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
@@ -349,39 +343,15 @@ function AddPracticeExamPage() {
                   <span className={styles.label}>
                     Mô tả &amp; Yêu cầu <span className={styles.required}>*</span>
                   </span>
-                  <div className={styles.editor}>
-                    <div className={styles.toolbar} aria-label="Định dạng văn bản">
-                      <button type="button" className={styles.tool} aria-label="In đậm">
-                        <FontAwesomeIcon icon={faBold} />
-                      </button>
-                      <button type="button" className={styles.tool} aria-label="In nghiêng">
-                        <FontAwesomeIcon icon={faItalic} />
-                      </button>
-                      <button type="button" className={styles.tool} aria-label="Gạch chân">
-                        <FontAwesomeIcon icon={faUnderline} />
-                      </button>
-                      <button type="button" className={styles.tool} aria-label="Danh sách">
-                        <FontAwesomeIcon icon={faListUl} />
-                      </button>
-                      <button type="button" className={styles.tool} aria-label="Danh sách đánh số">
-                        <FontAwesomeIcon icon={faListOl} />
-                      </button>
-                      <button type="button" className={styles.tool} aria-label="Liên kết">
-                        <FontAwesomeIcon icon={faLink} />
-                      </button>
-                      <button type="button" className={styles.tool} aria-label="Mã">
-                        <FontAwesomeIcon icon={faCode} />
-                      </button>
-                    </div>
-                    <textarea
-                      className={styles.textarea}
-                      placeholder="Nhập nội dung mô tả, yêu cầu đề bài, định dạng nộp bài..."
-                      value={description}
-                      onChange={(event) => setDescription(event.target.value)}
-                      rows={10}
-                      required
-                    />
-                  </div>
+                  <RichTextEditor
+                    value={description}
+                    onChange={setDescription}
+                    placeholder="Nhập nội dung mô tả, yêu cầu đề bài, định dạng nộp bài..."
+                    variant="basic"
+                    rows={10}
+                    required
+                    toolbarAriaLabel="Định dạng văn bản"
+                  />
                 </div>
               </div>
 

@@ -95,7 +95,10 @@ public sealed class SmtpEmailService : IEmailService
         string password,
         CancellationToken cancellationToken)
     {
-        using var client = new SmtpClient();
+        using var client = new SmtpClient
+        {
+            Timeout = 15_000,
+        };
         var socketOptions = smtp.Port == 465
             ? SecureSocketOptions.SslOnConnect
             : SecureSocketOptions.StartTls;

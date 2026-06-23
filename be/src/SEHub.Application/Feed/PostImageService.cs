@@ -12,6 +12,13 @@ namespace SEHub.Application.Feed;
 
 public interface IPostImageService
 {
+    Task<PostContentImageUploadDto> UploadContentImageAsync(
+        Stream content,
+        string fileName,
+        string contentType,
+        long fileSizeBytes,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<PostImageDto>> UploadImagesAsync(
         Guid postId,
         IReadOnlyList<PostImageUpload> uploads,
@@ -64,6 +71,35 @@ public sealed class PostImageService : IPostImageService
         _driveStorage = driveStorage;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+    }
+
+    public async Task<PostContentImageUploadDto> UploadContentImageAsync(
+        Stream content,
+        string fileName,
+        string contentType,
+        long fileSizeBytes,
+        CancellationToken cancellationToken = default)
+    {
+        _ = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+
+        CloudFileValidation.EnsureValidImage(contentType, fileSizeBytes, fileName);
+
+        CdnUploadResult result;
+        try
+        {
+            result = await _cdnStorage.UploadImageAsync(
+                content,
+                fileName,
+                contentType,
+                _cdnFolders.Posts,
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is not DomainException and not NotFoundException and not ForbiddenException)
+        {
+            throw new DomainException(ErrorCodes.StorageUploadFailed, ex);
+        }
+
+        return new PostContentImageUploadDto { Url = result.Url };
     }
 
     public async Task<IReadOnlyList<PostImageDto>> UploadImagesAsync(

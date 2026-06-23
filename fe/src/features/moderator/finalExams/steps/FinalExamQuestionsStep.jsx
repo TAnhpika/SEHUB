@@ -86,16 +86,14 @@ function FinalExamQuestionsStep() {
         return;
       }
 
-      const mapped = mapImportedExamQuestions(imported);
+      const warnings = result?.warnings ?? [];
+      const mapped = mapImportedExamQuestions(imported, warnings);
       setQuestions(mapped);
       setExamInfo((prev) => ({ ...prev, totalQuestions: mapped.length }));
       setActiveQuestionIndex(0);
       setInputMode("manual");
 
-      const warnings = result?.warnings ?? [];
-      if (warnings.length > 0) {
-        showToast(`Đã import ${mapped.length} câu. ${warnings.length} cảnh báo — kiểm tra lại đáp án.`, 6000);
-      } else {
+      if (warnings.length === 0) {
         showToast(`Đã import ${mapped.length} câu hỏi từ Markdown.`);
       }
     } catch (err) {
@@ -158,6 +156,7 @@ function FinalExamQuestionsStep() {
           <QuestionEditorCard
             questionNumber={questionNumber}
             question={activeQuestion}
+            importWarnings={activeQuestion.importWarnings}
             onChange={updateActiveQuestion}
             onAnswerChange={updateActiveAnswer}
             onCorrectAnswerChange={(key) => updateActiveQuestion({ correctAnswer: key })}
@@ -177,8 +176,15 @@ function FinalExamQuestionsStep() {
                     type="button"
                     className={`${styles.pickerBtn} ${
                       index === activeQuestionIndex ? styles["pickerBtn-active"] : ""
-                    } ${isQuestionComplete(item) ? styles["pickerBtn-complete"] : ""}`}
+                    } ${isQuestionComplete(item) ? styles["pickerBtn-complete"] : ""} ${
+                      item.importWarnings?.length ? styles["pickerBtn-warning"] : ""
+                    }`}
                     onClick={() => setActiveQuestionIndex(index)}
+                    title={
+                      item.importWarnings?.length
+                        ? item.importWarnings.join(" · ")
+                        : undefined
+                    }
                   >
                     {index + 1}
                   </button>

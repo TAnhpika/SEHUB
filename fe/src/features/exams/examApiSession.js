@@ -31,17 +31,28 @@ export async function persistAttemptAnswers(apiExamId, attemptId, questions, uiA
   return examsApi.saveAnswers(apiExamId, attemptId, body);
 }
 
-export async function submitApiAttempt(examId, apiExamId, attemptId, questions, startedAt) {
+export async function submitApiAttempt(
+  examId,
+  apiExamId,
+  attemptId,
+  questions,
+  startedAt,
+  uiAnswers = {},
+) {
+  if (Object.keys(uiAnswers).length > 0) {
+    await persistAttemptAnswers(apiExamId, attemptId, questions, uiAnswers);
+  }
+
   const apiResult = await examsApi.submitAttempt(apiExamId, attemptId);
   const result = mapExamResultToLocalResult(apiResult, questions);
-  const uiAnswers = {};
+  const resultAnswers = {};
 
   for (const item of result.items) {
     if (item.selectedAnswers?.length) {
-      uiAnswers[String(item.questionId)] =
+      resultAnswers[String(item.questionId)] =
         item.selectedAnswers.length > 1 ? item.selectedAnswers : item.selectedAnswers[0];
     } else if (item.selectedAnswer) {
-      uiAnswers[String(item.questionId)] = item.selectedAnswer;
+      resultAnswers[String(item.questionId)] = item.selectedAnswer;
     }
   }
 
@@ -50,7 +61,7 @@ export async function submitApiAttempt(examId, apiExamId, attemptId, questions, 
     attemptId,
     startedAt,
     submittedAt: Date.now(),
-    answers: uiAnswers,
+    answers: resultAnswers,
     result,
   });
 

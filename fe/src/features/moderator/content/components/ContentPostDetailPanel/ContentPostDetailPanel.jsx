@@ -4,6 +4,10 @@ import {
   faCheck,
   faComment,
   faCommentSlash,
+  faDownload,
+  faFile,
+  faFileArchive,
+  faFilePdf,
   faHeart,
   faImage,
   faMousePointer,
@@ -13,9 +17,15 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import ModeratorBadge from "@/features/moderator/components/ModeratorBadge/ModeratorBadge";
-import PostContentPreview from "@/common/PostContentPreview/PostContentPreview";
+import RichTextContent from "@/common/RichTextEditor/RichTextContent";
 import { STATUS_META, TYPE_META } from "@/features/moderator/content/contentModerationData";
 import styles from "./ContentPostDetailPanel.module.css";
+
+function AttachmentIcon({ type }) {
+  if (type === "pdf") return faFilePdf;
+  if (type === "zip") return faFileArchive;
+  return faFile;
+}
 
 function StatusBadge({ status }) {
   const meta = STATUS_META[status] ?? STATUS_META.pending;
@@ -102,7 +112,7 @@ function ContentPostDetailPanel({
     const emptyDesc =
       mode === "featured"
         ? "Nhấp bài đang ghim hoặc kết quả tìm kiếm để xem nội dung trước khi ghim lên sidebar."
-        : "Xem đầy đủ tiêu đề, nội dung văn bản, ảnh và liên kết trong bài.";
+        : "Xem đầy đủ tiêu đề, nội dung, ảnh bìa, ảnh trong bài và file đính kèm.";
 
     return (
       <div className={styles.detailEmpty}>
@@ -114,6 +124,7 @@ function ContentPostDetailPanel({
   }
 
   const bodyText = item.content ?? item.excerpt;
+  const hasAttachments = item.attachments?.length > 0;
   const hasInlineImages = item.inlineImages?.length > 0;
   const showModerationActions = mode === "queue" && item.status === "pending";
   const isFeaturedMode = mode === "featured";
@@ -175,7 +186,7 @@ function ContentPostDetailPanel({
 
         <div className={styles.detailPreview}>
           <p className={styles.detailPreviewLabel}>Nội dung bài viết</p>
-          <PostContentPreview text={bodyText} className={styles.detailText} emptyLabel="Không có nội dung." />
+          <RichTextContent value={bodyText} className={styles.detailText} />
         </div>
 
         {hasInlineImages ? (
@@ -191,6 +202,29 @@ function ContentPostDetailPanel({
                 </figure>
               ))}
             </div>
+          </section>
+        ) : null}
+
+        {hasAttachments ? (
+          <section className={styles.mediaSection}>
+            <p className={styles.detailPreviewLabel}>File đính kèm ({item.attachments.length})</p>
+            <ul className={styles.attachmentList}>
+              {item.attachments.map((file) => (
+                <li key={file.id} className={styles.attachmentItem}>
+                  <span className={styles.attachmentIcon} aria-hidden>
+                    <FontAwesomeIcon icon={AttachmentIcon({ type: file.type })} />
+                  </span>
+                  <div className={styles.attachmentMeta}>
+                    <p className={styles.attachmentName}>{file.name}</p>
+                    <p className={styles.attachmentSize}>{file.sizeLabel}</p>
+                  </div>
+                  <button type="button" className={styles.attachmentBtn} aria-label={`Tải ${file.name}`}>
+                    <FontAwesomeIcon icon={faDownload} />
+                    Xem / tải
+                  </button>
+                </li>
+              ))}
+            </ul>
           </section>
         ) : null}
 

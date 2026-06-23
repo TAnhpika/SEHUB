@@ -85,6 +85,31 @@
   overflow: hidden;
 }
 
+.excerpt strong,
+.excerpt b {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.excerpt em,
+.excerpt i {
+  font-style: italic;
+}
+
+.excerpt u {
+  text-decoration: underline;
+}
+
+.excerpt del,
+.excerpt s {
+  text-decoration: line-through;
+}
+
+.excerpt p {
+  margin: 0;
+  display: inline;
+}
+
 .tags {
   display: flex;
   flex-wrap: wrap;

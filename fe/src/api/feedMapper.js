@@ -52,7 +52,8 @@ export function mapPostListItem(dto) {
     author: mapAuthor(dto.author),
     title: dto.title,
     excerpt: dto.excerpt,
-    body: dto.excerpt,
+    contentPreview: dto.contentPreview ?? dto.excerpt,
+    body: dto.contentPreview ?? dto.excerpt,
     tags: dto.tags ?? [],
     timeAgo: formatRelativeTime(dto.createdAt),
     publishedAt: formatPublishedAt(dto.createdAt),
@@ -62,6 +63,7 @@ export function mapPostListItem(dto) {
     isPinned: dto.isPinned ?? false,
     isFeatured: dto.isFeatured ?? false,
     coverImageUrl: resolveAssetUrl(dto.coverImageUrl),
+    previewImageUrl: resolveAssetUrl(dto.previewImageUrl),
     isLiked: dto.isLiked ?? false,
     images: (dto.images ?? []).map(mapPostImage),
   };

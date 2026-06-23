@@ -539,7 +539,7 @@ function ExamDetailPage({ page }) {
               )}
               {isReviewExam && currentQuestion && (
                 <p className={styles["preview-label"]}>
-                  Câu {currentQuestion.id} · {currentIndex + 1}/{orderedQuestions.length}
+                  Câu {currentIndex + 1} / {orderedQuestions.length}
                   {correctAnswerRevealed ? " · Đáp án đã hiện" : ""}
                 </p>
               )}

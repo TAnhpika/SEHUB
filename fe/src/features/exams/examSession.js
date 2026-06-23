@@ -56,10 +56,35 @@ export function saveExamAnswers(examId, answers) {
   return session;
 }
 
+function isGradedAnswerCorrect(question, selected) {
+  if (selected == null || selected === "") {
+    return false;
+  }
+
+  if (Array.isArray(selected)) {
+    const correctKeys = question.correctAnswers ?? [];
+    if (correctKeys.length === 0) {
+      return false;
+    }
+
+    const selectedKeys = selected.filter(Boolean);
+    return (
+      selectedKeys.length === correctKeys.length
+      && selectedKeys.every((key) => correctKeys.includes(key))
+    );
+  }
+
+  if (question.correctAnswer == null) {
+    return false;
+  }
+
+  return selected === question.correctAnswer;
+}
+
 export function gradeExam(questions, answers) {
   const items = questions.map((question) => {
     const selected = answers[String(question.id)] ?? null;
-    const isCorrect = selected === question.correctAnswer;
+    const isCorrect = isGradedAnswerCorrect(question, selected);
 
     return {
       questionId: question.id,

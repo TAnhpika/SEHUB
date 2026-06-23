@@ -73,6 +73,46 @@ export function buildEmptyQuestions(count) {
   return Array.from({ length: total }, (_, index) => createEmptyQuestion(`q-${index + 1}`));
 }
 
+const INTERNAL_GUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const HTML_TAG_RE = /<[a-z][\s\S]*>/i;
+
+export function isInternalGuid(value) {
+  return INTERNAL_GUID_RE.test(String(value ?? "").trim());
+}
+
+export function sanitizeWizardQuestionContent(content) {
+  const raw = String(content ?? "").trim();
+  if (!raw || isInternalGuid(raw)) {
+    return "";
+  }
+
+  if (HTML_TAG_RE.test(raw)) {
+    return raw
+      .replace(/<p>\s*[0-9a-f-]{36}\s*<\/p>/gi, "")
+      .replace(/<div>\s*[0-9a-f-]{36}\s*<\/div>/gi, "")
+      .replace(INTERNAL_GUID_RE, "")
+      .replace(/(<br\s*\/?>\s*){3,}/gi, "<br /><br />")
+      .trim();
+  }
+
+  return raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !isInternalGuid(line))
+    .join("\n")
+    .trim();
+}
+
+function sanitizeWizardAnswerText(text) {
+  const value = String(text ?? "").trim();
+  return isInternalGuid(value) ? "" : value;
+}
+
+function normalizeOptionId(value) {
+  return String(value ?? "").toLowerCase();
+}
+
 export const MARKDOWN_IMPORT_PLACEHOLDER = `## Câu 1
 Nội dung câu hỏi?
 
@@ -106,7 +146,7 @@ function mapQuestionOptionsToWizardAnswers(options = []) {
       .trim()
       .toUpperCase();
     if (OPTION_LABELS.includes(label)) {
-      answers[label] = option.text ?? option.Text ?? "";
+      answers[label] = sanitizeWizardAnswerText(option.text ?? option.Text ?? "");
       optionLabels.push(label);
     }
   }
@@ -117,7 +157,9 @@ function mapQuestionOptionsToWizardAnswers(options = []) {
   };
 }
 
-export function mapImportedExamQuestions(apiQuestions = []) {
+export function mapImportedExamQuestions(apiQuestions = [], importWarnings = []) {
+  const warningsByQuestion = indexImportWarnings(importWarnings);
+
   return apiQuestions.map((question, index) => {
     const options = question.options ?? [];
     const { answers, optionLabels } = mapQuestionOptionsToWizardAnswers(options);
@@ -126,17 +168,23 @@ export function mapImportedExamQuestions(apiQuestions = []) {
 
     let correctAnswer = "A";
     let correctAnswers = [];
-    const correctOptionIds = question.correctOptionIds ?? question.CorrectOptionIds ?? [];
+    const correctOptionIds = (question.correctOptionIds ?? question.CorrectOptionIds ?? []).map(
+      normalizeOptionId,
+    );
 
     if (correctOptionIds.length > 0) {
       correctAnswers = options
-        .filter((option) => correctOptionIds.includes(option.id ?? option.Id))
+        .filter((option) =>
+          correctOptionIds.includes(normalizeOptionId(option.id ?? option.Id)),
+        )
         .map((option) => String(option.label ?? option.Label ?? "").trim().toUpperCase())
         .filter((label) => OPTION_LABELS.includes(label));
     } else {
-      const correctOptionId = question.correctOptionId ?? question.CorrectOptionId;
+      const correctOptionId = normalizeOptionId(
+        question.correctOptionId ?? question.CorrectOptionId,
+      );
       const correctOption = options.find(
-        (option) => (option.id ?? option.Id) === correctOptionId,
+        (option) => normalizeOptionId(option.id ?? option.Id) === correctOptionId,
       );
       const label = String(correctOption?.label ?? correctOption?.Label ?? "")
         .trim()
@@ -151,9 +199,14 @@ export function mapImportedExamQuestions(apiQuestions = []) {
       correctAnswers = ["A"];
     }
 
+    const orderIndex = question.orderIndex ?? question.OrderIndex ?? index + 1;
+    const rawContent = question.content ?? question.Content ?? "";
+    const content = sanitizeWizardQuestionContent(rawContent);
+
     return {
-      id: `q-${index + 1}`,
-      content: question.content ?? question.Content ?? "",
+      id: `q-${orderIndex}`,
+      orderIndex,
+      content,
       questionType,
       optionLabels,
       answers,
@@ -162,8 +215,47 @@ export function mapImportedExamQuestions(apiQuestions = []) {
       requiredSelectCount: question.requiredSelectCount ?? question.RequiredSelectCount ?? null,
       explanation: "",
       showExplanation: false,
+      importWarnings: warningsByQuestion.get(orderIndex) ?? [],
     };
   });
+}
+
+const IMPORT_WARNING_QUESTION_RE = /^Câu\s+(\d+)\s*:/iu;
+
+export function parseImportWarningQuestionNumber(warning) {
+  const match = String(warning ?? "").match(IMPORT_WARNING_QUESTION_RE);
+  return match ? Number(match[1]) : null;
+}
+
+export function indexImportWarnings(warnings = []) {
+  const byQuestion = new Map();
+
+  for (const warning of warnings) {
+    const questionNumber = parseImportWarningQuestionNumber(warning);
+    if (questionNumber == null) continue;
+
+    if (!byQuestion.has(questionNumber)) {
+      byQuestion.set(questionNumber, []);
+    }
+
+    byQuestion.get(questionNumber).push(warning);
+  }
+
+  return byQuestion;
+}
+
+export function formatImportWarningSummary(warnings = []) {
+  if (warnings.length === 0) {
+    return "";
+  }
+
+  return warnings
+    .map((warning) => {
+      const questionNumber = parseImportWarningQuestionNumber(warning);
+      const detail = warning.replace(IMPORT_WARNING_QUESTION_RE, "").trim();
+      return questionNumber ? `Câu ${questionNumber}: ${detail}` : warning;
+    })
+    .join("\n");
 }
 
 export function isQuestionComplete(question) {

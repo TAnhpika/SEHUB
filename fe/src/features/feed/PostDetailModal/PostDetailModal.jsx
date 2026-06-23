@@ -1,28 +1,18 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faAlignLeft,
-  faBold,
-  faCode,
   faComment,
   faEye,
   faHeart,
-  faHighlighter,
-  faImage,
-  faItalic,
-  faLink,
-  faLinkSlash,
-  faListOl,
-  faListUl,
-  faQuoteLeft,
   faReply,
   faShareNodes,
-  faStrikethrough,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
-import PostContentPreview from "@/common/PostContentPreview/PostContentPreview";
 import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
+import * as postsApi from "@/api/postsApi";
+import RichTextEditor from "@/common/RichTextEditor/RichTextEditor";
+import RichTextContent from "@/common/RichTextEditor/RichTextContent";
 import {
   loadPostById,
   removeComment,
@@ -31,7 +21,6 @@ import {
 } from "@/features/feed/feedData";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
-import ChatImageLightbox from "@/features/chat/ChatImageLightbox/ChatImageLightbox";
 import { copyPostLink, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./PostDetailModal.module.css";
@@ -49,26 +38,24 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
   const [displayBody, setDisplayBody] = useState("");
   const [likeCount, setLikeCount] = useState(0);
   const [viewCount, setViewCount] = useState(0);
-  const [coverImageUrl, setCoverImageUrl] = useState(null);
-  const [lightboxImage, setLightboxImage] = useState(null);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editCommentDraft, setEditCommentDraft] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
   const [savingPost, setSavingPost] = useState(false);
 
+  const handleImageUpload = useCallback(async (file) => {
+    const result = await postsApi.uploadPostContentImage(file);
+    return result?.url ?? result?.Url ?? null;
+  }, []);
+
   useEffect(() => {
     if (!open) {
-      setLightboxImage(null);
       return undefined;
     }
 
     function handleKeyDown(event) {
       if (event.key === "Escape") {
-        if (lightboxImage) {
-          setLightboxImage(null);
-        } else {
-          onClose();
-        }
+        onClose();
       }
     }
 
@@ -79,7 +66,7 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
       document.body.style.overflow = "";
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, onClose, lightboxImage]);
+  }, [open, onClose]);
 
   useEffect(() => {
     if (!post || !open) return undefined;
@@ -97,7 +84,6 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
       setEditBody(post.body ?? post.excerpt);
       setLikeCount(post.likes ?? 0);
       setViewCount(post.views ?? 0);
-      setCoverImageUrl(post.coverImageUrl ?? null);
       setComments(post.commentsList ?? []);
       setCommentCount(post.comments ?? 0);
 
@@ -113,7 +99,6 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
         setEditBody(detail.body ?? detail.excerpt);
         setLikeCount(detail.likes ?? 0);
         setViewCount(detail.views ?? 0);
-        setCoverImageUrl(detail.coverImageUrl ?? null);
       } catch {
         // Giữ dữ liệu từ danh sách nếu không tải được chi tiết.
       }
@@ -304,11 +289,15 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
                 </label>
                 <label className={styles.field}>
                   <span className={styles.label}>Nội dung</span>
-                  <textarea
-                    className={styles["edit-textarea"]}
+                  <RichTextEditor
                     value={editBody}
-                    onChange={(event) => setEditBody(event.target.value)}
+                    onChange={setEditBody}
+                    variant="full"
                     rows={5}
+                    toolbarAriaLabel="Định dạng nội dung"
+                    aria-label="Chỉnh sửa nội dung bài viết"
+                    onImageUpload={handleImageUpload}
+                    onImageUploadError={(message) => showToast(message)}
                   />
                 </label>
                 <div className={styles["edit-actions"]}>
@@ -322,27 +311,10 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
               </div>
             ) : (
               <>
-                {coverImageUrl ? (
-                  <button
-                    type="button"
-                    className={styles.coverBtn}
-                    aria-label="Xem ảnh bìa full"
-                    onClick={() =>
-                      setLightboxImage({ url: coverImageUrl, alt: displayTitle || "Ảnh bìa bài viết" })
-                    }
-                  >
-                    <img
-                      src={coverImageUrl}
-                      alt=""
-                      className={styles.cover}
-                      loading="lazy"
-                    />
-                  </button>
-                ) : null}
                 <h3 className={styles.title}>
                   <span className={styles.hash}>#</span> <strong>{displayTitle}</strong>
                 </h3>
-                <PostContentPreview text={displayBody} className={styles.content} />
+                <RichTextContent value={displayBody} className={styles.content} />
               </>
             )}
 
@@ -406,11 +378,14 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
 
                 {isEditingComment ? (
                   <div className={styles["comment-edit"]}>
-                    <textarea
-                      className={styles["comment-edit-input"]}
+                    <RichTextEditor
                       value={editCommentDraft}
-                      onChange={(event) => setEditCommentDraft(event.target.value)}
+                      onChange={setEditCommentDraft}
+                      variant="comment"
                       rows={3}
+                      bordered={false}
+                      textareaClassName={styles["comment-edit-input"]}
+                      toolbarAriaLabel="Định dạng bình luận"
                       aria-label="Chỉnh sửa bình luận"
                     />
                     <div className={styles["comment-edit-actions"]}>
@@ -431,7 +406,7 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
                     </div>
                   </div>
                 ) : (
-                  <PostContentPreview text={comment.content} className={styles["comment-content"]} />
+                  <RichTextContent value={comment.content} className={styles["comment-content"]} />
                 )}
 
                 {!isEditingComment && (
@@ -446,53 +421,17 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
 
             <div className={styles.editor}>
               <div className={styles["editor-panel"]}>
-                <div className={styles.toolbar} aria-label="Định dạng bình luận">
-                  <button type="button" className={styles.tool} aria-label="In đậm">
-                    <FontAwesomeIcon icon={faBold} />
-                  </button>
-                  <button type="button" className={styles.tool} aria-label="In nghiêng">
-                    <FontAwesomeIcon icon={faItalic} />
-                  </button>
-                  <button type="button" className={styles.tool} aria-label="Gạch ngang">
-                    <FontAwesomeIcon icon={faStrikethrough} />
-                  </button>
-                  <button type="button" className={styles.tool} aria-label="Đánh dấu">
-                    <FontAwesomeIcon icon={faHighlighter} />
-                  </button>
-                  <button type="button" className={styles.tool} aria-label="Mã">
-                    <FontAwesomeIcon icon={faCode} />
-                  </button>
-                  <button type="button" className={styles.tool} aria-label="Liên kết">
-                    <FontAwesomeIcon icon={faLink} />
-                  </button>
-                  <button type="button" className={styles.tool} aria-label="Gỡ liên kết">
-                    <FontAwesomeIcon icon={faLinkSlash} />
-                  </button>
-                  <button type="button" className={styles.tool} aria-label="Hình ảnh (URL)">
-                    <FontAwesomeIcon icon={faImage} />
-                  </button>
-                  <button type="button" className={styles.tool} aria-label="Danh sách">
-                    <FontAwesomeIcon icon={faListUl} />
-                  </button>
-                  <button type="button" className={styles.tool} aria-label="Danh sách đánh số">
-                    <FontAwesomeIcon icon={faListOl} />
-                  </button>
-                  <button type="button" className={styles.tool} aria-label="Trích dẫn">
-                    <FontAwesomeIcon icon={faQuoteLeft} />
-                  </button>
-                  <button type="button" className={styles.tool} aria-label="Căn trái">
-                    <FontAwesomeIcon icon={faAlignLeft} />
-                  </button>
-                </div>
-
-                <textarea
-                  className={styles.input}
-                  placeholder="Viết bình luận công khai (chỉ văn bản và link, không đính kèm file)"
+                <RichTextEditor
                   value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                  onKeyDown={handleDraftKeyDown}
+                  onChange={setDraft}
+                  placeholder="Viết bình luận công khai"
+                  variant="comment"
                   rows={4}
+                  bordered={false}
+                  textareaClassName={styles.input}
+                  toolbarAriaLabel="Định dạng bình luận"
                   aria-label="Viết bình luận công khai"
+                  onKeyDown={handleDraftKeyDown}
                 />
 
                 <div className={styles["editor-footer"]}>
@@ -515,16 +454,6 @@ function PostDetailModal({ post, open, onClose, onUpdate, onDelete, initialEditM
           </section>
         </div>
       </div>
-
-      <ChatImageLightbox
-        image={lightboxImage}
-        onClose={() => setLightboxImage(null)}
-        onImageClick={() => setLightboxImage(null)}
-        onBackdropClick={() => {
-          setLightboxImage(null);
-          onClose();
-        }}
-      />
     </div>
   );
 }

@@ -24,6 +24,7 @@ import {
   getOrCreateExamSession,
   saveExamAnswers,
   submitExamSession,
+  usesApiAttempt,
 } from "@/features/exams/examSession";
 import {
   getExamById,
@@ -124,9 +125,23 @@ function ExamDoPage({ page = "review" }) {
     async (auto = false) => {
       if (!exam) return;
 
+      const session = getExamSession(exam.id);
+      const effectiveApiExamId = apiExamId ?? session?.apiExamId;
+      const effectiveAttemptId = attemptId ?? session?.attemptId;
+      const shouldUseApi =
+        Boolean(effectiveApiExamId && effectiveAttemptId)
+        && (useApiFlow || usesApiAttempt(session));
+
       try {
-        if (useApiFlow && apiExamId && attemptId) {
-          await submitApiAttempt(exam.id, apiExamId, attemptId, questions, startedAt);
+        if (shouldUseApi) {
+          await submitApiAttempt(
+            exam.id,
+            effectiveApiExamId,
+            effectiveAttemptId,
+            questions,
+            startedAt,
+            session?.answers ?? {},
+          );
         } else {
           submitExamSession(exam.id, questions);
         }
@@ -184,8 +199,8 @@ function ExamDoPage({ page = "review" }) {
             );
 
             if (loadedQuestions.length > 0) {
-              nextQuestions = loadedQuestions;
               const attempt = await startOrResumeAttempt(nextApiExamId);
+              nextQuestions = loadedQuestions;
               nextAttemptId = attempt.id;
               nextAnswers = syncAttemptAnswersToUi(nextQuestions, attempt);
               nextStartedAt = attempt.startedAt

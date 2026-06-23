@@ -1,5 +1,9 @@
 using AutoMapper;
 
+using Microsoft.Extensions.DependencyInjection;
+
+using Microsoft.Extensions.Logging;
+
 using Microsoft.Extensions.Options;
 
 using SEHub.Application.Abstractions;
@@ -57,6 +61,8 @@ public sealed class AuthService : IAuthService
 
     private readonly IBadgeCheckService _badgeCheckService;
     private readonly IUserActivityService _userActivityService;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILogger<AuthService> _logger;
 
 
 
@@ -88,7 +94,11 @@ public sealed class AuthService : IAuthService
 
         IBadgeCheckService badgeCheckService,
 
-        IUserActivityService userActivityService)
+        IUserActivityService userActivityService,
+
+        IServiceScopeFactory scopeFactory,
+
+        ILogger<AuthService> logger)
 
     {
 
@@ -119,6 +129,10 @@ public sealed class AuthService : IAuthService
         _badgeCheckService = badgeCheckService;
 
         _userActivityService = userActivityService;
+
+        _scopeFactory = scopeFactory;
+
+        _logger = logger;
 
     }
 
@@ -180,13 +194,11 @@ public sealed class AuthService : IAuthService
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        var response = await BuildLoginResponseAsync(user, cancellationToken);
 
+        QueueVerificationEmail(request.Email);
 
-        await _otpService.GenerateAndSendEmailAsync(request.Email, OtpPurpose.EmailVerification, cancellationToken);
-
-
-
-        return await BuildLoginResponseAsync(user, cancellationToken);
+        return response;
 
     }
 
@@ -761,6 +773,40 @@ public sealed class AuthService : IAuthService
             throw new ForbiddenException(ErrorCodes.AccountBanned);
 
         }
+
+    }
+
+
+
+    private void QueueVerificationEmail(string email)
+
+    {
+
+        _ = Task.Run(async () =>
+
+        {
+
+            try
+
+            {
+
+                using var scope = _scopeFactory.CreateScope();
+
+                var otpService = scope.ServiceProvider.GetRequiredService<IOtpService>();
+
+                await otpService.GenerateAndSendEmailAsync(email, OtpPurpose.EmailVerification);
+
+            }
+
+            catch (Exception ex)
+
+            {
+
+                _logger.LogWarning(ex, "Failed to send verification email to {Email} during registration", email);
+
+            }
+
+        });
 
     }
 

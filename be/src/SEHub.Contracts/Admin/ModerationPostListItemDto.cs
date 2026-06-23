@@ -1,7 +1,5 @@
 namespace SEHub.Contracts.Admin;
 
-using SEHub.Contracts.Feed;
-
 public sealed class ModerationPostListItemDto
 {
     public Guid Id { get; init; }
@@ -16,7 +14,6 @@ public sealed class ModerationPostListItemDto
     public DateTime? ModeratedAt { get; init; }
     public string? ModerationNote { get; init; }
     public string? ModeratorUsername { get; init; }
-    public IReadOnlyList<PostImageDto> Images { get; init; } = [];
 }
 
 public sealed class ModerationAuthorDto

@@ -220,3 +220,9 @@
   background: #f0fdf4;
   border-color: #86efac;
 }
+
+.pickerBtn-warning:not(.pickerBtn-active) {
+  color: #92400e;
+  background: #fffbeb;
+  border-color: #fbbf24;
+}

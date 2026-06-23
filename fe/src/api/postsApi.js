@@ -20,7 +20,8 @@ export function getFeaturedPosts() {
 }
 
 export function getPost(id) {
-  return apiRequest(`/api/v1/posts/${id}`, { auth: false });
+  // Send auth when logged in so authors/moderators can open Pending posts.
+  return apiRequest(`/api/v1/posts/${id}`);
 }
 
 export function createPost(body) {
@@ -73,6 +74,12 @@ export function featurePost(id, body) {
 
 export function pinPost(id, body) {
   return apiRequest(`/api/v1/posts/${id}/pin`, { method: "PATCH", body });
+}
+
+export function uploadPostContentImage(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiUploadRequest("/api/v1/posts/upload-image", formData);
 }
 
 export function uploadPostCover(file) {

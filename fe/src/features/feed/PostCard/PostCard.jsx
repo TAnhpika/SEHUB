@@ -14,6 +14,8 @@ import PostReportButton from "@/features/feed/PostReportButton/PostReportButton"
 import { copyPostLink, isOwnPost } from "@/features/feed/postUtils";
 import { toggleLike } from "@/features/feed/feedData";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
+import RichTextContent from "@/common/RichTextEditor/RichTextContent";
+import { resolvePostPreviewImage } from "@/features/feed/postContentPreview";
 import styles from "./PostCard.module.css";
 
 function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeChange }) {
@@ -25,6 +27,7 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
   const [liked, setLiked] = useState(Boolean(post.isLiked));
   const [likes, setLikes] = useState(post.likes ?? 0);
   const [liking, setLiking] = useState(false);
+  const previewImageUrl = resolvePostPreviewImage(post);
 
   function handleOpenPost() {
     if (!canInteract) {
@@ -130,19 +133,16 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
         {post.isPinned ? <span className={styles.pinnedBadge}>Ghim</span> : null}
         {post.title}
       </h2>
-      {post.coverImageUrl ? (
+      {previewImageUrl ? (
         <div className={styles.coverWrap}>
-          <img src={post.coverImageUrl} alt="" className={styles.cover} loading="lazy" />
+          <img src={previewImageUrl} alt="" className={styles.cover} loading="lazy" />
         </div>
-      ) : post.images?.[0]?.url ? (
-        <img
-          className={styles.cover}
-          src={post.images[0].url}
-          alt=""
-          loading="lazy"
-        />
       ) : null}
-      <p className={styles.excerpt}>{post.excerpt}</p>
+      <RichTextContent
+        value={post.contentPreview ?? post.body ?? post.excerpt}
+        className={styles.excerpt}
+        emptyFallback={null}
+      />
 
       <ul className={styles.tags} aria-label="Thẻ bài viết">
         {post.tags.map((tag) => (

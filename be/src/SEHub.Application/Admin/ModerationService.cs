@@ -20,7 +20,6 @@ public sealed class ModerationService : IModerationService
 
     private readonly IPostReportRepository _reportRepository;
     private readonly IPostRepository _postRepository;
-    private readonly IPostImageRepository _imageRepository;
     private readonly IUserRepository _userRepository;
     private readonly IUserProfileRepository _profileRepository;
     private readonly IUserBanRepository _banRepository;
@@ -35,7 +34,6 @@ public sealed class ModerationService : IModerationService
     public ModerationService(
         IPostReportRepository reportRepository,
         IPostRepository postRepository,
-        IPostImageRepository imageRepository,
         IUserRepository userRepository,
         IUserProfileRepository profileRepository,
         IUserBanRepository banRepository,
@@ -49,7 +47,6 @@ public sealed class ModerationService : IModerationService
     {
         _reportRepository = reportRepository;
         _postRepository = postRepository;
-        _imageRepository = imageRepository;
         _userRepository = userRepository;
         _profileRepository = profileRepository;
         _banRepository = banRepository;
@@ -536,9 +533,6 @@ public sealed class ModerationService : IModerationService
             ? await _userRepository.GetByIdAsync(moderatorId, cancellationToken)
             : null;
         var profile = await _profileRepository.GetByUserIdAsync(post.AuthorId, cancellationToken);
-        var images = (await _imageRepository.GetByPostIdAsync(post.Id, cancellationToken))
-            .Select(PostImageService.MapDto)
-            .ToList();
 
         return new ModerationPostListItemDto
         {
@@ -553,8 +547,7 @@ public sealed class ModerationService : IModerationService
             CreatedAt = post.CreatedAt,
             ModeratedAt = post.ModeratedAt,
             ModerationNote = post.ModerationNote,
-            ModeratorUsername = moderator?.Username,
-            Images = images,
+            ModeratorUsername = moderator?.Username
         };
     }
 
@@ -577,8 +570,7 @@ public sealed class ModerationService : IModerationService
             UpdatedAt = post.UpdatedAt,
             ModeratedAt = listItem.ModeratedAt,
             ModerationNote = listItem.ModerationNote,
-            ModeratorUsername = listItem.ModeratorUsername,
-            Images = listItem.Images,
+            ModeratorUsername = listItem.ModeratorUsername
         };
     }
 

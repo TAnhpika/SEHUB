@@ -284,9 +284,14 @@ public sealed class ExamMarkdownImportService : IExamMarkdownImportService
             .ToList();
     }
 
+    private static readonly Regex GuidLineRegex = new(
+        @"^\s*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\s*$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     private static bool ShouldSkipContentLine(string line) =>
         QuestionHeaderRegex.IsMatch(line)
         || DocumentTitleRegex.IsMatch(line)
         || HorizontalRuleRegex.IsMatch(line)
-        || AnswerRegex.IsMatch(line);
+        || AnswerRegex.IsMatch(line)
+        || GuidLineRegex.IsMatch(line);
 }

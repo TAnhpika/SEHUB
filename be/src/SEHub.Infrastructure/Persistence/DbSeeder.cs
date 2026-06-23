@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SEHub.Application.Premium;
 using SEHub.Domain.Entities;
 using SEHub.Infrastructure.Identity;
 using SEHub.Shared.Constants;
@@ -12,6 +13,7 @@ public static class DbSeeder
 {
     private const string AdminEmail = "admin@sehub.local";
     private const string AdminPassword = "Admin@123";
+    private const string AdminPremiumPlanCode = "4y";
 
     public static async Task SeedAsync(IServiceProvider serviceProvider)
     {
@@ -21,6 +23,7 @@ public static class DbSeeder
         var context = services.GetRequiredService<SEHubDbContext>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+        var subscriptionService = services.GetRequiredService<ISubscriptionService>();
 
         try
         {
@@ -31,6 +34,11 @@ public static class DbSeeder
             await BadgeSeedData.SyncAsync(context, logger);
             await SyncLevelVoucherPercentsAsync(context, logger);
             await SeedAdminUserAsync(userManager, context, logger);
+            await EnsureAdminPremiumSubscriptionAsync(
+                userManager,
+                context,
+                subscriptionService,
+                logger);
         }
         catch (Exception ex)
         {
@@ -137,6 +145,44 @@ public static class DbSeeder
 
         await context.SaveChangesAsync();
         logger.LogInformation("Seeded admin user {Email}", AdminEmail);
+    }
+
+    private static async Task EnsureAdminPremiumSubscriptionAsync(
+        UserManager<ApplicationUser> userManager,
+        SEHubDbContext context,
+        ISubscriptionService subscriptionService,
+        ILogger logger)
+    {
+        var admin = await userManager.FindByEmailAsync(AdminEmail);
+        if (admin is null)
+        {
+            return;
+        }
+
+        var hasActiveSubscription = await context.Subscriptions
+            .AnyAsync(s => s.UserId == admin.Id && s.IsActive && s.EndAt > DateTime.UtcNow);
+
+        if (hasActiveSubscription)
+        {
+            return;
+        }
+
+        var plan = await context.SubscriptionPlans
+            .FirstOrDefaultAsync(p => p.Code == AdminPremiumPlanCode);
+
+        if (plan is null)
+        {
+            logger.LogWarning(
+                "Admin premium seed skipped: plan {PlanCode} not found",
+                AdminPremiumPlanCode);
+            return;
+        }
+
+        await subscriptionService.ActivateSubscriptionAsync(admin.Id, plan.Id);
+        logger.LogInformation(
+            "Activated Premium subscription ({PlanCode}) for admin {Email}",
+            AdminPremiumPlanCode,
+            AdminEmail);
     }
 
     private static async Task SyncLevelVoucherPercentsAsync(SEHubDbContext context, ILogger logger)

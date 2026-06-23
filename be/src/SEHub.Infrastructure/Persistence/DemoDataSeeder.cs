@@ -131,6 +131,7 @@ public static class DemoDataSeeder
             await SeedDemoPracticeSubmissionsAsync(context, logger);
             // demo.student stays Free so checkout/PayOS can be tested end-to-end.
             await SeedDemoPostsAsync(context, student.Id, logger);
+            await ShowcasePostsSeeder.SeedAsync(context, logger);
             await SeedPendingModerationPostsAsync(context, student.Id, logger);
             await SeedReportablePostsAsync(context, spammer.Id, logger);
             await SeedDemoPostReportsAsync(context, freeStudent.Id, student.Id, logger);
@@ -205,6 +206,12 @@ public static class DemoDataSeeder
         var existing = await userManager.FindByEmailAsync(DemoStudentEmail);
         if (existing is not null)
         {
+            if (existing.DisplayName is "Demo Student" or "demo_student")
+            {
+                existing.DisplayName = "Nguyễn Minh An";
+                await userManager.UpdateAsync(existing);
+            }
+
             if (!await context.UserProfiles.AnyAsync(p => p.UserId == existing.Id))
             {
                 context.UserProfiles.Add(new UserProfile
@@ -233,7 +240,7 @@ public static class DemoDataSeeder
             UserName = DemoStudentUsername,
             Email = DemoStudentEmail,
             EmailConfirmed = true,
-            DisplayName = "Demo Student",
+            DisplayName = "Nguyễn Minh An",
             Points = 0,
             LevelId = bronzeLevel.Id,
             StreakCount = 0
