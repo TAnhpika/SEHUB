@@ -367,14 +367,127 @@ export function mapAdminDocumentListItem(dto) {
   };
 }
 
+const PAYMENT_AUDIT_ACTION_LABEL = {
+  order_created: "Tạo đơn thanh toán",
+  waiting_confirmation: "Chờ xác nhận PayOS",
+  payment_expired: "Đơn thanh toán hết hạn",
+  manualverification: "Xác nhận thủ công",
+  n8n_activate: "Kích hoạt Premium (N8N)",
+  refund_request: "Yêu cầu hoàn tiền",
+  refund_approved: "Duyệt hoàn tiền",
+  payos_confirm: "Xác nhận PayOS",
+  payos_refund: "Hoàn tiền PayOS",
+  webhook_paid: "Thanh toán PayOS thành công",
+  webhook_duplicate_ignored: "Webhook trùng — bỏ qua",
+};
+
+function normalizePaymentAuditAction(action) {
+  return String(action ?? "")
+    .trim()
+    .replace(/([a-z])([A-Z])/g, "$1_$2")
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+}
+
+function readPayloadField(payload, ...keys) {
+  for (const key of keys) {
+    if (payload[key] != null && payload[key] !== "") return payload[key];
+  }
+  return null;
+}
+
+function formatVndAmount(amount) {
+  const value = Number(amount);
+  if (!Number.isFinite(value)) return null;
+  return `${value.toLocaleString("vi-VN")} đ`;
+}
+
+export function formatPaymentAuditPayload(action, payloadJson) {
+  if (!payloadJson) return "—";
+
+  let payload = payloadJson;
+  if (typeof payloadJson === "string") {
+    try {
+      payload = JSON.parse(payloadJson);
+    } catch {
+      const trimmed = payloadJson.trim();
+      return trimmed.length > 100 ? `${trimmed.slice(0, 97)}...` : trimmed;
+    }
+  }
+
+  if (!payload || typeof payload !== "object") {
+    return String(payloadJson);
+  }
+
+  const key = normalizePaymentAuditAction(action);
+
+  if (key === "order_created") {
+    const plan = readPayloadField(payload, "PlanCode", "planCode") ?? "—";
+    const amount = readPayloadField(payload, "FinalAmount", "finalAmount");
+    const discount = readPayloadField(payload, "DiscountPercent", "discountPercent");
+    const parts = [`Gói ${plan}`];
+    const amountLabel = formatVndAmount(amount);
+    if (amountLabel) parts.push(amountLabel);
+    if (Number(discount) > 0) parts.push(`giảm ${discount}%`);
+    return parts.join(" · ");
+  }
+
+  if (key === "payment_expired") {
+    const orderCode = readPayloadField(payload, "PayOsOrderCode", "payOsOrderCode");
+    return orderCode ? `Mã đơn ${orderCode}` : "Đơn đã hết hạn thanh toán";
+  }
+
+  if (key === "waiting_confirmation") {
+    return "SV đã chuyển khoản — chờ admin xác nhận";
+  }
+
+  if (key === "refund_request") {
+    const reason = readPayloadField(payload, "Reason", "reason");
+    return reason ? `Lý do: ${reason}` : "Sinh viên yêu cầu hoàn tiền";
+  }
+
+  if (key === "refund_approved" || key === "payos_refund") {
+    const amount = readPayloadField(payload, "Amount", "amount", "RefundAmount", "refundAmount");
+    const amountLabel = formatVndAmount(amount);
+    return amountLabel ? `Hoàn ${amountLabel}` : "Đã xử lý hoàn tiền";
+  }
+
+  if (key === "manualverification") {
+    const note = readPayloadField(payload, "Note", "note");
+    return note ? `Ghi chú: ${note}` : "Admin xác nhận thanh toán thủ công";
+  }
+
+  if (key === "webhook_paid" || key === "n8n_activate") {
+    const plan = readPayloadField(payload, "PlanCode", "planCode");
+    const username = readPayloadField(payload, "Username", "username");
+    const parts = [];
+    if (plan) parts.push(`Gói ${plan}`);
+    if (username) parts.push(`@${username}`);
+    return parts.length ? parts.join(" · ") : "Kích hoạt Premium thành công";
+  }
+
+  const note = readPayloadField(payload, "Note", "note", "Reason", "reason");
+  if (note) return String(note);
+
+  return "Cập nhật trạng thái thanh toán";
+}
+
+export function getPaymentAuditActionLabel(action) {
+  const key = normalizePaymentAuditAction(action);
+  return PAYMENT_AUDIT_ACTION_LABEL[key] ?? String(action ?? "Thanh toán");
+}
+
 export function mapPaymentAuditLogItem(dto) {
+  const action = normalizePaymentAuditAction(dto.action);
+  const actor = dto.actorUsername?.trim();
+
   return {
     id: dto.id,
     at: dto.createdAt,
-    admin: dto.actorUsername ?? "admin",
-    action: String(dto.action ?? "").toLowerCase(),
-    username: dto.actorUsername ?? "—",
-    detail: dto.payloadJson ?? dto.action ?? "—",
+    admin: actor ?? "admin",
+    action,
+    username: actor ?? "—",
+    detail: formatPaymentAuditPayload(action, dto.payloadJson),
     sortKey: dto.createdAt,
     type: "payment",
   };
