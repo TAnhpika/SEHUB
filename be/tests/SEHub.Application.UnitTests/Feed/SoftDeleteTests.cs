@@ -3,6 +3,7 @@ using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
 using SEHub.Application.Gamification;
+using SEHub.Application.Notifications;
 using SEHub.Application.Profiles;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
@@ -20,6 +21,7 @@ public sealed class SoftDeleteTests
     private readonly Mock<IUserProfileRepository> _profileRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IGamificationService> _gamificationService = new();
+    private readonly Mock<IWorkflowNotificationService> _workflowNotifications = new();
     private readonly Mock<IFileStorageService> _fileStorage = new();
     private readonly Mock<IBadgeCheckService> _badgeCheckService = new();
     private readonly Mock<IUserActivityService> _userActivityService = new();
@@ -39,6 +41,7 @@ public sealed class SoftDeleteTests
         _profileRepository.Object,
         _currentUser.Object,
         _gamificationService.Object,
+        _workflowNotifications.Object,
         _fileStorage.Object,
         _unitOfWork.Object,
         AutoMapperFactory.Create());
@@ -48,8 +51,10 @@ public sealed class SoftDeleteTests
         _postRepository.Object,
         _userRepository.Object,
         _profileRepository.Object,
+        Mock.Of<IUserFollowRepository>(),
         _badgeCheckService.Object,
         _userActivityService.Object,
+        Mock.Of<IWorkflowNotificationService>(),
         _currentUser.Object,
         _unitOfWork.Object);
 

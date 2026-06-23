@@ -1,4 +1,6 @@
 using AutoMapper;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using SEHub.Application.Abstractions;
@@ -28,6 +30,8 @@ public sealed class AuthServiceTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IBadgeCheckService> _badgeCheckService = new();
     private readonly Mock<IUserActivityService> _userActivityService = new();
+    private readonly Mock<IServiceScopeFactory> _scopeFactory = new();
+    private readonly Mock<ILogger<AuthService>> _logger = new();
     private readonly IMapper _mapper;
 
     private static readonly Guid UserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -51,7 +55,9 @@ public sealed class AuthServiceTests
         Options.Create(authSettings ?? new AuthSettings()),
         Options.Create(jwtSettings ?? new JwtSettings { RefreshExpirationDays = 7 }),
         _badgeCheckService.Object,
-        _userActivityService.Object);
+        _userActivityService.Object,
+        _scopeFactory.Object,
+        _logger.Object);
 
     private void SetupSuccessfulLoginMocks(UserAccount user)
     {
