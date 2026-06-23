@@ -162,7 +162,6 @@
   cursor: pointer;
 }
 
-.profile:hover .profile-menu,
 .profile:focus-within .profile-menu,
 .profileOpen .profile-menu {
   opacity: 1;
