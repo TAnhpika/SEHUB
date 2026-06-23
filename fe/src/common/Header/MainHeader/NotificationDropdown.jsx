@@ -10,6 +10,9 @@ import {
   faUserGroup,
   faEnvelope,
   faRotateLeft,
+  faClipboardCheck,
+  faAt,
+  faClipboardList,
 } from "@fortawesome/free-solid-svg-icons";
 import { faBell as faBellOutline } from "@fortawesome/free-regular-svg-icons";
 import {
@@ -36,6 +39,10 @@ const TYPE_ICONS = {
   token: faBell,
   badge: faBell,
   refund: faRotateLeft,
+  moderation: faClipboardCheck,
+  examreview: faFileLines,
+  mention: faAt,
+  practiceresult: faClipboardList,
 };
 
 function NotificationDropdown() {

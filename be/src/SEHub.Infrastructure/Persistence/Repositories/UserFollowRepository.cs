@@ -92,4 +92,57 @@ public sealed class UserFollowRepository : IUserFollowRepository
 
     public Task<int> CountFollowingListAsync(Guid userId, CancellationToken cancellationToken = default) =>
         CountFollowingAsync(userId, cancellationToken);
+
+    public async Task<bool> IsMutualFollowAsync(
+        Guid userId,
+        Guid otherUserId,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId == otherUserId)
+        {
+            return false;
+        }
+
+        var userFollowsOther = await ExistsAsync(userId, otherUserId, cancellationToken);
+        if (!userFollowsOther)
+        {
+            return false;
+        }
+
+        return await ExistsAsync(otherUserId, userId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Guid>> GetMutualFriendIdsAsync(
+        Guid userId,
+        string? search,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var safeLimit = Math.Clamp(limit, 1, 50);
+        var followingIds = _context.UserFollows
+            .AsNoTracking()
+            .Where(f => f.FollowerId == userId)
+            .Select(f => f.FollowingId);
+
+        var mutualIds = _context.UserFollows
+            .AsNoTracking()
+            .Where(f => f.FollowingId == userId && followingIds.Contains(f.FollowerId))
+            .Select(f => f.FollowerId);
+
+        var query = _context.Users.AsNoTracking().Where(u => mutualIds.Contains(u.Id));
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            query = query.Where(u =>
+                (u.UserName != null && u.UserName.Contains(term))
+                || u.DisplayName.Contains(term));
+        }
+
+        return await query
+            .OrderBy(u => u.UserName)
+            .Take(safeLimit)
+            .Select(u => u.Id)
+            .ToListAsync(cancellationToken);
+    }
 }

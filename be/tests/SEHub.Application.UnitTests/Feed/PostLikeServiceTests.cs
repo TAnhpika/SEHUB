@@ -2,6 +2,7 @@ using Moq;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
+using SEHub.Application.Notifications;
 using SEHub.Domain.Entities;
 
 namespace SEHub.Application.UnitTests.Feed;
@@ -12,6 +13,7 @@ public sealed class PostLikeServiceTests
     private readonly Mock<IPostRepository> _postRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IGamificationService> _gamificationService = new();
+    private readonly Mock<IWorkflowNotificationService> _workflowNotifications = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
     private static readonly Guid PostId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
@@ -23,6 +25,7 @@ public sealed class PostLikeServiceTests
         _postRepository.Object,
         _currentUser.Object,
         _gamificationService.Object,
+        _workflowNotifications.Object,
         _unitOfWork.Object);
 
     [Fact]

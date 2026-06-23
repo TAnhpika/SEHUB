@@ -26,4 +26,10 @@ public interface IUserFollowRepository
         CancellationToken cancellationToken = default);
     Task<int> CountFollowersListAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<int> CountFollowingListAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<bool> IsMutualFollowAsync(Guid userId, Guid otherUserId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Guid>> GetMutualFriendIdsAsync(
+        Guid userId,
+        string? search,
+        int limit,
+        CancellationToken cancellationToken = default);
 }

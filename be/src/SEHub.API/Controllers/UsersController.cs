@@ -83,6 +83,17 @@ public sealed class UsersController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("me/mention-friends")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> GetMentionFriends(
+        [FromQuery] string? search,
+        [FromQuery] int limit = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _followService.GetMentionFriendsAsync(search, limit, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpPost("{userId:guid}/block")]
     [Authorize(Policy = PolicyNames.RequireAuthenticated)]
     public async Task<IActionResult> Block(Guid userId, CancellationToken cancellationToken)

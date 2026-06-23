@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -11,6 +12,7 @@ import {
   faPaperPlane,
   faPaperclip,
   faPhone,
+  faUser,
   faVideo,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
@@ -98,6 +100,7 @@ function ConversationChat({
   onUnblock,
   onReport,
 }) {
+  const navigate = useNavigate();
   const [draft, setDraft] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
@@ -138,6 +141,11 @@ function ConversationChat({
       event.preventDefault();
       handleSendText();
     }
+  }
+
+  function openOtherProfile() {
+    if (!conversation?.username) return;
+    navigate(`/profile/${conversation.username}`);
   }
 
   return (
@@ -182,6 +190,18 @@ function ConversationChat({
             </button>
             {menuOpen && (
               <div className={styles.menu} role="menu">
+                <button
+                  type="button"
+                  className={styles["menu-item"]}
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    openOtherProfile();
+                  }}
+                >
+                  <FontAwesomeIcon icon={faUser} />
+                  Trang cá nhân
+                </button>
                 <button
                   type="button"
                   className={styles["menu-item"]}

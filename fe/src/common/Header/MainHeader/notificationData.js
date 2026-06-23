@@ -39,6 +39,22 @@ export const NOTIFICATION_META = {
     label: "Danh hiệu",
     tone: "purple",
   },
+  moderation: {
+    label: "Kiểm duyệt",
+    tone: "purple",
+  },
+  examreview: {
+    label: "Đề thi",
+    tone: "purple",
+  },
+  mention: {
+    label: "Nhắc tên",
+    tone: "blue",
+  },
+  practiceresult: {
+    label: "Thực hành",
+    tone: "amber",
+  },
   refund: {
     label: "Hoàn tiền",
     tone: "amber",

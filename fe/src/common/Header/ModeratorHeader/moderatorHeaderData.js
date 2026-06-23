@@ -5,6 +5,8 @@ import {
   faFlag,
   faUserSlash,
 } from "@fortawesome/free-solid-svg-icons";
+import { getNotifications, getNotificationUnreadCount } from "@/api/notificationsApi";
+import { mapNotificationPage } from "@/api/notificationsMapper";
 import { getPendingPracticeSubmissionCount } from "@/features/exams/practiceExamSubmissions";
 import { getModeratorNavBadgeCounts } from "@/features/moderator/moderatorNavData";
 
@@ -86,6 +88,45 @@ export function buildModeratorNotifications() {
   return items;
 }
 
+function mapModeratorWorkflowNotifications(items) {
+  return items
+    .filter((item) => item.type === "moderation" || item.type === "examreview")
+    .map((item) => ({
+      id: `notif-${item.id}`,
+      title: item.title,
+      detail: item.body || "Cần xử lý",
+      time: item.time,
+      to: item.linkUrl || "/moderator/reports",
+    }));
+}
+
+export async function loadModeratorNotifications() {
+  try {
+    const page = await getNotifications({ page: 1, pageSize: 20 });
+    const workflow = mapModeratorWorkflowNotifications(mapNotificationPage(page).items);
+    if (workflow.length > 0) {
+      return workflow;
+    }
+  } catch {
+    // fall back to queue badges below
+  }
+
+  return buildModeratorNotifications();
+}
+
 export function getModeratorUnreadCount() {
   return buildModeratorNotifications().length;
+}
+
+export async function loadModeratorUnreadCount() {
+  try {
+    const unread = await getNotificationUnreadCount();
+    if (typeof unread?.totalUnread === "number" && unread.totalUnread > 0) {
+      return unread.totalUnread;
+    }
+  } catch {
+    // ignore
+  }
+
+  return getModeratorUnreadCount();
 }

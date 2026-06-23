@@ -131,6 +131,12 @@ public sealed class AdminPaymentService : IAdminPaymentService
         CancellationToken cancellationToken = default) =>
         _premiumRefundService.ApproveRefundAsync(orderId, request.Note, cancellationToken);
 
+    public Task<PremiumRefundResultDto> CompleteRefundAsync(
+        Guid orderId,
+        ApproveRefundRequest request,
+        CancellationToken cancellationToken = default) =>
+        _premiumRefundService.CompleteRefundAsync(orderId, request.Note, cancellationToken);
+
     public async Task<PagedResult<PaymentAuditLogDto>> GetAuditLogsAsync(int page, int pageSize, CancellationToken cancellationToken = default)
     {
         var (items, total) = await _auditLogRepository.GetPagedAsync(page, pageSize, cancellationToken);
@@ -144,6 +150,7 @@ public sealed class AdminPaymentService : IAdminPaymentService
                 Action = l.Action,
                 ActorId = l.ActorId,
                 PayloadJson = l.PayloadJson,
+                Detail = PaymentAuditLogFormatter.FormatDetail(l.Action, l.PayloadJson),
                 CreatedAt = l.CreatedAt
             }).ToList(),
             Page = page,

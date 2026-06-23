@@ -21,6 +21,9 @@ public interface IUserRepository
     Task<IReadOnlyList<UserAccount>> GetPagedAsync(int page, int pageSize, string? search, CancellationToken cancellationToken = default);
     Task<int> CountAsync(string? search, CancellationToken cancellationToken = default);
     Task<int> CountByRoleAsync(string role, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Guid>> GetUserIdsByRolesAsync(
+        IReadOnlyList<string> roles,
+        CancellationToken cancellationToken = default);
     Task UpdateBanAsync(Guid userId, bool isBanned, DateTime? banUntil, string? banReason, string? banType, CancellationToken cancellationToken = default);
     Task UpdateRoleAsync(Guid userId, string role, CancellationToken cancellationToken = default);
     Task GrantAiTokensAsync(Guid userId, int amount, CancellationToken cancellationToken = default);
