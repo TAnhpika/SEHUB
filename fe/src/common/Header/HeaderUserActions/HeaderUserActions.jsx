@@ -22,8 +22,15 @@ function HeaderUserActions() {
   const displayName = user?.displayName ?? "Anhpika";
   const initial = user?.initial ?? displayName.charAt(0).toUpperCase();
 
-  function handleLogout() {
+  function handleProfileClick() {
     closeProfileMenu();
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  }
+
+  function handleLogout() {
+    handleProfileClick();
     logout();
     navigate("/");
   }
@@ -56,13 +63,13 @@ function HeaderUserActions() {
           <WorkspaceSwitcher
             variant="menu-compact"
             showHeading
-            onNavigate={closeProfileMenu}
+            onNavigate={handleProfileClick}
           />
           <Link
             to={`/profile/${user?.username ?? "anhcoding12345"}`}
             className={styles["menu-item"]}
             role="menuitem"
-            onClick={closeProfileMenu}
+            onClick={handleProfileClick}
           >
             <FontAwesomeIcon icon={faUser} />
             Hồ sơ cá nhân
