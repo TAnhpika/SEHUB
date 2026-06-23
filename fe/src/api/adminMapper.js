@@ -468,7 +468,8 @@ export function mapPaymentAuditLogItem(dto) {
     admin: dto.actorUsername ?? "admin",
     action: String(dto.action ?? "").toLowerCase(),
     username: dto.actorUsername ?? "—",
-    detail: dto.payloadJson ?? dto.action ?? "—",
+    detail: dto.detail ?? null,
+    payloadJson: dto.payloadJson ?? null,
     sortKey: dto.createdAt,
     type: "payment",
   };

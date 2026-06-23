@@ -61,6 +61,7 @@ public static class DependencyInjection
         services.AddScoped<ICommentRepository, CommentRepository>();
         services.AddScoped<IPostLikeRepository, PostLikeRepository>();
         services.AddScoped<IPostReportRepository, PostReportRepository>();
+        services.AddScoped<IQuestionReportRepository, QuestionReportRepository>();
         services.AddScoped<IExamRepository, ExamRepository>();
         services.AddScoped<IExamAttemptRepository, ExamAttemptRepository>();
         services.AddScoped<IPracticeSubmissionRepository, PracticeSubmissionRepository>();

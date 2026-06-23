@@ -81,7 +81,7 @@ function ReportsPage() {
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [communityReports, setCommunityReports] = useState(getCommunityReportsMock);
-  const [examReports, setExamReports] = useState(getExamQuestionReports);
+  const [examReports, setExamReports] = useState([]);
   const [tab, setTab] = useState("pending");
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
@@ -105,14 +105,23 @@ function ReportsPage() {
   }, [showToast]);
 
   useEffect(() => {
+    let cancelled = false;
+
     function refreshExamReports() {
-      setExamReports(getExamQuestionReports());
+      getExamQuestionReports()
+        .then((items) => {
+          if (!cancelled) setExamReports(items);
+        })
+        .catch(() => {
+          if (!cancelled) setExamReports([]);
+        });
     }
 
     refreshExamReports();
     window.addEventListener("sehubs-exam-reports-changed", refreshExamReports);
     window.addEventListener("storage", refreshExamReports);
     return () => {
+      cancelled = true;
       window.removeEventListener("sehubs-exam-reports-changed", refreshExamReports);
       window.removeEventListener("storage", refreshExamReports);
     };
@@ -186,8 +195,10 @@ function ReportsPage() {
   function resolveReportLocal(id, resolution) {
     const target = reports.find((report) => report.id === id);
     if (target?.category === "exam_question") {
-      resolveExamQuestionReport(id, resolution);
-      setExamReports(getExamQuestionReports());
+      resolveExamQuestionReport(id, resolution)
+        .then(() => getExamQuestionReports())
+        .then((items) => setExamReports(items))
+        .catch((err) => showToast(err.message ?? "Không xử lý được báo cáo câu hỏi."));
     } else {
       setCommunityReports((prev) =>
         prev.map((report) =>

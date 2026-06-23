@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SEHub.Application.Admin;
+using SEHub.Application.Exams;
 using SEHub.Application.Feed;
 using SEHub.Contracts.Admin;
+using SEHub.Contracts.Exams;
 using SEHub.Shared.Constants;
 
 namespace SEHub.API.Controllers.Admin;
@@ -15,15 +17,18 @@ public sealed class ModerationController : ControllerBase
     private readonly IModerationService _moderationService;
     private readonly IPostService _postService;
     private readonly IAdminExportService _exportService;
+    private readonly IQuestionReportService _questionReportService;
 
     public ModerationController(
         IModerationService moderationService,
         IPostService postService,
-        IAdminExportService exportService)
+        IAdminExportService exportService,
+        IQuestionReportService questionReportService)
     {
         _moderationService = moderationService;
         _postService = postService;
         _exportService = exportService;
+        _questionReportService = questionReportService;
     }
 
     [HttpGet("featured-posts")]
@@ -85,6 +90,34 @@ public sealed class ModerationController : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _moderationService.ResolveReportAsync(id, request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("question-reports")]
+    public async Task<IActionResult> GetQuestionReports(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? status = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _questionReportService.GetReportsAsync(page, pageSize, status, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("question-reports/pending-count")]
+    public async Task<IActionResult> GetPendingQuestionReportCount(CancellationToken cancellationToken)
+    {
+        var count = await _questionReportService.GetPendingCountAsync(cancellationToken);
+        return Ok(new { count });
+    }
+
+    [HttpPatch("question-reports/{id:guid}")]
+    public async Task<IActionResult> ResolveQuestionReport(
+        Guid id,
+        [FromBody] ResolveQuestionReportRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _questionReportService.ResolveAsync(id, request, cancellationToken);
         return Ok(result);
     }
 

@@ -155,6 +155,17 @@ public sealed class FollowService : IFollowService
         };
     }
 
+    public async Task<IReadOnlyList<FollowUserListItemDto>> GetMentionFriendsAsync(
+        string? search,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+        var safeLimit = Math.Clamp(limit, 1, 50);
+        var friendIds = await _followRepository.GetMutualFriendIdsAsync(userId, search, safeLimit, cancellationToken);
+        return await MapFollowListItemsAsync(friendIds, cancellationToken);
+    }
+
     private async Task<IReadOnlyList<FollowUserListItemDto>> MapFollowListItemsAsync(
         IReadOnlyList<Guid> userIds,
         CancellationToken cancellationToken)

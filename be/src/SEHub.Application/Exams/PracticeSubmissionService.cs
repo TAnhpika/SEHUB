@@ -2,6 +2,7 @@ using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Gamification;
+using SEHub.Application.Notifications;
 using SEHub.Application.Profiles;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Exams;
@@ -18,6 +19,7 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
     private readonly IUserRepository _userRepository;
     private readonly IBadgeCheckService _badgeCheckService;
     private readonly IUserActivityService _userActivityService;
+    private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
@@ -28,6 +30,7 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
         IUserRepository userRepository,
         IBadgeCheckService badgeCheckService,
         IUserActivityService userActivityService,
+        IWorkflowNotificationService workflowNotifications,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork,
         IMapper mapper)
@@ -37,6 +40,7 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
         _userRepository = userRepository;
         _badgeCheckService = badgeCheckService;
         _userActivityService = userActivityService;
+        _workflowNotifications = workflowNotifications;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -75,6 +79,11 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
             BadgeCheckService.TriggerPracticeSubmissions,
             cancellationToken);
         await _userActivityService.RecordActivityAsync(userId, cancellationToken);
+        await _workflowNotifications.NotifyModeratorsPracticeSubmittedAsync(
+            submission,
+            exam,
+            userId,
+            cancellationToken);
 
         return _mapper.Map<PracticeSubmissionDto>(submission);
     }
@@ -164,6 +173,16 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
 
         await _submissionRepository.UpdateAsync(submission, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var exam = await _examRepository.GetByIdAsync(examId, cancellationToken: cancellationToken)
+            ?? throw new NotFoundException("Exam", examId);
+        await _workflowNotifications.NotifyStudentPracticeReviewedAsync(
+            submission,
+            exam,
+            status,
+            request.ReviewerComment,
+            _currentUser.UserId,
+            cancellationToken);
 
         return _mapper.Map<PracticeSubmissionDto>(submission);
     }

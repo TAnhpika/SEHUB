@@ -21,6 +21,7 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<PostLike> PostLikes => Set<PostLike>();
     public DbSet<PostReport> PostReports => Set<PostReport>();
+    public DbSet<QuestionReport> QuestionReports => Set<QuestionReport>();
     public DbSet<Exam> Exams => Set<Exam>();
     public DbSet<ExamAttachment> ExamAttachments => Set<ExamAttachment>();
     public DbSet<PostImage> PostImages => Set<PostImage>();

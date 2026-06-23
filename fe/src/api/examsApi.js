@@ -115,3 +115,10 @@ export function submitAttempt(examId, attemptId) {
 export function getAttemptResult(examId, attemptId) {
   return apiRequest(`/api/v1/exams/${examId}/attempts/${attemptId}/result`);
 }
+
+export function reportExamQuestion(examId, questionId, body) {
+  return apiRequest(`/api/v1/exams/${examId}/questions/${questionId}/report`, {
+    method: "POST",
+    body,
+  });
+}

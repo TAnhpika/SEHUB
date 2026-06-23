@@ -161,6 +161,28 @@ export function approvePaymentRefund(orderId, body = {}) {
   });
 }
 
+export function completePaymentRefund(orderId, body = {}) {
+  return apiRequest(`/api/v1/admin/payments/${orderId}/refund/complete`, {
+    method: "POST",
+    body,
+  });
+}
+
+export function listQuestionReports(params = {}) {
+  return apiRequest(`/api/v1/admin/moderation/question-reports${buildQuery(params)}`);
+}
+
+export function getPendingQuestionReportCount() {
+  return apiRequest("/api/v1/admin/moderation/question-reports/pending-count");
+}
+
+export function resolveQuestionReport(id, body) {
+  return apiRequest(`/api/v1/admin/moderation/question-reports/${id}`, {
+    method: "PATCH",
+    body,
+  });
+}
+
 export function confirmPayment(orderId, body = {}) {
   return apiRequest(`/api/v1/admin/payments/${orderId}/confirm`, {
     method: "POST",

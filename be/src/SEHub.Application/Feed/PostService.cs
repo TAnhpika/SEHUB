@@ -1,6 +1,7 @@
 using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Notifications;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Feed;
@@ -28,6 +29,7 @@ public sealed class PostService : IPostService
     private readonly IUserProfileRepository _profileRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IGamificationService _gamificationService;
+    private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly IFileStorageService _fileStorage;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
@@ -42,6 +44,7 @@ public sealed class PostService : IPostService
         IUserProfileRepository profileRepository,
         ICurrentUserService currentUser,
         IGamificationService gamificationService,
+        IWorkflowNotificationService workflowNotifications,
         IFileStorageService fileStorage,
         IUnitOfWork unitOfWork,
         IMapper mapper)
@@ -55,6 +58,7 @@ public sealed class PostService : IPostService
         _profileRepository = profileRepository;
         _currentUser = currentUser;
         _gamificationService = gamificationService;
+        _workflowNotifications = workflowNotifications;
         _fileStorage = fileStorage;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -196,6 +200,11 @@ public sealed class PostService : IPostService
         await _postRepository.AddAsync(post, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        if (!_currentUser.IsModeratorOrAdmin)
+        {
+            await _workflowNotifications.NotifyModeratorsPostPendingAsync(post, userId, cancellationToken);
+        }
+
         return await MapDetailAsync(post, cancellationToken);
     }
 
@@ -213,7 +222,8 @@ public sealed class PostService : IPostService
         {
             post.CoverImageUrl = NormalizeCoverImageUrl(request.CoverImageUrl);
         }
-        if (post.Status == PostStatus.Rejected)
+        var resubmittedForReview = post.Status == PostStatus.Rejected;
+        if (resubmittedForReview)
         {
             post.Status = PostStatus.Pending;
         }
@@ -222,6 +232,14 @@ public sealed class PostService : IPostService
 
         await _postRepository.UpdateAsync(post, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (resubmittedForReview && !_currentUser.IsModeratorOrAdmin)
+        {
+            await _workflowNotifications.NotifyModeratorsPostPendingAsync(
+                post,
+                post.AuthorId,
+                cancellationToken);
+        }
 
         return await MapDetailAsync(post, cancellationToken);
     }

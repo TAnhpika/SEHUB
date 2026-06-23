@@ -1,4 +1,6 @@
 import * as adminApi from "@/api/adminApi";
+import { getNotificationUnreadCount, getNotifications } from "@/api/notificationsApi";
+import { mapNotificationPage } from "@/api/notificationsMapper";
 import { getDashboardPending, getMergedActivityLog } from "@/features/admin/adminMockData";
 import { loadAdminActivityPreview } from "@/features/admin/activity/adminActivityData";
 import { getPaymentStats, loadAdminPayments } from "@/features/admin/payments/adminPaymentData";
@@ -31,6 +33,20 @@ function buildNotificationsFromPending(pending, recent) {
   return [...pendingItems, ...recentItems];
 }
 
+function mapWorkflowNotifications(items) {
+  return items
+    .filter((item) => item.type === "moderation" || item.type === "examreview")
+    .map((item) => ({
+      id: `notif-${item.id}`,
+      kind: "action",
+      title: item.title,
+      desc: item.body || null,
+      time: item.time,
+      to: item.linkUrl || "/admin",
+      urgent: !item.read,
+    }));
+}
+
 /**
  * Thông báo header Admin — pending từ stats/store + audit gần đây.
  */
@@ -49,12 +65,15 @@ export async function loadAdminHeaderNotifications() {
     return buildNotificationsFromPending(pending, recent);
   }
 
-  const [modStats, pendingExamsPage, submissionsPage, paymentsPage, recent] = await Promise.all([
+  const [modStats, pendingExamsPage, submissionsPage, paymentsPage, recent, notifPage, unread] =
+    await Promise.all([
     adminApi.getModerationStats(),
     adminApi.listExams({ status: "PendingApproval", pageSize: 1 }),
     adminApi.listModerationPracticeSubmissions({ status: "Submitted", pageSize: 1 }),
     loadAdminPayments(),
     loadAdminActivityPreview(4),
+    getNotifications({ page: 1, pageSize: 20 }),
+    getNotificationUnreadCount(),
   ]);
 
   const paymentStats = getPaymentStats();
@@ -90,7 +109,11 @@ export async function loadAdminHeaderNotifications() {
   ].filter((item) => item.count > 0 || item.id === "p2");
 
   void paymentsPage;
-  return buildNotificationsFromPending(pending, recent);
+  const workflowNotifs = mapWorkflowNotifications(mapNotificationPage(notifPage).items);
+  const queueNotifs = buildNotificationsFromPending(pending, recent);
+  const merged = [...workflowNotifs, ...queueNotifs];
+  void unread;
+  return merged;
 }
 
 export function getAdminNotificationCount() {
@@ -98,6 +121,10 @@ export function getAdminNotificationCount() {
 }
 
 export async function loadAdminNotificationCount() {
-  const notifications = await loadAdminHeaderNotifications();
-  return notifications.filter((item) => item.kind === "action").length;
+  const [notifications, unread] = await Promise.all([
+    loadAdminHeaderNotifications(),
+    getNotificationUnreadCount(),
+  ]);
+  const actionCount = notifications.filter((item) => item.kind === "action").length;
+  return Math.max(unread?.totalUnread ?? 0, actionCount);
 }

@@ -1,10 +1,11 @@
-import { useEffect, useId, useMemo, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell } from "@fortawesome/free-solid-svg-icons";
 import {
   buildModeratorNotifications,
-  getModeratorUnreadCount,
+  loadModeratorNotifications,
+  loadModeratorUnreadCount,
 } from "./moderatorHeaderData";
 import headerStyles from "./ModeratorHeader.module.css";
 import styles from "./ModeratorHeaderDropdown.module.css";
@@ -12,8 +13,21 @@ import styles from "./ModeratorHeaderDropdown.module.css";
 function ModeratorNotificationDropdown({ open, onToggle, onClose }) {
   const rootRef = useRef(null);
   const panelId = useId();
-  const notifications = useMemo(() => buildModeratorNotifications(), []);
-  const unreadCount = getModeratorUnreadCount();
+  const [notifications, setNotifications] = useState(() => buildModeratorNotifications());
+  const [unreadCount, setUnreadCount] = useState(() => buildModeratorNotifications().length);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([loadModeratorNotifications(), loadModeratorUnreadCount()]).then(([items, count]) => {
+      if (!cancelled) {
+        setNotifications(items);
+        setUnreadCount(count);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;

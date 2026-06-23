@@ -55,4 +55,14 @@ public sealed class PaymentsController : ControllerBase
         var result = await _adminPaymentService.ApproveRefundAsync(orderId, request, cancellationToken);
         return Ok(result);
     }
+
+    [HttpPost("{orderId:guid}/refund/complete")]
+    public async Task<IActionResult> CompleteRefund(
+        Guid orderId,
+        [FromBody] ApproveRefundRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _adminPaymentService.CompleteRefundAsync(orderId, request, cancellationToken);
+        return Ok(result);
+    }
 }

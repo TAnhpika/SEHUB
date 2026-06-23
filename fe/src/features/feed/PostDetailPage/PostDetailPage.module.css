@@ -48,6 +48,24 @@
   gap: 0.75rem;
 }
 
+.profile-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.profile-trigger:hover .username,
+.profile-trigger:hover .comment-name {
+  color: var(--color-primary);
+}
+
 .avatar {
   width: 40px;
   height: 40px;
@@ -391,6 +409,25 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
+}
+
+.reply-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  background: rgba(59, 130, 246, 0.08);
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: 0.875rem;
+}
+
+.reply-banner button {
+  border: 0;
+  background: none;
+  color: var(--color-primary, #2563eb);
+  cursor: pointer;
+  font-weight: 600;
 }
 
 .toolbar {

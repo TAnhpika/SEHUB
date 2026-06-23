@@ -8,5 +8,6 @@ public sealed class PaymentAuditLogDto
     public Guid? ActorId { get; init; }
     public string? ActorUsername { get; init; }
     public string? PayloadJson { get; init; }
+    public string Detail { get; init; } = string.Empty;
     public DateTime CreatedAt { get; init; }
 }

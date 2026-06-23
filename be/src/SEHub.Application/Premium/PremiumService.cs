@@ -4,7 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
-using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Notifications;
 using SEHub.Contracts.Premium;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
@@ -27,6 +27,7 @@ public sealed class PremiumService : IPremiumService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
     private readonly IHostEnvironment _environment;
+    private readonly IWorkflowNotificationService _workflowNotifications;
 
     public PremiumService(
         ISubscriptionPlanRepository planRepository,
@@ -41,7 +42,8 @@ public sealed class PremiumService : IPremiumService
         IConfiguration configuration,
         IUnitOfWork unitOfWork,
         IMapper mapper,
-        IHostEnvironment environment)
+        IHostEnvironment environment,
+        IWorkflowNotificationService workflowNotifications)
     {
         _planRepository = planRepository;
         _orderRepository = orderRepository;
@@ -56,6 +58,7 @@ public sealed class PremiumService : IPremiumService
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _environment = environment;
+        _workflowNotifications = workflowNotifications;
     }
 
     public async Task<IReadOnlyList<SubscriptionPlanDto>> GetPlansAsync(CancellationToken cancellationToken = default)
@@ -211,6 +214,10 @@ public sealed class PremiumService : IPremiumService
                 CreatedAt = now
             }, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _workflowNotifications.NotifyAdminsPaymentWaitingConfirmationAsync(
+                order,
+                userId,
+                cancellationToken);
 
             message = "Thanh toán đang chờ xác nhận từ quản trị viên.";
         }

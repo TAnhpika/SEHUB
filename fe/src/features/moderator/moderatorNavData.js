@@ -9,7 +9,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import * as adminApi from "@/api/adminApi";
 import { getPendingContentCount } from "@/features/moderator/content/contentModerationStore";
-import { getPendingExamQuestionReportCount } from "@/features/exams/examQuestionReportStore";
+import { getPendingExamQuestionReportCount, getPendingExamQuestionReportCountSync } from "@/features/exams/examQuestionReportStore";
 import {
   getCommunityReportsPendingCount,
   syncCachedPendingReportsCount,
@@ -145,7 +145,7 @@ export function isModeratorNavActive(item, pathname) {
 
 export function getModeratorNavBadgeCounts() {
   const communityPending = getCommunityReportsPendingCount();
-  const examPending = getPendingExamQuestionReportCount();
+  const examPending = getPendingExamQuestionReportCountSync();
   return {
     reports: communityPending + examPending,
     content: getPendingContentCount(),
@@ -158,9 +158,11 @@ export async function loadModeratorNavBadgeCounts() {
   }
 
   try {
-    const stats = await adminApi.getModerationStats();
+    const [stats, examPending] = await Promise.all([
+      adminApi.getModerationStats(),
+      getPendingExamQuestionReportCount(),
+    ]);
     syncCachedPendingReportsCount(stats.pendingReports ?? 0);
-    const examPending = getPendingExamQuestionReportCount();
     return {
       reports: (stats.pendingReports ?? 0) + examPending,
       content: stats.pendingPosts ?? 0,

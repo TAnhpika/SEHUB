@@ -19,6 +19,7 @@ import RefundedPaymentsPanel from "@/features/admin/payments/RefundedPaymentsPan
 import {
 
   approveRefundViaApi,
+  completeRefundViaApi,
 
   confirmPayOsPaymentViaApi,
 
@@ -276,16 +277,19 @@ function AdminPaymentListPage() {
 
     const payment = payments.find((p) => p.id === refundPaymentId);
     const approvePending = payment?.status === "refund_requested";
+    const completePending = payment?.status === "processing_refund";
 
     const submit = approvePending
       ? approveRefundViaApi(refundPaymentId, reason)
-      : Promise.resolve(
-          processPayOsRefund({
-            paymentId: refundPaymentId,
-            reason,
-            adminUsername: user?.username ?? "admin_sehub",
-          }),
-        );
+      : completePending
+        ? completeRefundViaApi(refundPaymentId, reason)
+        : Promise.resolve(
+            processPayOsRefund({
+              paymentId: refundPaymentId,
+              reason,
+              adminUsername: user?.username ?? "admin_sehub",
+            }),
+          );
 
     submit.then((result) => {
       if (!result.ok) {
@@ -297,6 +301,17 @@ function AdminPaymentListPage() {
       setRefundOpen(false);
       setRefundPaymentId(null);
       bump();
+    });
+  }
+
+  function handleQuickCompleteRefund(paymentId) {
+    completeRefundViaApi(paymentId, "Admin xác nhận đã chuyển khoản hoàn tiền").then((result) => {
+      if (result.ok) {
+        showToast(result.message);
+        bump();
+      } else {
+        showToast(result.message);
+      }
     });
   }
 
@@ -715,6 +730,22 @@ function AdminPaymentListPage() {
                             >
 
                               Duyệt hoàn tiền
+
+                            </button>
+
+                          ) : payment.status === "processing_refund" ? (
+
+                            <button
+
+                              type="button"
+
+                              className={payStyles.confirmBtn}
+
+                              onClick={() => handleQuickCompleteRefund(payment.id)}
+
+                            >
+
+                              Xác nhận đã hoàn tiền
 
                             </button>
 
