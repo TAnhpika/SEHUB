@@ -12,7 +12,7 @@ public class ExamAttemptConfiguration : IEntityTypeConfiguration<ExamAttempt>
         builder.HasKey(a => a.Id);
         builder.HasIndex(a => new { a.UserId, a.ExamId });
         builder.HasIndex(a => new { a.UserId, a.ExamId, a.Status })
-            .HasFilter($"[{nameof(ExamAttempt.Status)}] = {(int)ExamAttemptStatus.InProgress}");
+            .HasFilter($"\"{nameof(ExamAttempt.Status)}\" = {(int)ExamAttemptStatus.InProgress}");
         builder.Property(a => a.Score).HasPrecision(5, 2);
         builder.Property(a => a.AnswersJson).HasMaxLength(8000);
     }

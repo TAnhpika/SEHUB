@@ -23,7 +23,7 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<SEHubDbCon
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
         var optionsBuilder = new DbContextOptionsBuilder<SEHubDbContext>();
-        optionsBuilder.UseSqlServer(connectionString);
+        optionsBuilder.UseNpgsql(connectionString);
         return new SEHubDbContext(optionsBuilder.Options);
     }
 }

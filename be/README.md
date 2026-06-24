@@ -16,15 +16,20 @@ ASP.NET Core 8 Web API — Clean Architecture backend for SEHub MVP (Giai đoạ
 ## Prerequisites
 
 - .NET 8 SDK
-- SQL Server (LocalDB on Windows, or Docker SQL Server)
+- [Supabase](https://supabase.com) project (PostgreSQL) — use **Session pooler** connection string
 
 ## Quick start
 
 ```bash
 cd be
 dotnet restore
+```
+
+Copy `src/SEHub.API/appsettings.Development.Local.json.example` → `appsettings.Development.Local.json` and fill your Supabase pooler connection string (`Host`, `Username`, `Password`).
+
+```bash
 dotnet ef database update --project src/SEHub.Infrastructure --startup-project src/SEHub.API
-dotnet run --project src/SEHub.API
+dotnet run --project src/SEHub.API --launch-profile http
 ```
 
 - Swagger: `https://localhost:7xxx/swagger`
@@ -52,7 +57,7 @@ Copy `appsettings.Development.json` values or use user secrets:
 dotnet user-secrets set "Jwt:Key" "your-256-bit-secret-key-here-min-32-chars" --project src/SEHub.API
 ```
 
-Key sections: `ConnectionStrings`, `Jwt`, `PayOS`, `FileStorage`, `Cors`, `Ai`.
+Key sections: `ConnectionStrings` (Supabase PostgreSQL), `Jwt`, `PayOS`, `FileStorage`, `Cors`, `Ai`.
 
 ## Tests
 

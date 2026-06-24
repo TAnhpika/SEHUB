@@ -1,6 +1,7 @@
 using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Storage;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Feed;
@@ -28,6 +29,8 @@ public sealed class PostService : IPostService
     private readonly IUserProfileRepository _profileRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IGamificationService _gamificationService;
+    private readonly IImageCdnStorageService _cdnStorage;
+    private readonly ICdnFolderSettings _cdnFolders;
     private readonly IFileStorageService _fileStorage;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
@@ -42,6 +45,8 @@ public sealed class PostService : IPostService
         IUserProfileRepository profileRepository,
         ICurrentUserService currentUser,
         IGamificationService gamificationService,
+        IImageCdnStorageService cdnStorage,
+        ICdnFolderSettings cdnFolders,
         IFileStorageService fileStorage,
         IUnitOfWork unitOfWork,
         IMapper mapper)
@@ -55,6 +60,8 @@ public sealed class PostService : IPostService
         _profileRepository = profileRepository;
         _currentUser = currentUser;
         _gamificationService = gamificationService;
+        _cdnStorage = cdnStorage;
+        _cdnFolders = cdnFolders;
         _fileStorage = fileStorage;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -232,6 +239,7 @@ public sealed class PostService : IPostService
             ?? throw new NotFoundException("Post", id);
 
         EnsureAuthorOrModerator(post.AuthorId);
+        await CdnAssetCleanup.TryDeleteAsync(_cdnStorage, publicId: null, post.CoverImageUrl, cancellationToken: cancellationToken);
         await _postImageService.DeleteImagesForPostAsync(id, cancellationToken);
         await _postRepository.SoftDeleteAsync(post, RequireUserId(), cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -334,14 +342,14 @@ public sealed class PostService : IPostService
             throw new DomainException("File name is required.");
         }
 
-        var storedPath = await _fileStorage.UploadAsync(
+        var upload = await _cdnStorage.UploadImageAsync(
             fileContent,
             safeFileName,
             normalizedContentType,
-            "posts/covers",
+            _cdnFolders.Posts,
             cancellationToken);
 
-        return new PostCoverUploadDto { CoverImageUrl = storedPath };
+        return new PostCoverUploadDto { CoverImageUrl = upload.Url };
     }
 
     private async Task<FeaturedPostModeratorItemDto> MapFeaturedModeratorItemAsync(

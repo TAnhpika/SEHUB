@@ -40,4 +40,4 @@ jobs:
         working-directory: be
         run: |
           dotnet tool install --global dotnet-ef --version 8.0.11
-          dotnet ef migrations bundle --project src/SEHub.Infrastructure --startup-project src/SEHub.API --self-contained -r linux-x64 -o migrations-bundle || echo "Bundle step skipped if SQL Server tools unavailable"
+          dotnet ef migrations bundle --project src/SEHub.Infrastructure --startup-project src/SEHub.API --self-contained -r linux-x64 -o migrations-bundle || echo "Bundle step skipped if connection string unavailable"

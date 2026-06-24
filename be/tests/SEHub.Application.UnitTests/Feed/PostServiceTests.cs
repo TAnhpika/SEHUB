@@ -3,6 +3,7 @@ using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
 using SEHub.Application.Models;
+using SEHub.Application.Storage;
 using SEHub.Contracts.Feed;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
@@ -20,25 +21,33 @@ public sealed class PostServiceTests
     private readonly Mock<IUserProfileRepository> _profileRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IGamificationService> _gamificationService = new();
+    private readonly Mock<IImageCdnStorageService> _cdnStorage = new();
+    private readonly Mock<ICdnFolderSettings> _cdnFolders = new();
     private readonly Mock<IFileStorageService> _fileStorage = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
     private static readonly Guid PostId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     private static readonly Guid AuthorId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 
-    private PostService CreateSut() => new(
-        _postRepository.Object,
-        _imageRepository.Object,
-        _postImageService.Object,
-        _likeRepository.Object,
-        _commentRepository.Object,
-        _userRepository.Object,
-        _profileRepository.Object,
-        _currentUser.Object,
-        _gamificationService.Object,
-        _fileStorage.Object,
-        _unitOfWork.Object,
-        AutoMapperFactory.Create());
+    private PostService CreateSut()
+    {
+        _cdnFolders.SetupGet(f => f.Posts).Returns(CdnFolders.Posts);
+        return new(
+            _postRepository.Object,
+            _imageRepository.Object,
+            _postImageService.Object,
+            _likeRepository.Object,
+            _commentRepository.Object,
+            _userRepository.Object,
+            _profileRepository.Object,
+            _currentUser.Object,
+            _gamificationService.Object,
+            _cdnStorage.Object,
+            _cdnFolders.Object,
+            _fileStorage.Object,
+            _unitOfWork.Object,
+            AutoMapperFactory.Create());
+    }
 
     [Fact]
     public async Task CreateAsync_StartsAsPending()
@@ -92,6 +101,8 @@ public sealed class PostServiceTests
             .ReturnsAsync(new UserAccount { Id = AuthorId, Username = "author", DisplayName = "Author" });
         _profileRepository.Setup(r => r.GetByUserIdAsync(AuthorId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((UserProfile?)null);
+        _imageRepository.Setup(r => r.GetByPostIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
         _fileStorage
             .Setup(s => s.GetSignedUrlAsync(storedPath, It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(publicUrl);
@@ -141,6 +152,8 @@ public sealed class PostServiceTests
             .ReturnsAsync(new UserAccount { Id = AuthorId, Username = "author", DisplayName = "Author" });
         _profileRepository.Setup(r => r.GetByUserIdAsync(AuthorId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((UserProfile?)null);
+        _imageRepository.Setup(r => r.GetByPostIdAsync(PostId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
 
         var sut = CreateSut();
         var result = await sut.GetByIdAsync(PostId);

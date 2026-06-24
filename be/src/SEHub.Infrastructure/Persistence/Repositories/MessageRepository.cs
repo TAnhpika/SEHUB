@@ -40,6 +40,15 @@ public sealed class MessageRepository : IMessageRepository
             .OrderByDescending(m => m.SentAt)
             .FirstOrDefaultAsync(cancellationToken);
 
+    public Task<Message?> GetByIdAsync(Guid messageId, CancellationToken cancellationToken = default) =>
+        _context.Messages.FirstOrDefaultAsync(m => m.Id == messageId, cancellationToken);
+
+    public Task DeleteAsync(Message message, CancellationToken cancellationToken = default)
+    {
+        _context.Messages.Remove(message);
+        return Task.CompletedTask;
+    }
+
     public Task<int> CountSentByUserSinceAsync(
         Guid senderId,
         DateTime sinceUtc,

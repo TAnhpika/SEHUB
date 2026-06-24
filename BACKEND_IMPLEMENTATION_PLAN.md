@@ -13,7 +13,7 @@ SEHub Backend là **ASP.NET Core 8 Web API** theo **Clean Architecture** (6 proj
 
 | Hạng mục | Quyết định |
 | -------- | ---------- |
-| Runtime | .NET 8 · EF Core Code First · SQL Server |
+| Runtime | .NET 8 · EF Core Code First · PostgreSQL (Supabase) |
 | Auth | Identity Roles + JWT + `PremiumAuthorizationHandler` (đọc DB) |
 | Premium | Tách khỏi Role — policy `RequirePremium` query `Subscriptions` |
 | Soft delete | Global filter: `Post`, `Comment`, `Document` |
@@ -117,7 +117,7 @@ FE axiosInstance (Bearer JWT)
   → Controller (thin)
   → Application Service
   → IRepository / DbContext
-  → SQL Server
+  → PostgreSQL (Supabase)
   ← Entity → AutoMapper → Contracts DTO
   ← ApiResponse<T> envelope
 ```
@@ -1261,4 +1261,4 @@ Cho **mỗi module**, đánh dấu ✅ khi đạt tất cả tiêu chí:
 
 ---
 
-_— SEHub Backend Implementation Plan · Nguồn: ARCHITECTURE-BE.md v2.0 · ASP.NET Core 8 · SQL Server · EF Core Code First_
+_— SEHub Backend Implementation Plan · Nguồn: ARCHITECTURE-BE.md v2.0 · ASP.NET Core 8 · PostgreSQL (Supabase) · EF Core Code First_

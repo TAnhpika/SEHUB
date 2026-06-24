@@ -16,7 +16,6 @@ public sealed class AdminDocumentService : IAdminDocumentService
     private readonly IDocumentRepository _documentRepository;
     private readonly IDocumentCategoryRepository _categoryRepository;
     private readonly ICloudFileStorageService _cloudStorage;
-    private readonly IFileStorageService _fileStorage;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
@@ -25,7 +24,6 @@ public sealed class AdminDocumentService : IAdminDocumentService
         IDocumentRepository documentRepository,
         IDocumentCategoryRepository categoryRepository,
         ICloudFileStorageService cloudStorage,
-        IFileStorageService fileStorage,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork,
         IMapper mapper)
@@ -33,7 +31,6 @@ public sealed class AdminDocumentService : IAdminDocumentService
         _documentRepository = documentRepository;
         _categoryRepository = categoryRepository;
         _cloudStorage = cloudStorage;
-        _fileStorage = fileStorage;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -202,7 +199,7 @@ public sealed class AdminDocumentService : IAdminDocumentService
         var document = await _documentRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException("Document", id);
 
-        await DocumentFileAccess.DeleteStoredFileAsync(document, _fileStorage, _cloudStorage, cancellationToken);
+        await DocumentFileAccess.DeleteStoredFileAsync(document, _cloudStorage, cancellationToken);
 
         var actorId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
         await _documentRepository.SoftDeleteAsync(document, actorId, cancellationToken);

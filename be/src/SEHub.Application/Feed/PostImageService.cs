@@ -205,20 +205,17 @@ public sealed class PostImageService : IPostImageService
 
         foreach (var image in images)
         {
-            try
+            var isRaw = false;
+            await CdnAssetCleanup.TryDeleteAsync(
+                _cdnStorage,
+                image.PublicId,
+                image.Url,
+                isRaw,
+                cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(image.DriveFileId))
             {
-                if (!string.IsNullOrWhiteSpace(image.PublicId))
-                {
-                    await _cdnStorage.DeleteAsync(image.PublicId, isRaw: false, cancellationToken);
-                }
-                else if (!string.IsNullOrWhiteSpace(image.DriveFileId))
-                {
-                    await _driveStorage.DeleteAsync(image.DriveFileId, cancellationToken);
-                }
-            }
-            catch
-            {
-                // Best effort cleanup when deleting post.
+                await CloudFileCleanup.TryDeleteAsync(_driveStorage, image.DriveFileId, cancellationToken);
             }
         }
 

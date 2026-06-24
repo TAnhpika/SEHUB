@@ -11,6 +11,7 @@ public class UserProfileConfiguration : IEntityTypeConfiguration<UserProfile>
         builder.HasKey(p => p.Id);
         builder.HasIndex(p => p.UserId).IsUnique();
         builder.Property(p => p.AvatarUrl).HasMaxLength(500);
+        builder.Property(p => p.AvatarPublicId).HasMaxLength(256);
         builder.Property(p => p.Bio).HasMaxLength(1000);
         builder.Property(p => p.Major).HasMaxLength(100);
         builder.Property(p => p.Gender).HasMaxLength(20);

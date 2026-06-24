@@ -10,6 +10,6 @@ public class QuestionOptionConfiguration : IEntityTypeConfiguration<QuestionOpti
     {
         builder.HasKey(o => o.Id);
         builder.Property(o => o.Label).HasMaxLength(5).IsRequired();
-        builder.Property(o => o.Text).HasMaxLength(2000).IsRequired();
+        builder.Property(o => o.Text).HasColumnType("text").IsRequired();
     }
 }
