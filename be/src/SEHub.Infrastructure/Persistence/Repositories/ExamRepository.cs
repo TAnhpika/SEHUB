@@ -23,6 +23,20 @@ public class ExamRepository : IExamRepository
         return await query.Include(e => e.RevisionOfExam).FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Exam>> GetByIdsAsync(
+        IReadOnlyList<Guid> ids,
+        CancellationToken cancellationToken = default)
+    {
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+
+        return await _context.Exams
+            .Where(e => ids.Contains(e.Id))
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<Exam?> GetByCodeAsync(string code, CancellationToken cancellationToken = default) =>
         _context.Exams.FirstOrDefaultAsync(e => e.Code == code, cancellationToken);
 

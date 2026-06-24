@@ -20,5 +20,9 @@ export default defineConfig({
     port: 5173,
     // Giữ cố định 5173 để khớp Authorized JavaScript origins trên Google Cloud Console.
     strictPort: true,
+    // GIS popup (ux_mode: popup) cần COOP này — tránh lỗi postMessage và token không hợp lệ.
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+    },
   },
 });

@@ -1,5 +1,6 @@
 import * as adminApi from "@/api/adminApi";
 import { mapModerationPostDetail, mapModerationPostListItem } from "@/api/adminMapper";
+import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 
 export const CONTENT_QUEUE_PAGE_SIZE = 4;
 export const CONTENT_HISTORY_PAGE_SIZE = 5;
@@ -456,7 +457,7 @@ export async function loadModerationContentItems({ status, sort = "newest" } = {
     return buildDefaultContentItems();
   }
 
-  const params = { pageSize: 100, sort };
+  const params = { pageSize: ADMIN_API_PAGE_SIZE, sort };
   if (status && status !== "all") {
     if (status === "pending") params.status = "Pending";
     else if (status === "approved") params.status = "Published";

@@ -2,7 +2,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFire, faTrophy } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import FtesPromoPanel from "@/common/Sidebar/FtesPromoPanel/FtesPromoPanel";
-import { FEATURED_POSTS } from "@/features/feed/feedData";
+import FeaturedPostsPanel from "@/common/Sidebar/FeaturedPostsPanel/FeaturedPostsPanel";
 import styles from "./HomeSidebar.module.css";
 
 function HomeSidebar() {
@@ -46,26 +46,7 @@ function HomeSidebar() {
         </div>
       </div>
 
-      <div className={`${styles.panel} ${styles.featured}`}>
-        <h2 className={styles.title}>Bài viết nổi bật</h2>
-        <ul className={styles.posts}>
-          {FEATURED_POSTS.map((post, index) => (
-            <li
-              key={post.url}
-              className={`${styles["post-item"]} ${index < FEATURED_POSTS.length - 1 ? styles.item : ""}`}
-            >
-              <a
-                href={post.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles["post-link"]}
-              >
-                {post.title}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <FeaturedPostsPanel className={`${styles.panel} ${styles.featured}`} />
 
       <FtesPromoPanel />
     </aside>

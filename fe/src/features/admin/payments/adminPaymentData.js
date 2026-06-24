@@ -11,6 +11,7 @@ import {
   revokePremiumFromPayment,
 } from "@/features/admin/users/adminUserStore";
 import { grantVoucherFromPayment } from "@/features/admin/vouchers/adminVoucherData";
+import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 import * as adminApi from "@/api/adminApi";
 import { mapAdminPaymentListItem } from "@/api/adminMapper";
 import { isValidGuid } from "@/features/feed/postUtils";
@@ -423,7 +424,7 @@ export async function loadAdminPayments() {
     return getAdminPayments();
   }
 
-  const page = await adminApi.listPayments({ page: 1, pageSize: 100 });
+  const page = await adminApi.listPayments({ page: 1, pageSize: ADMIN_API_PAGE_SIZE });
   return (page.items ?? []).map((item) => enrichPayment(mapAdminPaymentListItem(item)));
 }
 

@@ -1,5 +1,6 @@
 import * as adminApi from "@/api/adminApi";
 import * as examsApi from "@/api/examsApi";
+import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 import { formatRelativeTime } from "@/utils/dateTime";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
@@ -89,7 +90,7 @@ export async function getExamQuestionReports() {
     return readAll().map(toModeratorReport);
   }
 
-  const page = await adminApi.listQuestionReports({ page: 1, pageSize: 100 });
+  const page = await adminApi.listQuestionReports({ page: 1, pageSize: ADMIN_API_PAGE_SIZE });
   return (page.items ?? []).map(mapApiReport);
 }
 

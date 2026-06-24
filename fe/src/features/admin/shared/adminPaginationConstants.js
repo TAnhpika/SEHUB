@@ -1,5 +1,8 @@
 /** Kích thước trang mặc định — trang admin danh sách */
 
+/** Kích thước trang khi gọi API admin/moderator (giảm payload so với 100) */
+export const ADMIN_API_PAGE_SIZE = 25;
+
 export const ADMIN_PAGE_SIZES = {
   users: 8,
   userActivity: 5,

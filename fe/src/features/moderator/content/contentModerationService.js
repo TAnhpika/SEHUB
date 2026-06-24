@@ -4,6 +4,7 @@ import {
   mapModerationPostListItem,
 } from "@/api/contentModerationMapper";
 import { DEFAULT_REJECT_REASON } from "@/features/moderator/content/contentModerationData";
+import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
@@ -39,7 +40,7 @@ export async function loadModerationQueue({ sort = "newest" } = {}) {
     status: "Pending",
     sort,
     page: 1,
-    pageSize: 100,
+    pageSize: ADMIN_API_PAGE_SIZE,
   });
 
   const items = (data?.items ?? []).map(mapModerationPostListItem);
@@ -54,7 +55,7 @@ export async function loadModerationHistory({ status = "all", sort = "newest" } 
     status: queryStatus,
     sort,
     page: 1,
-    pageSize: 200,
+    pageSize: ADMIN_API_PAGE_SIZE,
   });
 
   return (data?.items ?? []).map(mapModerationPostListItem);

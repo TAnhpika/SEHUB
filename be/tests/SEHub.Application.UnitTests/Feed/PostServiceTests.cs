@@ -205,4 +205,108 @@ public sealed class PostServiceTests
         result.Status.Should().Be(nameof(PostStatus.Pending));
         result.Title.Should().Be("Resubmitted");
     }
+
+    [Fact]
+    public async Task GetPostsAsync_List_ReturnsPublicCoverPathWithoutSigning()
+    {
+        const string storedPath = "posts/covers/abc123_photo.jpg";
+        var post = new Post
+        {
+            Id = PostId,
+            AuthorId = AuthorId,
+            Title = "List Post",
+            Content = "Body",
+            Status = PostStatus.Published,
+            CoverImageUrl = storedPath,
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        _postRepository
+            .Setup(r => r.GetPagedAsync(It.IsAny<PostQueryParams>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(([post], 1));
+        _likeRepository
+            .Setup(r => r.CountByPostIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, int>());
+        _commentRepository
+            .Setup(r => r.CountByPostIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, int>());
+        _imageRepository
+            .Setup(r => r.GetByPostIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _userRepository
+            .Setup(r => r.GetByIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new UserAccount { Id = AuthorId, Username = "author", DisplayName = "Author" }]);
+        _profileRepository
+            .Setup(r => r.GetByUserIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var sut = CreateSut();
+        var result = await sut.GetPostsAsync(new PostQueryParams { Page = 1, PageSize = 5 });
+
+        result.Items.Should().ContainSingle();
+        result.Items[0].CoverImageUrl.Should().Be("/uploads/posts/covers/abc123_photo.jpg");
+        _fileStorage.Verify(
+            s => s.GetSignedUrlAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetFeaturedAsync_BatchesAuthorLookups()
+    {
+        var author2 = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var posts = new List<Post>
+        {
+            new()
+            {
+                Id = PostId,
+                AuthorId = AuthorId,
+                Title = "Featured 1",
+                Content = "Body",
+                Status = PostStatus.Published,
+                CreatedAt = DateTime.UtcNow,
+            },
+            new()
+            {
+                Id = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"),
+                AuthorId = author2,
+                Title = "Featured 2",
+                Content = "Body",
+                Status = PostStatus.Published,
+                CreatedAt = DateTime.UtcNow,
+            },
+        };
+
+        _postRepository
+            .Setup(r => r.GetFeaturedAsync(10, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(posts);
+        _userRepository
+            .Setup(r => r.GetByIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new UserAccount { Id = AuthorId, Username = "author1", DisplayName = "Author 1" },
+                new UserAccount { Id = author2, Username = "author2", DisplayName = "Author 2" },
+            ]);
+        _profileRepository
+            .Setup(r => r.GetByUserIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var sut = CreateSut();
+        var result = await sut.GetFeaturedAsync();
+
+        result.Should().HaveCount(2);
+        result[0].Author.Username.Should().Be("author1");
+        result[1].Author.Username.Should().Be("author2");
+        _userRepository.Verify(
+            r => r.GetByIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _userRepository.Verify(
+            r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _profileRepository.Verify(
+            r => r.GetByUserIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _profileRepository.Verify(
+            r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }

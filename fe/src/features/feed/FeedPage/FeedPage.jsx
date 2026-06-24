@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
@@ -8,7 +8,6 @@ import PostCard from "@/features/feed/PostCard/PostCard";
 import PostDetailModal from "@/features/feed/PostDetailModal/PostDetailModal";
 import PostFeedFilters from "@/features/feed/PostFeedFilters/PostFeedFilters";
 import { loadPosts, POSTS_PER_PAGE, removePost } from "@/features/feed/feedData";
-import { filterPosts } from "@/features/feed/feedFilterData";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import styles from "./FeedPage.module.css";
 
@@ -22,6 +21,7 @@ function FeedPage() {
   const [editOnOpen, setEditOnOpen] = useState(false);
   const [semesterFilter, setSemesterFilter] = useState("all");
   const [majorFilter, setMajorFilter] = useState("all");
+  const [totalPages, setTotalPages] = useState(1);
   const { needsLoginPrompt, requireAuth } = useRequireAuth();
   const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
 
@@ -32,13 +32,20 @@ function FeedPage() {
       setLoading(true);
       setError(null);
       try {
-        const result = await loadPosts({ pageSize: 100 });
+        const result = await loadPosts({
+          page: currentPage,
+          pageSize: POSTS_PER_PAGE,
+          semester: semesterFilter,
+          major: majorFilter,
+        });
         if (!cancelled) {
           setPosts(result.items);
+          setTotalPages(Math.max(1, result.totalPages ?? 1));
         }
       } catch (err) {
         if (!cancelled) {
           setError(err.message ?? "Không tải được danh sách bài viết.");
+          setPosts([]);
         }
       } finally {
         if (!cancelled) {
@@ -51,20 +58,9 @@ function FeedPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [currentPage, semesterFilter, majorFilter]);
 
-  const filteredPosts = useMemo(
-    () => filterPosts(posts, semesterFilter, majorFilter),
-    [posts, semesterFilter, majorFilter],
-  );
-
-  const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
-  const safePage = Math.min(currentPage, totalPages || 1);
-
-  const pagePosts = useMemo(() => {
-    const start = (safePage - 1) * POSTS_PER_PAGE;
-    return filteredPosts.slice(start, start + POSTS_PER_PAGE);
-  }, [filteredPosts, safePage]);
+  const safePage = Math.min(currentPage, totalPages);
 
   function handleSemesterChange(value) {
     setSemesterFilter(value);
@@ -164,8 +160,8 @@ function FeedPage() {
           <p className={styles.empty} role="alert">
             {error}
           </p>
-        ) : pagePosts.length > 0 ? (
-          pagePosts.map((post) => (
+        ) : posts.length > 0 ? (
+          posts.map((post) => (
             <PostCard
               key={post.id}
               post={post}

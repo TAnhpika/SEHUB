@@ -7,11 +7,11 @@ import { searchMembers } from "@/features/home/friendsData";
 import {
   SEARCH_TABS,
   getSearchCounts,
-  searchLocalContent,
   searchDocuments,
   searchFinalExams,
   searchPosts,
   searchPracticeExams,
+  searchLocalContent,
 } from "@/features/search/searchAllData";
 import styles from "./SearchAllPage.module.css";
 
@@ -23,9 +23,49 @@ function SearchAllPage() {
   const activeTab = searchParams.get("tab") ?? "all";
 
   const localResults = useMemo(() => searchLocalContent(query), [query]);
+  const [blogResults, setBlogResults] = useState([]);
+  const [blogsLoading, setBlogsLoading] = useState(false);
+  const [blogsError, setBlogsError] = useState(null);
   const [userResults, setUserResults] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchBlogs() {
+      if (!query) {
+        setBlogResults([]);
+        setBlogsError(null);
+        return;
+      }
+
+      setBlogsLoading(true);
+      setBlogsError(null);
+
+      try {
+        const posts = await searchPosts(query);
+        if (!cancelled) {
+          setBlogResults(posts);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setBlogResults([]);
+          setBlogsError(err.message ?? "Không tải được kết quả blogs.");
+        }
+      } finally {
+        if (!cancelled) {
+          setBlogsLoading(false);
+        }
+      }
+    }
+
+    fetchBlogs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [query]);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,8 +105,8 @@ function SearchAllPage() {
   }, [query]);
 
   const counts = useMemo(
-    () => getSearchCounts(query, userResults.length),
-    [query, userResults.length],
+    () => getSearchCounts(query, { blogCount: blogResults.length, userCount: userResults.length }),
+    [query, blogResults.length, userResults.length],
   );
 
   function handleTabChange(tabId) {
@@ -93,7 +133,19 @@ function SearchAllPage() {
     );
   }
 
-  function renderPosts(posts) {
+  function renderPosts(posts, { showLoading = false, showError = null } = {}) {
+    if (showLoading) {
+      return <p className={styles.empty}>Đang tải blogs...</p>;
+    }
+
+    if (showError) {
+      return (
+        <p className={styles.empty} role="alert">
+          {showError}
+        </p>
+      );
+    }
+
     if (posts.length === 0) return null;
 
     return (
@@ -188,14 +240,27 @@ function SearchAllPage() {
     }
 
     if (activeTab !== "all") {
+      if (activeTab === "blogs") {
+        if (blogsLoading) {
+          return renderPosts([], { showLoading: true });
+        }
+
+        if (blogsError) {
+          return renderPosts([], { showError: blogsError });
+        }
+
+        if (blogResults.length === 0) {
+          return <p className={styles.empty}>Không tìm thấy kết quả phù hợp.</p>;
+        }
+
+        return renderPosts(blogResults);
+      }
+
       const count = counts[activeTab] ?? 0;
       if (count === 0) {
         return <p className={styles.empty}>Không tìm thấy kết quả phù hợp.</p>;
       }
 
-      if (activeTab === "blogs") {
-        return renderPosts(searchPosts(query));
-      }
       if (activeTab === "documents") {
         return renderResources(searchDocuments(query), "Tài liệu", "search-documents-heading");
       }
@@ -213,13 +278,13 @@ function SearchAllPage() {
       );
     }
 
-    if (counts.all === 0 && !usersLoading) {
+    if (counts.all === 0 && !usersLoading && !blogsLoading) {
       return <p className={styles.empty}>Không tìm thấy kết quả phù hợp.</p>;
     }
 
     return (
       <>
-        {renderPosts(localResults.blogs)}
+        {renderPosts(blogResults, { showLoading: blogsLoading, showError: blogsError })}
         {renderResources(localResults.documents, "Tài liệu", "search-documents-heading")}
         {renderResources(
           localResults.exams.map((item) => ({ ...item, typeLabel: "Đề thi" })),

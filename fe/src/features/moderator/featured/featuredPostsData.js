@@ -1,5 +1,6 @@
 import * as postsApi from "@/api/postsApi";
 import * as adminApi from "@/api/adminApi";
+import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 import { FEATURED_POSTS_UPDATED_EVENT } from "@/features/feed/feedData";
 import { formatRelativeTimeFromApi } from "@/utils/parseApiDate";
 
@@ -348,7 +349,7 @@ export async function loadFeaturedPostsState() {
     };
   }
 
-  const state = await adminApi.getPinnedPosts({ pageSize: 100 });
+  const state = await adminApi.getPinnedPosts({ pageSize: ADMIN_API_PAGE_SIZE });
   const pinned = (state.pinned ?? []).map(mapModeratorFeaturedItem);
   const searchPool = (state.candidates ?? []).map(mapModeratorFeaturedItem);
 

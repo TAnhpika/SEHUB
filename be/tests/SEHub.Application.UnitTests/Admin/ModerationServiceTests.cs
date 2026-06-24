@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using Moq;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
@@ -53,7 +54,8 @@ public sealed class ModerationServiceTests
             _userActivityService.Object,
             _workflowNotifications.Object,
             _currentUser.Object,
-            _unitOfWork.Object);
+            _unitOfWork.Object,
+            new MemoryCache(new MemoryCacheOptions()));
     }
 
     [Fact]

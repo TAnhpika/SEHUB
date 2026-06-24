@@ -19,6 +19,21 @@ public class PostRepository : IPostRepository
     public Task<Post?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default) =>
         _context.Posts.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
+    public async Task<IReadOnlyList<Post>> GetByIdsIncludingDeletedAsync(
+        IReadOnlyList<Guid> ids,
+        CancellationToken cancellationToken = default)
+    {
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+
+        return await _context.Posts
+            .IgnoreQueryFilters()
+            .Where(p => ids.Contains(p.Id))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<(IReadOnlyList<Post> Items, int TotalCount)> GetPagedAsync(PostQueryParams query, CancellationToken cancellationToken = default)
     {
         var dbQuery = _context.Posts.Where(p => p.Status == PostStatus.Published);

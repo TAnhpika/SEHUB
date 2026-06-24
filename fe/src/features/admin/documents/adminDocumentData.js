@@ -2,6 +2,7 @@
 
 import * as adminApi from "@/api/adminApi";
 import { mapAdminDocumentListItem } from "@/api/adminMapper";
+import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 import { isValidGuid } from "@/features/feed/postUtils";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
@@ -530,7 +531,7 @@ export async function loadAdminDocuments() {
     return getAdminDocuments();
   }
 
-  const page = await adminApi.listDocuments({ pageSize: 100 });
+  const page = await adminApi.listDocuments({ pageSize: ADMIN_API_PAGE_SIZE });
   const apiDocs = (page.items ?? []).map(mapAdminDocumentListItem);
   documentsStore = apiDocs.map((doc) => ({ ...doc }));
   return apiDocs;

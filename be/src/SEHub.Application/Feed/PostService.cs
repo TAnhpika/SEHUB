@@ -1,6 +1,7 @@
 using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Models;
 using SEHub.Application.Storage;
 using SEHub.Application.Notifications;
 using SEHub.Contracts.Admin;
@@ -74,12 +75,18 @@ public sealed class PostService : IPostService
     public async Task<PagedResult<PostListItemDto>> GetPostsAsync(PostQueryParams query, CancellationToken cancellationToken = default)
     {
         var (items, total) = await _postRepository.GetPagedAsync(query, cancellationToken);
-        var dtos = new List<PostListItemDto>();
-
-        foreach (var post in items)
+        if (items.Count == 0)
         {
-            dtos.Add(await MapListItemAsync(post, cancellationToken));
+            return new PagedResult<PostListItemDto>
+            {
+                Items = [],
+                Page = query.Page,
+                PageSize = query.PageSize,
+                TotalCount = total
+            };
         }
+
+        var dtos = await MapListItemsAsync(items, cancellationToken);
 
         return new PagedResult<PostListItemDto>
         {
@@ -93,21 +100,31 @@ public sealed class PostService : IPostService
     public async Task<IReadOnlyList<FeaturedPostDto>> GetFeaturedAsync(CancellationToken cancellationToken = default)
     {
         var posts = await _postRepository.GetFeaturedAsync(10, cancellationToken);
-        var result = new List<FeaturedPostDto>();
-
-        foreach (var post in posts)
+        if (posts.Count == 0)
         {
-            var author = await BuildAuthorAsync(post.AuthorId, cancellationToken);
-            result.Add(new FeaturedPostDto
+            return [];
+        }
+
+        var authorIds = posts.Select(p => p.AuthorId).Distinct().ToList();
+        var authors = await _userRepository.GetByIdsAsync(authorIds, cancellationToken);
+        var profiles = await _profileRepository.GetByUserIdsAsync(authorIds, cancellationToken);
+
+        var authorsById = authors.ToDictionary(a => a.Id);
+        var profilesByUserId = profiles.ToDictionary(p => p.UserId);
+
+        return posts.Select(post =>
+        {
+            authorsById.TryGetValue(post.AuthorId, out var authorUser);
+            profilesByUserId.TryGetValue(post.AuthorId, out var profile);
+
+            return new FeaturedPostDto
             {
                 Id = post.Id,
                 Title = post.Title,
-                Author = author,
+                Author = BuildAuthorSummary(post.AuthorId, authorUser, profile),
                 CreatedAt = post.CreatedAt
-            });
-        }
-
-        return result;
+            };
+        }).ToList();
     }
 
     public async Task<FeaturedPostsStateDto> GetFeaturedModeratorStateAsync(
@@ -390,36 +407,75 @@ public sealed class PostService : IPostService
         };
     }
 
-    private async Task<PostListItemDto> MapListItemAsync(Post post, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<PostListItemDto>> MapListItemsAsync(
+        IReadOnlyList<Post> posts,
+        CancellationToken cancellationToken)
     {
-        bool? isLiked = null;
-        if (_currentUser.UserId is Guid userId)
+        var postIds = posts.Select(p => p.Id).ToList();
+        var authorIds = posts.Select(p => p.AuthorId).Distinct().ToList();
+
+        var likeCounts = await _likeRepository.CountByPostIdsAsync(postIds, cancellationToken);
+        var commentCounts = await _commentRepository.CountByPostIdsAsync(postIds, cancellationToken);
+        var postImages = await _imageRepository.GetByPostIdsAsync(postIds, cancellationToken);
+        var authors = await _userRepository.GetByIdsAsync(authorIds, cancellationToken);
+        var profiles = await _profileRepository.GetByUserIdsAsync(authorIds, cancellationToken);
+        var likedPostIds = _currentUser.UserId is Guid userId
+            ? await _likeRepository.GetLikedPostIdsAsync(userId, postIds, cancellationToken)
+            : (IReadOnlySet<Guid>)new HashSet<Guid>();
+
+        var imagesByPostId = postImages.GroupBy(i => i.PostId).ToDictionary(g => g.Key, g => g.ToList());
+        var authorsById = authors.ToDictionary(a => a.Id);
+        var profilesByUserId = profiles.ToDictionary(p => p.UserId);
+
+        var dtos = new List<PostListItemDto>(posts.Count);
+        for (var index = 0; index < posts.Count; index++)
         {
-            isLiked = await _likeRepository.GetAsync(post.Id, userId, cancellationToken) is not null;
+            var post = posts[index];
+            authorsById.TryGetValue(post.AuthorId, out var authorUser);
+            profilesByUserId.TryGetValue(post.AuthorId, out var profile);
+            imagesByPostId.TryGetValue(post.Id, out var images);
+
+            dtos.Add(new PostListItemDto
+            {
+                Id = post.Id,
+                Title = post.Title,
+                Excerpt = BuildExcerpt(post.Content),
+                ContentPreview = PostContentPreview.BuildContentPreview(post.Content),
+                PreviewImageUrl = PostContentPreview.ExtractFirstImageUrl(post.Content),
+                Author = BuildAuthorSummary(post.AuthorId, authorUser, profile),
+                Tags = ParseTags(post.Tags),
+                LikeCount = likeCounts.GetValueOrDefault(post.Id),
+                CommentCount = commentCounts.GetValueOrDefault(post.Id),
+                ViewCount = post.ViewCount,
+                CreatedAt = post.CreatedAt,
+                IsPinned = post.IsPinned,
+                IsFeatured = post.IsFeatured,
+                CoverImageUrl = ResolveListCoverImageUrl(post.CoverImageUrl),
+                IsLiked = _currentUser.UserId is null ? null : likedPostIds.Contains(post.Id),
+                Images = (images ?? []).Select(PostImageService.MapDto).ToList()
+            });
         }
 
-        var images = await _imageRepository.GetByPostIdAsync(post.Id, cancellationToken);
-
-        return new PostListItemDto
-        {
-            Id = post.Id,
-            Title = post.Title,
-            Excerpt = BuildExcerpt(post.Content),
-            ContentPreview = PostContentPreview.BuildContentPreview(post.Content),
-            PreviewImageUrl = PostContentPreview.ExtractFirstImageUrl(post.Content),
-            Author = await BuildAuthorAsync(post.AuthorId, cancellationToken),
-            Tags = ParseTags(post.Tags),
-            LikeCount = await _likeRepository.CountByPostIdAsync(post.Id, cancellationToken),
-            CommentCount = await _commentRepository.CountByPostIdAsync(post.Id, cancellationToken),
-            ViewCount = post.ViewCount,
-            CreatedAt = post.CreatedAt,
-            IsPinned = post.IsPinned,
-            IsFeatured = post.IsFeatured,
-            CoverImageUrl = await ResolveCoverImageUrlAsync(post.CoverImageUrl, cancellationToken),
-            IsLiked = isLiked,
-            Images = images.Select(PostImageService.MapDto).ToList()
-        };
+        return dtos;
     }
+
+    private async Task<PostListItemDto> MapListItemAsync(Post post, CancellationToken cancellationToken)
+    {
+        var items = await MapListItemsAsync([post], cancellationToken);
+        return items[0];
+    }
+
+    private static AuthorSummaryDto BuildAuthorSummary(
+        Guid authorId,
+        UserAccount? user,
+        UserProfile? profile) =>
+        new()
+        {
+            Id = authorId,
+            Username = user?.Username ?? "unknown",
+            DisplayName = user?.DisplayName ?? "Unknown",
+            AvatarUrl = profile?.AvatarUrl
+        };
 
     private async Task<PostDetailDto> MapDetailAsync(Post post, CancellationToken cancellationToken)
     {
@@ -489,6 +545,25 @@ public sealed class PostService : IPostService
         }
 
         return null;
+    }
+
+    private static string? ResolveListCoverImageUrl(string? storedPath)
+    {
+        if (string.IsNullOrWhiteSpace(storedPath))
+        {
+            return null;
+        }
+
+        var trimmed = storedPath.Trim();
+        if (trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith('/'))
+        {
+            return trimmed;
+        }
+
+        return $"/uploads/{trimmed.Replace('\\', '/')}";
     }
 
     private async Task<string?> ResolveCoverImageUrlAsync(string? storedPath, CancellationToken cancellationToken)

@@ -7,6 +7,7 @@ using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Auth;
 using SEHub.Application.Gamification;
+using SEHub.Application.Premium;
 using SEHub.Application.Profiles;
 using SEHub.Application.Models;
 using SEHub.Contracts.Auth;
@@ -30,6 +31,9 @@ public sealed class AuthServiceTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IBadgeCheckService> _badgeCheckService = new();
     private readonly Mock<IUserActivityService> _userActivityService = new();
+    private readonly Mock<IProfileStatsService> _profileStatsService = new();
+    private readonly Mock<IPremiumService> _premiumService = new();
+    private readonly Mock<IAiTokenService> _aiTokenService = new();
     private readonly Mock<IServiceScopeFactory> _scopeFactory = new();
     private readonly Mock<ILogger<AuthService>> _logger = new();
     private readonly IMapper _mapper;
@@ -56,6 +60,9 @@ public sealed class AuthServiceTests
         Options.Create(jwtSettings ?? new JwtSettings { RefreshExpirationDays = 7 }),
         _badgeCheckService.Object,
         _userActivityService.Object,
+        _profileStatsService.Object,
+        _premiumService.Object,
+        _aiTokenService.Object,
         _scopeFactory.Object,
         _logger.Object);
 

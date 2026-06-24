@@ -13,6 +13,20 @@ public class UserProfileRepository : IUserProfileRepository
     public Task<UserProfile?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) =>
         _context.UserProfiles.FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
 
+    public async Task<IReadOnlyList<UserProfile>> GetByUserIdsAsync(
+        IReadOnlyList<Guid> userIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (userIds.Count == 0)
+        {
+            return [];
+        }
+
+        return await _context.UserProfiles
+            .Where(p => userIds.Contains(p.UserId))
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<UserProfile?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default) =>
         (from profile in _context.UserProfiles
          join user in _context.Users on profile.UserId equals user.Id

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -6,6 +6,7 @@ import {
   faFlag,
   faInbox,
   faMousePointer,
+  faSpinner,
   faTrash,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
@@ -13,7 +14,6 @@ import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import {
   filterReports,
-  getCommunityReportsMock,
   loadModeratorCommunityReports,
   REASON_META,
   reloadModeratorCommunityReportsAfterResolve,
@@ -80,25 +80,65 @@ function TrustScore({ score }) {
 function ReportsPage() {
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [communityReports, setCommunityReports] = useState(getCommunityReportsMock);
+  const [communityReports, setCommunityReports] = useState([]);
+  const [hasMoreCommunityReports, setHasMoreCommunityReports] = useState(false);
+  const [loadingMoreCommunity, setLoadingMoreCommunity] = useState(false);
+  const [communityApiPage, setCommunityApiPage] = useState(1);
   const [examReports, setExamReports] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [communityLoadError, setCommunityLoadError] = useState(null);
   const [tab, setTab] = useState("pending");
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [lastResolved, setLastResolved] = useState(null);
+  const deepLinkSyncedRef = useRef(false);
+  const urlReportId = searchParams.get("id");
 
   useEffect(() => {
     let cancelled = false;
-    loadModeratorCommunityReports()
-      .then((items) => {
-        if (!cancelled) setCommunityReports(items);
+    setIsLoading(true);
+    setCommunityLoadError(null);
+
+    const communityPromise = loadModeratorCommunityReports()
+      .then((result) => {
+        if (!cancelled) {
+          setCommunityReports(result.items);
+          setHasMoreCommunityReports(result.hasMore);
+          setCommunityApiPage(result.page);
+        }
+        return result.items;
       })
       .catch((err) => {
+        const message = err.message ?? "Không tải được báo cáo cộng đồng.";
         if (!cancelled) {
-          showToast(err.message ?? "Không tải được báo cáo cộng đồng.");
+          setCommunityReports([]);
+          setCommunityLoadError(message);
+          showToast(message);
         }
+        return [];
       });
+
+    const examPromise = getExamQuestionReports()
+      .then((items) => {
+        if (!cancelled) {
+          setExamReports(items);
+        }
+        return items;
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setExamReports([]);
+        }
+        return [];
+      });
+
+    Promise.all([communityPromise, examPromise]).finally(() => {
+      if (!cancelled) {
+        setIsLoading(false);
+      }
+    });
+
     return () => {
       cancelled = true;
     };
@@ -117,7 +157,6 @@ function ReportsPage() {
         });
     }
 
-    refreshExamReports();
     window.addEventListener("sehubs-exam-reports-changed", refreshExamReports);
     window.addEventListener("storage", refreshExamReports);
     return () => {
@@ -158,13 +197,33 @@ function ReportsPage() {
   }, [reports, tab, category, query]);
 
   useEffect(() => {
-    const fromUrl = searchParams.get("id");
-    const urlItem = fromUrl ? reports.find((report) => report.id === fromUrl) : null;
+    deepLinkSyncedRef.current = false;
+  }, [urlReportId]);
 
-    if (urlItem) {
-      setSelectedId(urlItem.id);
-      if (urlItem.status === "resolved") setTab("resolved");
-      else if (urlItem.status === "pending") setTab("pending");
+  useEffect(() => {
+    if (!urlReportId || reports.length === 0) {
+      return;
+    }
+
+    const urlItem = reports.find((report) => report.id === urlReportId);
+    if (!urlItem) {
+      return;
+    }
+
+    setSelectedId(urlItem.id);
+
+    if (!deepLinkSyncedRef.current) {
+      deepLinkSyncedRef.current = true;
+      if (urlItem.status === "resolved") {
+        setTab("resolved");
+      } else if (urlItem.status === "pending") {
+        setTab("pending");
+      }
+    }
+  }, [urlReportId, reports]);
+
+  useEffect(() => {
+    if (urlReportId) {
       return;
     }
 
@@ -176,9 +235,33 @@ function ReportsPage() {
     setSelectedId((current) =>
       current && filtered.some((report) => report.id === current) ? current : filtered[0].id,
     );
-  }, [searchParams, reports, filtered]);
+  }, [filtered, urlReportId]);
 
   const selected = reports.find((r) => r.id === selectedId) ?? null;
+
+  function handleTabChange(nextTab) {
+    setTab(nextTab);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("id");
+        return next;
+      },
+      { replace: true },
+    );
+  }
+
+  function handleCategoryChange(nextCategory) {
+    setCategory(nextCategory);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("id");
+        return next;
+      },
+      { replace: true },
+    );
+  }
 
   function selectReport(id) {
     setSelectedId(id);
@@ -224,12 +307,44 @@ function ReportsPage() {
       }
       setTab("resolved");
       setSelectedId(id);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("id", id);
+          return next;
+        },
+        { replace: true },
+      );
+      deepLinkSyncedRef.current = true;
       return;
     }
 
     resolveReportLocal(id, resolution);
     setTab("resolved");
     setSelectedId(id);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("id", id);
+        return next;
+      },
+      { replace: true },
+    );
+    deepLinkSyncedRef.current = true;
+  }
+
+  async function handleLoadMoreCommunityReports() {
+    if (loadingMoreCommunity || !hasMoreCommunityReports) return;
+    setLoadingMoreCommunity(true);
+    try {
+      const nextPage = communityApiPage + 1;
+      const { items, hasMore, page } = await loadModeratorCommunityReports({ page: nextPage });
+      setCommunityReports((prev) => [...prev, ...items]);
+      setHasMoreCommunityReports(hasMore);
+      setCommunityApiPage(page);
+    } finally {
+      setLoadingMoreCommunity(false);
+    }
   }
 
   async function handleDismiss(id) {
@@ -238,6 +353,7 @@ function ReportsPage() {
       resolveReportLocal(id, "ignored");
       setTab("resolved");
       setSelectedId(id);
+      deepLinkSyncedRef.current = true;
     } else {
       try {
         const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "dismiss");
@@ -261,6 +377,7 @@ function ReportsPage() {
       resolveReportLocal(id, "deleted");
       setTab("resolved");
       setSelectedId(id);
+      deepLinkSyncedRef.current = true;
     } else {
       try {
         const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "delete");
@@ -389,7 +506,7 @@ function ReportsPage() {
                   key={opt.id}
                   type="button"
                   className={`${styles.filterBtn} ${tab === opt.id ? styles.filterBtnActive : ""}`}
-                  onClick={() => setTab(opt.id)}
+                  onClick={() => handleTabChange(opt.id)}
                 >
                   {opt.label}
                   {opt.id === "pending" ? ` (${pendingCount})` : ""}
@@ -402,7 +519,7 @@ function ReportsPage() {
                   key={opt.id}
                   type="button"
                   className={`${styles.filterBtn} ${category === opt.id ? styles.filterBtnActive : ""}`}
-                  onClick={() => setCategory(opt.id)}
+                  onClick={() => handleCategoryChange(opt.id)}
                 >
                   {opt.label}
                 </button>
@@ -411,11 +528,21 @@ function ReportsPage() {
           </div>
 
           <div className={styles.queueScroll}>
-            {filtered.length === 0 ? (
+            {isLoading ? (
+              <div className={styles.loadingQueue} role="status" aria-live="polite">
+                <FontAwesomeIcon icon={faSpinner} spin className={styles.loadingIcon} />
+                <p className={styles.emptyTitle}>Đang tải báo cáo…</p>
+                <p className={styles.emptyDesc}>Đồng bộ từ máy chủ.</p>
+              </div>
+            ) : filtered.length === 0 ? (
               <div className={styles.emptyQueue}>
                 <FontAwesomeIcon icon={faInbox} className={styles.emptyIcon} />
-                <p className={styles.emptyTitle}>Không có báo cáo</p>
-                <p className={styles.emptyDesc}>Thử đổi tab hoặc từ khóa tìm kiếm.</p>
+                <p className={styles.emptyTitle}>
+                  {communityLoadError ? "Không tải được dữ liệu" : "Không có báo cáo"}
+                </p>
+                <p className={`${styles.emptyDesc} ${communityLoadError ? styles.emptyDescError : ""}`}>
+                  {communityLoadError ?? "Thử đổi tab hoặc từ khóa tìm kiếm."}
+                </p>
               </div>
             ) : (
               <ul className={styles.queueList}>
@@ -465,11 +592,27 @@ function ReportsPage() {
                 })}
               </ul>
             )}
+            {!isLoading && hasMoreCommunityReports ? (
+              <div className={styles.loadMoreRow}>
+                <Button
+                  look="outline"
+                  disabled={loadingMoreCommunity}
+                  onClick={handleLoadMoreCommunityReports}
+                >
+                  {loadingMoreCommunity ? "Đang tải…" : "Tải thêm báo cáo"}
+                </Button>
+              </div>
+            ) : null}
           </div>
         </div>
 
         <div className={styles.detailCol}>
-          {!selected ? (
+          {isLoading ? (
+            <div className={styles.detailEmpty} role="status" aria-live="polite">
+              <FontAwesomeIcon icon={faSpinner} spin className={styles.loadingIcon} />
+              <p className={styles.emptyTitle}>Đang tải…</p>
+            </div>
+          ) : !selected ? (
             <div className={styles.detailEmpty}>
               <FontAwesomeIcon icon={faMousePointer} className={styles.emptyIcon} />
               <p className={styles.emptyTitle}>Chọn một báo cáo</p>

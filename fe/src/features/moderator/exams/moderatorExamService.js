@@ -1,4 +1,5 @@
 import * as adminApi from "@/api/adminApi";
+import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 import {
   mapExamDetailToWizard,
   mapFinalExamWizardToResubmitRequest,
@@ -131,7 +132,7 @@ export async function fetchModeratorExamContributions(moderatorUsername, filters
     return null;
   }
 
-  const params = { mine: true, pageSize: 100 };
+  const params = { mine: true, pageSize: ADMIN_API_PAGE_SIZE };
   if (filters.examType === "final") params.type = "Final";
   if (filters.examType === "practice") params.type = "Practice";
   if (filters.status === "pending_admin") params.status = "PendingApproval";

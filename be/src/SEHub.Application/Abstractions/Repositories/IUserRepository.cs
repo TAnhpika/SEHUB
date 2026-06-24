@@ -5,6 +5,9 @@ namespace SEHub.Application.Abstractions.Repositories;
 public interface IUserRepository
 {
     Task<UserAccount?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<UserAccount>> GetByIdsAsync(
+        IReadOnlyList<Guid> ids,
+        CancellationToken cancellationToken = default);
     Task<UserAccount?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
     Task<UserAccount?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default);
     Task<UserAccount?> GetByEmailOrUsernameAsync(string emailOrUsername, CancellationToken cancellationToken = default);
