@@ -18,4 +18,8 @@ public interface IFollowService
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<FollowUserListItemDto>> GetMentionFriendsAsync(
+        string? search,
+        int limit,
+        CancellationToken cancellationToken = default);
 }

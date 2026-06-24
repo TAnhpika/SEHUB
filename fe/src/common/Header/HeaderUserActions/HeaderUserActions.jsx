@@ -16,13 +16,21 @@ import styles from "@/common/Header/MainHeader/MainHeader.module.css";
 function HeaderUserActions() {
   const navigate = useNavigate();
   const { user, logout, isPremium } = useAuth();
-  const { open: profileOpen, rootProps: profileHoverProps, handleTriggerClick } =
+  const { open: profileOpen, rootProps: profileHoverProps, handleTriggerClick, hide: closeProfileMenu } =
     useHoverDropdown();
 
   const displayName = user?.displayName ?? "Anhpika";
   const initial = user?.initial ?? displayName.charAt(0).toUpperCase();
 
+  function handleProfileClick() {
+    closeProfileMenu();
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  }
+
   function handleLogout() {
+    handleProfileClick();
     logout();
     navigate("/");
   }
@@ -52,11 +60,16 @@ function HeaderUserActions() {
         </button>
 
         <div className={styles["profile-menu"]} role="menu">
-          <WorkspaceSwitcher variant="menu-compact" showHeading />
+          <WorkspaceSwitcher
+            variant="menu-compact"
+            showHeading
+            onNavigate={handleProfileClick}
+          />
           <Link
             to={`/profile/${user?.username ?? "anhcoding12345"}`}
             className={styles["menu-item"]}
             role="menuitem"
+            onClick={handleProfileClick}
           >
             <FontAwesomeIcon icon={faUser} />
             Hồ sơ cá nhân

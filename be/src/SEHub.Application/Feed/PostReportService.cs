@@ -1,5 +1,6 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Notifications;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
@@ -10,17 +11,20 @@ public sealed class PostReportService : IPostReportService
 {
     private readonly IPostReportRepository _reportRepository;
     private readonly IPostRepository _postRepository;
+    private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
     public PostReportService(
         IPostReportRepository reportRepository,
         IPostRepository postRepository,
+        IWorkflowNotificationService workflowNotifications,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
         _reportRepository = reportRepository;
         _postRepository = postRepository;
+        _workflowNotifications = workflowNotifications;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -37,9 +41,10 @@ public sealed class PostReportService : IPostReportService
             throw new ConflictException("You have already reported this post.");
         }
 
+        var reportId = Guid.NewGuid();
         await _reportRepository.AddAsync(new PostReport
         {
-            Id = Guid.NewGuid(),
+            Id = reportId,
             PostId = postId,
             ReporterId = reporterId,
             Reason = reason,
@@ -48,5 +53,11 @@ public sealed class PostReportService : IPostReportService
         }, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _workflowNotifications.NotifyModeratorsPostReportedAsync(
+            reportId,
+            postId,
+            reporterId,
+            reason,
+            cancellationToken);
     }
 }

@@ -59,6 +59,7 @@ public static class DependencyInjection
         services.AddScoped<IAdminChatbotService, AdminChatbotService>();
         services.AddScoped<IAiTokenService, AiTokenService>();
         services.AddScoped<IPracticeSubmissionService, PracticeSubmissionService>();
+        services.AddScoped<IQuestionReportService, QuestionReportService>();
 
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IDocumentAccessService, DocumentAccessService>();
@@ -82,6 +83,7 @@ public static class DependencyInjection
         services.AddScoped<IMessagingService, MessagingService>();
         services.AddScoped<IConversationReportService, ConversationReportService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IWorkflowNotificationService, WorkflowNotificationService>();
         services.AddScoped<IUserBlockService, UserBlockService>();
 
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();

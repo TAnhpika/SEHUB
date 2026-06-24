@@ -4,6 +4,7 @@ using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Admin;
 using SEHub.Application.Feed;
 using SEHub.Application.Gamification;
+using SEHub.Application.Notifications;
 using SEHub.Application.Profiles;
 using SEHub.Application.Models;
 using SEHub.Contracts.Admin;
@@ -26,6 +27,7 @@ public sealed class ModerationServiceTests
     private readonly Mock<IGamificationService> _gamificationService = new();
     private readonly Mock<IBadgeCheckService> _badgeCheckService = new();
     private readonly Mock<IUserActivityService> _userActivityService = new();
+    private readonly Mock<IWorkflowNotificationService> _workflowNotifications = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
@@ -49,6 +51,7 @@ public sealed class ModerationServiceTests
             _gamificationService.Object,
             _badgeCheckService.Object,
             _userActivityService.Object,
+            _workflowNotifications.Object,
             _currentUser.Object,
             _unitOfWork.Object);
     }

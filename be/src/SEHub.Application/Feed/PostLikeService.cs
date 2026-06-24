@@ -1,5 +1,6 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Notifications;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Exceptions;
 
@@ -11,6 +12,7 @@ public sealed class PostLikeService : IPostLikeService
     private readonly IPostRepository _postRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IGamificationService _gamificationService;
+    private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly IUnitOfWork _unitOfWork;
 
     public PostLikeService(
@@ -18,12 +20,14 @@ public sealed class PostLikeService : IPostLikeService
         IPostRepository postRepository,
         ICurrentUserService currentUser,
         IGamificationService gamificationService,
+        IWorkflowNotificationService workflowNotifications,
         IUnitOfWork unitOfWork)
     {
         _likeRepository = likeRepository;
         _postRepository = postRepository;
         _currentUser = currentUser;
         _gamificationService = gamificationService;
+        _workflowNotifications = workflowNotifications;
         _unitOfWork = unitOfWork;
     }
 
@@ -52,6 +56,7 @@ public sealed class PostLikeService : IPostLikeService
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         await _gamificationService.AwardLikeReceivedAsync(post.AuthorId, cancellationToken);
+        await _workflowNotifications.NotifyPostLikedAsync(post, userId, cancellationToken);
 
         return new LikeResultDto
         {

@@ -222,6 +222,24 @@ public class UserRepository : IUserRepository
         return usersInRole.Count;
     }
 
+    public async Task<IReadOnlyList<Guid>> GetUserIdsByRolesAsync(
+        IReadOnlyList<string> roles,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = new HashSet<Guid>();
+
+        foreach (var role in roles.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var usersInRole = await _userManager.GetUsersInRoleAsync(role);
+            foreach (var user in usersInRole)
+            {
+                ids.Add(user.Id);
+            }
+        }
+
+        return ids.ToList();
+    }
+
     public async Task UpdateBanAsync(Guid userId, bool isBanned, DateTime? banUntil, string? banReason, string? banType, CancellationToken cancellationToken = default)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)

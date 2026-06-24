@@ -21,4 +21,9 @@ public interface IPremiumRefundService
         PremiumRefundBankDetailsRequest request,
         IReadOnlyList<RefundPaymentProofUpload> paymentProofs,
         CancellationToken cancellationToken = default);
+
+    Task<PremiumRefundResultDto> CompleteRefundAsync(
+        Guid orderId,
+        string? adminNote,
+        CancellationToken cancellationToken = default);
 }

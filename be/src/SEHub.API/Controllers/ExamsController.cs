@@ -15,19 +15,22 @@ public sealed class ExamsController : ControllerBase
     private readonly IAiExplanationApplicationService _aiExplanationService;
     private readonly IAiExamChatApplicationService _aiExamChatService;
     private readonly IExamAttachmentService _examAttachmentService;
+    private readonly IQuestionReportService _questionReportService;
 
     public ExamsController(
         IExamQueryService examQueryService,
         IExamAttemptService examAttemptService,
         IAiExplanationApplicationService aiExplanationService,
         IAiExamChatApplicationService aiExamChatService,
-        IExamAttachmentService examAttachmentService)
+        IExamAttachmentService examAttachmentService,
+        IQuestionReportService questionReportService)
     {
         _examQueryService = examQueryService;
         _examAttemptService = examAttemptService;
         _aiExplanationService = aiExplanationService;
         _aiExamChatService = aiExamChatService;
         _examAttachmentService = examAttachmentService;
+        _questionReportService = questionReportService;
     }
 
     [HttpGet]
@@ -147,5 +150,17 @@ public sealed class ExamsController : ControllerBase
     {
         var content = await _examAttachmentService.OpenViewAsync(examId, attachmentId, cancellationToken);
         return File(content.Stream, content.ContentType, content.FileName, enableRangeProcessing: true);
+    }
+
+    [HttpPost("{examId:guid}/questions/{questionId:guid}/report")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> ReportQuestion(
+        Guid examId,
+        Guid questionId,
+        [FromBody] CreateQuestionReportRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _questionReportService.ReportAsync(examId, questionId, request, cancellationToken);
+        return Ok(result);
     }
 }

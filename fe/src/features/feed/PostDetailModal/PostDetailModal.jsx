@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faComment,
@@ -22,6 +23,7 @@ import {
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
 import { copyPostLink, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
+import CommentMentionPicker, { insertMention } from "@/features/feed/CommentMentionPicker/CommentMentionPicker";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./PostDetailModal.module.css";
 
@@ -31,9 +33,12 @@ function PostDetailModal({
   onClose,
   onUpdate,
   onPostChange,
+  onViewed,
   onDelete,
   initialEditMode = false,
+  focusCommentsOnOpen = false,
 }) {
+  const navigate = useNavigate();
   const { user, isPremium } = useAuth();
   const { showCopyToast, showToast } = useToast();
   const [comments, setComments] = useState([]);
@@ -49,8 +54,10 @@ function PostDetailModal({
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editCommentDraft, setEditCommentDraft] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [replyTarget, setReplyTarget] = useState(null);
   const [savingPost, setSavingPost] = useState(false);
   const onPostChangeRef = useRef(onPostChange);
+  const commentsRef = useRef(null);
 
   useEffect(() => {
     onPostChangeRef.current = onPostChange;
@@ -123,6 +130,7 @@ function PostDetailModal({
           likes: detail.likes ?? 0,
           views: detail.views ?? 0,
         });
+        onViewed?.(detail);
       } catch {
         // Giữ dữ liệu từ danh sách nếu không tải được chi tiết.
       }
@@ -134,10 +142,27 @@ function PostDetailModal({
     };
   }, [post?.id, open, initialEditMode]);
 
+  useEffect(() => {
+    if (!open || !focusCommentsOnOpen) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      commentsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+
+    return () => clearTimeout(timer);
+  }, [open, focusCommentsOnOpen, post?.id]);
+
   if (!open || !post) return null;
 
   const isOwner = isOwnPost(post, user);
   const hasDraft = draft.trim().length > 0;
+
+  function openProfile(username) {
+    if (!username) return;
+    navigate(`/profile/${username}`);
+  }
 
   function handleCancelDraft() {
     setDraft("");
@@ -149,7 +174,7 @@ function PostDetailModal({
 
     setSubmittingComment(true);
     try {
-      const newComment = await submitComment(post.id, content);
+      const newComment = await submitComment(post.id, content, replyTarget?.id ?? null);
       const nextComments = [...comments, newComment];
       const nextCount = commentCount + 1;
       setComments(nextComments);
@@ -160,11 +185,27 @@ function PostDetailModal({
         commentsList: nextComments,
       });
       setDraft("");
+      setReplyTarget(null);
     } catch (err) {
       showToast(err.message ?? "Không gửi được bình luận.");
     } finally {
       setSubmittingComment(false);
     }
+  }
+
+  function handleReply(comment) {
+    setReplyTarget({
+      id: comment.id,
+      username: comment.author?.username,
+      name: comment.author?.name ?? comment.author?.displayName,
+    });
+    if (comment.author?.username) {
+      setDraft((prev) => insertMention(prev, comment.author.username));
+    }
+  }
+
+  function handleInsertMention(username) {
+    setDraft((prev) => insertMention(prev, username));
   }
 
   function handleDraftKeyDown(event) {
@@ -293,20 +334,26 @@ function PostDetailModal({
           <article className={styles.post}>
             <div className={styles["author-row"]}>
               <div className={styles.author}>
-                <span className={styles.avatar} aria-hidden="true">
-                  {post.author.initial}
-                </span>
-                <div>
-                  <p
-                    className={withPremiumUsernameClass(
-                      styles.username,
-                      isOwner && isPremium,
-                    )}
-                  >
-                    {post.author.username}
-                  </p>
-                  <p className={styles.date}>{post.publishedAt}</p>
-                </div>
+                <button
+                  type="button"
+                  className={styles["profile-trigger"]}
+                  onClick={() => openProfile(post.author.username)}
+                >
+                  <span className={styles.avatar} aria-hidden="true">
+                    {post.author.initial}
+                  </span>
+                  <div>
+                    <p
+                      className={withPremiumUsernameClass(
+                        styles.username,
+                        isOwner && isPremium,
+                      )}
+                    >
+                      {post.author.username}
+                    </p>
+                    <p className={styles.date}>{post.publishedAt}</p>
+                  </div>
+                </button>
               </div>
 
               {isOwner && !isEditing && (
@@ -384,7 +431,7 @@ function PostDetailModal({
             </div>
           </article>
 
-          <section className={styles.comments} aria-label="Bình luận">
+          <section ref={commentsRef} className={styles.comments} aria-label="Bình luận">
             {comments.map((comment) => {
               const commentIsOwner = isOwnComment(comment, user);
               const isEditingComment = editingCommentId === comment.id;
@@ -392,7 +439,11 @@ function PostDetailModal({
               return (
               <article key={comment.id} className={styles.comment}>
                 <div className={styles["comment-head"]}>
-                  <div className={styles["comment-author"]}>
+                  <button
+                    type="button"
+                    className={`${styles["comment-author"]} ${styles["profile-trigger"]}`}
+                    onClick={() => openProfile(comment.author.username)}
+                  >
                     <span className={styles["comment-avatar"]} aria-hidden="true">
                       {comment.author.initial}
                     </span>
@@ -400,7 +451,7 @@ function PostDetailModal({
                       <p className={styles["comment-name"]}>{comment.author.name}</p>
                       <p className={styles["comment-time"]}>{comment.time}</p>
                     </div>
-                  </div>
+                  </button>
                   {commentIsOwner && !isEditingComment && (
                     <PostOwnerMenu
                       horizontal
@@ -448,7 +499,7 @@ function PostDetailModal({
                 )}
 
                 {!isEditingComment && (
-                  <button type="button" className={styles.reply}>
+                  <button type="button" className={styles.reply} onClick={() => handleReply(comment)}>
                     <FontAwesomeIcon icon={faReply} />
                     Trả lời
                   </button>
@@ -459,6 +510,16 @@ function PostDetailModal({
 
             <div className={styles.editor}>
               <div className={styles["editor-panel"]}>
+                {replyTarget ? (
+                  <div className={styles["reply-banner"]}>
+                    <span>
+                      Đang trả lời <strong>@{replyTarget.username ?? replyTarget.name}</strong>
+                    </span>
+                    <button type="button" onClick={() => setReplyTarget(null)}>
+                      Hủy
+                    </button>
+                  </div>
+                ) : null}
                 <RichTextEditor
                   value={draft}
                   onChange={setDraft}
@@ -471,6 +532,7 @@ function PostDetailModal({
                   aria-label="Viết bình luận công khai"
                   onKeyDown={handleDraftKeyDown}
                 />
+                <CommentMentionPicker value={draft} onInsert={handleInsertMention} />
 
                 <div className={styles["editor-footer"]}>
                   {hasDraft && (

@@ -46,7 +46,16 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
     onOpen?.(post);
   }
 
-  function handleCommentClick(event) {
+  function handleOpenComments(event) {
+    event.stopPropagation();
+    if (!canInteract) {
+      requireAuth("Vui lòng đăng nhập để bình luận.");
+      return;
+    }
+    onOpen?.(post, { focusComments: true });
+  }
+
+  function handleInteract(event) {
     event.stopPropagation();
     if (!canInteract) {
       requireAuth("Vui lòng đăng nhập để bình luận bài viết.");
@@ -195,7 +204,7 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
             type="button"
             className={styles.stat}
             aria-label="Bình luận"
-            onClick={handleCommentClick}
+            onClick={handleOpenComments}
           >
             <FontAwesomeIcon icon={faComment} />
             {commentCount}

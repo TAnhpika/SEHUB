@@ -1,6 +1,7 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Gamification;
+using SEHub.Application.Notifications;
 using SEHub.Application.Profiles;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Feed;
@@ -15,8 +16,10 @@ public sealed class CommentService : ICommentService
     private readonly IPostRepository _postRepository;
     private readonly IUserRepository _userRepository;
     private readonly IUserProfileRepository _profileRepository;
+    private readonly IUserFollowRepository _followRepository;
     private readonly IBadgeCheckService _badgeCheckService;
     private readonly IUserActivityService _userActivityService;
+    private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -25,8 +28,10 @@ public sealed class CommentService : ICommentService
         IPostRepository postRepository,
         IUserRepository userRepository,
         IUserProfileRepository profileRepository,
+        IUserFollowRepository followRepository,
         IBadgeCheckService badgeCheckService,
         IUserActivityService userActivityService,
+        IWorkflowNotificationService workflowNotifications,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
@@ -34,8 +39,10 @@ public sealed class CommentService : ICommentService
         _postRepository = postRepository;
         _userRepository = userRepository;
         _profileRepository = profileRepository;
+        _followRepository = followRepository;
         _badgeCheckService = badgeCheckService;
         _userActivityService = userActivityService;
+        _workflowNotifications = workflowNotifications;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -67,14 +74,33 @@ public sealed class CommentService : ICommentService
     public async Task<CommentDto> CreateAsync(Guid postId, CreateCommentRequest request, CancellationToken cancellationToken = default)
     {
         var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
-        _ = await _postRepository.GetByIdAsync(postId, cancellationToken)
+        var post = await _postRepository.GetByIdAsync(postId, cancellationToken)
             ?? throw new NotFoundException("Post", postId);
 
+        Guid? parentCommentAuthorId = null;
+        Comment? parentComment = null;
         if (request.ParentCommentId is Guid parentId)
         {
-            _ = await _commentRepository.GetByIdAsync(parentId, cancellationToken)
+            parentComment = await _commentRepository.GetByIdAsync(parentId, cancellationToken)
                 ?? throw new NotFoundException("Comment", parentId);
+            parentCommentAuthorId = parentComment.AuthorId;
         }
+
+        var content = request.Content;
+        if (parentComment is not null)
+        {
+            var parentUser = await _userRepository.GetByIdAsync(parentComment.AuthorId, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(parentUser?.Username))
+            {
+                content = CommentMentionHelper.EnsureReplyMention(content, parentUser.Username);
+            }
+        }
+
+        var mentionedUserIds = await ResolveAndValidateMentionsAsync(
+            userId,
+            content,
+            parentCommentAuthorId,
+            cancellationToken);
 
         var comment = new Comment
         {
@@ -82,7 +108,7 @@ public sealed class CommentService : ICommentService
             PostId = postId,
             AuthorId = userId,
             ParentCommentId = request.ParentCommentId,
-            Content = request.Content,
+            Content = content,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -91,8 +117,63 @@ public sealed class CommentService : ICommentService
 
         await _badgeCheckService.EvaluateForTriggerAsync(userId, BadgeCheckService.TriggerCommentsCreated, cancellationToken);
         await _userActivityService.RecordActivityAsync(userId, cancellationToken);
+        await _workflowNotifications.NotifyPostCommentedAsync(
+            post,
+            comment,
+            userId,
+            parentCommentAuthorId,
+            cancellationToken);
+        await _workflowNotifications.NotifyMentionedInCommentAsync(
+            post,
+            comment,
+            mentionedUserIds,
+            userId,
+            cancellationToken);
 
         return await MapCommentAsync(comment, [comment], cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<Guid>> ResolveAndValidateMentionsAsync(
+        Guid authorUserId,
+        string content,
+        Guid? replyTargetUserId,
+        CancellationToken cancellationToken)
+    {
+        var usernames = CommentMentionHelper.ExtractUsernames(content);
+        if (usernames.Count == 0)
+        {
+            return [];
+        }
+
+        var mentionedUserIds = new List<Guid>();
+        foreach (var username in usernames)
+        {
+            var user = await _userRepository.GetByUsernameAsync(username, cancellationToken)
+                ?? throw new DomainException($"Không tìm thấy người dùng @{username}.");
+
+            if (user.Id == authorUserId)
+            {
+                continue;
+            }
+
+            var isReplyTarget = replyTargetUserId == user.Id;
+            if (!isReplyTarget)
+            {
+                var isMutualFriend = await _followRepository.IsMutualFollowAsync(
+                    authorUserId,
+                    user.Id,
+                    cancellationToken);
+                if (!isMutualFriend)
+                {
+                    throw new ForbiddenException(
+                        $"Chỉ có thể tag bạn bè (follow qua lại). @{username} chưa đủ điều kiện.");
+                }
+            }
+
+            mentionedUserIds.Add(user.Id);
+        }
+
+        return mentionedUserIds;
     }
 
     public async Task DeleteAsync(Guid postId, Guid commentId, CancellationToken cancellationToken = default)

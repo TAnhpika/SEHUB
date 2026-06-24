@@ -1,3 +1,8 @@
+import * as adminApi from "@/api/adminApi";
+import * as examsApi from "@/api/examsApi";
+import { formatRelativeTime } from "@/utils/dateTime";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 const STORAGE_KEY = "sehubs_exam_question_reports";
 
 function readAll() {
@@ -13,16 +18,6 @@ function writeAll(reports) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
 }
 
-function formatReportTime(date = new Date()) {
-  return date.toLocaleString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
-
 function buildQuestionPreview(question) {
   if (!question) return "";
   const options =
@@ -31,21 +26,26 @@ function buildQuestionPreview(question) {
 }
 
 function toModeratorReport(entry) {
+  const reporterUsername = entry.reporterUsername?.startsWith("@")
+    ? entry.reporterUsername
+    : `@${entry.reporterUsername ?? "student"}`;
+  const initial = reporterUsername.replace("@", "").slice(0, 2).toUpperCase() || "SV";
+
   return {
     id: entry.id,
     code: entry.code,
     category: "exam_question",
-    status: entry.status,
+    status: entry.status?.toLowerCase?.() ?? entry.status,
     reason: entry.reason,
-    reporterUsername: entry.reporterUsername,
-    reporterInitial: entry.reporterInitial,
-    timeLabel: entry.timeLabel,
-    reportedAt: entry.reportedAt,
+    reporterUsername,
+    reporterInitial: initial,
+    timeLabel: entry.timeLabel ?? formatRelativeTime(entry.createdAt),
+    reportedAt: entry.reportedAt ?? formatRelativeTime(entry.createdAt),
     snippet: entry.snippet,
-    reporterReason: entry.detail,
-    violatingContent: entry.questionPreview,
+    reporterReason: entry.detail ?? entry.reporterReason,
+    violatingContent: entry.questionPreview ?? entry.questionText,
     examId: entry.examId,
-    courseCode: entry.courseCode,
+    courseCode: entry.courseCode ?? entry.examCode,
     questionId: entry.questionId,
     questionIndex: entry.questionIndex,
     questionText: entry.questionText,
@@ -56,77 +56,124 @@ function toModeratorReport(entry) {
       joinedAt: "Hệ thống",
       trustScore: 100,
     },
-    resolution: entry.resolution ?? null,
+    resolution: entry.resolution ?? entry.resolutionNote ?? null,
   };
 }
 
-export function getExamQuestionReports() {
-  return readAll().map(toModeratorReport);
+function mapApiReport(dto) {
+  const questionText = dto.questionText ?? "";
+  return toModeratorReport({
+    id: dto.id,
+    code: dto.code,
+    status: dto.status,
+    reason: dto.reason,
+    detail: dto.detail,
+    examId: dto.examCode || dto.examId,
+    examCode: dto.examCode,
+    questionId: dto.questionId,
+    questionIndex: dto.questionIndex,
+    questionText,
+    markedAnswer: dto.markedAnswer,
+    questionPreview: questionText,
+    reporterUsername: dto.reporterUsername,
+    createdAt: dto.createdAt,
+    resolutionNote: dto.resolutionNote,
+    snippet: `Câu ${dto.questionIndex} · ${dto.examCode} — ${
+      questionText.length > 72 ? `${questionText.slice(0, 72)}…` : questionText
+    }`,
+  });
 }
 
-export function getPendingExamQuestionReportCount() {
+export async function getExamQuestionReports() {
+  if (USE_MOCK) {
+    return readAll().map(toModeratorReport);
+  }
+
+  const page = await adminApi.listQuestionReports({ page: 1, pageSize: 100 });
+  return (page.items ?? []).map(mapApiReport);
+}
+
+export async function getPendingExamQuestionReportCount() {
+  if (USE_MOCK) {
+    return getPendingExamQuestionReportCountSync();
+  }
+
+  try {
+    const result = await adminApi.getPendingQuestionReportCount();
+    return result?.count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function getPendingExamQuestionReportCountSync() {
   return readAll().filter((entry) => entry.status === "pending").length;
 }
 
-/**
- * @param {{
- *   examId: string;
- *   courseCode: string;
- *   questionId: number;
- *   questionIndex: number;
- *   question: { text: string; correctAnswer?: string; options?: Array<{ key: string; label: string }> };
- *   reason: string;
- *   detail: string;
- *   reporter: { username?: string; displayName?: string };
- * }} payload
- */
-export function submitExamQuestionReport(payload) {
-  const now = new Date();
-  const seq = readAll().length + 1;
-  const id = `eqr-${Date.now()}`;
-  const code = `EQR-${String(1000 + seq).slice(-4)}`;
-  const reporterName = payload.reporter?.username ?? payload.reporter?.displayName ?? "student";
-  const reporterUsername = reporterName.startsWith("@") ? reporterName : `@${reporterName}`;
-  const initial = reporterUsername.replace("@", "").slice(0, 2).toUpperCase() || "SV";
+export async function submitExamQuestionReport(payload) {
+  if (USE_MOCK) {
+    const now = new Date();
+    const seq = readAll().length + 1;
+    const id = `eqr-${Date.now()}`;
+    const code = `EQR-${String(1000 + seq).slice(-4)}`;
+    const reporterName = payload.reporter?.username ?? payload.reporter?.displayName ?? "student";
+    const reporterUsername = reporterName.startsWith("@") ? reporterName : `@${reporterName}`;
+    const initial = reporterUsername.replace("@", "").slice(0, 2).toUpperCase() || "SV";
 
-  const entry = {
-    id,
-    code,
-    status: "pending",
+    const entry = {
+      id,
+      code,
+      status: "pending",
+      reason: payload.reason,
+      examId: payload.examId,
+      courseCode: payload.courseCode,
+      questionId: payload.questionId,
+      questionIndex: payload.questionIndex,
+      questionText: payload.question.text,
+      markedAnswer: payload.question.correctAnswer ?? null,
+      questionPreview: buildQuestionPreview(payload.question),
+      detail: payload.detail.trim(),
+      reporterUsername,
+      reporterInitial: initial,
+      timeLabel: "Vừa xong",
+      reportedAt: now.toLocaleString("vi-VN"),
+      createdAt: now.toISOString(),
+      snippet: `Câu ${payload.questionIndex} · ${payload.examId} — ${
+        payload.question.text.length > 72
+          ? `${payload.question.text.slice(0, 72)}…`
+          : payload.question.text
+      }`,
+      resolution: null,
+    };
+
+    writeAll([entry, ...readAll()]);
+    window.dispatchEvent(new CustomEvent("sehubs-exam-reports-changed"));
+    return toModeratorReport(entry);
+  }
+
+  const dto = await examsApi.reportExamQuestion(payload.examId, payload.question.id, {
     reason: payload.reason,
-    examId: payload.examId,
-    courseCode: payload.courseCode,
-    questionId: payload.questionId,
-    questionIndex: payload.questionIndex,
-    questionText: payload.question.text,
-    markedAnswer: payload.question.correctAnswer ?? null,
-    questionPreview: buildQuestionPreview(payload.question),
     detail: payload.detail.trim(),
-    reporterUsername,
-    reporterInitial: initial,
-    timeLabel: "Vừa xong",
-    reportedAt: formatReportTime(now),
-    createdAt: now.toISOString(),
-    snippet: `Câu ${payload.questionIndex} · ${payload.examId} — ${
-      payload.question.text.length > 72
-        ? `${payload.question.text.slice(0, 72)}…`
-        : payload.question.text
-    }`,
-    resolution: null,
-  };
-
-  writeAll([entry, ...readAll()]);
+  });
   window.dispatchEvent(new CustomEvent("sehubs-exam-reports-changed"));
-  return toModeratorReport(entry);
+  return mapApiReport(dto);
 }
 
-export function resolveExamQuestionReport(id, resolution) {
-  const next = readAll().map((entry) =>
-    entry.id === id ? { ...entry, status: "resolved", resolution } : entry,
-  );
-  writeAll(next);
+export async function resolveExamQuestionReport(id, resolution) {
+  if (USE_MOCK) {
+    const next = readAll().map((entry) =>
+      entry.id === id ? { ...entry, status: "resolved", resolution } : entry,
+    );
+    writeAll(next);
+    window.dispatchEvent(new CustomEvent("sehubs-exam-reports-changed"));
+    const resolved = next.find((entry) => entry.id === id);
+    return resolved ? toModeratorReport(resolved) : null;
+  }
+
+  const dto = await adminApi.resolveQuestionReport(id, {
+    status: "Resolved",
+    resolutionNote: resolution,
+  });
   window.dispatchEvent(new CustomEvent("sehubs-exam-reports-changed"));
-  return next.find((entry) => entry.id === id)
-    ? toModeratorReport(next.find((entry) => entry.id === id))
-    : null;
+  return mapApiReport(dto);
 }

@@ -10,5 +10,9 @@ public enum NotificationType
     Comment,
     Token,
     Badge,
-    Refund
+    Refund,
+    Moderation,
+    ExamReview,
+    Mention,
+    PracticeResult
 }

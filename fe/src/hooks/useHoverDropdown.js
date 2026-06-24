@@ -21,6 +21,11 @@ export function useHoverDropdown(closeDelayMs = 150) {
     closeTimerRef.current = window.setTimeout(() => setOpen(false), closeDelayMs);
   }, [clearCloseTimer, closeDelayMs]);
 
+  const hide = useCallback(() => {
+    clearCloseTimer();
+    setOpen(false);
+  }, [clearCloseTimer]);
+
   useEffect(() => () => clearCloseTimer(), [clearCloseTimer]);
 
   function handleTriggerClick() {
@@ -34,5 +39,5 @@ export function useHoverDropdown(closeDelayMs = 150) {
     onMouseLeave: hideSoon,
   };
 
-  return { open, setOpen, rootProps, handleTriggerClick, show, hideSoon };
+  return { open, setOpen, rootProps, handleTriggerClick, show, hideSoon, hide };
 }

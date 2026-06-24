@@ -2,6 +2,7 @@ using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
 using SEHub.Application.Gamification;
+using SEHub.Application.Notifications;
 using SEHub.Application.Profiles;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
@@ -28,6 +29,7 @@ public sealed class ModerationService : IModerationService
     private readonly IGamificationService _gamificationService;
     private readonly IBadgeCheckService _badgeCheckService;
     private readonly IUserActivityService _userActivityService;
+    private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -42,6 +44,7 @@ public sealed class ModerationService : IModerationService
         IGamificationService gamificationService,
         IBadgeCheckService badgeCheckService,
         IUserActivityService userActivityService,
+        IWorkflowNotificationService workflowNotifications,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
@@ -55,6 +58,7 @@ public sealed class ModerationService : IModerationService
         _gamificationService = gamificationService;
         _badgeCheckService = badgeCheckService;
         _userActivityService = userActivityService;
+        _workflowNotifications = workflowNotifications;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -252,6 +256,12 @@ public sealed class ModerationService : IModerationService
         {
             await _userActivityService.RecordActivityAsync(post.AuthorId, cancellationToken);
         }
+
+        await _workflowNotifications.NotifyPostAuthorModerationResultAsync(
+            post,
+            approved: action is "approve" or "published",
+            actorId,
+            cancellationToken);
 
         return await MapModerationDetailAsync(post, cancellationToken);
     }

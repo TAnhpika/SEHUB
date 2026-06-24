@@ -22,6 +22,7 @@ function HomePage() {
   const [error, setError] = useState(null);
   const [selectedPost, setSelectedPost] = useState(null);
   const [editOnOpen, setEditOnOpen] = useState(false);
+  const [focusCommentsOnOpen, setFocusCommentsOnOpen] = useState(false);
   const [semesterFilter, setSemesterFilter] = useState("all");
   const [majorFilter, setMajorFilter] = useState("all");
   const { user, isPremium } = useAuth();
@@ -90,14 +91,16 @@ function HomePage() {
     document.getElementById("home-top")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  function handleOpenPost(post) {
+  function handleOpenPost(post, options = {}) {
     setSelectedPost(post);
     setEditOnOpen(false);
+    setFocusCommentsOnOpen(Boolean(options.focusComments));
   }
 
   function handleEditPost(post) {
     setSelectedPost(post);
     setEditOnOpen(true);
+    setFocusCommentsOnOpen(false);
   }
 
   function handleUpdatePost(updatedPost) {
@@ -106,6 +109,18 @@ function HomePage() {
     );
     setSelectedPost(updatedPost);
     setEditOnOpen(false);
+    setFocusCommentsOnOpen(false);
+  }
+
+  function handleViewedPost(viewedPost) {
+    if (!viewedPost?.id) return;
+    setPosts((prev) =>
+      prev.map((item) =>
+        item.id === viewedPost.id
+          ? { ...item, views: viewedPost.views ?? item.views }
+          : item,
+      ),
+    );
   }
 
   function handlePostChange(patch) {
@@ -124,6 +139,7 @@ function HomePage() {
       setPosts((prev) => prev.filter((item) => item.id !== post.id));
       setSelectedPost(null);
       setEditOnOpen(false);
+      setFocusCommentsOnOpen(false);
     } catch (err) {
       window.alert(err.message ?? "Không xóa được bài viết.");
     }
@@ -185,12 +201,15 @@ function HomePage() {
       <PostDetailModal
         post={selectedPost}
         open={Boolean(selectedPost)}
+        focusCommentsOnOpen={focusCommentsOnOpen}
         onClose={() => {
           setSelectedPost(null);
           setEditOnOpen(false);
+          setFocusCommentsOnOpen(false);
         }}
         onUpdate={handleUpdatePost}
         onPostChange={handlePostChange}
+        onViewed={handleViewedPost}
         onDelete={handleDeletePost}
         initialEditMode={editOnOpen}
       />

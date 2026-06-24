@@ -1,5 +1,6 @@
 import * as adminApi from "@/api/adminApi";
 import { mapPaymentAuditLogItem } from "@/api/adminMapper";
+import { formatPaymentAuditText } from "@/features/admin/activity/paymentAuditFormat";
 import { getMergedActivityLog } from "@/features/admin/adminMockData";
 import { getPermissionsAudit } from "@/features/admin/permissions/adminPermissionsData";
 import { getPaymentAuditLog } from "@/features/admin/payments/adminPaymentData";
@@ -18,6 +19,17 @@ const USER_AUDIT_ACTION_LABEL = {
 };
 
 const PAYMENT_AUDIT_ACTION_LABEL = {
+  order_created: "Tạo đơn thanh toán",
+  webhook_paid: "PayOS xác nhận thanh toán",
+  webhook_duplicate_ignored: "Webhook PayOS trùng",
+  waiting_confirmation: "Chờ xác nhận thanh toán",
+  payment_expired: "Đơn hết hạn",
+  manualverification: "Admin xác nhận thủ công",
+  admin_confirm: "Admin xác nhận thanh toán",
+  n8n_activate: "Kích hoạt Premium (n8n)",
+  refund_request: "Yêu cầu hoàn tiền",
+  refund_approved: "Duyệt hoàn tiền",
+  refund_bank_details: "Gửi thông tin hoàn tiền",
   payos_confirm: "Xác nhận PayOS",
   manual_token: "Cộng token thưởng",
   manual_premium: "Cấp Premium thủ công",
@@ -66,7 +78,7 @@ function mapApiPaymentAudit(row) {
   return {
     id: row.id,
     time: formatActivityTime(row.at),
-    text: `${row.action ?? "payment"} — ${row.detail}`,
+    text: formatPaymentAuditText(row.action, row.detail, row.payloadJson),
     type: "payment",
     sortKey: row.at,
   };

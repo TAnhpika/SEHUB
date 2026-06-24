@@ -31,7 +31,7 @@ public sealed class AuthServiceTests
     private readonly Mock<IBadgeCheckService> _badgeCheckService = new();
     private readonly Mock<IUserActivityService> _userActivityService = new();
     private readonly Mock<IServiceScopeFactory> _scopeFactory = new();
-    private readonly ILogger<AuthService> _logger = Mock.Of<ILogger<AuthService>>();
+    private readonly Mock<ILogger<AuthService>> _logger = new();
     private readonly IMapper _mapper;
 
     private static readonly Guid UserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -57,7 +57,7 @@ public sealed class AuthServiceTests
         _badgeCheckService.Object,
         _userActivityService.Object,
         _scopeFactory.Object,
-        _logger);
+        _logger.Object);
 
     private void SetupSuccessfulLoginMocks(UserAccount user)
     {

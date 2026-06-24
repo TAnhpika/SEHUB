@@ -22,6 +22,7 @@ import {
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
 import { copyPostLink, formatDisplayTitle, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
+import CommentMentionPicker, { insertMention } from "@/features/feed/CommentMentionPicker/CommentMentionPicker";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./PostDetailPage.module.css";
 
@@ -48,6 +49,7 @@ function PostDetailPage() {
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editCommentDraft, setEditCommentDraft] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [replyTarget, setReplyTarget] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,6 +116,11 @@ function PostDetailPage() {
   const shortDate = formatShortDate(post.publishedAt);
   const displayTitle = formatDisplayTitle(post.title);
 
+  function openProfile(username) {
+    if (!username) return;
+    navigate(`/profile/${username}`);
+  }
+
   async function handleLike() {
     const nextLiked = !liked;
     setLiked(nextLiked);
@@ -144,14 +151,30 @@ function PostDetailPage() {
 
     setSubmittingComment(true);
     try {
-      const newComment = await submitComment(post.id, content);
+      const newComment = await submitComment(post.id, content, replyTarget?.id ?? null);
       setComments((prev) => [...prev, newComment]);
       setDraft("");
+      setReplyTarget(null);
     } catch (err) {
       window.alert(err.message ?? "Không gửi được bình luận.");
     } finally {
       setSubmittingComment(false);
     }
+  }
+
+  function handleReply(comment) {
+    setReplyTarget({
+      id: comment.id,
+      username: comment.author?.username,
+      name: comment.author?.name ?? comment.author?.displayName,
+    });
+    if (comment.author?.username) {
+      setDraft((prev) => insertMention(prev, comment.author.username));
+    }
+  }
+
+  function handleInsertMention(username) {
+    setDraft((prev) => insertMention(prev, username));
   }
 
   function handleStartEditComment(comment) {
@@ -201,23 +224,29 @@ function PostDetailPage() {
       <article className={styles.card}>
         <header className={styles.header}>
           <div className={styles.author}>
-            <span className={styles.avatar} aria-hidden="true">
-              {post.author.initial}
-            </span>
-            <div>
-              <p
-                className={withPremiumUsernameClass(
-                  styles.username,
-                  isOwner && isPremium,
-                )}
-              >
-                {post.author.username}
-              </p>
-              <p className={styles.meta}>
-                {shortDate}
-                {!isOwner && post.author.club ? ` · ${post.author.club}` : ""}
-              </p>
-            </div>
+            <button
+              type="button"
+              className={styles["profile-trigger"]}
+              onClick={() => openProfile(post.author.username)}
+            >
+              <span className={styles.avatar} aria-hidden="true">
+                {post.author.initial}
+              </span>
+              <div>
+                <p
+                  className={withPremiumUsernameClass(
+                    styles.username,
+                    isOwner && isPremium,
+                  )}
+                >
+                  {post.author.username}
+                </p>
+                <p className={styles.meta}>
+                  {shortDate}
+                  {!isOwner && post.author.club ? ` · ${post.author.club}` : ""}
+                </p>
+              </div>
+            </button>
           </div>
 
           <div className={styles["header-actions"]}>
@@ -289,7 +318,11 @@ function PostDetailPage() {
           return (
             <article key={comment.id} className={styles.comment}>
               <div className={styles["comment-head"]}>
-                <div className={styles["comment-author"]}>
+                <button
+                  type="button"
+                  className={`${styles["comment-author"]} ${styles["profile-trigger"]}`}
+                  onClick={() => openProfile(comment.author.username)}
+                >
                   <span className={styles["comment-avatar"]} aria-hidden="true">
                     {comment.author.initial}
                   </span>
@@ -297,7 +330,7 @@ function PostDetailPage() {
                     <p className={styles["comment-name"]}>{comment.author.name}</p>
                     <p className={styles["comment-time"]}>{comment.time}</p>
                   </div>
-                </div>
+                </button>
 
                 {commentIsOwner && !isEditingComment && (
                   <PostOwnerMenu
@@ -346,7 +379,7 @@ function PostDetailPage() {
               )}
 
               {!isEditingComment && (
-                <button type="button" className={styles.reply}>
+                <button type="button" className={styles.reply} onClick={() => handleReply(comment)}>
                   <FontAwesomeIcon icon={faReply} />
                   Trả lời
                 </button>
@@ -357,6 +390,16 @@ function PostDetailPage() {
 
         <div className={styles.editor}>
           <div className={styles["editor-panel"]}>
+            {replyTarget ? (
+              <div className={styles["reply-banner"]}>
+                <span>
+                  Đang trả lời <strong>@{replyTarget.username ?? replyTarget.name}</strong>
+                </span>
+                <button type="button" onClick={() => setReplyTarget(null)}>
+                  Hủy
+                </button>
+              </div>
+            ) : null}
             <RichTextEditor
               value={draft}
               onChange={setDraft}
@@ -368,6 +411,7 @@ function PostDetailPage() {
               toolbarAriaLabel="Định dạng bình luận"
               aria-label="Viết bình luận của bạn"
             />
+            <CommentMentionPicker value={draft} onInsert={handleInsertMention} />
 
             <div className={styles["editor-footer"]}>
               {hasDraft && (

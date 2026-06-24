@@ -247,7 +247,7 @@ export async function toggleLike(postId, isLiked) {
   return { isLiked: data.isLiked, likeCount: data.likeCount };
 }
 
-export async function submitComment(postId, content) {
+export async function submitComment(postId, content, parentCommentId = null) {
   if (USE_MOCK) {
     return {
       id: Date.now(),
@@ -257,7 +257,12 @@ export async function submitComment(postId, content) {
     };
   }
 
-  const data = await postsApi.createComment(postId, { content });
+  const body = { content };
+  if (parentCommentId) {
+    body.parentCommentId = parentCommentId;
+  }
+
+  const data = await postsApi.createComment(postId, body);
   return mapComment(data);
 }
 

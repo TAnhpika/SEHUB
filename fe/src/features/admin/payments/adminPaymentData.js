@@ -456,6 +456,35 @@ export async function approveRefundViaApi(paymentId, note = "") {
   }
 }
 
+export async function completeRefundViaApi(paymentId, note = "") {
+  const payment = await loadPaymentById(paymentId);
+  if (!payment) {
+    return { ok: false, message: "Không tìm thấy giao dịch." };
+  }
+
+  if (payment.status !== "processing_refund") {
+    return { ok: false, message: "Đơn này không ở trạng thái đang xử lý hoàn tiền." };
+  }
+
+  if (USE_MOCK || !isValidGuid(String(payment.apiId ?? payment.id ?? ""))) {
+    return processPayOsRefund({
+      paymentId,
+      reason: note || payment.refundReason || "Admin xác nhận đã chuyển khoản hoàn tiền",
+      adminUsername: "admin_sehub",
+    });
+  }
+
+  try {
+    const result = await adminApi.completePaymentRefund(payment.apiId ?? payment.id, { note });
+    return {
+      ok: true,
+      message: result.message ?? "Đã xác nhận hoàn tiền thành công.",
+    };
+  } catch (error) {
+    return { ok: false, message: error?.message ?? "Không xác nhận được hoàn tiền." };
+  }
+}
+
 export async function loadPaymentById(id) {
   const mockPayment = getPaymentById(id);
   if (USE_MOCK || !isValidGuid(String(id ?? ""))) {

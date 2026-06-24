@@ -73,7 +73,7 @@ function ExamQuestionReportModal({
       return;
     }
 
-    const report = submitExamQuestionReport({
+    submitExamQuestionReport({
       examId,
       courseCode,
       questionId: question.id,
@@ -82,12 +82,16 @@ function ExamQuestionReportModal({
       reason,
       detail: trimmedDetail,
       reporter: user,
-    });
-
-    showToast(
-      `Đã gửi báo cáo ${report.code} tới ${EXAM_REPORT_ROUTING.assigneeLabel}. Cảm ơn bạn đã góp ý!`,
-    );
-    onClose();
+    })
+      .then((report) => {
+        showToast(
+          `Đã gửi báo cáo ${report.code} tới ${EXAM_REPORT_ROUTING.assigneeLabel}. Cảm ơn bạn đã góp ý!`,
+        );
+        onClose();
+      })
+      .catch((err) => {
+        setError(err.message ?? "Không gửi được báo cáo.");
+      });
   }
 
   return (

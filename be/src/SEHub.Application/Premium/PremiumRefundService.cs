@@ -31,6 +31,7 @@ public sealed class PremiumRefundService : IPremiumRefundService
     private readonly IAiTokenUsageRepository _tokenUsageRepository;
     private readonly IPaymentRefundNotificationWebhook _refundWebhook;
     private readonly INotificationService _notificationService;
+    private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly IFileStorageService _fileStorage;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
@@ -46,6 +47,7 @@ public sealed class PremiumRefundService : IPremiumRefundService
         IAiTokenUsageRepository tokenUsageRepository,
         IPaymentRefundNotificationWebhook refundWebhook,
         INotificationService notificationService,
+        IWorkflowNotificationService workflowNotifications,
         IFileStorageService fileStorage,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork,
@@ -60,6 +62,7 @@ public sealed class PremiumRefundService : IPremiumRefundService
         _tokenUsageRepository = tokenUsageRepository;
         _refundWebhook = refundWebhook;
         _notificationService = notificationService;
+        _workflowNotifications = workflowNotifications;
         _fileStorage = fileStorage;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
@@ -118,6 +121,12 @@ public sealed class PremiumRefundService : IPremiumRefundService
         }, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _workflowNotifications.NotifyAdminsRefundRequestedAsync(
+            order,
+            userId,
+            request.Reason,
+            cancellationToken);
 
         var subscription = await _subscriptionService.GetStatusAsync(userId, cancellationToken);
 
@@ -294,6 +303,11 @@ public sealed class PremiumRefundService : IPremiumRefundService
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        await _workflowNotifications.NotifyAdminsRefundBankDetailsSubmittedAsync(
+            order,
+            userId,
+            cancellationToken);
+
         var subscription = await _subscriptionService.GetStatusAsync(userId, cancellationToken);
 
         return new PremiumRefundResultDto
@@ -305,6 +319,64 @@ public sealed class PremiumRefundService : IPremiumRefundService
                 ? _aiTokenLimits.DailyTokenLimitPremium
                 : _aiTokenLimits.DailyTokenLimitFree,
             Message = "Đã gửi thông tin nhận tiền. SEHub sẽ xử lý hoàn tiền trong thời gian sớm nhất.",
+        };
+    }
+
+    public async Task<PremiumRefundResultDto> CompleteRefundAsync(
+        Guid orderId,
+        string? adminNote,
+        CancellationToken cancellationToken = default)
+    {
+        var actorId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+        var order = await _orderRepository.GetByIdAsync(orderId, cancellationToken)
+            ?? throw new NotFoundException("PaymentOrder", orderId);
+
+        if (order.Status == PaymentOrderStatus.Refunded)
+        {
+            throw new ConflictException("Đơn hàng đã được đánh dấu hoàn tiền.");
+        }
+
+        if (order.Status != PaymentOrderStatus.ProcessingRefund)
+        {
+            throw new DomainException("Chỉ có thể hoàn tất đơn đang xử lý hoàn tiền.");
+        }
+
+        order.Status = PaymentOrderStatus.Refunded;
+        order.UpdatedAt = DateTime.UtcNow;
+        await _orderRepository.UpdateAsync(order, cancellationToken);
+
+        await _auditLogRepository.AddAsync(new PaymentAuditLog
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            Action = "REFUND_COMPLETED",
+            ActorId = actorId,
+            PayloadJson = JsonSerializer.Serialize(new
+            {
+                adminNote,
+                orderCode = order.PayOsOrderCode,
+            }),
+            CreatedAt = DateTime.UtcNow,
+        }, cancellationToken);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _workflowNotifications.NotifyUserRefundCompletedAsync(
+            order,
+            actorId,
+            cancellationToken);
+
+        var subscription = await _subscriptionService.GetStatusAsync(order.UserId, cancellationToken);
+
+        return new PremiumRefundResultDto
+        {
+            OrderCode = order.PayOsOrderCode,
+            Status = order.Status.ToString(),
+            IsPremium = subscription.IsActive,
+            AiDailyTokenLimit = subscription.IsActive
+                ? _aiTokenLimits.DailyTokenLimitPremium
+                : _aiTokenLimits.DailyTokenLimitFree,
+            Message = "Đã xác nhận hoàn tiền thành công cho sinh viên.",
         };
     }
 

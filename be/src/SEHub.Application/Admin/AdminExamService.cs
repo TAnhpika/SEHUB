@@ -2,6 +2,7 @@ using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Exams;
+using SEHub.Application.Notifications;
 using SEHub.Domain.Enums;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
@@ -18,6 +19,7 @@ public sealed class AdminExamService : IAdminExamService
     private readonly IExamAttachmentRepository _attachmentRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
+    private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly IMapper _mapper;
 
     public AdminExamService(
@@ -25,12 +27,14 @@ public sealed class AdminExamService : IAdminExamService
         IExamAttachmentRepository attachmentRepository,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
+        IWorkflowNotificationService workflowNotifications,
         IMapper mapper)
     {
         _examRepository = examRepository;
         _attachmentRepository = attachmentRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _workflowNotifications = workflowNotifications;
         _mapper = mapper;
     }
 
@@ -86,6 +90,7 @@ public sealed class AdminExamService : IAdminExamService
         var exam = BuildExamFromRequest(request, contentHash, _currentUser.UserId);
         await _examRepository.AddAsync(exam, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await NotifyAdminsIfModeratorSubmittedAsync(exam, cancellationToken);
 
         return await MapAdminExamAsync(exam, cancellationToken);
     }
@@ -153,6 +158,11 @@ public sealed class AdminExamService : IAdminExamService
         exam.UpdatedAt = DateTime.UtcNow;
         await _examRepository.UpdateAsync(exam, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _workflowNotifications.NotifyModeratorExamReviewResultAsync(
+            exam,
+            approved: true,
+            _currentUser.UserId,
+            cancellationToken);
 
         return await MapAdminExamAsync(exam, cancellationToken);
     }
@@ -181,6 +191,11 @@ public sealed class AdminExamService : IAdminExamService
 
         await _examRepository.UpdateAsync(exam, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _workflowNotifications.NotifyModeratorExamReviewResultAsync(
+            exam,
+            approved: false,
+            _currentUser.UserId,
+            cancellationToken);
 
         return await MapAdminExamAsync(exam, cancellationToken);
     }
@@ -226,6 +241,7 @@ public sealed class AdminExamService : IAdminExamService
         var refreshed = await _examRepository.GetByIdAsync(id, includeQuestions: true, cancellationToken: cancellationToken)
             ?? throw new NotFoundException("Exam", id);
 
+        await NotifyAdminsIfModeratorSubmittedAsync(refreshed, cancellationToken);
         return await MapAdminExamAsync(refreshed, cancellationToken);
     }
 
@@ -251,8 +267,27 @@ public sealed class AdminExamService : IAdminExamService
         var revision = await CloneExamAsRevisionAsync(published, cancellationToken);
         await _examRepository.AddAsync(revision, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await NotifyAdminsIfModeratorSubmittedAsync(revision, cancellationToken);
 
         return await MapAdminExamAsync(revision, cancellationToken);
+    }
+
+    private async Task NotifyAdminsIfModeratorSubmittedAsync(Exam exam, CancellationToken cancellationToken)
+    {
+        if (exam.Status != ExamStatus.PendingApproval)
+        {
+            return;
+        }
+
+        if (string.Equals(_currentUser.Role, RoleNames.Admin, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        await _workflowNotifications.NotifyAdminsExamPendingReviewAsync(
+            exam,
+            _currentUser.UserId,
+            cancellationToken);
     }
 
     private static string BuildContentHashSource(CreateExamRequest request)

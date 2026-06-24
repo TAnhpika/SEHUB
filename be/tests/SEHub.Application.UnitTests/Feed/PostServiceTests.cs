@@ -2,6 +2,7 @@ using Moq;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
+using SEHub.Application.Notifications;
 using SEHub.Application.Models;
 using SEHub.Application.Storage;
 using SEHub.Contracts.Feed;
@@ -23,6 +24,7 @@ public sealed class PostServiceTests
     private readonly Mock<IGamificationService> _gamificationService = new();
     private readonly Mock<IImageCdnStorageService> _cdnStorage = new();
     private readonly Mock<ICdnFolderSettings> _cdnFolders = new();
+    private readonly Mock<IWorkflowNotificationService> _workflowNotifications = new();
     private readonly Mock<IFileStorageService> _fileStorage = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
@@ -44,6 +46,7 @@ public sealed class PostServiceTests
             _gamificationService.Object,
             _cdnStorage.Object,
             _cdnFolders.Object,
+            _workflowNotifications.Object,
             _fileStorage.Object,
             _unitOfWork.Object,
             AutoMapperFactory.Create());
@@ -97,6 +100,8 @@ public sealed class PostServiceTests
             .ReturnsAsync(0);
         _commentRepository.Setup(r => r.CountByPostIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
+        _imageRepository.Setup(r => r.GetByPostIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
         _userRepository.Setup(r => r.GetByIdAsync(AuthorId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new UserAccount { Id = AuthorId, Username = "author", DisplayName = "Author" });
         _profileRepository.Setup(r => r.GetByUserIdAsync(AuthorId, It.IsAny<CancellationToken>()))
@@ -148,6 +153,7 @@ public sealed class PostServiceTests
         _postRepository.Setup(r => r.GetByIdAsync(PostId, It.IsAny<CancellationToken>())).ReturnsAsync(post);
         _likeRepository.Setup(r => r.CountByPostIdAsync(PostId, It.IsAny<CancellationToken>())).ReturnsAsync(0);
         _commentRepository.Setup(r => r.CountByPostIdAsync(PostId, It.IsAny<CancellationToken>())).ReturnsAsync(0);
+        _imageRepository.Setup(r => r.GetByPostIdAsync(PostId, It.IsAny<CancellationToken>())).ReturnsAsync([]);
         _userRepository.Setup(r => r.GetByIdAsync(AuthorId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new UserAccount { Id = AuthorId, Username = "author", DisplayName = "Author" });
         _profileRepository.Setup(r => r.GetByUserIdAsync(AuthorId, It.IsAny<CancellationToken>()))
