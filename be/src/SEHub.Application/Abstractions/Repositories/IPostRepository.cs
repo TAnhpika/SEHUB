@@ -9,6 +9,9 @@ public interface IPostRepository
 {
     Task<Post?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<Post?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Post>> GetByIdsIncludingDeletedAsync(
+        IReadOnlyList<Guid> ids,
+        CancellationToken cancellationToken = default);
     Task<(IReadOnlyList<Post> Items, int TotalCount)> GetPagedAsync(PostQueryParams query, CancellationToken cancellationToken = default);
     Task<(IReadOnlyList<Post> Items, int TotalCount)> GetModerationPagedAsync(ModerationPostQueryParams query, CancellationToken cancellationToken = default);
     Task<int> CountByStatusAsync(PostStatus status, CancellationToken cancellationToken = default);

@@ -83,6 +83,7 @@ public sealed class ProfileServiceTests
 
         result.AvatarUrl.Should().Be("https://res.cloudinary.com/test/image/upload/sehub/avatars/new.png");
         profile.AvatarUrl.Should().Be("https://res.cloudinary.com/test/image/upload/sehub/avatars/new.png");
+        profile.AvatarPublicId.Should().Be("sehub/avatars/new");
         _profileRepository.Verify(r => r.UpdateAsync(profile, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }

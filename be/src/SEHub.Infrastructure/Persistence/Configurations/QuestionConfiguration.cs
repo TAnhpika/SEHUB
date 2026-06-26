@@ -11,7 +11,7 @@ public class QuestionConfiguration : IEntityTypeConfiguration<Question>
     {
         builder.HasKey(q => q.Id);
         builder.HasIndex(q => new { q.ExamId, q.OrderIndex });
-        builder.Property(q => q.Content).HasMaxLength(4000).IsRequired();
+        builder.Property(q => q.Content).HasColumnType("text").IsRequired();
         builder.Property(q => q.QuestionType).HasConversion<int>().HasDefaultValue(QuestionType.SingleChoice);
         builder.Property(q => q.CorrectOptionIdsJson).HasMaxLength(2000).HasDefaultValue("[]");
 

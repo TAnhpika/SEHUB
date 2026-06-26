@@ -1,9 +1,10 @@
-import { MOCK_POSTS } from "@/features/feed/feedData";
 import { getAdminDocuments } from "@/features/admin/documents/adminDocumentData";
 import { getAdminExams } from "@/features/admin/exams/adminExamData";
 import { REVIEW_COURSES } from "@/features/review/ReviewQuestionsPage/reviewData";
 import { getExamPapersForCourse } from "@/features/subjects/SubjectDetailPage/subjectDetailData";
 import { getSubjectCatalogPath } from "@/utils/subjectPaths";
+import * as postsApi from "@/api/postsApi";
+import { mapPostListItem } from "@/api/feedMapper";
 
 export const SEARCH_TABS = [
   { id: "all", label: "Tất cả" },
@@ -75,13 +76,22 @@ function buildPracticeExamIndex() {
   return practiceExamIndexCache;
 }
 
-export function searchPosts(query) {
-  const keyword = normalizeQuery(query);
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+
+export async function searchPosts(query) {
+  const keyword = query?.trim() ?? "";
   if (!keyword) return [];
 
-  return MOCK_POSTS.filter((post) =>
-    matchesQuery(keyword, post.title, post.body, post.author?.username, ...(post.tags ?? [])),
-  );
+  if (USE_MOCK) {
+    return [];
+  }
+
+  try {
+    const data = await postsApi.listPosts({ search: keyword, page: 1, pageSize: 20 });
+    return (data.items ?? []).map(mapPostListItem);
+  } catch {
+    return [];
+  }
 }
 
 export function searchDocuments(query) {
@@ -121,17 +131,17 @@ export function searchPracticeExams(query) {
 
 export function searchLocalContent(query) {
   return {
-    blogs: searchPosts(query),
+    blogs: [],
     documents: searchDocuments(query),
     exams: searchFinalExams(query),
     practice: searchPracticeExams(query),
   };
 }
 
-export function getSearchCounts(query, userCount = 0) {
+export function getSearchCounts(query, { blogCount = 0, userCount = 0 } = {}) {
   const results = searchLocalContent(query);
   const total =
-    results.blogs.length +
+    blogCount +
     results.documents.length +
     results.exams.length +
     results.practice.length +
@@ -139,7 +149,7 @@ export function getSearchCounts(query, userCount = 0) {
 
   return {
     all: total,
-    blogs: results.blogs.length,
+    blogs: blogCount,
     documents: results.documents.length,
     exams: results.exams.length,
     practice: results.practice.length,

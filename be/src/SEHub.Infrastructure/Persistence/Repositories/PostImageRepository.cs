@@ -20,6 +20,23 @@ public class PostImageRepository : IPostImageRepository
             .ThenBy(i => i.CreatedAt)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<PostImage>> GetByPostIdsAsync(
+        IReadOnlyList<Guid> postIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (postIds.Count == 0)
+        {
+            return [];
+        }
+
+        return await _context.PostImages
+            .Where(i => postIds.Contains(i.PostId))
+            .OrderBy(i => i.PostId)
+            .ThenBy(i => i.SortOrder)
+            .ThenBy(i => i.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(PostImage image, CancellationToken cancellationToken = default) =>
         await _context.PostImages.AddAsync(image, cancellationToken);
 

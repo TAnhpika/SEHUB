@@ -24,11 +24,10 @@ export async function loadAdminNavBadgeCounts() {
   }
 
   try {
-    const [modStats, pendingExamsPage, submissionsPage, paymentsPage] = await Promise.all([
+    const [modStats, pendingExamsPage, submissionsPage] = await Promise.all([
       adminApi.getModerationStats(),
       adminApi.listExams({ status: "PendingApproval", pageSize: 1 }),
       adminApi.listModerationPracticeSubmissions({ status: "Submitted", pageSize: 1 }),
-      adminApi.listPayments({ pageSize: 100 }),
     ]);
 
     const pendingSubmissions =

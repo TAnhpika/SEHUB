@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
   faCircleInfo,
+  faImage,
   faPaperPlane,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
@@ -19,6 +20,8 @@ import { MAJORS, MAX_CONTENT_LENGTH, SEMESTERS } from "@/features/posts/createPo
 import { getPlainTextLength } from "@/common/RichTextEditor/richTextEditorWysiwyg";
 import styles from "./CreatePostPage.module.css";
 
+const MAX_COVER_SIZE = 5 * 1024 * 1024;
+
 function CreatePostPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -29,6 +32,10 @@ function CreatePostPage() {
   const [major, setMajor] = useState("");
   const [content, setContent] = useState("");
   const [contentMode, setContentMode] = useState("edit");
+  const [coverMode, setCoverMode] = useState("upload");
+  const [coverUrl, setCoverUrl] = useState("");
+  const [coverFile, setCoverFile] = useState(null);
+  const [coverFileName, setCoverFileName] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState([]);
   const [anonymous, setAnonymous] = useState(false);
@@ -58,16 +65,43 @@ function CreatePostPage() {
     setTags((prev) => prev.filter((item) => item !== tag));
   }
 
+  function handleCoverFileChange(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > MAX_COVER_SIZE) {
+      showToast("Ảnh bìa tối đa 5MB.");
+      return;
+    }
+    setCoverFile(file);
+    setCoverFileName(file.name);
+  }
+
+  async function resolveCoverImageUrl() {
+    if (coverMode === "url") {
+      return coverUrl.trim() || null;
+    }
+
+    if (!coverFile) {
+      return null;
+    }
+
+    const result = await postsApi.uploadPostCover(coverFile);
+    return result?.coverImageUrl ?? result?.CoverImageUrl ?? null;
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
     if (!title.trim() || getPlainTextLength(content) === 0 || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
+      const coverImageUrl = await resolveCoverImageUrl();
       await submitPost({
         title: title.trim(),
         content: content.trim(),
         tags,
+        coverImageUrl,
+        coverFile: coverMode === "upload" ? coverFile : null,
       });
       showToast("Đã gửi bài viết — chờ moderator duyệt trước khi hiển thị.", 5500);
       window.setTimeout(() => navigate("/home"), 1200);
@@ -189,6 +223,53 @@ function CreatePostPage() {
           <p className={styles.hint}>
             Dùng nút hình ảnh trên thanh công cụ để chèn ảnh vào nội dung (lưu trên Cloudinary).
           </p>
+        </section>
+
+        <section className={styles.card}>
+          <p className={styles.label}>Ảnh bìa (tùy chọn)</p>
+          <div className={styles.tabs}>
+            <button
+              type="button"
+              className={`${styles.tab} ${coverMode === "upload" ? styles["tab-active"] : ""}`}
+              onClick={() => setCoverMode("upload")}
+            >
+              Upload
+            </button>
+            <button
+              type="button"
+              className={`${styles.tab} ${coverMode === "url" ? styles["tab-active"] : ""}`}
+              onClick={() => setCoverMode("url")}
+            >
+              URL
+            </button>
+          </div>
+
+          {coverMode === "upload" ? (
+            <div className={styles.upload}>
+              <FontAwesomeIcon icon={faImage} className={styles["upload-icon"]} />
+              <label className={styles["upload-btn"]}>
+                Chọn ảnh bìa
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/gif,image/webp"
+                  className={styles["file-input"]}
+                  onChange={handleCoverFileChange}
+                />
+              </label>
+              <p className={styles.hint}>
+                PNG, JPG, GIF, WEBP (tối đa 5MB). Chỉ ảnh bìa — không upload file đính kèm.
+              </p>
+              {coverFileName && <p className={styles["file-name"]}>{coverFileName}</p>}
+            </div>
+          ) : (
+            <input
+              type="url"
+              className={styles.input}
+              placeholder="https://example.com/image.jpg"
+              value={coverUrl}
+              onChange={(event) => setCoverUrl(event.target.value)}
+            />
+          )}
         </section>
 
         <section className={styles.card}>

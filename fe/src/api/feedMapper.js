@@ -66,6 +66,7 @@ export function mapPostListItem(dto) {
     previewImageUrl: resolveAssetUrl(dto.previewImageUrl),
     isLiked: dto.isLiked ?? false,
     images: (dto.images ?? []).map(mapPostImage),
+    commentsList: [],
   };
 }
 

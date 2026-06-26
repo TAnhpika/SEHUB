@@ -162,6 +162,7 @@ public static class ServiceCollectionExtensions
 
         services.AddAuthorizationPolicies();
         services.AddAuthRateLimiting(configuration);
+        services.AddResponseCaching();
 
         services.AddSignalR()
             .AddJsonProtocol(options =>

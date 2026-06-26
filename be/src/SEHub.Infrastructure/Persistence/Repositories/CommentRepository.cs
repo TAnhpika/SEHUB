@@ -25,6 +25,22 @@ public class CommentRepository : ICommentRepository
     public Task<int> CountByPostIdAsync(Guid postId, CancellationToken cancellationToken = default) =>
         _context.Comments.CountAsync(c => c.PostId == postId, cancellationToken);
 
+    public async Task<IReadOnlyDictionary<Guid, int>> CountByPostIdsAsync(
+        IReadOnlyList<Guid> postIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (postIds.Count == 0)
+        {
+            return new Dictionary<Guid, int>();
+        }
+
+        return await _context.Comments
+            .Where(c => postIds.Contains(c.PostId))
+            .GroupBy(c => c.PostId)
+            .Select(g => new { PostId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.PostId, x => x.Count, cancellationToken);
+    }
+
     public Task<int> CountByAuthorIdAsync(Guid authorId, CancellationToken cancellationToken = default) =>
         _context.Comments.CountAsync(c => c.AuthorId == authorId && !c.IsDeleted, cancellationToken);
 

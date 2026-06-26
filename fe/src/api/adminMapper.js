@@ -6,6 +6,7 @@ import {
   normalizeCourseSubjectCode,
   resolvePublicExamName,
 } from "@/utils/examDisplay";
+import { mapModerationPostImages } from "@/utils/mapModerationPostImages";
 import { getExamAssetFileName } from "@/utils/examAssetUrl";
 import {
   mapImportedExamQuestions,
@@ -534,6 +535,7 @@ function toModerationInitials(name) {
 export function mapModerationPostListItem(dto) {
   const status = mapModerationPostStatus(dto.status);
   const createdMs = new Date(dto.createdAt).getTime();
+  const { coverImage, inlineImages } = mapModerationPostImages(dto.images ?? []);
 
   return {
     id: dto.id,
@@ -556,8 +558,8 @@ export function mapModerationPostListItem(dto) {
     allowComments: true,
     anonymous: false,
     attachments: [],
-    coverImage: null,
-    inlineImages: [],
+    coverImage,
+    inlineImages,
     resubmission: status === "pending" && Boolean(dto.moderatedAt),
     moderation: dto.moderatedAt
       ? {

@@ -160,6 +160,7 @@ public sealed class ProfileService : IProfileService
             ?? throw new NotFoundException("UserProfile", userId);
 
         var previousAvatarPath = profile.AvatarUrl;
+        var previousAvatarPublicId = profile.AvatarPublicId;
         var upload = await _cdnStorage.UploadImageAsync(
             fileContent,
             safeFileName,
@@ -168,12 +169,13 @@ public sealed class ProfileService : IProfileService
             cancellationToken);
 
         profile.AvatarUrl = upload.Url;
+        profile.AvatarPublicId = upload.PublicId;
         profile.UpdatedAt = DateTime.UtcNow;
 
         await _profileRepository.UpdateAsync(profile, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await DeletePreviousAvatarAsync(previousAvatarPath, cancellationToken);
+        await DeletePreviousAvatarAsync(previousAvatarPublicId, previousAvatarPath, cancellationToken);
 
         return new ProfileAvatarUploadDto
         {
@@ -285,24 +287,18 @@ public sealed class ProfileService : IProfileService
         return await _fileStorage.GetSignedUrlAsync(avatarUrl, TimeSpan.FromHours(24), cancellationToken);
     }
 
-    private async Task DeletePreviousAvatarAsync(string? avatarUrl, CancellationToken cancellationToken)
+    private async Task DeletePreviousAvatarAsync(
+        string? previousPublicId,
+        string? avatarUrl,
+        CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(avatarUrl))
-        {
-            return;
-        }
-
-        if (CdnUrlHelper.TryGetPublicId(avatarUrl, out var publicId, out var isRaw))
-        {
-            await _cdnStorage.DeleteAsync(publicId, isRaw, cancellationToken);
-            return;
-        }
+        await CdnAssetCleanup.TryDeleteAsync(_cdnStorage, previousPublicId, avatarUrl, cancellationToken: cancellationToken);
 
         if (ShouldDeleteStoredAvatar(avatarUrl))
         {
             try
             {
-                await _fileStorage.DeleteAsync(avatarUrl, cancellationToken);
+                await _fileStorage.DeleteAsync(avatarUrl!, cancellationToken);
             }
             catch (FileNotFoundException)
             {

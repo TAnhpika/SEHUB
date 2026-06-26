@@ -10,7 +10,7 @@
 
 | Hạng mục | Quyết định |
 | -------- | ---------- |
-| Runtime | .NET 8 · ASP.NET Core Web API · EF Core **Code First** · SQL Server |
+| Runtime | .NET 8 · ASP.NET Core Web API · EF Core **Code First** · PostgreSQL (Supabase) |
 | Kiến trúc | Clean Architecture — `API` · `Application` · `Domain` · `Infrastructure` · `Contracts` · `Shared` |
 | Auth | Identity Roles + JWT + **`PremiumAuthorizationHandler`** (đọc DB) |
 | Contract FE | `ApiResponse<T>` + `PagedResult<T>` — khớp Redux `createAsyncThunk` |
@@ -64,7 +64,7 @@ Backend SEHUB phục vụ React SPA (Redux Thunk + Axios + JWT). Thiết kế th
 | ---- | --------- | ------------------- |
 | Runtime | .NET | **8** (LTS) |
 | API | ASP.NET Core Web API | REST, JSON, OpenAPI (Swagger) |
-| Database | **SQL Server** | Dev: LocalDB/Docker; Prod: Azure SQL hoặc on-prem |
+| Database | **PostgreSQL (Supabase)** | Dev/Prod: Supabase pooler connection string |
 | ORM | **Entity Framework Core** | **Code First** — `Migrations/` là **single source of truth** cho schema |
 | Identity | **ASP.NET Core Identity** | `ApplicationUser`, roles, password policy |
 | Security | **JWT Bearer** | Khớp FE: `Authorization: Bearer <accessToken>` |
@@ -78,7 +78,7 @@ Backend SEHUB phục vụ React SPA (Redux Thunk + Axios + JWT). Thiết kế th
 | **Serilog** | Structured logging → Console / Application Insights |
 | **Swashbuckle.AspNetCore** | Swagger UI + XML comments |
 | **AspNetCoreRateLimit** | Rate limit OTP, login, AI explain |
-| **Microsoft.EntityFrameworkCore.SqlServer** | Provider SQL Server |
+| **Npgsql.EntityFrameworkCore.PostgreSQL** | Provider PostgreSQL (Supabase) |
 | **Microsoft.AspNetCore.Authentication.JwtBearer** | JWT middleware |
 | **Ardalis.GuardClauses** *(optional)* | Guard clause trong Application services |
 
@@ -326,7 +326,7 @@ Component
       → Controller [Authorize(Policy)]
         → Application Service
           → IRepository / SEHubDbContext (Infrastructure)
-            → SQL Server
+            → PostgreSQL (Supabase)
           ← map Entity → Contracts DTO
       ← ApiResponse<T> (SEHub.Contracts) envelope
     ← slice: fulfilled | rejected
@@ -1003,7 +1003,7 @@ Guest và Free dùng chung DTO `QuestionPublicDto` — **không leak** qua neste
 
 ### 6.3 Gamification — Lazy-reset Token AI (không Cron 00:00)
 
-**Vấn đề (BA §4.2.B):** Cron reset hàng loạt lúc 00:00 → table lock SQL Server.
+**Vấn đề (BA §4.2.B):** Cron reset hàng loạt lúc 00:00 → table lock trên PostgreSQL.
 
 **Giải pháp G1 — Lazy reset per user:**
 
@@ -1350,4 +1350,4 @@ Thứ tự gợi ý để team không block lẫn nhau:
 
 ---
 
-_— SEHUB Backend Architecture **v2.0** · ASP.NET Core 8 · SQL Server · EF Core Code First · Identity + JWT_
+_— SEHUB Backend Architecture **v2.0** · ASP.NET Core 8 · PostgreSQL (Supabase) · EF Core Code First · Identity + JWT_

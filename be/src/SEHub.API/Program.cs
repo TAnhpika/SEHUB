@@ -38,6 +38,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("DefaultCors");
+app.UseResponseCaching();
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseMiddleware<BannedUserMiddleware>();

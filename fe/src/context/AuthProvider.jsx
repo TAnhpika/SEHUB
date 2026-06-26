@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import * as authApi from "@/api/authApi";
 import { deriveUsernameFromEmail, mapApiUser } from "@/api/authMapper";
 import { mapProfileStatsToAuthUser, mapAiTokenStatusDto } from "@/api/profileMapper";
-import * as profilesApi from "@/api/profilesApi";
+import { mapSubscriptionStatusDto } from "@/api/premiumMapper";
 import {
   clearAuthTokens,
   getAccessToken,
@@ -12,7 +12,6 @@ import {
   setRefreshToken,
 } from "@/api/httpClient";
 import { resolveIsPremium, STUDENT_PLAN } from "@/utils/studentPlan";
-import { loadSubscriptionStatus } from "@/features/landing/PricingModal/pricingData";
 import { consumeAiExplainTokens, clearServerAiTokenSnapshot, getAiTokenSnapshot, setServerAiTokenSnapshot, applyServerRemainingTokens } from "@/utils/aiTokens";
 import { AuthContext } from "./authContextValue";
 
@@ -104,7 +103,8 @@ function applyAuthSession(setUser, setIsBootstrapping, loginResponse) {
   setIsBootstrapping(false);
 
   if (!USE_MOCK) {
-    syncUserFromApi(nextUser).then((merged) => {
+    authApi.getMe().then((me) => {
+      const merged = applyMeEnrichment(nextUser, me);
       persistUser(merged);
       setUser(merged);
     });
@@ -113,59 +113,44 @@ function applyAuthSession(setUser, setIsBootstrapping, loginResponse) {
   return nextUser;
 }
 
-async function syncProfileStats(user) {
-  if (!user || USE_MOCK) {
+function applyMeEnrichment(user, meDto) {
+  if (!user || !meDto || USE_MOCK) {
     return user;
   }
 
-  try {
-    const stats = await profilesApi.getMyStats();
-    return mapProfileStatsToAuthUser(user, stats);
-  } catch {
-    return user;
-  }
-}
+  let next = user;
 
-async function syncPremiumSubscription(user) {
-  if (!user || USE_MOCK) {
-    return user;
+  if (meDto.stats) {
+    next = mapProfileStatsToAuthUser(next, meDto.stats);
   }
 
-  try {
-    const status = await loadSubscriptionStatus();
-    const isPremium = Boolean(status.isActive);
-
-    return enrichUser({
-      ...user,
-      isPremium,
-      plan: isPremium ? STUDENT_PLAN.PREMIUM : STUDENT_PLAN.FREE,
-      premiumExpiresAt: status.expiresAt ?? null,
-      premiumPlanName: status.planName ?? null,
+  if (meDto.subscription) {
+    const subscription = mapSubscriptionStatusDto(meDto.subscription);
+    next = enrichUser({
+      ...next,
+      isPremium: Boolean(subscription.isActive),
+      plan: subscription.isActive ? STUDENT_PLAN.PREMIUM : STUDENT_PLAN.FREE,
+      premiumExpiresAt: subscription.expiresAt ?? null,
+      premiumPlanName: subscription.planName ?? null,
     });
-  } catch {
+  }
+
+  if (meDto.aiTokens) {
+    setServerAiTokenSnapshot(mapAiTokenStatusDto(meDto.aiTokens));
+  } else {
+    clearServerAiTokenSnapshot();
+  }
+
+  return next;
+}
+
+async function syncUserFromApi(user, meDto = null) {
+  if (!user || USE_MOCK) {
     return user;
   }
-}
 
-async function syncAiTokens(user) {
-  if (!user || USE_MOCK) {
-    clearServerAiTokenSnapshot();
-    return;
-  }
-
-  try {
-    const dto = await profilesApi.getMyAiTokens();
-    setServerAiTokenSnapshot(mapAiTokenStatusDto(dto));
-  } catch {
-    clearServerAiTokenSnapshot();
-  }
-}
-
-async function syncUserFromApi(user) {
-  const withStats = await syncProfileStats(user);
-  const withPremium = await syncPremiumSubscription(withStats);
-  await syncAiTokens(withPremium);
-  return withPremium;
+  const me = meDto ?? (await authApi.getMe());
+  return applyMeEnrichment(user, me);
 }
 
 function clearAuthSession(setUser) {
@@ -201,7 +186,7 @@ export function AuthProvider({ children }) {
       try {
         const me = await authApi.getMe();
         if (cancelled) return;
-        const nextUser = await syncUserFromApi(mapAndEnrichUser(me));
+        const nextUser = applyMeEnrichment(mapAndEnrichUser(me), me);
         persistUser(nextUser);
         setUser(nextUser);
       } catch {
@@ -211,7 +196,7 @@ export function AuthProvider({ children }) {
             const refreshed = await refreshSession();
             if (cancelled) return;
             const me = await authApi.getMe();
-            const nextUser = await syncUserFromApi(mapAndEnrichUser(me ?? refreshed.user));
+            const nextUser = applyMeEnrichment(mapAndEnrichUser(me ?? refreshed.user), me);
             persistUser(nextUser);
             setUser(nextUser);
             return;
@@ -278,7 +263,7 @@ export function AuthProvider({ children }) {
     try {
       if (getAccessToken()) {
         const me = await authApi.getMe();
-        const nextUser = await syncUserFromApi(mapAndEnrichUser(me));
+        const nextUser = applyMeEnrichment(mapAndEnrichUser(me), me);
         persistUser(nextUser);
         setUser(nextUser);
         return nextUser;
@@ -316,7 +301,17 @@ export function AuthProvider({ children }) {
       return getAiTokenSnapshot(user);
     }
 
-    await syncAiTokens(user);
+    try {
+      const me = await authApi.getMe();
+      if (me?.aiTokens) {
+        setServerAiTokenSnapshot(mapAiTokenStatusDto(me.aiTokens));
+      } else {
+        clearServerAiTokenSnapshot();
+      }
+    } catch {
+      clearServerAiTokenSnapshot();
+    }
+
     setAiTokenVersion((version) => version + 1);
     return getAiTokenSnapshot(user);
   }, [user]);

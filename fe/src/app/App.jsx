@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ToastProvider } from "@/common/Toast/ToastProvider";
 import PrivateRoute from "@/common/guards/PrivateRoute";
@@ -39,47 +40,57 @@ import PaymentSuccessPage from "@/features/premium/PaymentSuccessPage/PaymentSuc
 import PaymentReturnPage from "@/features/premium/PaymentReturnPage/PaymentReturnPage";
 import PremiumRefundFormPage from "@/features/premium/PremiumRefundFormPage/PremiumRefundFormPage";
 import SupportPage from "@/features/support/SupportPage/SupportPage";
+import ChatbotAdvisorPage from "@/features/chatbot/ChatbotAdvisorPage/ChatbotAdvisorPage";
+import NotFound from "@/features/errors/NotFound/NotFound";
+import PracticeFocusRedirect from "@/common/routes/PracticeFocusRedirect";
+import ExamFocusResultRedirect from "@/common/routes/ExamFocusResultRedirect";
+import ScrollToTop from "@/common/routes/ScrollToTop";
 import AdminRoute from "@/common/guards/AdminRoute";
 import ModeratorRoute from "@/common/guards/ModeratorRoute";
 import AdminLayout from "@/common/Layout/AdminLayout/AdminLayout";
 import ModeratorLayout from "@/common/Layout/ModeratorLayout/ModeratorLayout";
-import AdminDashboardPage from "@/features/admin/dashboard/AdminDashboardPage";
-import AdminUserListPage from "@/features/admin/users/AdminUserListPage";
-import AdminUserDetailPage from "@/features/admin/users/AdminUserDetailPage";
-import AdminExamListPage from "@/features/admin/exams/AdminExamListPage";
-import AdminExamFormPage from "@/features/admin/exams/AdminExamFormPage";
-import AdminExamPendingPage from "@/features/admin/exams/AdminExamPendingPage";
-import AdminExamDetailPage from "@/features/admin/exams/AdminExamDetailPage";
-import AdminPracticeSubmissionsPage from "@/features/admin/exams/AdminPracticeSubmissionsPage";
-import AdminDocumentCatalogPage from "@/features/admin/documents/AdminDocumentCatalogPage";
-import AdminDocumentSubjectPage from "@/features/admin/documents/AdminDocumentSubjectPage";
-import AdminModerationPage from "@/features/admin/moderation/AdminModerationPage";
-import AdminReportDetailPage from "@/features/admin/moderation/AdminReportDetailPage";
-import AdminBannedPage from "@/features/admin/moderation/AdminBannedPage";
-import AdminPaymentListPage from "@/features/admin/payments/AdminPaymentListPage";
-import AdminPaymentDetailPage from "@/features/admin/payments/AdminPaymentDetailPage";
-import AdminVoucherPage from "@/features/admin/vouchers/AdminVoucherPage";
-import AdminGamificationConfigPage from "@/features/admin/gamification/AdminGamificationConfigPage";
-import AdminChatbotPage from "@/features/admin/chatbot/AdminChatbotPage";
-import ChatbotAdvisorPage from "@/features/chatbot/ChatbotAdvisorPage/ChatbotAdvisorPage";
-import AdminPermissionsPage from "@/features/admin/permissions/AdminPermissionsPage";
-import AdminActivityLogPage from "@/features/admin/activity/AdminActivityLogPage";
-import AddPracticeExamPage from "@/features/moderator/practiceExams/AddPracticeExamPage/AddPracticeExamPage";
-import ModeratorExamContributionHistoryPage from "@/features/moderator/exams/ModeratorExamContributionHistoryPage/ModeratorExamContributionHistoryPage";
-import ModeratorPracticeSubmissionsPage from "@/features/moderator/practiceExams/ModeratorPracticeSubmissionsPage";
-import NotFound from "@/features/errors/NotFound/NotFound";
-import AddFinalExamWizard from "@/features/moderator/finalExams/AddFinalExamWizard";
-import FinalExamInfoStep from "@/features/moderator/finalExams/steps/FinalExamInfoStep";
-import FinalExamQuestionsStep from "@/features/moderator/finalExams/steps/FinalExamQuestionsStep";
-import FinalExamReviewStep from "@/features/moderator/finalExams/steps/FinalExamReviewStep";
-import ViolatingAccountsPage from "@/features/moderator/violations/ViolatingAccountsPage/ViolatingAccountsPage";
-import ContentModerationPage from "@/features/moderator/content/ContentModerationPage/ContentModerationPage";
-import ContentModerationHistoryPage from "@/features/moderator/content/ContentModerationHistoryPage/ContentModerationHistoryPage";
-import FeaturedPostsPage from "@/features/moderator/featured/FeaturedPostsPage/FeaturedPostsPage";
-import ReportsPage from "@/features/moderator/reports/ReportsPage/ReportsPage";
-import PracticeFocusRedirect from "@/common/routes/PracticeFocusRedirect";
-import ExamFocusResultRedirect from "@/common/routes/ExamFocusResultRedirect";
-import ScrollToTop from "@/common/routes/ScrollToTop";
+
+const AdminDashboardPage = lazy(() => import("@/features/admin/dashboard/AdminDashboardPage"));
+const AdminUserListPage = lazy(() => import("@/features/admin/users/AdminUserListPage"));
+const AdminUserDetailPage = lazy(() => import("@/features/admin/users/AdminUserDetailPage"));
+const AdminExamListPage = lazy(() => import("@/features/admin/exams/AdminExamListPage"));
+const AdminExamFormPage = lazy(() => import("@/features/admin/exams/AdminExamFormPage"));
+const AdminExamPendingPage = lazy(() => import("@/features/admin/exams/AdminExamPendingPage"));
+const AdminExamDetailPage = lazy(() => import("@/features/admin/exams/AdminExamDetailPage"));
+const AdminPracticeSubmissionsPage = lazy(() => import("@/features/admin/exams/AdminPracticeSubmissionsPage"));
+const AdminDocumentCatalogPage = lazy(() => import("@/features/admin/documents/AdminDocumentCatalogPage"));
+const AdminDocumentSubjectPage = lazy(() => import("@/features/admin/documents/AdminDocumentSubjectPage"));
+const AdminModerationPage = lazy(() => import("@/features/admin/moderation/AdminModerationPage"));
+const AdminReportDetailPage = lazy(() => import("@/features/admin/moderation/AdminReportDetailPage"));
+const AdminBannedPage = lazy(() => import("@/features/admin/moderation/AdminBannedPage"));
+const AdminPaymentListPage = lazy(() => import("@/features/admin/payments/AdminPaymentListPage"));
+const AdminPaymentDetailPage = lazy(() => import("@/features/admin/payments/AdminPaymentDetailPage"));
+const AdminVoucherPage = lazy(() => import("@/features/admin/vouchers/AdminVoucherPage"));
+const AdminGamificationConfigPage = lazy(() => import("@/features/admin/gamification/AdminGamificationConfigPage"));
+const AdminChatbotPage = lazy(() => import("@/features/admin/chatbot/AdminChatbotPage"));
+const AdminPermissionsPage = lazy(() => import("@/features/admin/permissions/AdminPermissionsPage"));
+const AdminActivityLogPage = lazy(() => import("@/features/admin/activity/AdminActivityLogPage"));
+
+const AddPracticeExamPage = lazy(() => import("@/features/moderator/practiceExams/AddPracticeExamPage/AddPracticeExamPage"));
+const ModeratorExamContributionHistoryPage = lazy(() => import("@/features/moderator/exams/ModeratorExamContributionHistoryPage/ModeratorExamContributionHistoryPage"));
+const ModeratorPracticeSubmissionsPage = lazy(() => import("@/features/moderator/practiceExams/ModeratorPracticeSubmissionsPage"));
+const AddFinalExamWizard = lazy(() => import("@/features/moderator/finalExams/AddFinalExamWizard"));
+const FinalExamInfoStep = lazy(() => import("@/features/moderator/finalExams/steps/FinalExamInfoStep"));
+const FinalExamQuestionsStep = lazy(() => import("@/features/moderator/finalExams/steps/FinalExamQuestionsStep"));
+const FinalExamReviewStep = lazy(() => import("@/features/moderator/finalExams/steps/FinalExamReviewStep"));
+const ViolatingAccountsPage = lazy(() => import("@/features/moderator/violations/ViolatingAccountsPage/ViolatingAccountsPage"));
+const ContentModerationPage = lazy(() => import("@/features/moderator/content/ContentModerationPage/ContentModerationPage"));
+const ContentModerationHistoryPage = lazy(() => import("@/features/moderator/content/ContentModerationHistoryPage/ContentModerationHistoryPage"));
+const FeaturedPostsPage = lazy(() => import("@/features/moderator/featured/FeaturedPostsPage/FeaturedPostsPage"));
+const ReportsPage = lazy(() => import("@/features/moderator/reports/ReportsPage/ReportsPage"));
+
+function RouteFallback() {
+  return (
+    <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted, #64748b)" }}>
+      Đang tải…
+    </div>
+  );
+}
 
 function App() {
   return (
@@ -87,6 +98,7 @@ function App() {
       <ToastProvider>
         <BrowserRouter>
           <ScrollToTop />
+          <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route element={<AuthenticatedHomeRedirect />}>
               <Route element={<GuestLayout />}>
@@ -281,6 +293,7 @@ function App() {
             <Route path="/landing" element={<Navigate to="/" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </BrowserRouter>
       </ToastProvider>
     </AuthProvider>

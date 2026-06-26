@@ -22,6 +22,8 @@ public interface IExamAttachmentService
 
     Task DeleteAsync(Guid examId, Guid attachmentId, CancellationToken cancellationToken = default);
 
+    Task DeleteAllForExamAsync(Guid examId, CancellationToken cancellationToken = default);
+
     Task<ExamAttachmentContentResult> OpenViewAsync(
         Guid examId,
         Guid attachmentId,
@@ -114,17 +116,27 @@ public sealed class ExamAttachmentService : IExamAttachmentService
             throw new NotFoundException("ExamAttachment", attachmentId);
         }
 
-        try
-        {
-            await _cloudStorage.DeleteAsync(attachment.DriveFileId, cancellationToken);
-        }
-        catch (Exception ex) when (ex is not DomainException and not NotFoundException and not ForbiddenException)
-        {
-            throw new DomainException(ErrorCodes.StorageUploadFailed, ex);
-        }
+        await CloudFileCleanup.TryDeleteAsync(_cloudStorage, attachment.DriveFileId, cancellationToken);
 
         await _attachmentRepository.DeleteAsync(attachment, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteAllForExamAsync(Guid examId, CancellationToken cancellationToken = default)
+    {
+        EnsureModeratorOrAdmin();
+
+        var attachments = await _attachmentRepository.GetByExamIdAsync(examId, cancellationToken);
+        foreach (var attachment in attachments)
+        {
+            await CloudFileCleanup.TryDeleteAsync(_cloudStorage, attachment.DriveFileId, cancellationToken);
+            await _attachmentRepository.DeleteAsync(attachment, cancellationToken);
+        }
+
+        if (attachments.Count > 0)
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
     }
 
     public async Task<ExamAttachmentContentResult> OpenViewAsync(

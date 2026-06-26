@@ -401,9 +401,25 @@
 }
 
 .emptyQueue,
+.loadingQueue,
 .detailEmpty {
   padding: 2.5rem 1.5rem;
   text-align: center;
+}
+
+.loadingQueue {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  min-height: 12rem;
+  color: var(--mod-muted);
+}
+
+.loadingIcon {
+  font-size: 1.5rem;
+  color: var(--mod-primary);
 }
 
 .detailEmpty {
@@ -432,6 +448,10 @@
   margin: 0;
   font-size: 0.8125rem;
   color: var(--mod-muted);
+}
+
+.emptyDescError {
+  color: #b42318;
 }
 
 .detailCol {
@@ -722,4 +742,10 @@
     border-right: none;
     border-bottom: 1px solid var(--mod-border);
   }
+}
+
+.loadMoreRow {
+  display: flex;
+  justify-content: center;
+  padding: 0.75rem 0 0.25rem;
 }

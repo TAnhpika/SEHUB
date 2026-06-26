@@ -2,7 +2,7 @@
   "_comment": "Copy to appsettings.Development.Local.json (gitignored). Fill credentials locally. Never commit real passwords.",
 
   "ConnectionStrings": {
-    "DefaultConnection": "Server=YOUR_INSTANCE;Database=SEHubDb;User Id=...;Password=...;TrustServerCertificate=True;MultipleActiveResultSets=true"
+    "DefaultConnection": "Host=aws-1-REGION.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.YOUR_PROJECT_REF;Password=YOUR_DB_PASSWORD;SSL Mode=Require;Trust Server Certificate=true"
   },
 
   "Email": {
@@ -58,7 +58,7 @@
     "_comment": "openrouter.ai/keys — Provider OpenRouter + ApiKey bắt buộc để bật AI thật",
     "Provider": "OpenRouter",
     "ApiKey": "your-openrouter-api-key",
-    "Model": "nex-agi/nex-n2-pro:free",
+    "Model": "poolside/laguna-m.1:free",
     "BaseUrl": "https://openrouter.ai/api/v1",
     "HttpReferer": "http://localhost:5173",
     "SiteTitle": "SEHub",

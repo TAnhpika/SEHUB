@@ -11,6 +11,7 @@ using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 
 using SEHub.Application.Gamification;
+using SEHub.Application.Premium;
 using SEHub.Application.Profiles;
 
 using SEHub.Application.Models;
@@ -61,6 +62,9 @@ public sealed class AuthService : IAuthService
 
     private readonly IBadgeCheckService _badgeCheckService;
     private readonly IUserActivityService _userActivityService;
+    private readonly IProfileStatsService _profileStatsService;
+    private readonly IPremiumService _premiumService;
+    private readonly IAiTokenService _aiTokenService;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<AuthService> _logger;
 
@@ -96,6 +100,12 @@ public sealed class AuthService : IAuthService
 
         IUserActivityService userActivityService,
 
+        IProfileStatsService profileStatsService,
+
+        IPremiumService premiumService,
+
+        IAiTokenService aiTokenService,
+
         IServiceScopeFactory scopeFactory,
 
         ILogger<AuthService> logger)
@@ -129,6 +139,12 @@ public sealed class AuthService : IAuthService
         _badgeCheckService = badgeCheckService;
 
         _userActivityService = userActivityService;
+
+        _profileStatsService = profileStatsService;
+
+        _premiumService = premiumService;
+
+        _aiTokenService = aiTokenService;
 
         _scopeFactory = scopeFactory;
 
@@ -626,6 +642,11 @@ public sealed class AuthService : IAuthService
 
         var authUser = BuildAuthUserDto(user, isPremium, profile?.AvatarUrl);
 
+        var statsTask = _profileStatsService.GetMyStatsAsync(cancellationToken);
+        var subscriptionTask = _premiumService.GetSubscriptionAsync(cancellationToken);
+        var aiTokensTask = _aiTokenService.GetStatusAsync(userId, cancellationToken);
+        await Task.WhenAll(statsTask, subscriptionTask, aiTokensTask);
+
 
 
         return new MeResponse
@@ -648,7 +669,13 @@ public sealed class AuthService : IAuthService
 
             Points = authUser.Points,
 
-            LevelName = authUser.LevelName
+            LevelName = authUser.LevelName,
+
+            Stats = await statsTask,
+
+            Subscription = await subscriptionTask,
+
+            AiTokens = await aiTokensTask
 
         };
 

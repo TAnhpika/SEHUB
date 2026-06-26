@@ -17,7 +17,6 @@ public sealed class PreviewPageLimitTests
 
     private readonly Mock<IDocumentRepository> _documentRepository = new();
     private readonly Mock<IDocumentAccessLogRepository> _accessLogRepository = new();
-    private readonly Mock<IFileStorageService> _fileStorage = new();
     private readonly Mock<ICloudFileStorageService> _cloudStorage = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
@@ -36,7 +35,6 @@ public sealed class PreviewPageLimitTests
         return new DocumentService(
             _documentRepository.Object,
             _accessLogRepository.Object,
-            _fileStorage.Object,
             _cloudStorage.Object,
             accessService,
             _currentUser.Object,
@@ -54,15 +52,13 @@ public sealed class PreviewPageLimitTests
         _currentUser.Setup(u => u.UserId).Returns(Guid.NewGuid());
         _currentUser.Setup(u => u.IsPremium).Returns(false);
         _currentUser.Setup(u => u.IsModeratorOrAdmin).Returns(false);
-        _fileStorage
-            .Setup(s => s.GetSignedUrlAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync("https://storage.example/doc#page=3");
 
         var sut = CreateSut();
         var preview = await sut.GetPreviewAsync(DocumentId, page: 3);
 
         preview.Page.Should().Be(3);
         preview.PageLimit.Should().Be(DocumentService.FreePreviewPageLimit);
+        preview.ContentUrl.Should().Be($"http://localhost:5006/api/v1/documents/{DocumentId}/content?page=3");
     }
 
     [Fact]
@@ -102,15 +98,13 @@ public sealed class PreviewPageLimitTests
         _currentUser.Setup(u => u.IsAuthenticated).Returns(true);
         _currentUser.Setup(u => u.UserId).Returns(Guid.NewGuid());
         _currentUser.Setup(u => u.IsPremium).Returns(true);
-        _fileStorage
-            .Setup(s => s.GetSignedUrlAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync("https://storage.example/doc#page=8");
 
         var sut = CreateSut();
         var preview = await sut.GetPreviewAsync(DocumentId, page: 8);
 
         preview.Page.Should().Be(8);
         preview.PageLimit.Should().Be(10);
+        preview.ContentUrl.Should().Be($"http://localhost:5006/api/v1/documents/{DocumentId}/content?page=8");
     }
 
     [Fact]
@@ -152,7 +146,7 @@ public sealed class PreviewPageLimitTests
         _cloudStorage.Verify(s => s.OpenReadAsync("drive-file-1", It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    private void SetupDocument(int pageCount, AccessTier accessTier, string? driveFileId = null)
+    private void SetupDocument(int pageCount, AccessTier accessTier, string driveFileId = "drive-file-default")
     {
         _documentRepository
             .Setup(r => r.GetByIdAsync(DocumentId, It.IsAny<CancellationToken>()))
@@ -160,7 +154,7 @@ public sealed class PreviewPageLimitTests
             {
                 Id = DocumentId,
                 Title = "Sample Document",
-                FilePath = driveFileId is null ? "documents/sample.pdf" : string.Empty,
+                FilePath = string.Empty,
                 DriveFileId = driveFileId,
                 OriginalFileName = "sample.pdf",
                 MimeType = "application/pdf",

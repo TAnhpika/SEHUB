@@ -15,7 +15,6 @@ public sealed class DocumentService : IDocumentService
 
     private readonly IDocumentRepository _documentRepository;
     private readonly IDocumentAccessLogRepository _accessLogRepository;
-    private readonly IFileStorageService _fileStorage;
     private readonly ICloudFileStorageService _cloudStorage;
     private readonly IDocumentAccessService _accessService;
     private readonly ICurrentUserService _currentUser;
@@ -27,7 +26,6 @@ public sealed class DocumentService : IDocumentService
     public DocumentService(
         IDocumentRepository documentRepository,
         IDocumentAccessLogRepository accessLogRepository,
-        IFileStorageService fileStorage,
         ICloudFileStorageService cloudStorage,
         IDocumentAccessService accessService,
         ICurrentUserService currentUser,
@@ -38,7 +36,6 @@ public sealed class DocumentService : IDocumentService
     {
         _documentRepository = documentRepository;
         _accessLogRepository = accessLogRepository;
-        _fileStorage = fileStorage;
         _cloudStorage = cloudStorage;
         _accessService = accessService;
         _currentUser = currentUser;
@@ -100,12 +97,7 @@ public sealed class DocumentService : IDocumentService
         _accessService.EnsureCanPreview(document, page);
         var decision = _accessService.Evaluate(document);
 
-        var contentUrl = DocumentFileAccess.UsesDrive(document)
-            ? BuildContentApiUrl(document.Id, page)
-            : await _fileStorage.GetSignedUrlAsync(
-                $"{document.FilePath}#page={page}",
-                TimeSpan.FromMinutes(15),
-                cancellationToken);
+        var contentUrl = BuildContentApiUrl(document.Id, page);
 
         await LogAccessAsync(document.Id, "Preview", cancellationToken);
 
@@ -127,12 +119,7 @@ public sealed class DocumentService : IDocumentService
         _accessService.EnsureCanDownload(document);
         await LogAccessAsync(document.Id, "Download", cancellationToken);
 
-        if (DocumentFileAccess.UsesDrive(document))
-        {
-            return BuildContentApiUrl(document.Id, page: null);
-        }
-
-        return await _fileStorage.GetSignedUrlAsync(document.FilePath, TimeSpan.FromMinutes(30), cancellationToken);
+        return BuildContentApiUrl(document.Id, page: null);
     }
 
     public async Task<DocumentContentResult> GetContentAsync(Guid id, int? page, CancellationToken cancellationToken = default)
@@ -152,7 +139,7 @@ public sealed class DocumentService : IDocumentService
             await LogAccessAsync(document.Id, "Content", cancellationToken);
         }
 
-        var stream = await DocumentFileAccess.OpenReadAsync(document, _fileStorage, _cloudStorage, cancellationToken);
+        var stream = await DocumentFileAccess.OpenReadAsync(document, _cloudStorage, cancellationToken);
         return new DocumentContentResult
         {
             Stream = stream,

@@ -2,6 +2,7 @@
 
 import * as adminApi from "@/api/adminApi";
 import { mapAdminReportListItem } from "@/api/adminMapper";
+import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 import { addBannedUserFromReport } from "@/features/admin/moderation/adminBannedData";
 import { syncUserBanStatus } from "@/features/admin/users/adminUserStore";
 import { isValidGuid } from "@/features/feed/postUtils";
@@ -206,17 +207,35 @@ export function banReportedUser(id, durationLabel) {
   return resolved;
 }
 
+export async function fetchAdminReportsPage(page = 1, { pageSize = ADMIN_API_PAGE_SIZE, status } = {}) {
+  const params = { page, pageSize };
+  if (status) {
+    params.status = status;
+  }
+
+  const pageResult = await adminApi.listReports(params);
+  const items = (pageResult.items ?? [])
+    .map(mapAdminReportListItem)
+    .sort((a, b) =>
+      String(b.createdAtIso ?? b.createdAt).localeCompare(String(a.createdAtIso ?? a.createdAt)),
+    );
+
+  const totalCount = pageResult.totalCount ?? items.length;
+  return {
+    items,
+    totalCount,
+    page,
+    hasMore: page * pageSize < totalCount,
+  };
+}
+
 export async function loadAdminReports() {
   if (USE_MOCK) {
     return getAdminReports();
   }
 
-  const page = await adminApi.listReports({ pageSize: 100 });
-  return (page.items ?? [])
-    .map(mapAdminReportListItem)
-    .sort((a, b) =>
-      String(b.createdAtIso ?? b.createdAt).localeCompare(String(a.createdAtIso ?? a.createdAt)),
-    );
+  const { items } = await fetchAdminReportsPage(1);
+  return items;
 }
 
 export async function loadAdminReportById(id) {

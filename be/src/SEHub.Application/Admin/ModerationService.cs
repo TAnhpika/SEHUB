@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
@@ -18,6 +19,8 @@ public sealed class ModerationService : IModerationService
 {
     private static readonly int[] AllowedBanDurations = [1, 7, 30];
     private const string DefaultWarningReason = "Vi phạm quy định cộng đồng SEHUB.";
+    private const string ModerationStatsCacheKey = "moderation:stats";
+    private static readonly TimeSpan ModerationStatsCacheDuration = TimeSpan.FromSeconds(60);
 
     private readonly IPostReportRepository _reportRepository;
     private readonly IPostRepository _postRepository;
@@ -32,6 +35,7 @@ public sealed class ModerationService : IModerationService
     private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMemoryCache _cache;
 
     public ModerationService(
         IPostReportRepository reportRepository,
@@ -46,7 +50,8 @@ public sealed class ModerationService : IModerationService
         IUserActivityService userActivityService,
         IWorkflowNotificationService workflowNotifications,
         ICurrentUserService currentUser,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IMemoryCache cache)
     {
         _reportRepository = reportRepository;
         _postRepository = postRepository;
@@ -61,6 +66,7 @@ public sealed class ModerationService : IModerationService
         _workflowNotifications = workflowNotifications;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _cache = cache;
     }
 
     public async Task<PagedResult<ReportDto>> GetReportsAsync(int page, int pageSize, string? status, CancellationToken cancellationToken = default)
@@ -72,12 +78,7 @@ public sealed class ModerationService : IModerationService
         }
 
         var (items, total) = await _reportRepository.GetPagedAsync(page, pageSize, statusFilter, cancellationToken);
-        var dtos = new List<ReportDto>();
-
-        foreach (var report in items)
-        {
-            dtos.Add(await MapReportAsync(report, cancellationToken));
-        }
+        var dtos = await MapReportsAsync(items, cancellationToken);
 
         return new PagedResult<ReportDto>
         {
@@ -122,6 +123,7 @@ public sealed class ModerationService : IModerationService
 
         await _reportRepository.UpdateAsync(report, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        InvalidateModerationStatsCache();
 
         return await MapReportAsync(report, cancellationToken);
     }
@@ -160,6 +162,11 @@ public sealed class ModerationService : IModerationService
 
     public async Task<ModerationStatsDto> GetStatsAsync(CancellationToken cancellationToken = default)
     {
+        if (_cache.TryGetValue(ModerationStatsCacheKey, out ModerationStatsDto? cached) && cached is not null)
+        {
+            return cached;
+        }
+
         var pendingPosts = await _postRepository.CountByStatusAsync(PostStatus.Pending, cancellationToken);
         var (_, pendingReports) = await _reportRepository.GetPagedAsync(1, 1, ReportStatus.Pending, cancellationToken);
         var pendingSubmissions = await _submissionRepository.CountByStatusAsync(
@@ -168,7 +175,7 @@ public sealed class ModerationService : IModerationService
         var activeBans = await _banRepository.CountActiveBansAsync(cancellationToken);
         var violatingAccounts = await _banRepository.CountDistinctViolatingUsersAsync(cancellationToken);
 
-        return new ModerationStatsDto
+        var stats = new ModerationStatsDto
         {
             PendingPosts = pendingPosts,
             PendingReports = pendingReports,
@@ -176,18 +183,16 @@ public sealed class ModerationService : IModerationService
             ActiveBans = activeBans,
             ViolatingAccounts = violatingAccounts
         };
+
+        _cache.Set(ModerationStatsCacheKey, stats, ModerationStatsCacheDuration);
+        return stats;
     }
 
     public async Task<PagedResult<ModerationPostListItemDto>> GetPostsAsync(
         ModerationPostQueryParams query, CancellationToken cancellationToken = default)
     {
         var (items, total) = await _postRepository.GetModerationPagedAsync(query, cancellationToken);
-        var dtos = new List<ModerationPostListItemDto>();
-
-        foreach (var post in items)
-        {
-            dtos.Add(await MapModerationListItemAsync(post, cancellationToken));
-        }
+        var dtos = await MapModerationListItemsAsync(items, cancellationToken);
 
         return new PagedResult<ModerationPostListItemDto>
         {
@@ -467,14 +472,21 @@ public sealed class ModerationService : IModerationService
         }
 
         var (items, total) = await _submissionRepository.GetPagedAsync(page, pageSize, statusFilter, cancellationToken);
-        var dtos = new List<PracticeSubmissionListItemDto>();
+        var userIds = items.Select(i => i.UserId).Distinct().ToList();
+        var examIds = items.Select(i => i.ExamId).Distinct().ToList();
 
-        foreach (var item in items)
+        var users = await _userRepository.GetByIdsAsync(userIds, cancellationToken);
+        var exams = await _examRepository.GetByIdsAsync(examIds, cancellationToken);
+
+        var usersById = (users ?? []).ToDictionary(u => u.Id);
+        var examsById = (exams ?? []).ToDictionary(e => e.Id);
+
+        var dtos = items.Select(item =>
         {
-            var user = await _userRepository.GetByIdAsync(item.UserId, cancellationToken);
-            var exam = await _examRepository.GetByIdAsync(item.ExamId, cancellationToken: cancellationToken);
+            usersById.TryGetValue(item.UserId, out var user);
+            examsById.TryGetValue(item.ExamId, out var exam);
 
-            dtos.Add(new PracticeSubmissionListItemDto
+            return new PracticeSubmissionListItemDto
             {
                 Id = item.Id,
                 ExamId = item.ExamId,
@@ -491,8 +503,8 @@ public sealed class ModerationService : IModerationService
                 },
                 ExamTitle = exam?.Title,
                 ExamCode = exam?.Code
-            });
-        }
+            };
+        }).ToList();
 
         return new PagedResult<PracticeSubmissionListItemDto>
         {
@@ -505,60 +517,130 @@ public sealed class ModerationService : IModerationService
 
     private async Task<ReportDto> MapReportAsync(PostReport report, CancellationToken cancellationToken)
     {
-        var post = await _postRepository.GetByIdIncludingDeletedAsync(report.PostId, cancellationToken);
-        var reporter = await _userRepository.GetByIdAsync(report.ReporterId, cancellationToken);
-        var author = post is null ? null : await _userRepository.GetByIdAsync(post.AuthorId, cancellationToken);
+        var items = await MapReportsAsync([report], cancellationToken);
+        return items[0];
+    }
 
-        return new ReportDto
+    private async Task<IReadOnlyList<ReportDto>> MapReportsAsync(
+        IReadOnlyList<PostReport> reports,
+        CancellationToken cancellationToken)
+    {
+        if (reports.Count == 0)
         {
-            Id = report.Id,
-            PostId = report.PostId,
-            PostTitle = post?.Title ?? "Unknown",
-            PostExcerpt = post is null ? null : BuildExcerpt(post.Content),
-            Reason = report.Reason,
-            Status = report.Status.ToString(),
-            Reporter = new ReportUserSummaryDto
+            return [];
+        }
+
+        var postIds = reports.Select(r => r.PostId).Distinct().ToList();
+        var reporterIds = reports.Select(r => r.ReporterId).Distinct().ToList();
+
+        var posts = await _postRepository.GetByIdsIncludingDeletedAsync(postIds, cancellationToken);
+        var postsById = posts.ToDictionary(p => p.Id);
+
+        var authorIds = posts.Select(p => p.AuthorId).Distinct().ToList();
+        var userIds = reporterIds.Concat(authorIds).Distinct().ToList();
+        var usersById = ((await _userRepository.GetByIdsAsync(userIds, cancellationToken)) ?? [])
+            .ToDictionary(u => u.Id);
+
+        var dtos = new List<ReportDto>(reports.Count);
+        foreach (var report in reports)
+        {
+            postsById.TryGetValue(report.PostId, out var post);
+            usersById.TryGetValue(report.ReporterId, out var reporter);
+            Models.UserAccount? author = null;
+            if (post is not null)
             {
-                Id = report.ReporterId,
-                Username = reporter?.Username ?? "unknown",
-                DisplayName = reporter?.DisplayName ?? "Unknown"
-            },
-            ReportedUser = author is null
-                ? null
-                : new ReportUserSummaryDto
+                usersById.TryGetValue(post.AuthorId, out author);
+            }
+
+            dtos.Add(new ReportDto
+            {
+                Id = report.Id,
+                PostId = report.PostId,
+                PostTitle = post?.Title ?? "Unknown",
+                PostExcerpt = post is null ? null : BuildExcerpt(post.Content),
+                Reason = report.Reason,
+                Status = report.Status.ToString(),
+                Reporter = new ReportUserSummaryDto
                 {
-                    Id = author.Id,
-                    Username = author.Username,
-                    DisplayName = author.DisplayName
+                    Id = report.ReporterId,
+                    Username = reporter?.Username ?? "unknown",
+                    DisplayName = reporter?.DisplayName ?? "Unknown"
                 },
-            CreatedAt = report.CreatedAt,
-            ResolvedAt = report.Status != ReportStatus.Pending ? report.UpdatedAt : null
-        };
+                ReportedUser = author is null
+                    ? null
+                    : new ReportUserSummaryDto
+                    {
+                        Id = author.Id,
+                        Username = author.Username,
+                        DisplayName = author.DisplayName
+                    },
+                CreatedAt = report.CreatedAt,
+                ResolvedAt = report.Status != ReportStatus.Pending ? report.UpdatedAt : null
+            });
+        }
+
+        return dtos;
     }
 
     private async Task<ModerationPostListItemDto> MapModerationListItemAsync(Post post, CancellationToken cancellationToken)
     {
-        var author = await BuildModerationAuthorAsync(post.AuthorId, cancellationToken);
-        var moderator = post.ModeratedById is Guid moderatorId
-            ? await _userRepository.GetByIdAsync(moderatorId, cancellationToken)
-            : null;
-        var profile = await _profileRepository.GetByUserIdAsync(post.AuthorId, cancellationToken);
+        var items = await MapModerationListItemsAsync([post], cancellationToken);
+        return items[0];
+    }
 
-        return new ModerationPostListItemDto
+    private async Task<IReadOnlyList<ModerationPostListItemDto>> MapModerationListItemsAsync(
+        IReadOnlyList<Post> posts,
+        CancellationToken cancellationToken)
+    {
+        if (posts.Count == 0)
         {
-            Id = post.Id,
-            Title = post.Title,
-            Excerpt = BuildExcerpt(post.Content),
-            Status = post.Status.ToString(),
-            Author = author,
-            Tags = ParseTags(post.Tags),
-            Major = profile?.Major,
-            Semester = profile?.Semester,
-            CreatedAt = post.CreatedAt,
-            ModeratedAt = post.ModeratedAt,
-            ModerationNote = post.ModerationNote,
-            ModeratorUsername = moderator?.Username
-        };
+            return [];
+        }
+
+        var authorIds = posts.Select(p => p.AuthorId).Distinct().ToList();
+        var moderatorIds = posts
+            .Where(p => p.ModeratedById is Guid)
+            .Select(p => p.ModeratedById!.Value)
+            .Distinct()
+            .ToList();
+        var userIds = authorIds.Concat(moderatorIds).Distinct().ToList();
+
+        var users = await _userRepository.GetByIdsAsync(userIds, cancellationToken);
+        var profiles = await _profileRepository.GetByUserIdsAsync(authorIds, cancellationToken);
+
+        var usersById = (users ?? []).ToDictionary(u => u.Id);
+        var profilesByUserId = (profiles ?? []).ToDictionary(p => p.UserId);
+
+        var dtos = new List<ModerationPostListItemDto>(posts.Count);
+        foreach (var post in posts)
+        {
+            usersById.TryGetValue(post.AuthorId, out var authorUser);
+            Models.UserAccount? moderator = null;
+            if (post.ModeratedById is Guid moderatorId)
+            {
+                usersById.TryGetValue(moderatorId, out moderator);
+            }
+
+            profilesByUserId.TryGetValue(post.AuthorId, out var profile);
+
+            dtos.Add(new ModerationPostListItemDto
+            {
+                Id = post.Id,
+                Title = post.Title,
+                Excerpt = BuildExcerpt(post.Content),
+                Status = post.Status.ToString(),
+                Author = BuildModerationAuthor(post.AuthorId, authorUser),
+                Tags = ParseTags(post.Tags),
+                Major = profile?.Major,
+                Semester = profile?.Semester,
+                CreatedAt = post.CreatedAt,
+                ModeratedAt = post.ModeratedAt,
+                ModerationNote = post.ModerationNote,
+                ModeratorUsername = moderator?.Username
+            });
+        }
+
+        return dtos;
     }
 
     private async Task<ModerationPostDetailDto> MapModerationDetailAsync(Post post, CancellationToken cancellationToken)
@@ -685,17 +767,15 @@ public sealed class ModerationService : IModerationService
         return "normal";
     }
 
-    private async Task<ModerationAuthorDto> BuildModerationAuthorAsync(Guid authorId, CancellationToken cancellationToken)
-    {
-        var user = await _userRepository.GetByIdAsync(authorId, cancellationToken);
-
-        return new ModerationAuthorDto
+    private static ModerationAuthorDto BuildModerationAuthor(Guid authorId, Models.UserAccount? user) =>
+        new()
         {
             Id = authorId,
             Username = user?.Username ?? "unknown",
             DisplayName = user?.DisplayName ?? "Unknown"
         };
-    }
+
+    private void InvalidateModerationStatsCache() => _cache.Remove(ModerationStatsCacheKey);
 
     private static string BuildExcerpt(string content) =>
         content.Length <= 200 ? content : content[..200] + "...";

@@ -34,64 +34,32 @@ public static class DocumentFileAccess
 
     public static async Task<Stream> OpenReadAsync(
         Document document,
-        IFileStorageService localStorage,
         ICloudFileStorageService cloudStorage,
         CancellationToken cancellationToken)
     {
-        if (UsesDrive(document))
+        if (!UsesDrive(document))
         {
-            try
-            {
-                var read = await cloudStorage.OpenReadAsync(document.DriveFileId!, cancellationToken);
-                return read.Stream;
-            }
-            catch (Exception ex) when (ex is not DomainException and not NotFoundException and not ForbiddenException)
-            {
-                throw new DomainException(ErrorCodes.StorageUploadFailed, ex);
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(document.FilePath))
-        {
-            throw new FileNotFoundException("Document file not found.");
-        }
-
-        return await localStorage.OpenReadAsync(document.FilePath, cancellationToken);
-    }
-
-    public static async Task DeleteStoredFileAsync(
-        Document document,
-        IFileStorageService localStorage,
-        ICloudFileStorageService cloudStorage,
-        CancellationToken cancellationToken)
-    {
-        if (UsesDrive(document))
-        {
-            try
-            {
-                await cloudStorage.DeleteAsync(document.DriveFileId!, cancellationToken);
-            }
-            catch
-            {
-                /* best effort */
-            }
-
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(document.FilePath))
-        {
-            return;
+            throw new DomainException(
+                "Document is not stored on Google Drive. Run admin migrate-local-to-drive first.");
         }
 
         try
         {
-            await localStorage.DeleteAsync(document.FilePath, cancellationToken);
+            var read = await cloudStorage.OpenReadAsync(document.DriveFileId!, cancellationToken);
+            return read.Stream;
         }
-        catch (FileNotFoundException)
+        catch (Exception ex) when (ex is not DomainException and not NotFoundException and not ForbiddenException)
         {
-            /* already removed */
+            throw new DomainException(ErrorCodes.StorageUploadFailed, ex);
         }
+    }
+
+    public static async Task DeleteStoredFileAsync(
+        Document document,
+        ICloudFileStorageService cloudStorage,
+        CancellationToken cancellationToken)
+    {
+        await CloudFileCleanup.TryDeleteAsync(cloudStorage, document.DriveFileId, cancellationToken);
     }
 
     public static string ResolveDownloadFileName(Document document)

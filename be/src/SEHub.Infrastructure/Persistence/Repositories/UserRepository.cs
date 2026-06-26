@@ -23,6 +23,32 @@ public class UserRepository : IUserRepository
     public async Task<UserAccount?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         await MapUserAsync(await _userManager.FindByIdAsync(id.ToString()), cancellationToken);
 
+    public async Task<IReadOnlyList<UserAccount>> GetByIdsAsync(
+        IReadOnlyList<Guid> ids,
+        CancellationToken cancellationToken = default)
+    {
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+
+        var users = await _context.Users
+            .Where(u => ids.Contains(u.Id))
+            .ToListAsync(cancellationToken);
+
+        var accounts = new List<UserAccount>(users.Count);
+        foreach (var user in users)
+        {
+            var account = await MapUserAsync(user, cancellationToken);
+            if (account is not null)
+            {
+                accounts.Add(account);
+            }
+        }
+
+        return accounts;
+    }
+
     public async Task<UserAccount?> GetByEmailAsync(string email, CancellationToken cancellationToken = default) =>
         await MapUserAsync(await _userManager.FindByEmailAsync(email), cancellationToken);
 

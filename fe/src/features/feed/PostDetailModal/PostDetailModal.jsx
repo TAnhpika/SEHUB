@@ -32,6 +32,7 @@ function PostDetailModal({
   open,
   onClose,
   onUpdate,
+  onPostChange,
   onViewed,
   onDelete,
   initialEditMode = false,
@@ -55,7 +56,16 @@ function PostDetailModal({
   const [submittingComment, setSubmittingComment] = useState(false);
   const [replyTarget, setReplyTarget] = useState(null);
   const [savingPost, setSavingPost] = useState(false);
+  const onPostChangeRef = useRef(onPostChange);
   const commentsRef = useRef(null);
+
+  useEffect(() => {
+    onPostChangeRef.current = onPostChange;
+  }, [onPostChange]);
+
+  function emitPostChange(patch) {
+    onPostChangeRef.current?.(patch);
+  }
 
   const handleImageUpload = useCallback(async (file) => {
     const result = await postsApi.uploadPostContentImage(file);
@@ -113,6 +123,13 @@ function PostDetailModal({
         setEditBody(detail.body ?? detail.excerpt);
         setLikeCount(detail.likes ?? 0);
         setViewCount(detail.views ?? 0);
+        emitPostChange({
+          id: post.id,
+          comments: detail.comments ?? 0,
+          commentsList: detail.commentsList ?? [],
+          likes: detail.likes ?? 0,
+          views: detail.views ?? 0,
+        });
         onViewed?.(detail);
       } catch {
         // Giữ dữ liệu từ danh sách nếu không tải được chi tiết.
@@ -123,7 +140,7 @@ function PostDetailModal({
     return () => {
       cancelled = true;
     };
-  }, [post, open, initialEditMode]);
+  }, [post?.id, open, initialEditMode]);
 
   useEffect(() => {
     if (!open || !focusCommentsOnOpen) {
@@ -158,8 +175,15 @@ function PostDetailModal({
     setSubmittingComment(true);
     try {
       const newComment = await submitComment(post.id, content, replyTarget?.id ?? null);
-      setComments((prev) => [...prev, newComment]);
-      setCommentCount((prev) => prev + 1);
+      const nextComments = [...comments, newComment];
+      const nextCount = commentCount + 1;
+      setComments(nextComments);
+      setCommentCount(nextCount);
+      emitPostChange({
+        id: post.id,
+        comments: nextCount,
+        commentsList: nextComments,
+      });
       setDraft("");
       setReplyTarget(null);
     } catch (err) {
@@ -270,8 +294,15 @@ function PostDetailModal({
 
     try {
       await removeComment(post.id, commentId);
-      setComments((prev) => prev.filter((item) => item.id !== commentId));
-      setCommentCount((prev) => Math.max(0, prev - 1));
+      const nextComments = comments.filter((item) => item.id !== commentId);
+      const nextCount = Math.max(0, commentCount - 1);
+      setComments(nextComments);
+      setCommentCount(nextCount);
+      emitPostChange({
+        id: post.id,
+        comments: nextCount,
+        commentsList: nextComments,
+      });
       if (editingCommentId === commentId) {
         setEditingCommentId(null);
         setEditCommentDraft("");

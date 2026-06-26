@@ -27,5 +27,6 @@ public interface IMessagingService
         string? caption,
         CancellationToken cancellationToken = default);
     Task MarkReadAsync(Guid conversationId, CancellationToken cancellationToken = default);
+    Task DeleteMessageAsync(Guid conversationId, Guid messageId, CancellationToken cancellationToken = default);
     Task<UnreadCountDto> GetUnreadCountAsync(CancellationToken cancellationToken = default);
 }

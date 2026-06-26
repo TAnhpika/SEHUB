@@ -195,7 +195,8 @@ public sealed class AiExamChatApplicationService : IAiExamChatApplicationService
 
         return
             "Bạn là trợ giảng SEHub. Trả lời ngắn gọn, rõ ràng bằng tiếng Việt về câu hỏi trắc nghiệm bên dưới. " +
-            "Không bịa thông tin ngoài ngữ cảnh câu hỏi.\n\n" +
+            "Không bịa thông tin ngoài ngữ cảnh câu hỏi. " +
+            AiPromptRules.PlainTextOnly + "\n\n" +
             $"Câu hỏi:\n{question.Content}\n\nLựa chọn:\n{optionsText}";
     }
 

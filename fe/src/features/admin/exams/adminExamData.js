@@ -12,6 +12,7 @@ import {
   mapPracticeExamFormToCreateRequest,
 } from "@/api/adminMapper";
 import { addAdminDocumentFromApprovedExam } from "@/features/admin/documents/adminDocumentData";
+import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 import { getSubmissionsByCourseCode } from "@/features/exams/practiceExamSubmissions";
 import { isValidGuid } from "@/features/feed/postUtils";
 import { enrichRevisionExamEntries } from "@/utils/examDisplay";
@@ -293,7 +294,7 @@ export async function loadAdminPendingExams() {
     return getAdminPendingExams();
   }
 
-  const page = await adminApi.listExams({ status: "PendingApproval", pageSize: 100 });
+  const page = await adminApi.listExams({ status: "PendingApproval", pageSize: ADMIN_API_PAGE_SIZE });
   apiPendingCache = enrichRevisionExamEntries(
     (page.items ?? []).map((dto) => mapPendingExamListItem(dto)),
   );
@@ -806,7 +807,7 @@ export async function loadAdminExams() {
   }
 
   try {
-    const page = await adminApi.listExams({ pageSize: 100 });
+    const page = await adminApi.listExams({ pageSize: ADMIN_API_PAGE_SIZE });
     const apiExams = (page.items ?? []).map(mapAdminExamListItem);
     examsStore = apiExams.map((exam) => ({ ...exam }));
     return apiExams;

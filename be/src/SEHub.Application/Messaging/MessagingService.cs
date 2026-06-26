@@ -276,6 +276,7 @@ public sealed class MessagingService : IMessagingService
             Content = trimmedCaption,
             MessageType = messageType,
             AttachmentPath = upload.Url,
+            AttachmentPublicId = upload.PublicId,
             AttachmentFileName = safeFileName,
             AttachmentMimeType = normalizedMimeType,
             AttachmentSizeBytes = fileSizeBytes,
@@ -349,6 +350,36 @@ public sealed class MessagingService : IMessagingService
 
         var unread = await _conversationRepository.GetTotalUnreadCountAsync(userId, cancellationToken);
         await _chatNotifier.NotifyUnreadCountUpdatedAsync(userId, unread, cancellationToken);
+    }
+
+    public async Task DeleteMessageAsync(Guid conversationId, Guid messageId, CancellationToken cancellationToken = default)
+    {
+        var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+        await EnsureParticipantAsync(conversationId, userId, cancellationToken);
+
+        var message = await _messageRepository.GetByIdAsync(messageId, cancellationToken)
+            ?? throw new NotFoundException("Message", messageId);
+
+        if (message.ConversationId != conversationId)
+        {
+            throw new NotFoundException("Message", messageId);
+        }
+
+        if (message.SenderId != userId && !_currentUser.IsModeratorOrAdmin)
+        {
+            throw new ForbiddenException("You can only delete your own messages.");
+        }
+
+        var isRawAttachment = message.MessageType == MessageType.File;
+        await CdnAssetCleanup.TryDeleteAsync(
+            _cdnStorage,
+            message.AttachmentPublicId,
+            message.AttachmentPath,
+            isRawAttachment,
+            cancellationToken);
+
+        await _messageRepository.DeleteAsync(message, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<UnreadCountDto> GetUnreadCountAsync(CancellationToken cancellationToken = default)

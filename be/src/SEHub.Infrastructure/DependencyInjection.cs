@@ -35,7 +35,7 @@ public static class DependencyInjection
 
         services.AddDbContext<SEHubDbContext>((sp, options) =>
         {
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"));
+            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
             options.AddInterceptors(
                 sp.GetRequiredService<SoftDeleteInterceptor>(),
                 sp.GetRequiredService<PaymentAuditLogAppendOnlyInterceptor>());
@@ -152,7 +152,7 @@ public static class DependencyInjection
         {
             services.AddOpenRouterClient();
             services.AddScoped<IAiProvider, OpenRouterAiProvider>();
-            services.AddScoped<IAiExplanationService, GeminiAiExplanationService>();
+            services.AddScoped<IAiExplanationService, OpenRouterAiExplanationService>();
         }
         else
         {

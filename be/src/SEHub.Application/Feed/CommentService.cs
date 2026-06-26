@@ -1,6 +1,7 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Gamification;
+using SEHub.Application.Models;
 using SEHub.Application.Notifications;
 using SEHub.Application.Profiles;
 using SEHub.Contracts.Common;
@@ -54,13 +55,7 @@ public sealed class CommentService : ICommentService
 
         var comments = await _commentRepository.GetByPostIdAsync(postId, page, pageSize, cancellationToken);
         var total = await _commentRepository.CountByPostIdAsync(postId, cancellationToken);
-        var topLevel = comments.Where(c => c.ParentCommentId is null).ToList();
-        var dtos = new List<CommentDto>();
-
-        foreach (var comment in topLevel)
-        {
-            dtos.Add(await MapCommentAsync(comment, comments, cancellationToken));
-        }
+        var dtos = await MapCommentsTreeAsync(comments, cancellationToken);
 
         return new PagedResult<CommentDto>
         {
@@ -130,7 +125,7 @@ public sealed class CommentService : ICommentService
             userId,
             cancellationToken);
 
-        return await MapCommentAsync(comment, [comment], cancellationToken);
+        return (await MapCommentsTreeAsync([comment], cancellationToken))[0];
     }
 
     private async Task<IReadOnlyList<Guid>> ResolveAndValidateMentionsAsync(
@@ -196,21 +191,79 @@ public sealed class CommentService : ICommentService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task<CommentDto> MapCommentAsync(Comment comment, IReadOnlyList<Comment> all, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<CommentDto>> MapCommentsTreeAsync(
+        IReadOnlyList<Comment> comments,
+        CancellationToken cancellationToken)
     {
-        var author = await BuildAuthorAsync(comment.AuthorId, cancellationToken);
-        var replies = all
-            .Where(c => c.ParentCommentId == comment.Id)
-            .Select(async c => await MapCommentAsync(c, all, cancellationToken));
-
-        return new CommentDto
+        if (comments.Count == 0)
         {
-            Id = comment.Id,
-            Content = comment.Content,
-            Author = author,
-            ParentCommentId = comment.ParentCommentId,
-            CreatedAt = comment.CreatedAt,
-            Replies = await Task.WhenAll(replies)
+            return [];
+        }
+
+        var authorIds = comments.Select(c => c.AuthorId).Distinct().ToList();
+        var authors = await _userRepository.GetByIdsAsync(authorIds, cancellationToken);
+        var profiles = await _profileRepository.GetByUserIdsAsync(authorIds, cancellationToken);
+
+        var authorsById = authors.ToDictionary(a => a.Id);
+        var profilesByUserId = profiles.ToDictionary(p => p.UserId);
+
+        var childrenByParentId = new Dictionary<Guid, List<Comment>>();
+        var roots = new List<Comment>();
+
+        foreach (var comment in comments)
+        {
+            if (comment.ParentCommentId is Guid parentId)
+            {
+                if (!childrenByParentId.TryGetValue(parentId, out var children))
+                {
+                    children = [];
+                    childrenByParentId[parentId] = children;
+                }
+
+                children.Add(comment);
+            }
+            else
+            {
+                roots.Add(comment);
+            }
+        }
+
+        CommentDto MapNode(Comment comment)
+        {
+            IReadOnlyList<CommentDto>? replies = null;
+            if (childrenByParentId.TryGetValue(comment.Id, out var children) && children.Count > 0)
+            {
+                replies = children.Select(MapNode).ToList();
+            }
+
+            return new CommentDto
+            {
+                Id = comment.Id,
+                Content = comment.Content,
+                Author = BuildAuthorSummary(comment.AuthorId, authorsById, profilesByUserId),
+                ParentCommentId = comment.ParentCommentId,
+                CreatedAt = comment.CreatedAt,
+                Replies = replies
+            };
+        }
+
+        return roots.Select(MapNode).ToList();
+    }
+
+    private static AuthorSummaryDto BuildAuthorSummary(
+        Guid authorId,
+        IReadOnlyDictionary<Guid, UserAccount> authorsById,
+        IReadOnlyDictionary<Guid, UserProfile> profilesByUserId)
+    {
+        authorsById.TryGetValue(authorId, out var user);
+        profilesByUserId.TryGetValue(authorId, out var profile);
+
+        return new AuthorSummaryDto
+        {
+            Id = authorId,
+            Username = user?.Username ?? "unknown",
+            DisplayName = user?.DisplayName ?? "Unknown",
+            AvatarUrl = profile?.AvatarUrl
         };
     }
 

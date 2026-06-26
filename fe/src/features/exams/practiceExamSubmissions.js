@@ -2,6 +2,7 @@
 
 import * as adminApi from "@/api/adminApi";
 import * as examsApi from "@/api/examsApi";
+import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 import * as practiceSubmissionsApi from "@/api/practiceSubmissionsApi";
 import {
   buildReviewerComment,
@@ -468,7 +469,7 @@ export async function loadAllPracticeSubmissions() {
   }
 
   try {
-    const page = await adminApi.listModerationPracticeSubmissions({ pageSize: 100 });
+    const page = await adminApi.listModerationPracticeSubmissions({ pageSize: ADMIN_API_PAGE_SIZE });
     const submissions = (page.items ?? []).map((item) => mapModerationPracticeSubmission(item));
     if (submissions.length > 0) {
       return submissions.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
@@ -478,13 +479,13 @@ export async function loadAllPracticeSubmissions() {
   }
 
   try {
-    const examsResult = await examsApi.listExams({ type: "Practice", pageSize: 100 });
+    const examsResult = await examsApi.listExams({ type: "Practice", pageSize: ADMIN_API_PAGE_SIZE });
     const submissions = [];
 
     for (const exam of examsResult.items ?? []) {
       try {
         const page = await practiceSubmissionsApi.listPracticeSubmissions(exam.id, {
-          pageSize: 100,
+          pageSize: ADMIN_API_PAGE_SIZE,
         });
 
         for (const item of page.items ?? []) {

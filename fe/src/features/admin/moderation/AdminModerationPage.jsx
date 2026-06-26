@@ -21,6 +21,7 @@ import {
   deleteReportedPost,
   dismissReport,
   getAdminReports,
+  fetchAdminReportsPage,
   loadAdminReports,
   resolveReportBanViaApi,
   resolveReportDeleteViaApi,
@@ -41,6 +42,9 @@ function AdminModerationPage() {
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [reports, setReports] = useState(getAdminReports);
+  const [hasMoreReports, setHasMoreReports] = useState(false);
+  const [loadingMoreReports, setLoadingMoreReports] = useState(false);
+  const [apiReportPage, setApiReportPage] = useState(1);
   const [tab, setTab] = useState("pending");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
@@ -48,8 +52,12 @@ function AdminModerationPage() {
 
   useEffect(() => {
     let cancelled = false;
-    loadAdminReports().then((items) => {
-      if (!cancelled) setReports(items);
+    fetchAdminReportsPage(1).then(({ items, hasMore }) => {
+      if (!cancelled) {
+        setReports(items);
+        setHasMoreReports(hasMore);
+        setApiReportPage(1);
+      }
     });
     return () => {
       cancelled = true;
@@ -115,6 +123,20 @@ function AdminModerationPage() {
     );
   }
 
+  async function handleLoadMoreReports() {
+    if (loadingMoreReports || !hasMoreReports) return;
+    setLoadingMoreReports(true);
+    try {
+      const nextPage = apiReportPage + 1;
+      const { items, hasMore } = await fetchAdminReportsPage(nextPage);
+      setReports((prev) => [...prev, ...items]);
+      setHasMoreReports(hasMore);
+      setApiReportPage(nextPage);
+    } finally {
+      setLoadingMoreReports(false);
+    }
+  }
+
   async function handleResolve(mockFn, toastMsg, apiResolveFn) {
     if (!selected) return;
     let result = null;
@@ -129,6 +151,8 @@ function AdminModerationPage() {
     if (!result) return;
     const next = await loadAdminReports();
     setReports(next);
+    setHasMoreReports(false);
+    setApiReportPage(1);
     setLastResolved(result);
     showToast(toastMsg);
     if (result.status === "resolved") {
@@ -321,6 +345,13 @@ function AdminModerationPage() {
               ariaLabel="Phân trang hàng chờ báo cáo"
               compact
             />
+            {hasMoreReports ? (
+              <div className={modStyles.loadMoreRow}>
+                <Button look="outline" disabled={loadingMoreReports} onClick={handleLoadMoreReports}>
+                  {loadingMoreReports ? "Đang tải…" : "Tải thêm báo cáo"}
+                </Button>
+              </div>
+            ) : null}
           </div>
 
           <div className={modStyles.detailCol}>

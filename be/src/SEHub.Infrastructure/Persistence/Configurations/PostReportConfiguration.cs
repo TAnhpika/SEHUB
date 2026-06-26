@@ -10,6 +10,7 @@ public class PostReportConfiguration : IEntityTypeConfiguration<PostReport>
     {
         builder.HasKey(r => r.Id);
         builder.HasIndex(r => r.Status);
+        builder.HasIndex(r => new { r.Status, r.CreatedAt });
         builder.Property(r => r.Reason).HasMaxLength(1000).IsRequired();
     }
 }

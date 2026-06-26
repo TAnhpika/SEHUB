@@ -40,6 +40,7 @@ public sealed class PostsController : ControllerBase
 
     [HttpGet("featured")]
     [AllowAnonymous]
+    [ResponseCache(Duration = 60, Location = ResponseCacheLocation.Any, NoStore = false)]
     public async Task<IActionResult> GetFeatured(CancellationToken cancellationToken)
     {
         var result = await _postService.GetFeaturedAsync(cancellationToken);

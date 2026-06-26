@@ -1,5 +1,6 @@
 import * as adminApi from "@/api/adminApi";
 import { mapAdminReportListItem } from "@/api/adminMapper";
+import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 import {
   resolveReportDeleteViaApi,
   resolveReportDismissViaApi,
@@ -236,17 +237,37 @@ export function getCommunityReportsMock() {
   return REPORTS_MOCK.map((report) => ({ ...report, category: "community" }));
 }
 
-export async function loadModeratorCommunityReports() {
+export async function loadModeratorCommunityReports(options = {}) {
   if (USE_MOCK) {
-    return getCommunityReportsMock();
+    return {
+      items: getCommunityReportsMock(),
+      totalCount: REPORTS_MOCK.length,
+      page: 1,
+      hasMore: false,
+    };
   }
 
-  const page = await adminApi.listReports({ pageSize: 100 });
-  const items = (page.items ?? [])
+  const { page = 1, pageSize = ADMIN_API_PAGE_SIZE, status } = options;
+  const params = { page, pageSize };
+  if (status && status !== "all") {
+    params.status = status === "pending" ? "Pending" : status === "resolved" ? "Resolved" : status;
+  }
+
+  const pageResult = await adminApi.listReports(params);
+  const items = (pageResult.items ?? [])
     .map(mapAdminReportListItem)
     .map(mapAdminReportToModeratorCommunityReport);
-  cachedPendingReportsCount = items.filter((report) => report.status === "pending").length;
-  return items;
+  const totalCount = pageResult.totalCount ?? items.length;
+  if (page === 1) {
+    cachedPendingReportsCount = items.filter((report) => report.status === "pending").length;
+  }
+
+  return {
+    items,
+    totalCount,
+    page,
+    hasMore: page * pageSize < totalCount,
+  };
 }
 
 export async function reloadModeratorCommunityReportsAfterResolve(id, action) {
@@ -264,7 +285,7 @@ export async function reloadModeratorCommunityReportsAfterResolve(id, action) {
   }
 
   const resolvedReport = mapAdminReportToModeratorCommunityReport(mapAdminReportListItem(dto));
-  const list = await loadModeratorCommunityReports();
+  const { items: list } = await loadModeratorCommunityReports();
   return mergeResolvedCommunityReport(list, resolvedReport);
 }
 
