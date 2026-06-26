@@ -278,6 +278,7 @@ public sealed class PostService : IPostService
         await _postImageService.DeleteImagesForPostAsync(id, cancellationToken);
         await _postRepository.SoftDeleteAsync(post, RequireUserId(), cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _gamificationService.PublishPostDeletedAsync(post.Id, post.AuthorId, cancellationToken);
     }
 
     public async Task<PostDetailDto> SetFeaturedAsync(Guid id, FeaturePostRequest request, CancellationToken cancellationToken = default)

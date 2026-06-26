@@ -91,7 +91,7 @@ public sealed class ModerationServiceTests
         post.Status.Should().Be(PostStatus.Published);
         result.Status.Should().Be(nameof(PostStatus.Published));
         _gamificationService.Verify(
-            g => g.AwardPostPublishedAsync(post.AuthorId, It.IsAny<CancellationToken>()),
+            g => g.AwardPostPublishedAsync(post.AuthorId, post.Id, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

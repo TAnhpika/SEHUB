@@ -11,5 +11,6 @@ public class LevelConfigConfiguration : IEntityTypeConfiguration<LevelConfig>
         builder.HasKey(l => l.Id);
         builder.HasIndex(l => l.MinPoints);
         builder.Property(l => l.Name).HasMaxLength(50).IsRequired();
+        builder.Property(l => l.SortOrder).HasDefaultValue(0);
     }
 }

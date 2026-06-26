@@ -10,7 +10,8 @@ using SEHub.Application.Abstractions;
 
 using SEHub.Application.Abstractions.Repositories;
 
-using SEHub.Application.Gamification;
+using SEHub.Application.Gamification.Abstractions;
+using SEHub.Application.Gamification.Events;
 using SEHub.Application.Premium;
 using SEHub.Application.Profiles;
 
@@ -60,8 +61,7 @@ public sealed class AuthService : IAuthService
 
     private readonly JwtSettings _jwtSettings;
 
-    private readonly IBadgeCheckService _badgeCheckService;
-    private readonly IUserActivityService _userActivityService;
+    private readonly IGamificationEventPublisher _gamificationPublisher;
     private readonly IProfileStatsService _profileStatsService;
     private readonly IPremiumService _premiumService;
     private readonly IAiTokenService _aiTokenService;
@@ -96,9 +96,7 @@ public sealed class AuthService : IAuthService
 
         IOptions<JwtSettings> jwtSettings,
 
-        IBadgeCheckService badgeCheckService,
-
-        IUserActivityService userActivityService,
+        IGamificationEventPublisher gamificationPublisher,
 
         IProfileStatsService profileStatsService,
 
@@ -136,9 +134,7 @@ public sealed class AuthService : IAuthService
 
         _jwtSettings = jwtSettings.Value;
 
-        _badgeCheckService = badgeCheckService;
-
-        _userActivityService = userActivityService;
+        _gamificationPublisher = gamificationPublisher;
 
         _profileStatsService = profileStatsService;
 
@@ -252,11 +248,7 @@ public sealed class AuthService : IAuthService
 
         await EnsureNotBannedAsync(user.Id, cancellationToken);
 
-        await _userActivityService.RecordActivityAsync(user.Id, cancellationToken);
-
-        await _badgeCheckService.EvaluateForTriggerAsync(user.Id, BadgeCheckService.TriggerStreakDays, cancellationToken);
-
-
+        await _gamificationPublisher.PublishAsync(new DailyLoginEvent(user.Id), cancellationToken);
 
         user = await _userRepository.GetByIdAsync(user.Id, cancellationToken) ?? user;
 
@@ -306,9 +298,7 @@ public sealed class AuthService : IAuthService
 
         await EnsureNotBannedAsync(user.Id, cancellationToken);
 
-        await _userActivityService.RecordActivityAsync(user.Id, cancellationToken);
-
-        await _badgeCheckService.EvaluateForTriggerAsync(user.Id, BadgeCheckService.TriggerStreakDays, cancellationToken);
+        await _gamificationPublisher.PublishAsync(new DailyLoginEvent(user.Id), cancellationToken);
 
 
 
@@ -671,6 +661,8 @@ public sealed class AuthService : IAuthService
 
             LevelName = authUser.LevelName,
 
+            EmailConfirmed = authUser.EmailConfirmed,
+
             Stats = await statsTask,
 
             Subscription = await subscriptionTask,
@@ -769,7 +761,9 @@ public sealed class AuthService : IAuthService
 
             Points = dto.Points,
 
-            LevelName = dto.LevelName
+            LevelName = dto.LevelName,
+
+            EmailConfirmed = user.EmailConfirmed
 
         };
 

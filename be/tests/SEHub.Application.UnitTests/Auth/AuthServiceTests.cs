@@ -6,7 +6,8 @@ using Moq;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Auth;
-using SEHub.Application.Gamification;
+using SEHub.Application.Gamification.Abstractions;
+using SEHub.Application.Gamification.Events;
 using SEHub.Application.Premium;
 using SEHub.Application.Profiles;
 using SEHub.Application.Models;
@@ -29,8 +30,7 @@ public sealed class AuthServiceTests
     private readonly Mock<IGoogleTokenValidator> _googleTokenValidator = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
-    private readonly Mock<IBadgeCheckService> _badgeCheckService = new();
-    private readonly Mock<IUserActivityService> _userActivityService = new();
+    private readonly Mock<IGamificationEventPublisher> _gamificationPublisher = new();
     private readonly Mock<IProfileStatsService> _profileStatsService = new();
     private readonly Mock<IPremiumService> _premiumService = new();
     private readonly Mock<IAiTokenService> _aiTokenService = new();
@@ -58,8 +58,7 @@ public sealed class AuthServiceTests
         _mapper,
         Options.Create(authSettings ?? new AuthSettings()),
         Options.Create(jwtSettings ?? new JwtSettings { RefreshExpirationDays = 7 }),
-        _badgeCheckService.Object,
-        _userActivityService.Object,
+        _gamificationPublisher.Object,
         _profileStatsService.Object,
         _premiumService.Object,
         _aiTokenService.Object,
@@ -74,11 +73,8 @@ public sealed class AuthServiceTests
         _userRepository
             .Setup(r => r.IsCurrentlyBannedAsync(user.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
-        _userRepository
-            .Setup(r => r.UpdateStreakOnActivityAsync(user.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new StreakUpdateResult(false, user.StreakCount));
-        _userActivityService
-            .Setup(s => s.RecordActivityAsync(user.Id, It.IsAny<CancellationToken>()))
+        _gamificationPublisher
+            .Setup(p => p.PublishAsync(It.IsAny<DailyLoginEvent>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         _subscriptionRepository
             .Setup(r => r.GetActiveByUserIdAsync(user.Id, It.IsAny<CancellationToken>()))

@@ -20,7 +20,11 @@ public interface IUserRepository
     Task UpdatePasswordAsync(Guid userId, string newPassword, CancellationToken cancellationToken = default);
     Task<bool> IsCurrentlyBannedAsync(Guid userId, CancellationToken cancellationToken = default);
     Task AddPointsAsync(Guid userId, int points, CancellationToken cancellationToken = default);
+    Task ApplyPointDeltaAsync(Guid userId, int delta, CancellationToken cancellationToken = default);
     Task<StreakUpdateResult> UpdateStreakOnActivityAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<StreakUpdateResult> UpdateQualifyingStreakAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<bool> TryApplyDailyLoginBonusAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<Guid?> RecalculateLevelAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<UserAccount>> GetPagedAsync(int page, int pageSize, string? search, CancellationToken cancellationToken = default);
     Task<int> CountAsync(string? search, CancellationToken cancellationToken = default);
     Task<int> CountByRoleAsync(string role, CancellationToken cancellationToken = default);

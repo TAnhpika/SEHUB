@@ -91,10 +91,22 @@ const PANEL_COPY = {
     showDivider: false,
     showFooter: true,
   },
+  "verify-email": {
+    headline: (
+      <>
+        Xác minh
+        <br />
+        email của bạn
+      </>
+    ),
+    desc: "Chúng tôi gửi mã OTP 6 chữ số để đảm bảo email thuộc về bạn trước khi sử dụng SEHub.",
+    features: FEATURES,
+    showDivider: true,
+  },
 };
 
 /**
- * @param {{ variant?: "login" | "register" | "forgot-password" }} props
+ * @param {{ variant?: "login" | "register" | "forgot-password" | "verify-email" }} props
  */
 function AuthBrandPanel({ variant = "login" }) {
   const copy = PANEL_COPY[variant] ?? PANEL_COPY.login;

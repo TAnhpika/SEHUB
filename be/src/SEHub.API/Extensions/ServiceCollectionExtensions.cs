@@ -9,6 +9,7 @@ using SEHub.API.Services;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Auth;
 using SEHub.Application.Exams;
+using SEHub.Application.Gamification;
 
 namespace SEHub.API.Extensions;
 
@@ -18,6 +19,7 @@ public static class ServiceCollectionExtensions
     {
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
         services.Configure<AiTokenLimitSettings>(configuration.GetSection(AiTokenLimitSettings.SectionName));
+        services.Configure<GamificationSettings>(configuration.GetSection(GamificationSettings.SectionName));
 
         services.AddControllers(options =>
         {

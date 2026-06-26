@@ -49,7 +49,7 @@ public sealed class PostLikeServiceTests
         result.LikeCount.Should().Be(1);
         _likeRepository.Verify(r => r.AddAsync(It.IsAny<PostLike>(), It.IsAny<CancellationToken>()), Times.Never);
         _gamificationService.Verify(
-            g => g.AwardLikeReceivedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            g => g.AwardLikeReceivedAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -73,7 +73,7 @@ public sealed class PostLikeServiceTests
         result.IsLiked.Should().BeTrue();
         _likeRepository.Verify(r => r.AddAsync(It.IsAny<PostLike>(), It.IsAny<CancellationToken>()), Times.Once);
         _gamificationService.Verify(
-            g => g.AwardLikeReceivedAsync(AuthorId, It.IsAny<CancellationToken>()),
+            g => g.AwardLikeReceivedAsync(PostId, AuthorId, UserId, It.IsAny<CancellationToken>()),
             Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }

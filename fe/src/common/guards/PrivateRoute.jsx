@@ -3,7 +3,7 @@ import { useAuth } from "@/context";
 import { mapHomeSubjectPathToCommunity } from "@/utils/subjectPaths";
 
 function PrivateRoute() {
-  const { isAuthenticated, isBootstrapping } = useAuth();
+  const { isAuthenticated, isBootstrapping, user } = useAuth();
   const location = useLocation();
 
   if (isBootstrapping) {
@@ -22,6 +22,16 @@ function PrivateRoute() {
     }
 
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  }
+
+  if (user?.emailConfirmed === false) {
+    return (
+      <Navigate
+        to="/verify-email"
+        state={{ from: location.pathname, email: user.email }}
+        replace
+      />
+    );
   }
 
   return <Outlet />;

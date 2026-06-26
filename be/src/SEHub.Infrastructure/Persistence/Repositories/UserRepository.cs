@@ -185,21 +185,83 @@ public class UserRepository : IUserRepository
         }
     }
 
-    public async Task<StreakUpdateResult> UpdateStreakOnActivityAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task ApplyPointDeltaAsync(Guid userId, int delta, CancellationToken cancellationToken = default)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
+            ?? throw new InvalidOperationException("User not found.");
+        user.Points = Math.Max(0, user.Points + delta);
+        await RecalculateLevelInternalAsync(user, cancellationToken);
+    }
+
+    public Task<Guid?> RecalculateLevelAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        RecalculateLevelForUserAsync(userId, cancellationToken);
+
+    private async Task<Guid?> RecalculateLevelForUserAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
+            ?? throw new InvalidOperationException("User not found.");
+        return await RecalculateLevelInternalAsync(user, cancellationToken);
+    }
+
+    private async Task<Guid?> RecalculateLevelInternalAsync(ApplicationUser user, CancellationToken cancellationToken)
+    {
+        var level = await _context.LevelConfigs
+            .Where(l => l.MinPoints <= user.Points)
+            .OrderByDescending(l => l.MinPoints)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (level is not null)
+        {
+            user.LevelId = level.Id;
+            return level.Id;
+        }
+
+        return user.LevelId;
+    }
+
+    public async Task<StreakUpdateResult> UpdateQualifyingStreakAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
+            ?? throw new InvalidOperationException("User not found.");
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var lastDate = user.LastActivityDate.HasValue
+            ? DateOnly.FromDateTime(user.LastActivityDate.Value)
+            : (DateOnly?)null;
+
+        if (lastDate == today)
+        {
+            return new StreakUpdateResult(false, user.StreakCount);
+        }
+
+        var previousStreak = user.StreakCount;
+        user.StreakCount = lastDate == today.AddDays(-1) ? user.StreakCount + 1 : 1;
+        user.HighestStreak = Math.Max(user.HighestStreak, user.StreakCount);
+        if (previousStreak > user.StreakCount)
+        {
+            user.HighestStreak = Math.Max(user.HighestStreak, previousStreak);
+        }
+
+        user.LastActivityDate = today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        return new StreakUpdateResult(true, user.StreakCount);
+    }
+
+    public async Task<bool> TryApplyDailyLoginBonusAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
             ?? throw new InvalidOperationException("User not found.");
 
         var today = DateTime.UtcNow.Date;
-        if (user.LastActivityDate?.Date == today)
+        if (user.LastDailyLoginBonusAt?.Date == today)
         {
-            return new StreakUpdateResult(false, user.StreakCount);
+            return false;
         }
 
-        user.StreakCount = user.LastActivityDate?.Date == today.AddDays(-1) ? user.StreakCount + 1 : 1;
-        user.LastActivityDate = today;
-        return new StreakUpdateResult(true, user.StreakCount);
+        user.LastDailyLoginBonusAt = today;
+        return true;
     }
+
+    public async Task<StreakUpdateResult> UpdateStreakOnActivityAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        await UpdateQualifyingStreakAsync(userId, cancellationToken);
 
     public async Task<IReadOnlyList<UserAccount>> GetPagedAsync(int page, int pageSize, string? search, CancellationToken cancellationToken = default)
     {
@@ -329,7 +391,9 @@ public class UserRepository : IUserRepository
             LevelId = user.LevelId,
             LevelName = levelName,
             StreakCount = user.StreakCount,
+            HighestStreak = user.HighestStreak,
             LastActivityDate = user.LastActivityDate,
+            LastDailyLoginBonusAt = user.LastDailyLoginBonusAt,
             CreatedAt = DateTime.UtcNow
         };
     }

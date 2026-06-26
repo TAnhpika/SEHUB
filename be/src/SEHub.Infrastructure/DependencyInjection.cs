@@ -80,6 +80,14 @@ public static class DependencyInjection
         services.AddScoped<IBadgeRepository, BadgeRepository>();
         services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
         services.AddScoped<IUserDailyActivityRepository, UserDailyActivityRepository>();
+        services.AddScoped<IPointRuleRepository, PointRuleRepository>();
+        services.AddScoped<IPointTransactionRepository, PointTransactionRepository>();
+        services.AddScoped<IGamificationEventInboxRepository, GamificationEventInboxRepository>();
+        services.AddScoped<IRewardRuleRepository, RewardRuleRepository>();
+        services.AddScoped<IRankRewardVoucherRepository, RankRewardVoucherRepository>();
+        services.AddScoped<IUserLevelHistoryRepository, UserLevelHistoryRepository>();
+        services.AddScoped<ILeaderboardRepository, LeaderboardRepository>();
+        services.AddScoped<IMissionRepository, MissionRepository>();
         services.AddScoped<IProfileActivityCache, ProfileActivityCache>();
         services.AddScoped<IProfileSnapshotCache, ProfileSnapshotCache>();
         services.AddScoped<IUserBanRepository, UserBanRepository>();

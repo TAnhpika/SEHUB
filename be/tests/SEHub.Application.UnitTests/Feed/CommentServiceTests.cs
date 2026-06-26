@@ -2,7 +2,7 @@ using Moq;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
-using SEHub.Application.Gamification;
+using SEHub.Application.Gamification.Abstractions;
 using SEHub.Application.Models;
 using SEHub.Application.Notifications;
 using SEHub.Application.Profiles;
@@ -24,8 +24,7 @@ public sealed class CommentServiceTests
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<IUserProfileRepository> _profileRepository = new();
     private readonly Mock<IUserFollowRepository> _followRepository = new();
-    private readonly Mock<IBadgeCheckService> _badgeCheckService = new();
-    private readonly Mock<IUserActivityService> _userActivityService = new();
+    private readonly Mock<IGamificationEventPublisher> _gamificationPublisher = new();
     private readonly Mock<IWorkflowNotificationService> _workflowNotifications = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
@@ -36,8 +35,7 @@ public sealed class CommentServiceTests
         _userRepository.Object,
         _profileRepository.Object,
         _followRepository.Object,
-        _badgeCheckService.Object,
-        _userActivityService.Object,
+        _gamificationPublisher.Object,
         _workflowNotifications.Object,
         _currentUser.Object,
         _unitOfWork.Object);

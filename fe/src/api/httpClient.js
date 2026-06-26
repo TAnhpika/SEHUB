@@ -6,6 +6,9 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5006
 const API_ERROR_MESSAGES = {
   STORAGE_NOT_CONFIGURED:
     "Chưa cấu hình Google Drive trên server. Dev: restart BE (Development) để dùng lưu file local; prod: thêm GoogleDrive trong appsettings.",
+  EMAIL_NOT_CONFIRMED:
+    "Vui lòng xác minh email trước khi đăng nhập. Kiểm tra hộp thư hoặc yêu cầu gửi lại mã.",
+  OTP_INVALID: "Mã OTP không hợp lệ hoặc đã hết hạn.",
   STORAGE_UPLOAD_FAILED: "Không upload được file lên storage. Kiểm tra cấu hình Google Drive hoặc thử lại.",
 };
 

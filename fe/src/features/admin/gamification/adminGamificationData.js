@@ -10,6 +10,9 @@ import {
   mapBadgeToCreateRequest,
   mapBadgeToUpdateRequest,
   mapLevelConfigToRankTier,
+  mapPointRuleAdminDto,
+  mapPointRuleToCreateRequest,
+  mapPointRuleToUpdateRequest,
   mapRankTiersToUpdateLevelsRequest,
 } from "@/api/adminMapper";
 import { isValidGuid } from "@/features/feed/postUtils";
@@ -444,13 +447,28 @@ export function createPointRule(payload) {
   const validation = validatePointRulePayload(payload, pointRulesStore);
   if (!validation.ok) return validation;
 
-  const entry = {
-    id: `rule-${Date.now()}`,
-    ...validation.data,
-    updatedAt: nowIso(),
-  };
-  pointRulesStore = [entry, ...pointRulesStore];
-  return { ok: true, item: entry };
+  if (USE_MOCK) {
+    const entry = {
+      id: `rule-${Date.now()}`,
+      ...validation.data,
+      updatedAt: nowIso(),
+    };
+    pointRulesStore = [entry, ...pointRulesStore];
+    return { ok: true, item: entry };
+  }
+
+  return createPointRuleAsync(validation.data);
+}
+
+async function createPointRuleAsync(data) {
+  try {
+    const dto = await adminApi.createGamificationPointRule(mapPointRuleToCreateRequest(data));
+    const mapped = mapPointRuleAdminDto(dto);
+    pointRulesStore = [mapped, ...pointRulesStore];
+    return { ok: true, item: mapped };
+  } catch (error) {
+    return { ok: false, message: error?.message ?? "Không tạo được quy tắc." };
+  }
 }
 
 export function updatePointRule(id, payload) {
@@ -460,29 +478,77 @@ export function updatePointRule(id, payload) {
   const validation = validatePointRulePayload(payload, pointRulesStore, id);
   if (!validation.ok) return validation;
 
-  const updated = {
-    ...pointRulesStore[index],
-    ...validation.data,
-    updatedAt: nowIso(),
-  };
-  pointRulesStore = pointRulesStore.map((r, i) => (i === index ? updated : r));
-  return { ok: true, item: updated };
+  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+    const updated = {
+      ...pointRulesStore[index],
+      ...validation.data,
+      updatedAt: nowIso(),
+    };
+    pointRulesStore = pointRulesStore.map((r, i) => (i === index ? updated : r));
+    return { ok: true, item: updated };
+  }
+
+  return updatePointRuleAsync(id, pointRulesStore[index], validation.data);
+}
+
+async function updatePointRuleAsync(id, current, data) {
+  try {
+    const merged = { ...current, ...data };
+    const dto = await adminApi.updateGamificationPointRule(id, mapPointRuleToUpdateRequest(merged));
+    const mapped = mapPointRuleAdminDto(dto);
+    pointRulesStore = pointRulesStore.map((r) => (r.id === id ? mapped : r));
+    return { ok: true, item: mapped };
+  } catch (error) {
+    return { ok: false, message: error?.message ?? "Không cập nhật được quy tắc." };
+  }
 }
 
 export function deletePointRule(id) {
   const target = pointRulesStore.find((r) => r.id === id);
   if (!target) return { ok: false, message: "Không tìm thấy quy tắc." };
-  pointRulesStore = pointRulesStore.filter((r) => r.id !== id);
-  return { ok: true, item: target };
+
+  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+    pointRulesStore = pointRulesStore.filter((r) => r.id !== id);
+    return { ok: true, item: target };
+  }
+
+  return deletePointRuleAsync(id, target);
+}
+
+async function deletePointRuleAsync(id, target) {
+  try {
+    await adminApi.deleteGamificationPointRule(id);
+    pointRulesStore = pointRulesStore.filter((r) => r.id !== id);
+    return { ok: true, item: target };
+  } catch (error) {
+    return { ok: false, message: error?.message ?? "Không xóa được quy tắc." };
+  }
 }
 
 export function togglePointRuleActive(id) {
   const index = pointRulesStore.findIndex((r) => r.id === id);
   if (index < 0) return { ok: false, message: "Không tìm thấy quy tắc." };
-  pointRulesStore = pointRulesStore.map((r, i) =>
-    i === index ? { ...r, active: !r.active, updatedAt: nowIso() } : r,
-  );
-  return { ok: true };
+
+  const current = pointRulesStore[index];
+  const next = { ...current, active: !current.active, updatedAt: nowIso() };
+
+  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+    pointRulesStore = pointRulesStore.map((r, i) => (i === index ? next : r));
+    return { ok: true };
+  }
+
+  return togglePointRuleActiveAsync(id, next);
+}
+
+async function togglePointRuleActiveAsync(id, next) {
+  try {
+    const dto = await adminApi.updateGamificationPointRule(id, mapPointRuleToUpdateRequest(next));
+    const mapped = mapPointRuleAdminDto(dto);
+    pointRulesStore = pointRulesStore.map((r) => (r.id === id ? mapped : r));
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: error?.message ?? "Không đổi trạng thái quy tắc." };
+  }
 }
 
 /** Dùng cho getUserGamification — đọc ngưỡng từ store */
@@ -513,6 +579,15 @@ export async function hydrateGamificationFromApi() {
     }
   } catch {
     /* keep mock badges */
+  }
+
+  try {
+    const rules = await adminApi.getGamificationPointRules();
+    if ((rules ?? []).length > 0) {
+      pointRulesStore = rules.map(mapPointRuleAdminDto);
+    }
+  } catch {
+    /* keep mock point rules */
   }
 }
 

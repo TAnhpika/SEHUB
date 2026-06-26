@@ -16,7 +16,9 @@ public sealed class UserAccount
     public Guid? LevelId { get; init; }
     public string? LevelName { get; init; }
     public int StreakCount { get; init; }
+    public int HighestStreak { get; init; }
     public DateTime? LastActivityDate { get; init; }
+    public DateTime? LastDailyLoginBonusAt { get; init; }
     public DateTime CreatedAt { get; init; }
 }
 

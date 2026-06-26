@@ -11,4 +11,5 @@ public sealed class AuthUserDto
     public string? AvatarUrl { get; init; }
     public int Points { get; init; }
     public string? LevelName { get; init; }
+    public bool EmailConfirmed { get; init; }
 }

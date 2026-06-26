@@ -177,16 +177,23 @@ function AdminGamificationConfigPage() {
   }
 
   function handleRuleSubmit(payload) {
-    const result = ruleModal.editing
+    const runSave = ruleModal.editing
       ? updatePointRule(ruleModal.editing.id, payload)
       : createPointRule(payload);
-    if (!result.ok) {
-      setRuleModal((m) => ({ ...m, error: result.message }));
-      return;
-    }
-    showToast(ruleModal.editing ? "Đã cập nhật quy tắc." : "Đã tạo quy tắc mới.");
-    setRuleModal({ open: false, editing: null, error: "" });
-    bump();
+
+    Promise.resolve(runSave)
+      .then((result) => {
+        if (!result.ok) {
+          setRuleModal((m) => ({ ...m, error: result.message }));
+          return;
+        }
+        showToast(ruleModal.editing ? "Đã cập nhật quy tắc." : "Đã tạo quy tắc mới.");
+        setRuleModal({ open: false, editing: null, error: "" });
+        bump();
+      })
+      .catch((err) => {
+        setRuleModal((m) => ({ ...m, error: err.message ?? "Không lưu được quy tắc." }));
+      });
   }
 
   function confirmDelete() {
@@ -634,8 +641,15 @@ function AdminGamificationConfigPage() {
                           rule.active ? gStyles.toggleOn : gStyles.toggleOff,
                         ].join(" ")}
                         onClick={() => {
-                          togglePointRuleActive(rule.id);
-                          bump();
+                          Promise.resolve(togglePointRuleActive(rule.id))
+                            .then((result) => {
+                              if (result?.ok === false) {
+                                showToast(result.message);
+                                return;
+                              }
+                              bump();
+                            })
+                            .catch((err) => showToast(err.message ?? "Không đổi trạng thái."));
                         }}
                       >
                         {rule.active ? "Đang bật" : "Đã tắt"}

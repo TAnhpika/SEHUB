@@ -1,48 +1,40 @@
-using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Gamification.Abstractions;
+using SEHub.Application.Gamification.Events;
+using SEHub.Application.Gamification.Models;
 
 namespace SEHub.Application.Feed;
 
 public sealed class GamificationService : IGamificationService
 {
-    public const int PointsPerPost = 10;
-    public const int PointsPerLike = 2;
-
-    private readonly IUserRepository _userRepository;
-    private readonly ILevelConfigRepository _levelConfigRepository;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IGamificationReadService _readService;
+    private readonly IGamificationEventPublisher _eventPublisher;
 
     public GamificationService(
-        IUserRepository userRepository,
-        ILevelConfigRepository levelConfigRepository,
-        IUnitOfWork unitOfWork)
+        IGamificationReadService readService,
+        IGamificationEventPublisher eventPublisher)
     {
-        _userRepository = userRepository;
-        _levelConfigRepository = levelConfigRepository;
-        _unitOfWork = unitOfWork;
+        _readService = readService;
+        _eventPublisher = eventPublisher;
     }
 
-    public async Task AwardPostPublishedAsync(Guid authorId, CancellationToken cancellationToken = default)
-    {
-        await _userRepository.AddPointsAsync(authorId, PointsPerPost, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-    }
+    public Task AwardPostPublishedAsync(Guid authorId, Guid postId, CancellationToken cancellationToken = default) =>
+        _eventPublisher.PublishAsync(new PostPublishedEvent(postId, authorId), cancellationToken);
 
-    public async Task AwardLikeReceivedAsync(Guid authorId, CancellationToken cancellationToken = default)
-    {
-        await _userRepository.AddPointsAsync(authorId, PointsPerLike, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-    }
+    public Task AwardLikeReceivedAsync(Guid postId, Guid authorId, Guid likerId, CancellationToken cancellationToken = default) =>
+        _eventPublisher.PublishAsync(new LikeReceivedEvent(postId, authorId, likerId), cancellationToken);
 
-    public async Task<(int Points, string? LevelName, int StreakCount)> GetUserGamificationAsync(Guid userId, CancellationToken cancellationToken = default)
-    {
-        var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
-        if (user is null)
-        {
-            return (0, null, 0);
-        }
+    public Task RevokeLikeReceivedAsync(Guid postId, Guid authorId, Guid likerId, CancellationToken cancellationToken = default) =>
+        _eventPublisher.PublishAsync(new LikeRemovedEvent(postId, authorId, likerId), cancellationToken);
 
-        var level = await _levelConfigRepository.GetForPointsAsync(user.Points, cancellationToken);
-        return (user.Points, level?.Name ?? user.LevelName, user.StreakCount);
+    public Task PublishPostDeletedAsync(Guid postId, Guid authorId, CancellationToken cancellationToken = default) =>
+        _eventPublisher.PublishAsync(new PostDeletedEvent(postId, authorId), cancellationToken);
+
+    public async Task<(int Points, string? LevelName, int StreakCount)> GetUserGamificationAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var profile = await _readService.GetProfileGamificationAsync(userId, cancellationToken);
+        return (profile.Points, profile.LevelName, profile.CurrentStreak);
     }
 }

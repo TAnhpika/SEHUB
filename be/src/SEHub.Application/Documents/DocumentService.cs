@@ -2,6 +2,8 @@ using AutoMapper;
 using Microsoft.Extensions.Configuration;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Gamification.Abstractions;
+using SEHub.Application.Gamification.Events;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Documents;
 using SEHub.Domain.Entities;
@@ -21,6 +23,7 @@ public sealed class DocumentService : IDocumentService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClientContext _clientContext;
     private readonly IMapper _mapper;
+    private readonly IGamificationEventPublisher _gamificationPublisher;
     private readonly string _apiBaseUrl;
 
     public DocumentService(
@@ -32,6 +35,7 @@ public sealed class DocumentService : IDocumentService
         IUnitOfWork unitOfWork,
         IClientContext clientContext,
         IMapper mapper,
+        IGamificationEventPublisher gamificationPublisher,
         IConfiguration configuration)
     {
         _documentRepository = documentRepository;
@@ -42,6 +46,7 @@ public sealed class DocumentService : IDocumentService
         _unitOfWork = unitOfWork;
         _clientContext = clientContext;
         _mapper = mapper;
+        _gamificationPublisher = gamificationPublisher;
         _apiBaseUrl = configuration["FileStorage:ApiBaseUrl"]?.TrimEnd('/')
             ?? "http://localhost:5006";
     }
@@ -176,5 +181,10 @@ public sealed class DocumentService : IDocumentService
         }, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (action is "Content" or "Preview")
+        {
+            await _gamificationPublisher.PublishAsync(new DocumentReadEvent(documentId, userId.Value), cancellationToken);
+        }
     }
 }

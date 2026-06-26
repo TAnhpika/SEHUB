@@ -1,4 +1,5 @@
 import { resolveAssetUrl } from "@/api/assetUrl";
+import { buildHeatmapGrid, HEATMAP_LOCALE } from "@/utils/heatmapCalendar";
 
 const LEVEL_TIERS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond"];
 
@@ -94,10 +95,19 @@ export function mapProfileCard(dto, statsDto = null) {
   const displayName = dto.displayName?.trim() || dto.username || "User";
   const points = statsDto?.points ?? dto.points ?? 0;
   const streakCount = statsDto?.streakCount ?? dto.streakCount ?? 0;
+  const highestStreak = statsDto?.highestStreak ?? dto.highestStreak ?? streakCount;
   const levelName = statsDto?.levelName ?? dto.levelName ?? "Bronze";
   const nextLevelName = statsDto?.nextLevelName ?? deriveNextLevelLabel(levelName);
   const nextLevelPoints = statsDto?.nextLevelPoints ?? dto.nextLevelPoints;
-  const { pointsToNext, levelProgress } = computeProgress(points, nextLevelPoints);
+  const serverProgress = statsDto?.progressPercent;
+  const serverRemaining = statsDto?.remainingPoints;
+  const { pointsToNext, levelProgress } =
+    serverProgress != null && serverRemaining != null
+      ? {
+          pointsToNext: serverRemaining,
+          levelProgress: Math.min(100, Math.round(Number(serverProgress))),
+        }
+      : computeProgress(points, nextLevelPoints);
 
   return {
     userId: dto.userId,
@@ -120,6 +130,7 @@ export function mapProfileCard(dto, statsDto = null) {
     joinedAgo: formatRelativeTimeVi(dto.memberSince),
     updatedAgo: formatRelativeTimeVi(dto.profileUpdatedAt),
     streakCount,
+    highestStreak,
     totalActivities: streakCount,
     bio: dto.bio ?? "",
     major: dto.major ?? "",
@@ -132,13 +143,22 @@ export function mapProfileStatsToAuthUser(user, statsDto) {
   if (!user || !statsDto) return user;
 
   const points = statsDto.points ?? user.points ?? 0;
-  const { pointsToNext, levelProgress } = computeProgress(points, statsDto.nextLevelPoints);
+  const serverProgress = statsDto.progressPercent;
+  const serverRemaining = statsDto.remainingPoints;
+  const { pointsToNext, levelProgress } =
+    serverProgress != null && serverRemaining != null
+      ? {
+          pointsToNext: serverRemaining,
+          levelProgress: Math.min(100, Math.round(Number(serverProgress))),
+        }
+      : computeProgress(points, statsDto.nextLevelPoints);
 
   return {
     ...user,
     points,
     level: statsDto.levelName ?? user.level,
     streak: statsDto.streakCount ?? 0,
+    highestStreak: statsDto.highestStreak ?? statsDto.streakCount ?? 0,
     levelProgress,
     pointsToNext,
   };
@@ -171,31 +191,7 @@ export function mapFormToUpdateRequest(form) {
   };
 }
 
-const HEATMAP_WEEKS = 26;
-const HEATMAP_DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const HEATMAP_MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
-function formatIsoDate(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-export function mapProfileActivityToHeatmap(activityDto) {
+export function mapProfileActivityToHeatmap(activityDto, { locale } = {}) {
   if (!activityDto?.days?.length) {
     return null;
   }
@@ -207,42 +203,10 @@ export function mapProfileActivityToHeatmap(activityDto) {
     activityDto.days.map((day) => [day.date, day.count ?? 0]),
   );
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const start = new Date(today);
-  start.setDate(start.getDate() - (HEATMAP_WEEKS * 7 - 1));
-
-  const cells = [];
-  const months = Array(HEATMAP_WEEKS).fill("");
-  let lastMonth = null;
-
-  for (let week = 0; week < HEATMAP_WEEKS; week += 1) {
-    const weekStart = new Date(start);
-    weekStart.setDate(start.getDate() + week * 7);
-    const month = weekStart.getMonth();
-    if (month !== lastMonth) {
-      months[week] = HEATMAP_MONTHS[month];
-      lastMonth = month;
-    }
-
-    for (let day = 0; day < 7; day += 1) {
-      const date = new Date(weekStart);
-      date.setDate(weekStart.getDate() + day);
-      const isoDate = formatIsoDate(date);
-      cells.push({
-        week,
-        day,
-        level: levelByDate.get(isoDate) ?? 0,
-        date: isoDate,
-        count: countByDate.get(isoDate) ?? 0,
-      });
-    }
-  }
+  const resolvedLocale = locale ?? HEATMAP_LOCALE;
 
   return {
-    months,
-    dayLabels: HEATMAP_DAY_LABELS,
-    cells,
+    ...buildHeatmapGrid({ levelByDate, countByDate, locale: resolvedLocale }),
     totalActivities: activityDto.totalActivities ?? 0,
   };
 }

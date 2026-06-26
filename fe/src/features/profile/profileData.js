@@ -12,6 +12,7 @@ import {
   getProfileFormData,
   saveProfileFormData,
 } from "@/features/profile/profileFormData";
+import { buildHeatmapGrid, HEATMAP_LOCALE } from "@/utils/heatmapCalendar";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
@@ -129,50 +130,21 @@ export const RECENT_POSTS = [
   },
 ];
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const HEATMAP_WEEKS = 26;
-
-function buildHeatmapMonthLabels() {
-  const labels = Array(HEATMAP_WEEKS).fill("");
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const start = new Date(today);
-  start.setDate(start.getDate() - (HEATMAP_WEEKS * 7 - 1));
-
-  let lastMonth = null;
-  for (let week = 0; week < HEATMAP_WEEKS; week += 1) {
-    const weekStart = new Date(start);
-    weekStart.setDate(start.getDate() + week * 7);
-    const month = weekStart.getMonth();
-    if (month !== lastMonth) {
-      labels[week] = MONTHS[month];
-      lastMonth = month;
-    }
-  }
-
-  return labels;
-}
-
 function buildHeatmapCells() {
-  const cells = [];
-  let id = 0;
-
-  for (let week = 0; week < HEATMAP_WEEKS; week += 1) {
-    for (let day = 0; day < 7; day += 1) {
-      let level = 0;
-      if (week >= 22 && day >= 2 && day <= 5) {
-        level = 1 + ((week + day) % 3);
-      }
-      if (week === 24 && day === 4) {
-        level = 3;
-      }
-
-      cells.push({ id: id++, week, day, level });
+  const grid = buildHeatmapGrid({ locale: HEATMAP_LOCALE });
+  const cells = grid.cells.map((cell, id) => {
+    let level = 0;
+    if (cell.week >= 22 && cell.day >= 2 && cell.day <= 5) {
+      level = 1 + ((cell.week + cell.day) % 3);
     }
-  }
+    if (cell.week === 24 && cell.day === 4) {
+      level = 3;
+    }
 
-  return { months: buildHeatmapMonthLabels(), dayLabels: DAY_LABELS, cells };
+    return { ...cell, id, level };
+  });
+
+  return { months: grid.months, dayLabels: grid.dayLabels, cells };
 }
 
 export const HEATMAP_DATA = buildHeatmapCells();
