@@ -141,6 +141,10 @@ function applyMeEnrichment(user, meDto) {
     clearServerAiTokenSnapshot();
   }
 
+  if (meDto.emailConfirmed !== undefined) {
+    next = { ...next, emailConfirmed: Boolean(meDto.emailConfirmed) };
+  }
+
   return next;
 }
 
@@ -322,6 +326,15 @@ export function AuthProvider({ children }) {
     setAiTokenVersion((version) => version + 1);
   }, []);
 
+  const markEmailVerified = useCallback(() => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, emailConfirmed: true };
+      persistUser(next);
+      return next;
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -339,6 +352,7 @@ export function AuthProvider({ children }) {
       googleLogin,
       logout,
       activatePremium,
+      markEmailVerified,
     }),
     [
       user,
@@ -352,6 +366,7 @@ export function AuthProvider({ children }) {
       googleLogin,
       logout,
       activatePremium,
+      markEmailVerified,
     ],
   );
 

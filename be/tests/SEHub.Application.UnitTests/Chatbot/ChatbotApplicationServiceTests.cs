@@ -5,6 +5,7 @@ using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Chatbot;
 using SEHub.Application.Exams;
+using SEHub.Application.Gamification.Abstractions;
 using SEHub.Contracts.Chatbot;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Exceptions;
@@ -18,6 +19,7 @@ public class ChatbotApplicationServiceTests
     private readonly Mock<IAiTokenService> _aiTokenService = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    private readonly Mock<IGamificationEventPublisher> _gamificationPublisher = new();
     private readonly ChatbotApplicationService _sut;
 
     private readonly Guid _userId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
@@ -45,6 +47,7 @@ public class ChatbotApplicationServiceTests
             _aiTokenService.Object,
             _currentUser.Object,
             _unitOfWork.Object,
+            _gamificationPublisher.Object,
             Options.Create(new AiTokenLimitSettings { TokenCostChat = 10 }));
     }
 

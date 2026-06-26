@@ -55,7 +55,7 @@ public sealed class PostLikeService : IPostLikeService
         }, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        await _gamificationService.AwardLikeReceivedAsync(post.AuthorId, cancellationToken);
+        await _gamificationService.AwardLikeReceivedAsync(postId, post.AuthorId, userId, cancellationToken);
         await _workflowNotifications.NotifyPostLikedAsync(post, userId, cancellationToken);
 
         return new LikeResultDto
@@ -68,7 +68,7 @@ public sealed class PostLikeService : IPostLikeService
     public async Task<LikeResultDto> UnlikeAsync(Guid postId, CancellationToken cancellationToken = default)
     {
         var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
-        _ = await _postRepository.GetByIdAsync(postId, cancellationToken)
+        var post = await _postRepository.GetByIdAsync(postId, cancellationToken)
             ?? throw new NotFoundException("Post", postId);
 
         var existing = await _likeRepository.GetAsync(postId, userId, cancellationToken);
@@ -76,6 +76,7 @@ public sealed class PostLikeService : IPostLikeService
         {
             await _likeRepository.RemoveAsync(existing, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _gamificationService.RevokeLikeReceivedAsync(postId, post.AuthorId, userId, cancellationToken);
         }
 
         return new LikeResultDto

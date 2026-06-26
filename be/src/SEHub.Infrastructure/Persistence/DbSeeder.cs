@@ -32,6 +32,10 @@ public static class DbSeeder
             await SeedLevelConfigsAsync(context, logger);
             await SeedSubscriptionPlansAsync(context, logger);
             await BadgeSeedData.SyncAsync(context, logger);
+            await PointRuleSeedData.SyncAsync(context, logger);
+            await RewardRuleSeedData.SyncAsync(context, logger);
+            await MissionSeedData.SyncAsync(context, logger);
+            await BattlePassSeedData.SyncAsync(context, logger);
             await SyncLevelVoucherPercentsAsync(context, logger);
             await SeedAdminUserAsync(userManager, context, logger);
             await EnsureAdminPremiumSubscriptionAsync(
@@ -68,10 +72,10 @@ public static class DbSeeder
 
         var levels = new[]
         {
-            new LevelConfig { Id = Guid.NewGuid(), Name = "Bronze", MinPoints = 0, VoucherPercent = null, CreatedAt = DateTime.UtcNow },
-            new LevelConfig { Id = Guid.NewGuid(), Name = "Silver", MinPoints = 100, VoucherPercent = 5, CreatedAt = DateTime.UtcNow },
-            new LevelConfig { Id = Guid.NewGuid(), Name = "Gold", MinPoints = 500, VoucherPercent = 10, CreatedAt = DateTime.UtcNow },
-            new LevelConfig { Id = Guid.NewGuid(), Name = "Platinum", MinPoints = 2000, VoucherPercent = 20, CreatedAt = DateTime.UtcNow }
+            new LevelConfig { Id = Guid.NewGuid(), Name = "Bronze", MinPoints = 0, SortOrder = 0, VoucherPercent = null, CreatedAt = DateTime.UtcNow },
+            new LevelConfig { Id = Guid.NewGuid(), Name = "Silver", MinPoints = 100, SortOrder = 1, VoucherPercent = 5, CreatedAt = DateTime.UtcNow },
+            new LevelConfig { Id = Guid.NewGuid(), Name = "Gold", MinPoints = 500, SortOrder = 2, VoucherPercent = 10, CreatedAt = DateTime.UtcNow },
+            new LevelConfig { Id = Guid.NewGuid(), Name = "Platinum", MinPoints = 2000, SortOrder = 3, VoucherPercent = 20, CreatedAt = DateTime.UtcNow }
         };
 
         context.LevelConfigs.AddRange(levels);

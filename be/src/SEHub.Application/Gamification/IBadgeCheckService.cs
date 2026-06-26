@@ -1,6 +1,7 @@
+using SEHub.Application.Gamification.Abstractions;
+
 namespace SEHub.Application.Gamification;
 
-public interface IBadgeCheckService
+public interface IBadgeCheckService : IAchievementEngine
 {
-    Task EvaluateForTriggerAsync(Guid userId, string triggerType, CancellationToken cancellationToken = default);
 }

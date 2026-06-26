@@ -1,4 +1,5 @@
 using FluentValidation;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Admin;
@@ -12,6 +13,9 @@ using SEHub.Application.Exams.Validators;
 using SEHub.Application.Feed;
 using SEHub.Application.Feed.Validators;
 using SEHub.Application.Gamification;
+using SEHub.Application.Gamification.Abstractions;
+using SEHub.Application.Gamification.Engines;
+using SEHub.Application.Gamification.Orchestration;
 using SEHub.Application.Mapping;
 using SEHub.Application.Premium;
 
@@ -35,6 +39,20 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddAutoMapper(typeof(MappingProfile));
+
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
+
+        services.AddScoped<IGamificationEventPublisher, GamificationEventPublisher>();
+        services.AddScoped<IPointEngine, PointEngine>();
+        services.AddScoped<IRewardEngine, RewardEngine>();
+        services.AddScoped<ILevelEngine, LevelEngine>();
+        services.AddScoped<IStreakEngine, StreakEngine>();
+        services.AddScoped<IHeatmapProjection, HeatmapProjection>();
+        services.AddScoped<IAchievementEngine, BadgeCheckService>();
+        services.AddScoped<IGamificationReadService, GamificationReadService>();
+        services.AddScoped<LeaderboardService>();
+        services.AddScoped<ILeaderboardService, CachedLeaderboardService>();
+        services.AddScoped<IMissionProgressService, MissionProgressService>();
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();

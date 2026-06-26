@@ -85,7 +85,7 @@ public sealed class PostServiceTests
         captured!.Status.Should().Be(PostStatus.Pending);
         result.Status.Should().Be(nameof(PostStatus.Pending));
         _gamificationService.Verify(
-            g => g.AwardPostPublishedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            g => g.AwardPostPublishedAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 

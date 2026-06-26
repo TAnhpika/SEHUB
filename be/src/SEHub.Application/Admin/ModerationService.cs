@@ -118,6 +118,7 @@ public sealed class ModerationService : IModerationService
             if (post is not null)
             {
                 await _postRepository.SoftDeleteAsync(post, actorId, cancellationToken);
+                await _gamificationService.PublishPostDeletedAsync(post.Id, post.AuthorId, cancellationToken);
             }
         }
 
@@ -224,7 +225,6 @@ public sealed class ModerationService : IModerationService
         }
 
         var action = request.Action.Trim().ToLowerInvariant();
-        var shouldRecordAuthorActivity = false;
         post.ModeratedById = actorId;
         post.ModeratedAt = DateTime.UtcNow;
         post.ModerationNote = request.Note?.Trim();
@@ -235,12 +235,7 @@ public sealed class ModerationService : IModerationService
             case "approve":
             case "published":
                 post.Status = PostStatus.Published;
-                await _gamificationService.AwardPostPublishedAsync(post.AuthorId, cancellationToken);
-                await _badgeCheckService.EvaluateForTriggerAsync(
-                    post.AuthorId,
-                    BadgeCheckService.TriggerPostsPublished,
-                    cancellationToken);
-                shouldRecordAuthorActivity = true;
+                await _gamificationService.AwardPostPublishedAsync(post.AuthorId, post.Id, cancellationToken);
                 break;
             case "reject":
             case "rejected":
@@ -256,11 +251,6 @@ public sealed class ModerationService : IModerationService
 
         await _postRepository.UpdateAsync(post, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        if (shouldRecordAuthorActivity)
-        {
-            await _userActivityService.RecordActivityAsync(post.AuthorId, cancellationToken);
-        }
 
         await _workflowNotifications.NotifyPostAuthorModerationResultAsync(
             post,

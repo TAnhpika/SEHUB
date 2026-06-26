@@ -1,6 +1,7 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
-using SEHub.Application.Gamification;
+using SEHub.Application.Gamification.Abstractions;
+using SEHub.Application.Gamification.Events;
 using SEHub.Application.Models;
 using SEHub.Application.Notifications;
 using SEHub.Application.Profiles;
@@ -18,8 +19,7 @@ public sealed class CommentService : ICommentService
     private readonly IUserRepository _userRepository;
     private readonly IUserProfileRepository _profileRepository;
     private readonly IUserFollowRepository _followRepository;
-    private readonly IBadgeCheckService _badgeCheckService;
-    private readonly IUserActivityService _userActivityService;
+    private readonly IGamificationEventPublisher _gamificationPublisher;
     private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
@@ -30,8 +30,7 @@ public sealed class CommentService : ICommentService
         IUserRepository userRepository,
         IUserProfileRepository profileRepository,
         IUserFollowRepository followRepository,
-        IBadgeCheckService badgeCheckService,
-        IUserActivityService userActivityService,
+        IGamificationEventPublisher gamificationPublisher,
         IWorkflowNotificationService workflowNotifications,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
@@ -41,8 +40,7 @@ public sealed class CommentService : ICommentService
         _userRepository = userRepository;
         _profileRepository = profileRepository;
         _followRepository = followRepository;
-        _badgeCheckService = badgeCheckService;
-        _userActivityService = userActivityService;
+        _gamificationPublisher = gamificationPublisher;
         _workflowNotifications = workflowNotifications;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
@@ -110,8 +108,7 @@ public sealed class CommentService : ICommentService
         await _commentRepository.AddAsync(comment, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await _badgeCheckService.EvaluateForTriggerAsync(userId, BadgeCheckService.TriggerCommentsCreated, cancellationToken);
-        await _userActivityService.RecordActivityAsync(userId, cancellationToken);
+        await _gamificationPublisher.PublishAsync(new CommentCreatedEvent(comment.Id, userId), cancellationToken);
         await _workflowNotifications.NotifyPostCommentedAsync(
             post,
             comment,
@@ -189,6 +186,9 @@ public sealed class CommentService : ICommentService
 
         await _commentRepository.SoftDeleteAsync(comment, userId, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _gamificationPublisher.PublishAsync(
+            new CommentDeletedEvent(commentId, comment.AuthorId),
+            cancellationToken);
     }
 
     private async Task<IReadOnlyList<CommentDto>> MapCommentsTreeAsync(

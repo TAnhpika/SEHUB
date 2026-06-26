@@ -1,6 +1,7 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
+using SEHub.Application.Gamification.Abstractions;
 using SEHub.Contracts.Profiles;
 using SEHub.Domain.Exceptions;
 
@@ -11,33 +12,30 @@ public sealed class ProfileStatsService : IProfileStatsService
     private static readonly TimeSpan StatsCacheTtl = TimeSpan.FromMinutes(15);
 
     private readonly IUserRepository _userRepository;
-    private readonly ILevelConfigRepository _levelConfigRepository;
     private readonly IUserBadgeRepository _badgeRepository;
     private readonly IPostRepository _postRepository;
     private readonly ICommentRepository _commentRepository;
     private readonly IExamAttemptRepository _examAttemptRepository;
-    private readonly IGamificationService _gamificationService;
+    private readonly IGamificationReadService _gamificationReadService;
     private readonly IProfileSnapshotCache _snapshotCache;
     private readonly ICurrentUserService _currentUser;
 
     public ProfileStatsService(
         IUserRepository userRepository,
-        ILevelConfigRepository levelConfigRepository,
         IUserBadgeRepository badgeRepository,
         IPostRepository postRepository,
         ICommentRepository commentRepository,
         IExamAttemptRepository examAttemptRepository,
-        IGamificationService gamificationService,
+        IGamificationReadService gamificationReadService,
         IProfileSnapshotCache snapshotCache,
         ICurrentUserService currentUser)
     {
         _userRepository = userRepository;
-        _levelConfigRepository = levelConfigRepository;
         _badgeRepository = badgeRepository;
         _postRepository = postRepository;
         _commentRepository = commentRepository;
         _examAttemptRepository = examAttemptRepository;
-        _gamificationService = gamificationService;
+        _gamificationReadService = gamificationReadService;
         _snapshotCache = snapshotCache;
         _currentUser = currentUser;
     }
@@ -73,17 +71,18 @@ public sealed class ProfileStatsService : IProfileStatsService
             return cached;
         }
 
-        var (points, levelName, streak) = await _gamificationService.GetUserGamificationAsync(userId, cancellationToken);
-        var levels = await _levelConfigRepository.GetAllOrderedAsync(cancellationToken);
-        var nextLevel = levels.FirstOrDefault(l => l.MinPoints > points);
+        var gamification = await _gamificationReadService.GetProfileGamificationAsync(userId, cancellationToken);
 
         var result = new ProfileStatsDto
         {
-            Points = points,
-            LevelName = levelName,
-            StreakCount = streak,
-            NextLevelPoints = nextLevel?.MinPoints,
-            NextLevelName = nextLevel?.Name,
+            Points = gamification.Points,
+            LevelName = gamification.LevelName,
+            StreakCount = gamification.CurrentStreak,
+            HighestStreak = gamification.HighestStreak,
+            NextLevelPoints = gamification.NextLevelPoints,
+            NextLevelName = gamification.NextLevelName,
+            ProgressPercent = gamification.ProgressPercent,
+            RemainingPoints = gamification.RemainingPoints,
             BadgesCount = await _badgeRepository.CountByUserIdAsync(userId, cancellationToken),
             PostsCount = await _postRepository.CountByAuthorIdAsync(userId, cancellationToken),
             CommentsCount = await _commentRepository.CountByAuthorIdAsync(userId, cancellationToken),

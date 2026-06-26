@@ -13,6 +13,7 @@ import { AuthProvider } from "@/context";
 import LoginPage from "@/features/auth/LoginPage/LoginPage";
 import RegisterPage from "@/features/auth/RegisterPage/RegisterPage";
 import ForgotPasswordPage from "@/features/auth/ForgotPasswordPage/ForgotPasswordPage";
+import VerifyEmailPage from "@/features/auth/VerifyEmailPage/VerifyEmailPage";
 import DocumentsPage from "@/features/documents/DocumentsPage/DocumentsPage";
 import FeedPage from "@/features/feed/FeedPage/FeedPage";
 import FriendProfilePage from "@/features/home/FriendProfilePage/FriendProfilePage";
@@ -149,6 +150,9 @@ function App() {
                   element={<ExamDetailPage page="documents" />}
                 />
               </Route>
+            </Route>
+            <Route element={<AuthLayout />}>
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
             </Route>
             <Route element={<GuestRoute />}>
               <Route element={<AuthLayout />}>

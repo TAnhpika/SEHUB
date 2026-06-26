@@ -3,6 +3,8 @@ using Microsoft.Extensions.Options;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Exams;
+using SEHub.Application.Gamification.Abstractions;
+using SEHub.Application.Gamification.Events;
 using SEHub.Contracts.Chatbot;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Exceptions;
@@ -32,6 +34,7 @@ public sealed class ChatbotApplicationService : IChatbotApplicationService
     private readonly IAiTokenService _aiTokenService;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IGamificationEventPublisher _gamificationPublisher;
     private readonly AiTokenLimitSettings _settings;
 
     public ChatbotApplicationService(
@@ -40,6 +43,7 @@ public sealed class ChatbotApplicationService : IChatbotApplicationService
         IAiTokenService aiTokenService,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork,
+        IGamificationEventPublisher gamificationPublisher,
         IOptions<AiTokenLimitSettings> settings)
     {
         _chatbotRepository = chatbotRepository;
@@ -47,6 +51,7 @@ public sealed class ChatbotApplicationService : IChatbotApplicationService
         _aiTokenService = aiTokenService;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _gamificationPublisher = gamificationPublisher;
         _settings = settings.Value;
     }
 
@@ -190,6 +195,9 @@ public sealed class ChatbotApplicationService : IChatbotApplicationService
         await _chatbotRepository.AddMessageAsync(assistantMessage, cancellationToken);
 
         var remaining = await _aiTokenService.RecordConsumptionAsync(userId, billingCost, cancellationToken);
+        await _gamificationPublisher.PublishAsync(
+            new AiUsedEvent(userId, "chat", conversation.Id),
+            cancellationToken);
 
         return new ChatbotReplyResponse
         {

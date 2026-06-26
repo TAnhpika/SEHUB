@@ -1,4 +1,5 @@
 import styles from "./ActivityHeatmap.module.css";
+import { HEATMAP_WEEKS } from "@/utils/heatmapCalendar";
 
 const LEVEL_CLASS = {
   0: styles.l0,
@@ -8,7 +9,6 @@ const LEVEL_CLASS = {
 };
 
 const DAY_LABEL_ROWS = [0, 2, 4];
-const WEEKS = 26;
 
 function formatActivityLabel(cell) {
   if (!cell?.date) {
@@ -29,7 +29,7 @@ function ActivityHeatmap({
   showChart = false,
   heatmapData = null,
 }) {
-  const weeks = Array.from({ length: WEEKS }, (_, index) => index);
+  const weeks = Array.from({ length: HEATMAP_WEEKS }, (_, index) => index);
   const chartData = heatmapData;
   const showHeatmapChart = showChart && totalActivities > 0 && chartData?.cells?.length;
 

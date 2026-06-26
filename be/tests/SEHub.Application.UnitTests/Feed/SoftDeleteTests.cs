@@ -2,7 +2,7 @@ using Moq;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
-using SEHub.Application.Gamification;
+using SEHub.Application.Gamification.Abstractions;
 using SEHub.Application.Notifications;
 using SEHub.Application.Profiles;
 using SEHub.Application.Storage;
@@ -26,8 +26,6 @@ public sealed class SoftDeleteTests
     private readonly Mock<ICdnFolderSettings> _cdnFolders = new();
     private readonly Mock<IWorkflowNotificationService> _workflowNotifications = new();
     private readonly Mock<IFileStorageService> _fileStorage = new();
-    private readonly Mock<IBadgeCheckService> _badgeCheckService = new();
-    private readonly Mock<IUserActivityService> _userActivityService = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
     private static readonly Guid PostId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
@@ -61,8 +59,7 @@ public sealed class SoftDeleteTests
         _userRepository.Object,
         _profileRepository.Object,
         Mock.Of<IUserFollowRepository>(),
-        _badgeCheckService.Object,
-        _userActivityService.Object,
+        Mock.Of<IGamificationEventPublisher>(),
         Mock.Of<IWorkflowNotificationService>(),
         _currentUser.Object,
         _unitOfWork.Object);

@@ -4,6 +4,7 @@ using Moq;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Documents;
+using SEHub.Application.Gamification.Abstractions;
 using SEHub.Application.Models;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
@@ -22,6 +23,7 @@ public sealed class PreviewPageLimitTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IClientContext> _clientContext = new();
     private readonly Mock<IMapper> _mapper = new();
+    private readonly Mock<IGamificationEventPublisher> _gamificationPublisher = new();
     private readonly IConfiguration _configuration = new ConfigurationBuilder()
         .AddInMemoryCollection(new Dictionary<string, string?>
         {
@@ -41,6 +43,7 @@ public sealed class PreviewPageLimitTests
             _unitOfWork.Object,
             _clientContext.Object,
             _mapper.Object,
+            _gamificationPublisher.Object,
             _configuration);
     }
 

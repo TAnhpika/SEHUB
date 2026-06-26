@@ -57,8 +57,11 @@ function RegisterPage() {
         email: trimmedEmail,
         password,
       });
-      showToast("Đăng ký thành công. Email xác minh sẽ được gửi trong giây lát.");
-      navigate("/home", { replace: true });
+      showToast("Đăng ký thành công. Kiểm tra email để lấy mã xác minh.");
+      navigate("/verify-email", {
+        replace: true,
+        state: { email: trimmedEmail, from: "/home" },
+      });
     } catch (error) {
       showToast(error?.message ?? "Đăng ký thất bại.");
       setIsSubmitting(false);

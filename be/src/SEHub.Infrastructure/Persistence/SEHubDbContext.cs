@@ -39,6 +39,15 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<LevelConfig> LevelConfigs => Set<LevelConfig>();
     public DbSet<Badge> Badges => Set<Badge>();
     public DbSet<UserBadge> UserBadges => Set<UserBadge>();
+    public DbSet<PointRule> PointRules => Set<PointRule>();
+    public DbSet<PointTransaction> PointTransactions => Set<PointTransaction>();
+    public DbSet<GamificationEventInbox> GamificationEventInboxes => Set<GamificationEventInbox>();
+    public DbSet<RewardRule> RewardRules => Set<RewardRule>();
+    public DbSet<RankRewardVoucher> RankRewardVouchers => Set<RankRewardVoucher>();
+    public DbSet<UserLevelHistory> UserLevelHistories => Set<UserLevelHistory>();
+    public DbSet<DailyMission> DailyMissions => Set<DailyMission>();
+    public DbSet<WeeklyMission> WeeklyMissions => Set<WeeklyMission>();
+    public DbSet<BattlePassSeason> BattlePassSeasons => Set<BattlePassSeason>();
     public DbSet<AiTokenDailyUsage> AiTokenDailyUsages => Set<AiTokenDailyUsage>();
     public DbSet<AiExamChatThread> AiExamChatThreads => Set<AiExamChatThread>();
     public DbSet<AiExamChatMessage> AiExamChatMessages => Set<AiExamChatMessage>();

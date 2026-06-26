@@ -796,6 +796,69 @@ export function mapBadgeToUpdateRequest(badge) {
   };
 }
 
+const POINT_RULE_EVENT_TO_FE = {
+  "streak.milestone_7": "streak_milestone",
+  "auth.daily_login": "daily_login",
+  "post.published": "post_published",
+  "exam.completed": "exam_passed",
+  "like.received": "manual",
+  "comment.created": "manual",
+  "ai.used": "manual",
+  "document.read": "manual",
+};
+
+const POINT_RULE_EVENT_TO_BE = {
+  streak_milestone: "streak.milestone_7",
+  daily_login: "auth.daily_login",
+  post_published: "post.published",
+  exam_passed: "exam.completed",
+  manual: "manual",
+};
+
+function mapPointRuleEventToFe(eventType) {
+  return POINT_RULE_EVENT_TO_FE[eventType] ?? "manual";
+}
+
+function mapPointRuleEventToBe(eventType) {
+  return POINT_RULE_EVENT_TO_BE[eventType] ?? eventType;
+}
+
+export function mapPointRuleAdminDto(dto) {
+  const slug = dto.code ?? "";
+  const eventType = mapPointRuleEventToFe(dto.eventType ?? "");
+  return {
+    id: dto.id,
+    apiId: dto.id,
+    slug,
+    name: dto.description?.trim() || slug.replace(/-/g, " "),
+    eventType,
+    points: dto.points ?? 0,
+    intervalDays: eventType === "streak_milestone" ? 7 : null,
+    description: dto.description ?? "",
+    active: dto.isActive !== false,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function mapPointRuleToCreateRequest(data) {
+  return {
+    code: data.slug,
+    eventType: mapPointRuleEventToBe(data.eventType),
+    points: data.points,
+    isActive: data.active !== false,
+    description: data.description || data.name,
+  };
+}
+
+export function mapPointRuleToUpdateRequest(rule) {
+  return {
+    eventType: mapPointRuleEventToBe(rule.eventType),
+    points: rule.points,
+    isActive: rule.active !== false,
+    description: rule.description || rule.name,
+  };
+}
+
 export function mapRankTiersToUpdateLevelsRequest(ranks) {
   return {
     levels: ranks.map((rank) => ({

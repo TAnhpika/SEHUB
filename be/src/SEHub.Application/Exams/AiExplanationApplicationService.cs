@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Options;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Gamification.Abstractions;
+using SEHub.Application.Gamification.Events;
 using SEHub.Contracts.Exams;
 using SEHub.Domain.Exceptions;
 
@@ -17,6 +19,7 @@ public sealed class AiExplanationApplicationService : IAiExplanationApplicationS
     private readonly IAiExplanationService _aiService;
     private readonly IAiTokenService _aiTokenService;
     private readonly ICurrentUserService _currentUser;
+    private readonly IGamificationEventPublisher _gamificationPublisher;
     private readonly AiTokenLimitSettings _settings;
 
     public AiExplanationApplicationService(
@@ -24,12 +27,14 @@ public sealed class AiExplanationApplicationService : IAiExplanationApplicationS
         IAiExplanationService aiService,
         IAiTokenService aiTokenService,
         ICurrentUserService currentUser,
+        IGamificationEventPublisher gamificationPublisher,
         IOptions<AiTokenLimitSettings> settings)
     {
         _examRepository = examRepository;
         _aiService = aiService;
         _aiTokenService = aiTokenService;
         _currentUser = currentUser;
+        _gamificationPublisher = gamificationPublisher;
         _settings = settings.Value;
     }
 
@@ -53,6 +58,9 @@ public sealed class AiExplanationApplicationService : IAiExplanationApplicationS
             cancellationToken);
 
         var remaining = await _aiTokenService.RecordConsumptionAsync(userId, billingCost, cancellationToken);
+        await _gamificationPublisher.PublishAsync(
+            new AiUsedEvent(userId, "explain", questionId),
+            cancellationToken);
 
         return new AiExplainResponse
         {

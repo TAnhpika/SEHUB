@@ -93,6 +93,14 @@ function LoginPage() {
       const nextUser = await login({ username: email.trim(), password });
       navigateAfterLogin(nextUser);
     } catch (error) {
+      const errorCode = error?.errors?.[0]?.code;
+      if (errorCode === "EMAIL_NOT_CONFIRMED") {
+        navigate("/verify-email", {
+          replace: true,
+          state: { email: email.trim(), from: redirectTo },
+        });
+        return;
+      }
       showToast(error?.message ?? "Đăng nhập thất bại.");
       setIsSubmitting(false);
     }
@@ -116,6 +124,14 @@ function LoginPage() {
       }
       navigateAfterLogin(nextUser);
     } catch (error) {
+      const errorCode = error?.errors?.[0]?.code;
+      if (errorCode === "EMAIL_NOT_CONFIRMED") {
+        navigate("/verify-email", {
+          replace: true,
+          state: { email: account.username, from: redirectTo },
+        });
+        return;
+      }
       showToast(error?.message ?? "Đăng nhập thất bại.");
       setIsSubmitting(false);
     }

@@ -1,7 +1,8 @@
 using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
-using SEHub.Application.Gamification;
+using SEHub.Application.Gamification.Abstractions;
+using SEHub.Application.Gamification.Events;
 using SEHub.Application.Notifications;
 using SEHub.Application.Profiles;
 using SEHub.Contracts.Common;
@@ -17,8 +18,7 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
     private readonly IPracticeSubmissionRepository _submissionRepository;
     private readonly IExamRepository _examRepository;
     private readonly IUserRepository _userRepository;
-    private readonly IBadgeCheckService _badgeCheckService;
-    private readonly IUserActivityService _userActivityService;
+    private readonly IGamificationEventPublisher _gamificationPublisher;
     private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
@@ -28,8 +28,7 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
         IPracticeSubmissionRepository submissionRepository,
         IExamRepository examRepository,
         IUserRepository userRepository,
-        IBadgeCheckService badgeCheckService,
-        IUserActivityService userActivityService,
+        IGamificationEventPublisher gamificationPublisher,
         IWorkflowNotificationService workflowNotifications,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork,
@@ -38,8 +37,7 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
         _submissionRepository = submissionRepository;
         _examRepository = examRepository;
         _userRepository = userRepository;
-        _badgeCheckService = badgeCheckService;
-        _userActivityService = userActivityService;
+        _gamificationPublisher = gamificationPublisher;
         _workflowNotifications = workflowNotifications;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
@@ -74,11 +72,7 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
         await _submissionRepository.AddAsync(submission, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await _badgeCheckService.EvaluateForTriggerAsync(
-            userId,
-            BadgeCheckService.TriggerPracticeSubmissions,
-            cancellationToken);
-        await _userActivityService.RecordActivityAsync(userId, cancellationToken);
+        await _gamificationPublisher.PublishAsync(new PracticeSubmittedEvent(submission.Id, userId), cancellationToken);
         await _workflowNotifications.NotifyModeratorsPracticeSubmittedAsync(
             submission,
             exam,

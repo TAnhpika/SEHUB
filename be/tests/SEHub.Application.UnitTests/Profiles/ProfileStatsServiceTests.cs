@@ -1,11 +1,11 @@
 using Moq;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
-using SEHub.Application.Feed;
+using SEHub.Application.Gamification.Abstractions;
+using SEHub.Application.Gamification.Models;
 using SEHub.Application.Models;
 using SEHub.Application.Profiles;
 using SEHub.Contracts.Profiles;
-using SEHub.Domain.Entities;
 using SEHub.Domain.Exceptions;
 
 namespace SEHub.Application.UnitTests.Profiles;
@@ -13,12 +13,11 @@ namespace SEHub.Application.UnitTests.Profiles;
 public sealed class ProfileStatsServiceTests
 {
     private readonly Mock<IUserRepository> _userRepository = new();
-    private readonly Mock<ILevelConfigRepository> _levelConfigRepository = new();
     private readonly Mock<IUserBadgeRepository> _badgeRepository = new();
     private readonly Mock<IPostRepository> _postRepository = new();
     private readonly Mock<ICommentRepository> _commentRepository = new();
     private readonly Mock<IExamAttemptRepository> _examAttemptRepository = new();
-    private readonly Mock<IGamificationService> _gamificationService = new();
+    private readonly Mock<IGamificationReadService> _gamificationReadService = new();
     private readonly Mock<IProfileSnapshotCache> _snapshotCache = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
 
@@ -33,12 +32,11 @@ public sealed class ProfileStatsServiceTests
 
     private ProfileStatsService CreateSut() => new(
         _userRepository.Object,
-        _levelConfigRepository.Object,
         _badgeRepository.Object,
         _postRepository.Object,
         _commentRepository.Object,
         _examAttemptRepository.Object,
-        _gamificationService.Object,
+        _gamificationReadService.Object,
         _snapshotCache.Object,
         _currentUser.Object);
 
@@ -48,13 +46,17 @@ public sealed class ProfileStatsServiceTests
         _currentUser.SetupGet(u => u.IsAuthenticated).Returns(true);
         _userRepository.Setup(r => r.GetByUsernameAsync("anhpika", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new UserAccount { Id = UserId, Username = "anhpika", DisplayName = "Anhpika" });
-        _gamificationService.Setup(g => g.GetUserGamificationAsync(UserId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((120, "Bronze", 3));
-        _levelConfigRepository.Setup(r => r.GetAllOrderedAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<LevelConfig>
+        _gamificationReadService.Setup(g => g.GetProfileGamificationAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GamificationProfileDto
             {
-                new() { Name = "Bronze", MinPoints = 0 },
-                new() { Name = "Silver", MinPoints = 200 }
+                Points = 120,
+                LevelName = "Bronze",
+                CurrentStreak = 3,
+                HighestStreak = 5,
+                NextLevelPoints = 200,
+                NextLevelName = "Silver",
+                ProgressPercent = 60m,
+                RemainingPoints = 80
             });
         _badgeRepository.Setup(r => r.CountByUserIdAsync(UserId, It.IsAny<CancellationToken>())).ReturnsAsync(2);
         _postRepository.Setup(r => r.CountByAuthorIdAsync(UserId, It.IsAny<CancellationToken>())).ReturnsAsync(5);
@@ -68,6 +70,9 @@ public sealed class ProfileStatsServiceTests
         result.Points.Should().Be(120);
         result.LevelName.Should().Be("Bronze");
         result.StreakCount.Should().Be(3);
+        result.HighestStreak.Should().Be(5);
+        result.ProgressPercent.Should().Be(60m);
+        result.RemainingPoints.Should().Be(80);
         result.NextLevelPoints.Should().Be(200);
         result.NextLevelName.Should().Be("Silver");
         result.BadgesCount.Should().Be(2);
@@ -123,8 +128,8 @@ public sealed class ProfileStatsServiceTests
 
         result.Points.Should().Be(99);
         result.LevelName.Should().Be("Silver");
-        _gamificationService.Verify(
-            g => g.GetUserGamificationAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+        _gamificationReadService.Verify(
+            g => g.GetProfileGamificationAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 }

@@ -310,6 +310,28 @@ export function deleteGamificationBadge(id) {
   return apiRequest(`/api/v1/admin/gamification/badges/${id}`, { method: "DELETE" });
 }
 
+export function getGamificationPointRules() {
+  return apiRequest("/api/v1/admin/gamification/point-rules");
+}
+
+export function createGamificationPointRule(body) {
+  return apiRequest("/api/v1/admin/gamification/point-rules", {
+    method: "POST",
+    body,
+  });
+}
+
+export function updateGamificationPointRule(id, body) {
+  return apiRequest(`/api/v1/admin/gamification/point-rules/${id}`, {
+    method: "PUT",
+    body,
+  });
+}
+
+export function deleteGamificationPointRule(id) {
+  return apiRequest(`/api/v1/admin/gamification/point-rules/${id}`, { method: "DELETE" });
+}
+
 export function listModerationPracticeSubmissions(params = {}) {
   return apiRequest(`/api/v1/admin/moderation/practice-submissions${buildQuery(params)}`);
 }
