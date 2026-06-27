@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ToastProvider } from "@/common/Toast/ToastProvider";
+import { ConfirmDialogProvider } from "@/hooks/useConfirmDialog";
 import PrivateRoute from "@/common/guards/PrivateRoute";
 import GuestRoute from "@/common/guards/GuestRoute";
 import AuthenticatedHomeRedirect from "@/common/guards/AuthenticatedHomeRedirect";
@@ -21,6 +22,7 @@ import NotFound from "@/features/errors/NotFound/NotFound";
 import PremiumRoute from "@/common/guards/PremiumRoute";
 import PracticeFocusRedirect from "@/common/routes/PracticeFocusRedirect";
 import ExamFocusResultRedirect from "@/common/routes/ExamFocusResultRedirect";
+import PracticalExamRedirect from "@/common/routes/PracticalExamRedirect";
 import ScrollToTop from "@/common/routes/ScrollToTop";
 import AuthBootstrapFallback from "@/common/loading/AuthBootstrapFallback";
 import AdminRoute from "@/common/guards/AdminRoute";
@@ -95,10 +97,14 @@ function App() {
   return (
     <AuthProvider>
       <ToastProvider>
+        <ConfirmDialogProvider>
         <BrowserRouter>
           <ScrollToTop />
           <Suspense fallback={<RouteFallback />}>
           <Routes>
+            <Route path="/community/pratical-exam/*" element={<PracticalExamRedirect />} />
+            <Route path="/home/pratical-exam/*" element={<PracticalExamRedirect />} />
+            <Route path="/exam/focus/pratical-exam/*" element={<PracticalExamRedirect />} />
             <Route element={<AuthenticatedHomeRedirect />}>
               <Route element={<GuestLayout />}>
                 <Route path="/" element={<LandingPage />} />
@@ -119,22 +125,22 @@ function App() {
                   path="final-exam/:courseCode/:examId/result"
                   element={<ExamResultPage page="review" />}
                 />
-                <Route path="pratical-exam" element={<PracticeQuestionsPage />} />
+                <Route path="practical-exam" element={<PracticeQuestionsPage />} />
                 <Route
-                  path="pratical-exam/:courseCode"
+                  path="practical-exam/:courseCode"
                   element={<SubjectDetailPage page="practice" />}
                 />
                 <Route
-                  path="pratical-exam/:courseCode/:examId"
+                  path="practical-exam/:courseCode/:examId"
                   element={<ExamDetailPage page="practice" />}
                 />
                 <Route element={<PremiumRoute />}>
                   <Route
-                    path="pratical-exam/:courseCode/:examId/do/:questionIndex"
+                    path="practical-exam/:courseCode/:examId/do/:questionIndex"
                     element={<PracticeDoPage />}
                   />
                   <Route
-                    path="pratical-exam/:courseCode/:examId/result/:questionIndex"
+                    path="practical-exam/:courseCode/:examId/result/:questionIndex"
                     element={<ExamResultPage page="practice" />}
                   />
                 </Route>
@@ -187,22 +193,22 @@ function App() {
                   path="/home/final-exam/:courseCode/:examId/result"
                   element={<ExamResultPage page="review" />}
                 />
-                <Route path="/home/pratical-exam" element={<PracticeQuestionsPage scope="home" />} />
+                <Route path="/home/practical-exam" element={<PracticeQuestionsPage scope="home" />} />
                 <Route
-                  path="/home/pratical-exam/:courseCode"
+                  path="/home/practical-exam/:courseCode"
                   element={<SubjectDetailPage page="practice" />}
                 />
                 <Route
-                  path="/home/pratical-exam/:courseCode/:examId"
+                  path="/home/practical-exam/:courseCode/:examId"
                   element={<ExamDetailPage page="practice" />}
                 />
                 <Route element={<PremiumRoute />}>
                   <Route
-                    path="/home/pratical-exam/:courseCode/:examId/do/:questionIndex"
+                    path="/home/practical-exam/:courseCode/:examId/do/:questionIndex"
                     element={<PracticeDoPage />}
                   />
                   <Route
-                    path="/home/pratical-exam/:courseCode/:examId/result/:questionIndex"
+                    path="/home/practical-exam/:courseCode/:examId/result/:questionIndex"
                     element={<ExamResultPage page="practice" />}
                   />
                 </Route>
@@ -235,11 +241,11 @@ function App() {
               </Route>
               <Route element={<PremiumRoute />}>
                 <Route
-                  path="/exam/focus/pratical-exam/:courseCode/:examId/do/:questionIndex"
+                  path="/exam/focus/practical-exam/:courseCode/:examId/do/:questionIndex"
                   element={<PracticeFocusRedirect />}
                 />
                 <Route
-                  path="/exam/focus/pratical-exam/:courseCode/:examId/result/:questionIndex"
+                  path="/exam/focus/practical-exam/:courseCode/:examId/result/:questionIndex"
                   element={<PracticeFocusRedirect result />}
                 />
               </Route>
@@ -297,6 +303,7 @@ function App() {
           </Routes>
           </Suspense>
         </BrowserRouter>
+        </ConfirmDialogProvider>
       </ToastProvider>
     </AuthProvider>
   );
