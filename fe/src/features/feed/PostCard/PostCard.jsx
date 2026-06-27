@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faComment,
@@ -85,22 +85,12 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
     onOpen?.(post);
   }
 
-  function handleOpenComments(event) {
-    event.stopPropagation();
+  function handleOpenComments() {
     if (!canInteract) {
       requireAuth("Vui lòng đăng nhập để bình luận.");
       return;
     }
     onOpen?.(post, { focusComments: true });
-  }
-
-  function handleInteract(event) {
-    event.stopPropagation();
-    if (!canInteract) {
-      requireAuth("Vui lòng đăng nhập để bình luận bài viết.");
-      return;
-    }
-    onOpen?.(post);
   }
 
   function handleEditPost(event) {
@@ -113,8 +103,7 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
     onDelete?.(post);
   }
 
-  async function handleShare(event) {
-    event.stopPropagation();
+  async function handleShare() {
     try {
       await copyPostLink(post.id);
       showCopyToast();
@@ -123,8 +112,7 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
     }
   }
 
-  async function handleLike(event) {
-    event.stopPropagation();
+  async function handleLike() {
     if (!canInteract) {
       requireAuth("Vui lòng đăng nhập để thích bài viết.");
       return;
@@ -150,84 +138,72 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
   }
 
   return (
-    <article
-      ref={cardRef}
-      className={styles.card}
-      onClick={handleOpenPost}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          handleOpenPost();
-        }
-      }}
-      role="button"
-      tabIndex={0}
-    >
-      <header className={styles.header}>
-        <div className={styles.author}>
-          <span className={styles.avatar} aria-hidden="true">
-            {post.author.initial}
-          </span>
-          <div>
-            <p
-              className={withPremiumUsernameClass(
-                styles.username,
-                isOwner && isPremium,
-              )}
-            >
-              {post.author.username}
-            </p>
-            <p className={styles.meta}>
-              {post.publishedAt ?? post.timeAgo}
-              {!isOwner && post.author.club ? ` · ${post.author.club}` : ""}
-            </p>
-          </div>
-        </div>
-
-        {isOwner && (
+    <article ref={cardRef} className={styles.card}>
+      {isOwner ? (
+        <div className={styles.ownerMenu}>
           <PostOwnerMenu onEdit={handleEditPost} onDelete={handleDeletePost} />
-        )}
-      </header>
-
-      <h2 className={styles.title}>
-        {post.isPinned ? <span className={styles.pinnedBadge}>Ghim</span> : null}
-        {post.title}
-      </h2>
-      {previewImageUrl ? (
-        <div className={styles.coverWrap}>
-          <img src={previewImageUrl} alt="" className={styles.cover} loading="lazy" />
         </div>
       ) : null}
-      <RichTextContent
-        value={post.contentPreview ?? post.body ?? post.excerpt}
-        className={styles.excerpt}
-        emptyFallback={null}
-      />
 
-      <ul className={styles.tags} aria-label="Thẻ bài viết">
-        {post.tags.map((tag) => (
-          <li key={tag} className={styles.tag}>
-            {tag}
-          </li>
-        ))}
-      </ul>
+      <button type="button" className={styles.bodyBtn} onClick={handleOpenPost}>
+        <header className={styles.header}>
+          <div className={styles.author}>
+            <span className={styles.avatar} aria-hidden="true">
+              {post.author.initial}
+            </span>
+            <div>
+              <p
+                className={withPremiumUsernameClass(
+                  styles.username,
+                  isOwner && isPremium,
+                )}
+              >
+                {post.author.username}
+              </p>
+              <p className={styles.meta}>
+                {post.publishedAt ?? post.timeAgo}
+                {!isOwner && post.author.club ? ` · ${post.author.club}` : ""}
+              </p>
+            </div>
+          </div>
+        </header>
 
-      {commentPreviews.length > 0 ? (
-        <ul
-          className={styles.commentPreviews}
-          aria-label="Bình luận gần đây"
-          onClick={(event) => event.stopPropagation()}
-        >
-          {commentPreviews.map((comment) => (
-            <li key={comment.id} className={styles.commentPreview}>
-              <span className={styles.commentAuthor}>{comment.author.name}</span>
-              <span className={styles.commentText}>{comment.content}</span>
+        <h2 className={styles.title}>
+          {post.isPinned ? <span className={styles.pinnedBadge}>Ghim</span> : null}
+          {post.title}
+        </h2>
+        {previewImageUrl ? (
+          <div className={styles.coverWrap}>
+            <img src={previewImageUrl} alt="" className={styles.cover} loading="lazy" />
+          </div>
+        ) : null}
+        <RichTextContent
+          value={post.contentPreview ?? post.body ?? post.excerpt}
+          className={styles.excerpt}
+          emptyFallback={null}
+        />
+
+        <ul className={styles.tags} aria-label="Thẻ bài viết">
+          {post.tags.map((tag) => (
+            <li key={tag} className={styles.tag}>
+              {tag}
             </li>
           ))}
         </ul>
-      ) : null}
 
-      <footer className={styles.footer} onClick={(event) => event.stopPropagation()}>
+        {commentPreviews.length > 0 ? (
+          <ul className={styles.commentPreviews} aria-label="Bình luận gần đây">
+            {commentPreviews.map((comment) => (
+              <li key={comment.id} className={styles.commentPreview}>
+                <span className={styles.commentAuthor}>{comment.author.name}</span>
+                <span className={styles.commentText}>{comment.content}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </button>
+
+      <footer className={styles.footer}>
         <div className={styles.stats}>
           <button
             type="button"
@@ -276,4 +252,4 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
   );
 }
 
-export default PostCard;
+export default memo(PostCard);

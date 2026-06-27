@@ -86,7 +86,16 @@
     gap: 0;
   }
 
-  .col-left,
+  .col-left {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    overflow: visible;
+    z-index: 50;
+  }
+
   .col-right {
     display: none;
   }

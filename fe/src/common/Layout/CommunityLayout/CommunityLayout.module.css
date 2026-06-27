@@ -96,7 +96,16 @@
   }
 
   .col-left {
-    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    overflow: visible;
+    z-index: 50;
+    padding: 0;
+    border: none;
+    background: transparent;
   }
 
   .col-right {

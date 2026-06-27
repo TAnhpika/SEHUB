@@ -16,7 +16,7 @@ const SUBJECT_ICONS = {
 /**
  * @param {"community" | "home"} [scope="community"]
  */
-function SubjectNavSection({ pathname, styles, scope = "community" }) {
+function SubjectNavSection({ pathname, styles, scope = "community", onNavigate }) {
   const links = getSubjectNavLinks(scope).map((item) => ({
     ...item,
     icon: SUBJECT_ICONS[item.key],
@@ -38,6 +38,7 @@ function SubjectNavSection({ pathname, styles, scope = "community" }) {
                 <Link
                   to={item.to}
                   className={`${styles["subject-link"]} ${isActive ? styles.active : ""}`}
+                  onClick={onNavigate}
                 >
                   <FontAwesomeIcon icon={item.icon} className={styles.icon} />
                   {item.label}

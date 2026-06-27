@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+import { faBars, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import HeaderUserActions from "@/common/Header/HeaderUserActions/HeaderUserActions";
+import { useMainShellOptional } from "@/common/context/MainShellContext";
 import { useAuth } from "@/context";
 import logoSrc from "@/img/logo.png";
 import styles from "./MainHeader.module.css";
@@ -12,6 +13,7 @@ function MainHeader() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { isAdmin } = useAuth();
+  const mainShell = useMainShellOptional();
   const brandTo = isAdmin ? "/admin" : "/home";
   const isSearchPage = location.pathname === "/home/search";
   const [searchQuery, setSearchQuery] = useState(() =>
@@ -32,9 +34,24 @@ function MainHeader() {
     navigate(`/home/search?q=${encodeURIComponent(trimmed)}`);
   }
 
+  function handleMobileSearch() {
+    navigate("/home/search");
+  }
+
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
+        {mainShell ? (
+          <button
+            type="button"
+            className={styles.menuBtn}
+            aria-label="Mở menu điều hướng"
+            onClick={() => mainShell.setSidebarOpen(true)}
+          >
+            <FontAwesomeIcon icon={faBars} />
+          </button>
+        ) : null}
+
         <Link to={brandTo} className={styles.brand}>
           <img
             src={logoSrc}
@@ -61,6 +78,14 @@ function MainHeader() {
         </form>
 
         <div className={styles.actions}>
+          <button
+            type="button"
+            className={styles.searchBtn}
+            aria-label="Tìm kiếm"
+            onClick={handleMobileSearch}
+          >
+            <FontAwesomeIcon icon={faMagnifyingGlass} />
+          </button>
           <HeaderUserActions />
         </div>
       </div>

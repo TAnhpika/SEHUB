@@ -5,7 +5,7 @@ import { faMessage, faRobot } from "@fortawesome/free-solid-svg-icons";
 import { loadUnreadCount } from "@/features/chat/messagesData";
 import { useChatHub } from "@/hooks/useChatHub";
 
-function InteractionNavSection({ pathname, styles, isPremium = false }) {
+function InteractionNavSection({ pathname, styles, isPremium = false, onNavigate }) {
   const isMessagesActive =
     pathname === "/home/messages" || pathname.startsWith("/home/messages/");
   const isAdvisorActive = pathname === "/home/advisor" || pathname.startsWith("/home/advisor/");
@@ -49,6 +49,7 @@ function InteractionNavSection({ pathname, styles, isPremium = false }) {
             <Link
               to="/home/messages"
               className={`${styles["subject-link"]} ${styles["badge-link"]} ${isMessagesActive ? styles.active : ""}`}
+              onClick={onNavigate}
             >
               <span className={styles["link-content"]}>
                 <FontAwesomeIcon icon={faMessage} className={styles.icon} />
@@ -66,6 +67,7 @@ function InteractionNavSection({ pathname, styles, isPremium = false }) {
               <Link
                 to="/home/advisor"
                 className={`${styles["subject-link"]} ${isAdvisorActive ? styles.active : ""}`}
+                onClick={onNavigate}
               >
                 <FontAwesomeIcon icon={faRobot} className={styles.icon} />
                 Tư vấn AI

@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/context";
+import AuthBootstrapFallback from "@/common/loading/AuthBootstrapFallback";
 import { mapCommunityPathToHome } from "@/utils/subjectPaths";
 
 function AuthenticatedHomeRedirect() {
@@ -7,7 +8,7 @@ function AuthenticatedHomeRedirect() {
   const location = useLocation();
 
   if (isBootstrapping) {
-    return null;
+    return <AuthBootstrapFallback />;
   }
 
   if (isAuthenticated) {
