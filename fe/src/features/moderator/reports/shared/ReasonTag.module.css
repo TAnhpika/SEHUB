@@ -1,0 +1,16 @@
+.tag {
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+.tagMuted {
+  color: #4b5563;
+  background: #f3f4f6;
+}
+
+.tagDanger {
+  color: #b91c1c;
+  background: #fee2e2;
+}

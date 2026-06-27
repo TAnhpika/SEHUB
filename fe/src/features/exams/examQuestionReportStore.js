@@ -1,6 +1,7 @@
 import * as adminApi from "@/api/adminApi";
 import * as examsApi from "@/api/examsApi";
 import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
+import { MODERATION_QUEUE_FETCH_SIZE } from "@/features/moderator/reports/shared/reportCategoryConstants";
 import { formatRelativeTime } from "@/utils/dateTime";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
@@ -78,6 +79,7 @@ function mapApiReport(dto) {
     questionPreview: questionText,
     reporterUsername: dto.reporterUsername,
     createdAt: dto.createdAt,
+    createdAtIso: dto.createdAt,
     resolutionNote: dto.resolutionNote,
     snippet: `Câu ${dto.questionIndex} · ${dto.examCode} — ${
       questionText.length > 72 ? `${questionText.slice(0, 72)}…` : questionText
@@ -85,13 +87,18 @@ function mapApiReport(dto) {
   });
 }
 
-export async function getExamQuestionReports() {
+export async function getExamQuestionReports({ pageSize = ADMIN_API_PAGE_SIZE } = {}) {
   if (USE_MOCK) {
     return readAll().map(toModeratorReport);
   }
 
-  const page = await adminApi.listQuestionReports({ page: 1, pageSize: ADMIN_API_PAGE_SIZE });
+  const page = await adminApi.listQuestionReports({ page: 1, pageSize });
   return (page.items ?? []).map(mapApiReport);
+}
+
+export async function findExamQuestionReportById(id) {
+  const items = await getExamQuestionReports({ pageSize: MODERATION_QUEUE_FETCH_SIZE });
+  return items.find((item) => item.id === id) ?? null;
 }
 
 export async function getPendingExamQuestionReportCount() {

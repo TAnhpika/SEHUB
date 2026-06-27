@@ -1,5 +1,6 @@
 import * as adminApi from "@/api/adminApi";
 import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
+import { MODERATION_QUEUE_FETCH_SIZE } from "@/features/moderator/reports/shared/reportCategoryConstants";
 import { REASON_META } from "@/features/moderator/reports/reportsData";
 import { formatRelativeTime } from "@/utils/dateTime";
 
@@ -89,13 +90,18 @@ function mapApiReport(dto) {
   });
 }
 
-export async function getConversationReports() {
+export async function getConversationReports({ pageSize = ADMIN_API_PAGE_SIZE } = {}) {
   if (USE_MOCK) {
     return [];
   }
 
-  const page = await adminApi.listConversationReports({ page: 1, pageSize: ADMIN_API_PAGE_SIZE });
+  const page = await adminApi.listConversationReports({ page: 1, pageSize });
   return (page.items ?? []).map(mapApiReport);
+}
+
+export async function findConversationReportById(id) {
+  const items = await getConversationReports({ pageSize: MODERATION_QUEUE_FETCH_SIZE });
+  return items.find((item) => item.id === id) ?? null;
 }
 
 export async function resolveConversationReport(id, resolution) {
