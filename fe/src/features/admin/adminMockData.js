@@ -241,11 +241,6 @@ export const ADMIN_EXAM_PENDING = getAdminPendingExams();
 
 export { getAdminDocuments as ADMIN_DOCUMENTS } from "@/features/admin/documents/adminDocumentData";
 
-import { getAdminReports } from "@/features/admin/moderation/adminReportData";
-
-/** Snapshot mock — dùng getAdminReports() khi cần danh sách live */
-export const ADMIN_REPORTS = getAdminReports();
-
 export const ADMIN_BANNED_USERS = getAdminBannedUsers();
 
 export { getAdminPayments as ADMIN_PAYMENTS } from "@/features/admin/payments/adminPaymentData";

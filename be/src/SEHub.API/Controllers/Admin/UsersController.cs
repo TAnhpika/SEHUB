@@ -114,5 +114,21 @@ public sealed class UsersController : ControllerBase
 
     }
 
+
+
+    [HttpGet("{id:guid}/activity")]
+
+    [Authorize(Policy = PolicyNames.RequireAdmin)]
+
+    public async Task<IActionResult> GetUserActivity(Guid id, [FromQuery] int limit = 20, CancellationToken cancellationToken = default)
+
+    {
+
+        var result = await _adminUserService.GetUserActivityAsync(id, limit, cancellationToken);
+
+        return Ok(result);
+
+    }
+
 }
 

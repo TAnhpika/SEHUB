@@ -61,6 +61,15 @@ public sealed class GamificationController : ControllerBase
         });
     }
 
+    [HttpGet("me/daily-missions")]
+    [Authorize]
+    public async Task<IActionResult> GetMyDailyMissions(CancellationToken cancellationToken)
+    {
+        var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException();
+        var missions = await _readService.GetDailyMissionProgressAsync(userId, cancellationToken);
+        return Ok(missions);
+    }
+
     [HttpGet("leaderboard")]
     [AllowAnonymous]
     public async Task<IActionResult> GetLeaderboard([FromQuery] int take = 20, CancellationToken cancellationToken = default)

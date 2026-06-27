@@ -10,4 +10,5 @@ public interface IAdminUserService
     Task<AdminUserDetailDto> PatchUserAsync(Guid id, AdminUserPatchRequest request, CancellationToken cancellationToken = default);
     Task ResetPasswordAsync(Guid id, CancellationToken cancellationToken = default);
     Task GrantTokensAsync(Guid id, GrantTokensRequest request, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AdminUserActivityItemDto>> GetUserActivityAsync(Guid id, int limit = 20, CancellationToken cancellationToken = default);
 }

@@ -12,6 +12,7 @@ import {
   getSubjectOptionsForSemester,
   PRACTICE_SEMESTER_OPTIONS,
 } from "@/features/moderator/practiceExams/practiceExamData";
+import { loadReviewCourses, REVIEW_COURSES } from "@/features/review/ReviewQuestionsPage/reviewData";
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
 import {
   generateExamPaperCode,
@@ -29,12 +30,27 @@ function FinalExamInfoStep() {
     String(examInfo.totalQuestions ?? ""),
   );
   const [existingPaperCodes, setExistingPaperCodes] = useState([]);
+  const [reviewCourses, setReviewCourses] = useState(REVIEW_COURSES);
 
   const previewQuestionCount = parseTotalQuestions(questionCountInput);
   const subjectOptions = useMemo(
-    () => getSubjectOptionsForSemester(examInfo.semesterLabel),
-    [examInfo.semesterLabel],
+    () => getSubjectOptionsForSemester(examInfo.semesterLabel, reviewCourses),
+    [examInfo.semesterLabel, reviewCourses],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    loadReviewCourses()
+      .then((courses) => {
+        if (!cancelled) setReviewCourses(courses);
+      })
+      .catch(() => {
+        if (!cancelled) setReviewCourses([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;

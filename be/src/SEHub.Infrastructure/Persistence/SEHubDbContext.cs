@@ -22,6 +22,7 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<PostLike> PostLikes => Set<PostLike>();
     public DbSet<PostReport> PostReports => Set<PostReport>();
     public DbSet<QuestionReport> QuestionReports => Set<QuestionReport>();
+    public DbSet<QuestionComment> QuestionComments => Set<QuestionComment>();
     public DbSet<Exam> Exams => Set<Exam>();
     public DbSet<ExamAttachment> ExamAttachments => Set<ExamAttachment>();
     public DbSet<PostImage> PostImages => Set<PostImage>();
@@ -63,6 +64,7 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
     public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
     public DbSet<ConversationReport> ConversationReports => Set<ConversationReport>();
+    public DbSet<UserFeedback> UserFeedbacks => Set<UserFeedback>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -72,6 +74,7 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
 
         builder.Entity<Post>().HasQueryFilter(p => !p.IsDeleted);
         builder.Entity<Comment>().HasQueryFilter(c => !c.IsDeleted);
+        builder.Entity<QuestionComment>().HasQueryFilter(c => !c.IsDeleted);
         builder.Entity<Document>().HasQueryFilter(d => !d.IsDeleted);
     }
 }

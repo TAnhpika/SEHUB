@@ -41,4 +41,22 @@ public class UserProfileRepository : IUserProfileRepository
         _context.UserProfiles.Update(profile);
         return Task.CompletedTask;
     }
+
+    public async Task<IReadOnlyList<(DateOnly Date, int Count)>> GetRegistrationCountsByDateRangeAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default)
+    {
+        var start = startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var end = endDate.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+
+        var rows = await _context.UserProfiles
+            .AsNoTracking()
+            .Where(p => p.CreatedAt >= start && p.CreatedAt <= end)
+            .GroupBy(p => DateOnly.FromDateTime(p.CreatedAt))
+            .Select(g => new { Date = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        return rows.Select(r => (r.Date, r.Count)).ToList();
+    }
 }

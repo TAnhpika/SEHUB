@@ -1,4 +1,5 @@
 using SEHub.Contracts.Exams;
+using SEHub.Contracts.Subjects;
 using SEHub.Domain.Entities;
 
 namespace SEHub.Application.Abstractions.Repositories;
@@ -15,4 +16,5 @@ public interface IExamRepository
     Task ReplaceQuestionsAsync(Guid examId, IReadOnlyList<Question> newQuestions, CancellationToken cancellationToken = default);
     Task<int> CountPublishedAsync(CancellationToken cancellationToken = default);
     Task<Exam?> GetPendingRevisionOfAsync(Guid publishedExamId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<SubjectSourceEntryDto>> GetDistinctPublishedSubjectsAsync(CancellationToken cancellationToken = default);
 }

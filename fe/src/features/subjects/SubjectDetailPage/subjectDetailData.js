@@ -195,21 +195,6 @@ function mapApiExamListItemToPaper(dto, courseCode, typeLabel) {
   };
 }
 
-function buildMajorQueryValues(courseCode) {
-  const values = new Set();
-  const normalized = normalizeCourseSubjectCode(courseCode);
-  const upper = courseCode?.toUpperCase() ?? "";
-
-  if (normalized) {
-    values.add(normalized);
-  }
-  if (upper) {
-    values.add(upper);
-  }
-
-  return [...values];
-}
-
 export async function loadExamPapersForCourse(courseCode, pageKey) {
   const meta = PAGE_EXAM_API_META[pageKey];
   if (!meta) {
@@ -225,22 +210,19 @@ export async function loadExamPapersForCourse(courseCode, pageKey) {
     );
   }
 
-  const majors = buildMajorQueryValues(courseCode);
-  const collected = new Map();
-
-  for (const major of majors) {
-    const page = await examsApi.listExams({
-      major,
-      type: meta.apiType,
-      pageSize: 100,
-    });
-
-    for (const item of page.items ?? []) {
-      collected.set(item.id, item);
-    }
+  const subjectCode =
+    normalizeCourseSubjectCode(courseCode) ?? courseCode?.toUpperCase() ?? "";
+  if (!subjectCode) {
+    return [];
   }
 
-  return [...collected.values()]
+  const page = await examsApi.listExams({
+    code: subjectCode,
+    type: meta.apiType,
+    pageSize: 100,
+  });
+
+  return (page.items ?? [])
     .map((dto) => mapApiExamListItemToPaper(dto, courseCode, meta.typeLabel))
     .sort((a, b) => {
       if (b.year !== a.year) {
@@ -249,6 +231,33 @@ export async function loadExamPapersForCourse(courseCode, pageKey) {
       const termOrder = { SP: 0, SU: 1, FA: 2 };
       return (termOrder[a.term] ?? 0) - (termOrder[b.term] ?? 0);
     });
+}
+
+export async function loadExamById(courseCode, examId, pageKey, scope = "community") {
+  if (USE_MOCK) {
+    return getExamById(courseCode, examId, pageKey, scope);
+  }
+
+  const config = getSubjectDetailConfig(pageKey, scope);
+  if (!config) return null;
+
+  const normalizedCode = courseCode?.toUpperCase() ?? "";
+
+  if (pageKey === "documents") {
+    const { loadDocumentItemsForCourse } = await import(
+      "@/features/documents/studentDocumentsData"
+    );
+    const docs = await loadDocumentItemsForCourse(normalizedCode);
+    return docs.find((item) => item.id === examId) ?? null;
+  }
+
+  const papers = await loadExamPapersForCourse(courseCode, pageKey);
+  const paper = papers.find((exam) => exam.id === examId || exam.apiId === examId);
+  if (paper) {
+    return paper;
+  }
+
+  return null;
 }
 
 export function getExamById(courseCode, examId, pageKey, scope = "community") {

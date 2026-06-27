@@ -1,3 +1,7 @@
+import * as examsApi from "@/api/examsApi";
+import { isValidGuid } from "@/features/feed/postUtils";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 const STORAGE_KEY = "sehubs_exam_comments";
 
 function threadKey(examId, questionId) {
@@ -28,6 +32,23 @@ function formatTimeAgo(isoString) {
   return `${days} ngày trước`;
 }
 
+function mapApiComment(dto) {
+  const displayName = dto.author?.displayName ?? dto.author?.username ?? "User";
+  return {
+    id: dto.id,
+    author: displayName,
+    username: dto.author?.username ?? "",
+    initial: displayName.charAt(0).toUpperCase(),
+    avatarColor: "#004ac6",
+    content: dto.content,
+    createdAt: dto.createdAt,
+    timeAgo: formatTimeAgo(dto.createdAt),
+    likes: 0,
+    likedByMe: false,
+    highlighted: false,
+  };
+}
+
 function withDisplayFields(comment) {
   return {
     ...comment,
@@ -35,62 +56,68 @@ function withDisplayFields(comment) {
   };
 }
 
-/** @returns {Array} */
-export function getExamComments(examId, questionId) {
+function getMockComments(examId, questionId) {
   const key = threadKey(examId, questionId);
   const store = readStore();
-
   if (!store[key]) {
     store[key] = [];
     writeStore(store);
   }
-
   return store[key].map(withDisplayFields);
 }
 
-export function addExamComment(examId, questionId, user, content) {
+export async function loadExamComments(examId, questionId) {
+  if (USE_MOCK || !isValidGuid(String(examId ?? "")) || !isValidGuid(String(questionId ?? ""))) {
+    return getMockComments(examId, questionId);
+  }
+
+  const items = await examsApi.getQuestionComments(examId, questionId);
+  return (items ?? []).map(mapApiComment);
+}
+
+export async function addExamComment(examId, questionId, user, content) {
   const trimmed = content?.trim();
   if (!trimmed || !user) return null;
 
-  const key = threadKey(examId, questionId);
-  const store = readStore();
-
-  if (!store[key]) {
-    store[key] = [];
+  if (USE_MOCK || !isValidGuid(String(examId ?? "")) || !isValidGuid(String(questionId ?? ""))) {
+    const key = threadKey(examId, questionId);
+    const store = readStore();
+    if (!store[key]) store[key] = [];
+    const displayName = user.displayName ?? user.username ?? "Sinh viên";
+    const comment = {
+      id: `cmt-${Date.now()}`,
+      examId,
+      questionId,
+      userId: user.username ?? user.email,
+      author: displayName,
+      initial: displayName.charAt(0).toUpperCase(),
+      avatarColor: "#004ac6",
+      content: trimmed,
+      createdAt: new Date().toISOString(),
+      likes: 0,
+      likedByMe: false,
+      highlighted: false,
+    };
+    store[key] = [...store[key], comment];
+    writeStore(store);
+    return withDisplayFields(comment);
   }
 
-  const displayName = user.displayName ?? user.username ?? "Sinh viên";
-  const initial = user.initial ?? displayName.charAt(0).toUpperCase();
-
-  const comment = {
-    id: `cmt-${Date.now()}`,
-    examId,
-    questionId,
-    userId: user.username ?? user.email,
-    author: displayName,
-    initial,
-    avatarColor: "#004ac6",
-    content: trimmed,
-    createdAt: new Date().toISOString(),
-    likes: 0,
-    likedByMe: false,
-    highlighted: false,
-  };
-
-  store[key] = [...store[key], comment];
-  writeStore(store);
-
-  return withDisplayFields(comment);
+  const dto = await examsApi.createQuestionComment(examId, questionId, { content: trimmed });
+  return mapApiComment(dto);
 }
 
-export function toggleExamCommentLike(examId, questionId, commentId, userId) {
+export async function toggleExamCommentLike(examId, questionId, commentId, userId) {
+  if (!USE_MOCK) {
+    return loadExamComments(examId, questionId);
+  }
+
   const key = threadKey(examId, questionId);
   const store = readStore();
-  if (!store[key]) return null;
+  if (!store[key]) return [];
 
   store[key] = store[key].map((comment) => {
     if (comment.id !== commentId) return comment;
-
     const likedByMe = !comment.likedByMe;
     return {
       ...comment,
@@ -100,5 +127,10 @@ export function toggleExamCommentLike(examId, questionId, commentId, userId) {
   });
 
   writeStore(store);
-  return getExamComments(examId, questionId);
+  return getMockComments(examId, questionId);
+}
+
+/** @deprecated Use loadExamComments */
+export function getExamComments(examId, questionId) {
+  return getMockComments(examId, questionId);
 }

@@ -4,6 +4,7 @@ import { deriveUsernameFromEmail, mapApiUser } from "@/api/authMapper";
 import { mapProfileStatsToAuthUser, mapAiTokenStatusDto } from "@/api/profileMapper";
 import { mapSubscriptionStatusDto } from "@/api/premiumMapper";
 import {
+  ApiError,
   clearAuthTokens,
   getAccessToken,
   getRefreshToken,
@@ -12,7 +13,7 @@ import {
   setRefreshToken,
 } from "@/api/httpClient";
 import { resolveIsPremium, STUDENT_PLAN } from "@/utils/studentPlan";
-import { consumeAiExplainTokens, clearServerAiTokenSnapshot, getAiTokenSnapshot, setServerAiTokenSnapshot, applyServerRemainingTokens } from "@/utils/aiTokens";
+import { consumeAiExplainTokens, clearServerAiTokenSnapshot, getAiTokenSnapshot, setServerAiTokenSnapshot, applyServerRemainingTokens, refreshAiTokensFromServer } from "@/utils/aiTokens";
 import { AuthContext } from "./authContextValue";
 
 const STORAGE_KEY = "sehubs_user";
@@ -107,6 +108,8 @@ function applyAuthSession(setUser, setIsBootstrapping, loginResponse) {
       const merged = applyMeEnrichment(nextUser, me);
       persistUser(merged);
       setUser(merged);
+    }).catch(() => {
+      /* keep login response user if /me enrichment fails */
     });
   }
 
@@ -136,7 +139,10 @@ function applyMeEnrichment(user, meDto) {
   }
 
   if (meDto.aiTokens) {
-    setServerAiTokenSnapshot(mapAiTokenStatusDto(meDto.aiTokens));
+    setServerAiTokenSnapshot(mapAiTokenStatusDto(meDto.aiTokens), user);
+  } else if (!USE_MOCK) {
+    clearServerAiTokenSnapshot();
+    refreshAiTokensFromServer(user).catch(() => {});
   } else {
     clearServerAiTokenSnapshot();
   }
@@ -155,6 +161,17 @@ async function syncUserFromApi(user, meDto = null) {
 
   const me = meDto ?? (await authApi.getMe());
   return applyMeEnrichment(user, me);
+}
+
+function shouldClearSessionOnBootstrapError(error) {
+  return error instanceof ApiError && (error.status === 401 || error.status === 403);
+}
+
+function applyStoredUserFallback(setUser) {
+  const stored = readStoredUser();
+  if (stored) {
+    setUser(stored);
+  }
 }
 
 function clearAuthSession(setUser) {
@@ -193,8 +210,14 @@ export function AuthProvider({ children }) {
         const nextUser = applyMeEnrichment(mapAndEnrichUser(me), me);
         persistUser(nextUser);
         setUser(nextUser);
-      } catch {
+      } catch (error) {
         if (cancelled) return;
+
+        if (!shouldClearSessionOnBootstrapError(error)) {
+          applyStoredUserFallback(setUser);
+          return;
+        }
+
         try {
           if (getRefreshToken() && getRefreshToken() === refreshAtStart) {
             const refreshed = await refreshSession();
@@ -305,17 +328,7 @@ export function AuthProvider({ children }) {
       return getAiTokenSnapshot(user);
     }
 
-    try {
-      const me = await authApi.getMe();
-      if (me?.aiTokens) {
-        setServerAiTokenSnapshot(mapAiTokenStatusDto(me.aiTokens));
-      } else {
-        clearServerAiTokenSnapshot();
-      }
-    } catch {
-      clearServerAiTokenSnapshot();
-    }
-
+    await refreshAiTokensFromServer(user);
     setAiTokenVersion((version) => version + 1);
     return getAiTokenSnapshot(user);
   }, [user]);

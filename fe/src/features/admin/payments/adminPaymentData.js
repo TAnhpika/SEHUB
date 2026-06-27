@@ -311,11 +311,12 @@ export function confirmPayOsPayment(paymentId, adminUsername = "admin_sehub") {
   };
 }
 
-export function grantManualTokens({
+export async function grantManualTokens({
   username,
   amount,
   reason,
   adminUsername = "admin_sehub",
+  userId = null,
 }) {
   const trimmedUser = username?.trim();
   const trimmedReason = reason?.trim();
@@ -330,6 +331,40 @@ export function grantManualTokens({
   if (!validation.ok) return validation;
 
   const grantAmount = validation.amount;
+
+  if (!USE_MOCK) {
+    const resolvedUserId = userId ?? (await adminApi.listUsers({ search: trimmedUser, pageSize: 5 }))
+      ?.items?.find((item) => item.username?.toLowerCase() === trimmedUser.toLowerCase())?.id;
+
+    if (!resolvedUserId || !isValidGuid(String(resolvedUserId))) {
+      return { ok: false, message: "Không tìm thấy sinh viên trên hệ thống." };
+    }
+
+    try {
+      await adminApi.grantUserTokens(resolvedUserId, { amount: grantAmount });
+    } catch (error) {
+      return { ok: false, message: error?.message ?? "Không cộng được token." };
+    }
+
+    const now = new Date().toISOString();
+    const entry = {
+      id: `aud-${Date.now()}`,
+      at: now,
+      admin: adminUsername,
+      action: "manual_token",
+      username: trimmedUser,
+      detail: `Cộng ${grantAmount} token thưởng — ${trimmedReason}`,
+      meta: { amount: grantAmount, bonusBefore: currentBonus },
+    };
+    auditStore = [entry, ...auditStore];
+
+    return {
+      ok: true,
+      message: `Đã cộng ${grantAmount} token cho @${trimmedUser}.`,
+      audit: entry,
+    };
+  }
+
   const bonusAfter = currentBonus + grantAmount;
   bonusTokenByUser = { ...bonusTokenByUser, [trimmedUser]: bonusAfter };
 

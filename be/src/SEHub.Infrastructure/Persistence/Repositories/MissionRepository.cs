@@ -9,6 +9,18 @@ public class MissionRepository : IMissionRepository
 
     public MissionRepository(SEHubDbContext context) => _context = context;
 
+    public async Task<IReadOnlyList<(Guid Id, string Code, string Name, string EventType, int TargetCount, int RewardPoints)>> GetActiveDailyMissionsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var items = await _context.DailyMissions
+            .Where(m => m.IsActive)
+            .OrderBy(m => m.Name)
+            .Select(m => new { m.Id, m.Code, m.Name, m.EventType, m.TargetCount, m.RewardPoints })
+            .ToListAsync(cancellationToken);
+
+        return items.Select(m => (m.Id, m.Code, m.Name, m.EventType, m.TargetCount, m.RewardPoints)).ToList();
+    }
+
     public async Task<IReadOnlyList<(Guid Id, string Code, string EventType, int RewardPoints)>> GetActiveDailyByEventTypeAsync(
         string eventType,
         CancellationToken cancellationToken = default)

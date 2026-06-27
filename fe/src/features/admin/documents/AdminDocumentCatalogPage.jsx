@@ -6,13 +6,14 @@ import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import { getAdminDocumentsSubjectUrl } from "@/features/admin/documents/adminDocumentPaths";
 import {
   MAJOR_OPTIONS,
-  REVIEW_COURSES,
   SEMESTER_OPTIONS,
+  useReviewCourses,
 } from "@/features/review/ReviewQuestionsPage/reviewData";
 import catalogStyles from "@/features/subjects/CourseCatalogPage/CourseCatalogPage.module.css";
 import docStyles from "@/features/admin/documents/AdminDocuments.module.css";
 
 function AdminDocumentCatalogPage() {
+  const { courses, loading } = useReviewCourses();
   const [searchParams, setSearchParams] = useSearchParams();
   const semesterFromUrl = searchParams.get("semester");
   const [semesterFilter, setSemesterFilter] = useState(() =>
@@ -40,7 +41,7 @@ function AdminDocumentCatalogPage() {
   }
 
   const filteredSemesters = useMemo(() => {
-    return REVIEW_COURSES.map((group) => ({
+    return courses.map((group) => ({
       ...group,
       courses: group.courses.filter(
         (course) => majorFilter === "all" || course.major === majorFilter,
@@ -50,7 +51,11 @@ function AdminDocumentCatalogPage() {
         semesterFilter === "all" || String(group.semester) === semesterFilter;
       return matchSemester && group.courses.length > 0;
     });
-  }, [semesterFilter, majorFilter]);
+  }, [courses, semesterFilter, majorFilter]);
+
+  if (loading) {
+    return null;
+  }
 
   return (
     <AdminPageLayout

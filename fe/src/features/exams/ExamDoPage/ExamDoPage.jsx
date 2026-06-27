@@ -10,7 +10,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
-import { buildExamQuestions, EXAM_TYPE_LABELS, loadExamMeta, loadReviewQuestions, resolveExamApiId } from "@/features/exams/examDetailData";
+import { buildExamQuestions, EXAM_TYPE_LABELS, EXAM_USE_MOCK, loadExamMeta, loadReviewQuestions, resolveExamApiId } from "@/features/exams/examDetailData";
 import {
   persistAttemptAnswers,
   startOrResumeAttempt,
@@ -81,14 +81,16 @@ function ExamDoPage({ page = "review" }) {
 
     async function fetchExam() {
       setExamReady(false);
-      const mockExam = getExamById(courseCode, decodedExamId, page, scope);
-      if (mockExam) {
-        if (!cancelled) {
-          setExam(mockExam);
-          setApiExamId(null);
-          setExamReady(true);
+      if (EXAM_USE_MOCK) {
+        const mockExam = getExamById(courseCode, decodedExamId, page, scope);
+        if (mockExam) {
+          if (!cancelled) {
+            setExam(mockExam);
+            setApiExamId(null);
+            setExamReady(true);
+          }
+          return;
         }
-        return;
       }
 
       try {

@@ -196,17 +196,15 @@ export async function loadExamMeta(courseCode, examId, pageKey, scope = "communi
     }
 
     if (apiExamId) {
-      try {
-        const detail = await examsApi.getExam(apiExamId);
-        return {
-          exam: mapExamDetailDtoToFeExam(detail, courseCode),
-          apiExamId,
-          source: "api",
-        };
-      } catch {
-        /* fall back to mock below */
-      }
+      const detail = await examsApi.getExam(apiExamId);
+      return {
+        exam: mapExamDetailDtoToFeExam(detail, courseCode),
+        apiExamId,
+        source: "api",
+      };
     }
+
+    return null;
   }
 
   const mockExam = getMockExamById(courseCode, examId, pageKey, scope);

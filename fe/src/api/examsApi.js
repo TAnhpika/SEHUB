@@ -122,3 +122,20 @@ export function reportExamQuestion(examId, questionId, body) {
     body,
   });
 }
+
+export function getQuestionComments(examId, questionId) {
+  return apiRequest(`/api/v1/exams/${examId}/questions/${questionId}/comments`);
+}
+
+export function createQuestionComment(examId, questionId, body) {
+  return apiRequest(`/api/v1/exams/${examId}/questions/${questionId}/comments`, {
+    method: "POST",
+    body,
+  });
+}
+
+export function deleteQuestionComment(examId, questionId, commentId) {
+  return apiRequest(`/api/v1/exams/${examId}/questions/${questionId}/comments/${commentId}`, {
+    method: "DELETE",
+  });
+}

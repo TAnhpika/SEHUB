@@ -6,9 +6,10 @@ import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
 import {
   addExamComment,
-  getExamComments,
+  loadExamComments,
   toggleExamCommentLike,
 } from "@/features/exams/examCommentsStore";
+import { EXAM_USE_MOCK } from "@/features/exams/examDetailData";
 import styles from "./ExamCommentsPanel.module.css";
 
 function ExamCommentsPanel({ locked = false, reason = "premium", examId, questionId, questionLabel }) {
@@ -16,14 +17,38 @@ function ExamCommentsPanel({ locked = false, reason = "premium", examId, questio
   const { showToast } = useToast();
   const [draft, setDraft] = useState("");
   const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (locked || !examId || questionId == null) {
       setComments([]);
-      return;
+      return undefined;
     }
-    setComments(getExamComments(examId, questionId));
-    setDraft("");
+
+    let cancelled = false;
+    setLoading(true);
+
+    loadExamComments(examId, questionId)
+      .then((items) => {
+        if (!cancelled) {
+          setComments(items);
+          setDraft("");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setComments([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [locked, examId, questionId]);
 
   if (locked) {
@@ -42,24 +67,28 @@ function ExamCommentsPanel({ locked = false, reason = "premium", examId, questio
     );
   }
 
-  function handleSend() {
+  async function handleSend() {
     const trimmed = draft.trim();
     if (!trimmed) {
       showToast("Vui lòng nhập nội dung bình luận.");
       return;
     }
 
-    const comment = addExamComment(examId, questionId, user, trimmed);
-    if (!comment) return;
-
-    setComments(getExamComments(examId, questionId));
-    setDraft("");
-    showToast("Đã đăng bình luận.");
+    try {
+      await addExamComment(examId, questionId, user, trimmed);
+      const next = await loadExamComments(examId, questionId);
+      setComments(next);
+      setDraft("");
+      showToast("Đã đăng bình luận.");
+    } catch (error) {
+      showToast(error?.message ?? "Không gửi được bình luận.");
+    }
   }
 
-  function handleLike(commentId) {
-    toggleExamCommentLike(examId, questionId, commentId, user?.username);
-    setComments(getExamComments(examId, questionId));
+  async function handleLike(commentId) {
+    if (!EXAM_USE_MOCK) return;
+    const next = await toggleExamCommentLike(examId, questionId, commentId, user?.username);
+    setComments(next);
   }
 
   function handleKeyDown(event) {
@@ -81,56 +110,44 @@ function ExamCommentsPanel({ locked = false, reason = "premium", examId, questio
         </div>
       </header>
 
+      {loading ? <p className={styles.empty}>Đang tải bình luận…</p> : null}
+
       <ul className={styles.list}>
         {comments.map((comment) => (
-          <li
-            key={comment.id}
-            className={`${styles.item} ${comment.highlighted ? styles["item-highlight"] : ""}`}
-          >
-            <div className={styles["item-head"]}>
-              <span
-                className={styles.avatar}
-                style={{ background: comment.avatarColor }}
-                aria-hidden="true"
-              >
-                {comment.initial}
-              </span>
-              <div>
-                <p className={styles.author}>{comment.author}</p>
-                <p className={styles.time}>{comment.timeAgo}</p>
-              </div>
+          <li key={comment.id} className={styles.item}>
+            <div className={styles.avatar} style={{ backgroundColor: comment.avatarColor }}>
+              {comment.initial}
             </div>
-            <p className={styles.content}>{comment.content}</p>
-            <div className={styles.actions}>
-              <button
-                type="button"
-                className={`${styles.like} ${comment.likedByMe ? styles["like-active"] : ""}`}
-                onClick={() => handleLike(comment.id)}
-              >
-                <FontAwesomeIcon icon={faHeart} />
-                {comment.likes}
-              </button>
+            <div className={styles.body}>
+              <div className={styles.meta}>
+                <strong>{comment.author}</strong>
+                <span>{comment.timeAgo}</span>
+              </div>
+              <p className={styles.content}>{comment.content}</p>
+              {EXAM_USE_MOCK ? (
+                <button type="button" className={styles.like} onClick={() => handleLike(comment.id)}>
+                  <FontAwesomeIcon icon={faHeart} />
+                  {comment.likes > 0 ? comment.likes : ""}
+                </button>
+              ) : null}
             </div>
           </li>
         ))}
+        {!loading && comments.length === 0 ? (
+          <li className={styles.empty}>Chưa có bình luận — hãy là người đầu tiên.</li>
+        ) : null}
       </ul>
 
       <div className={styles.composer}>
         <textarea
           className={styles.input}
-          rows={3}
+          rows={2}
           placeholder="Viết bình luận của bạn..."
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={handleKeyDown}
         />
-        <button
-          type="button"
-          className={styles.send}
-          onClick={handleSend}
-          disabled={!draft.trim()}
-          aria-label="Gửi bình luận"
-        >
+        <button type="button" className={styles.send} onClick={handleSend}>
           <FontAwesomeIcon icon={faPaperPlane} />
         </button>
       </div>

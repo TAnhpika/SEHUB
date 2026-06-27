@@ -21,7 +21,7 @@ import {
   getScoreGrade,
   getScoreOnTen,
 } from "@/features/exams/examResultInsights";
-import { buildExamQuestions, loadExamMeta } from "@/features/exams/examDetailData";
+import { buildExamQuestions, EXAM_USE_MOCK, loadExamMeta } from "@/features/exams/examDetailData";
 import {
   clearExamSession,
   createExamSession,
@@ -207,13 +207,15 @@ function ExamResultPage({ page = "review" }) {
 
     async function fetchExam() {
       setExamReady(false);
-      const mockExam = getExamById(courseCode, decodedExamId, page, scope);
-      if (mockExam) {
-        if (!cancelled) {
-          setExam(mockExam);
-          setExamReady(true);
+      if (EXAM_USE_MOCK) {
+        const mockExam = getExamById(courseCode, decodedExamId, page, scope);
+        if (mockExam) {
+          if (!cancelled) {
+            setExam(mockExam);
+            setExamReady(true);
+          }
+          return;
         }
-        return;
       }
 
       try {

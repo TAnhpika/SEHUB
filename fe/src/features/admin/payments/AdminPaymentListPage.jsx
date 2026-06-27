@@ -328,32 +328,22 @@ function AdminPaymentListPage() {
     );
   }
 
-  function handleGrantTokens({ username, amount, reason }) {
-
+  async function handleGrantTokens({ username, amount, reason }) {
     setGrantError("");
 
-    const result = grantManualTokens({
-
+    const result = await grantManualTokens({
       username,
-
       amount,
-
       reason,
-
       adminUsername: user?.username ?? "admin_sehub",
-
     });
 
     if (!result.ok) {
-
       setGrantError(result.message);
-
       return;
-
     }
 
     showToast(result.message);
-
     setGrantOpen(false);
 
     bump();

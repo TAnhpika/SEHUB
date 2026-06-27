@@ -41,10 +41,10 @@ Nhánh `Hau_Authen_BE` là bản tích hợp lớn: social Phase 2–3, chat Sig
 | Trả lời bình luận | ✅ `ParentCommentId` | 🔴 | Nút **「Trả lời」** chỉ UI, **không gọi API** |
 | Lượt xem | ✅ tăng khi xem chi tiết | ✅ | Hiển thị `ViewCount` từ API |
 | Chia sẻ | — | 🟡 | Copy link / Web Share API, không metric share |
-| Tìm kiếm bài viết | 🟡 `search` param | 🟠 | Tab Blogs trong `SearchAllPage` dùng **`MOCK_POSTS`**, chưa search API |
+| Tìm kiếm bài viết | 🟡 `search` param | ✅ | `SearchAllPage` → `searchPosts` / `postsApi.list` |
 | Báo cáo bài viết | ✅ | ✅ | `ReportPostModal` → API |
 | Bài nổi bật sidebar | ✅ `GET /posts/featured` | 🟠 | `HomeSidebar` / `CommunitySidebar` vẫn dùng **`FEATURED_POSTS` mock** |
-| Streak & thống kê sidebar | ✅ streak trong DB | 🟡 | Điểm/cấp từ `AuthProvider` + profile stats; **+20 điểm streak 7 ngày** chưa thấy logic BE award |
+| Streak & thống kê sidebar | ✅ streak trong DB | 🟡 | `StreakDropdown` → `GET /gamification/me/daily-missions`; streak +20 milestone có trên BE |
 
 **File tham chiếu:** `fe/src/features/feed/feedData.js`, `PostsController.cs`, `HomeSidebar.jsx`, `PostDetailPage.jsx`
 
@@ -68,7 +68,8 @@ Nhánh `Hau_Authen_BE` là bản tích hợp lớn: social Phase 2–3, chat Sig
 
 | Tính năng | Mức | Ghi chú |
 |-----------|-----|---------|
-| Tìm user | ✅ | `GET /users/search` → `FriendsPage` / `friendsData` |
+| Tìm user | ✅ | `GET /users/search` → `searchAllData` / `friendsData` |
+| Tài liệu / đề thi (search) | ✅ | `searchAllData` → `documentsApi` + `examsApi` (lọc client-side) |
 | Follow | ✅ | `UsersController` + `FollowButton` |
 | Message | ✅ | `ConversationsController` + SignalR `ChatHub` |
 | Lịch sử / đã đọc | ✅ | unread count, mark read, attachments (emoji, ảnh, file) |
@@ -87,9 +88,9 @@ Nhánh `Hau_Authen_BE` là bản tích hợp lớn: social Phase 2–3, chat Sig
 | Chi tiết mã đề, số câu | ✅ | |
 | Xem câu hỏi & đáp án | ✅ | `GET .../questions` |
 | Làm bài online 50 câu | ✅ | attempts API: save answers, submit, result |
-| Bình luận câu hỏi | 🟠 ~25% | **`examCommentsStore.js`** — localStorage + mock, **không có BE** |
+| Bình luận câu hỏi | ✅ ~85% | `ExamsController` comments CRUD + `examsApi`; đã xóa mock `examCommentsData.js` |
 
-**File tham chiếu:** `fe/src/features/exams/examDetailData.js`, `ExamsController.cs`, `examCommentsStore.js`
+**File tham chiếu:** `fe/src/features/exams/examDetailData.js`, `ExamsController.cs`, `examsApi.js`
 
 ---
 
@@ -160,8 +161,8 @@ Nhánh `Hau_Authen_BE` là bản tích hợp lớn: social Phase 2–3, chat Sig
 | Kích hoạt sau thanh toán | ✅ | webhook + subscription service |
 | Voucher theo rank/badge | 🟠 | Admin voucher page **mock/local**; rank config có field voucher trong gamification admin |
 | Free 3 trang / Premium full docs | ✅ | |
-| AI giải đáp + token/ngày | 🟡 | BE `ai-explain`; FE **`aiTokens.js` localStorage** (Free 10, Premium 1000) — spec nói 1 vs 100 lượt, cần align |
-| Reset token 00:00 | 🟡 | FE theo ngày local; chưa rõ sync server |
+| AI giải đáp + token/ngày | ✅ ~85% | BE `GET /profiles/me/ai-tokens`; FE `aiTokens.js` ưu tiên server, localStorage chỉ cache |
+| Reset token 00:00 | ✅ | Server-side daily quota; FE cache theo ngày UTC slice |
 
 **File tham chiếu:** `CheckoutPage.jsx`, `PremiumController.cs`, `fe/src/utils/aiTokens.js`
 
@@ -211,13 +212,17 @@ Nhánh `Hau_Authen_BE` là bản tích hợp lớn: social Phase 2–3, chat Sig
   auth, posts, exams, messages, notifications, follow, premium, admin/*, profiles, documents, users, block, …
 
 Mock / fallback layers (VITE_USE_MOCK hoặc hardcoded):
-  feedData (MOCK_POSTS, FEATURED_POSTS)
-  searchAllData (blogs tab)
+  feedData (FEATURED_POSTS fallback)
   HomeSidebar featured
-  examCommentsStore (localStorage)
   featuredPostsData (moderator)
   admin dashboard, violations, payments (fallback)
   reviewData (guest)
+
+Đã wire (không mock khi VITE_USE_MOCK=false):
+  searchAllData → postsApi, documentsApi, examsApi, usersApi
+  aiTokens.js → GET /profiles/me/ai-tokens (cache localStorage)
+  streakData.js → GET /gamification/me/daily-missions
+  question comments → examsApi (đã xóa examCommentsData, examAiChatData, examAiChatStore)
 
 Đã gỡ:
   FriendsController, FriendService, friendsApi, bảng FriendRequests (migration RemoveFriendRequests)
@@ -255,9 +260,9 @@ codegraph impact "feedData.js"
 |---|-----|------------------|
 | 1 | Reply comment (FE wire `ParentCommentId`) | Nhỏ |
 | 2 | Featured sidebar → `GET /posts/featured` | Nhỏ |
-| 3 | Search bài viết → posts API thay `MOCK_POSTS` | Nhỏ |
+| 3 | ~~Search bài viết → posts API thay `MOCK_POSTS`~~ | ✅ Done |
 | 4 | Filter feed gửi semester/major lên API | Nhỏ |
-| 5 | Exam question comments → BE + FE | Trung bình |
+| 5 | ~~Exam question comments → BE + FE~~ | ✅ Done |
 | 6 | Heatmap hoạt động từ stats API | Trung bình |
 | 7 | Badge auto-unlock theo hành vi | Trung bình |
 | 8 | AI token sync server (align spec 1 vs 100 lượt) | Trung bình |

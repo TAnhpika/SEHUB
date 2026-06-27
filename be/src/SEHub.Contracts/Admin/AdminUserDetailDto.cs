@@ -19,4 +19,9 @@ public sealed class AdminUserDetailDto
     public int AiTokensConsumedToday { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? LastActivityDate { get; init; }
+    public DateTime? LastLoginAt { get; init; }
+    public int PostsCount { get; init; }
+    public int ExamsCompleted { get; init; }
+    public int ReportsFiled { get; init; }
+    public int ReportsAgainst { get; init; }
 }

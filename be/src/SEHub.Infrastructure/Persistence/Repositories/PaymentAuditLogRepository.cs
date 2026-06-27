@@ -48,6 +48,26 @@ public class PaymentAuditLogRepository : IPaymentAuditLogRepository
         return (items, total);
     }
 
+    public async Task<(IReadOnlyList<PaymentAuditLog> Items, int TotalCount)> GetPagedByUserIdAsync(
+        Guid userId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.PaymentAuditLogs
+            .Include(l => l.Order)
+            .Where(l => l.Order.UserId == userId);
+
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(l => l.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, total);
+    }
+
     public Task<bool> ExistsByExternalReferenceAsync(string reference, CancellationToken cancellationToken = default) =>
         _context.PaymentAuditLogs.AnyAsync(l => l.PayloadJson.Contains(reference), cancellationToken);
 }
