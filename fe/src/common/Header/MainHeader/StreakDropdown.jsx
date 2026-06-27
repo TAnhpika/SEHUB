@@ -59,7 +59,7 @@ function StreakDropdown() {
         className={`${styles.trigger} ${open ? styles["trigger-open"] : ""}`}
         onClick={handleTriggerClick}
         aria-label={`Streak ${streakDays} ngày, ${completedCount}/${dailyTasks.length} nhiệm vụ hoàn thành`}
-        aria-haspopup="dialog"
+        aria-haspopup="true"
         aria-expanded={open}
         aria-controls={panelId}
       >
@@ -68,7 +68,12 @@ function StreakDropdown() {
       </button>
 
       {open && (
-        <div id={panelId} className={styles.dropdown} role="dialog" aria-label="Nhiệm vụ hàng ngày">
+        <div
+          id={panelId}
+          className={styles.dropdown}
+          role="region"
+          aria-label="Nhiệm vụ hàng ngày"
+        >
           <header className={styles.header}>
             <div>
               <h2 className={styles.title}>Nhiệm vụ hàng ngày</h2>
