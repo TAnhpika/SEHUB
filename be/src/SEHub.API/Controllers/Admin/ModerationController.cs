@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using SEHub.Application.Admin;
 using SEHub.Application.Exams;
 using SEHub.Application.Feed;
+using SEHub.Application.Messaging;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Exams;
+using SEHub.Contracts.Messaging;
 using SEHub.Shared.Constants;
 
 namespace SEHub.API.Controllers.Admin;
@@ -18,17 +20,20 @@ public sealed class ModerationController : ControllerBase
     private readonly IPostService _postService;
     private readonly IAdminExportService _exportService;
     private readonly IQuestionReportService _questionReportService;
+    private readonly IConversationReportService _conversationReportService;
 
     public ModerationController(
         IModerationService moderationService,
         IPostService postService,
         IAdminExportService exportService,
-        IQuestionReportService questionReportService)
+        IQuestionReportService questionReportService,
+        IConversationReportService conversationReportService)
     {
         _moderationService = moderationService;
         _postService = postService;
         _exportService = exportService;
         _questionReportService = questionReportService;
+        _conversationReportService = conversationReportService;
     }
 
     [HttpGet("featured-posts")]
@@ -118,6 +123,34 @@ public sealed class ModerationController : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _questionReportService.ResolveAsync(id, request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("conversation-reports")]
+    public async Task<IActionResult> GetConversationReports(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? status = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _conversationReportService.GetReportsAsync(page, pageSize, status, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("conversation-reports/pending-count")]
+    public async Task<IActionResult> GetPendingConversationReportCount(CancellationToken cancellationToken)
+    {
+        var count = await _conversationReportService.GetPendingCountAsync(cancellationToken);
+        return Ok(new { count });
+    }
+
+    [HttpPatch("conversation-reports/{id:guid}")]
+    public async Task<IActionResult> ResolveConversationReport(
+        Guid id,
+        [FromBody] ResolveConversationReportRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _conversationReportService.ResolveAsync(id, request, cancellationToken);
         return Ok(result);
     }
 
