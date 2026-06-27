@@ -11,6 +11,7 @@ public class ConversationReport : BaseEntity
     public string Detail { get; set; } = string.Empty;
     public ReportStatus Status { get; set; }
     public Guid? ResolvedById { get; set; }
+    public string? ResolutionNote { get; set; }
 
     public Conversation Conversation { get; set; } = null!;
 }
