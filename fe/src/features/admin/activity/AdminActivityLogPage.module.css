@@ -38,6 +38,31 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--stat-accent) 12%, transparent);
 }
 
+.statCard-all {
+  --stat-accent: #004ac6;
+  --stat-bg: #e8f0fe;
+}
+
+.statCard-exam {
+  --stat-accent: #2563eb;
+  --stat-bg: #dbeafe;
+}
+
+.statCard-report {
+  --stat-accent: #dc2626;
+  --stat-bg: #fee2e2;
+}
+
+.statCard-payment {
+  --stat-accent: #059669;
+  --stat-bg: #d1fae5;
+}
+
+.statCard-user {
+  --stat-accent: #7c3aed;
+  --stat-bg: #ede9fe;
+}
+
 .statIcon {
   display: flex;
   flex-shrink: 0;
@@ -176,6 +201,31 @@
   border: 2px solid #fff;
   border-radius: 50%;
   box-shadow: 0 1px 4px color-mix(in srgb, var(--node-accent) 18%, transparent);
+}
+
+.node-all {
+  --node-accent: #004ac6;
+  --node-bg: #e8f0fe;
+}
+
+.node-exam {
+  --node-accent: #2563eb;
+  --node-bg: #dbeafe;
+}
+
+.node-report {
+  --node-accent: #dc2626;
+  --node-bg: #fee2e2;
+}
+
+.node-payment {
+  --node-accent: #059669;
+  --node-bg: #d1fae5;
+}
+
+.node-user {
+  --node-accent: #7c3aed;
+  --node-bg: #ede9fe;
 }
 
 .card {
