@@ -6,6 +6,8 @@ import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationCons
 import { addBannedUserFromReport } from "@/features/admin/moderation/adminBannedData";
 import { syncUserBanStatus } from "@/features/admin/users/adminUserStore";
 import { isValidGuid } from "@/features/feed/postUtils";
+import { getExamQuestionReports } from "@/features/exams/examQuestionReportStore";
+import { getConversationReports } from "@/features/moderator/reports/conversationReportStore";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
@@ -152,8 +154,38 @@ let reportsStore = [
   },
 ];
 
+function formatReportCode(id) {
+  const short = String(id ?? "")
+    .replace(/-/g, "")
+    .slice(0, 4)
+    .toUpperCase();
+  return short ? `RP-${short}` : "RP-0000";
+}
+
+export function mapCommunityReportForQueue(report) {
+  const reporter = report.reporter ?? "unknown";
+  const reportedUser = report.reportedUser ?? reporter;
+  const reporterUsername = reporter.startsWith("@") ? reporter : `@${reporter}`;
+  const reportedUsername = reportedUser.startsWith("@") ? reportedUser : `@${reportedUser}`;
+
+  return {
+    ...report,
+    category: "community",
+    code: formatReportCode(report.id),
+    snippet: report.post?.excerpt ?? report.post?.title ?? "",
+    reporterUsername,
+    timeLabel: report.createdAt,
+    reportedUserProfile: {
+      username: reportedUsername,
+      initial: reportedUser.replace("@", "").slice(0, 2).toUpperCase() || "?",
+    },
+  };
+}
+
 export function getAdminReports() {
-  return [...reportsStore].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return [...reportsStore]
+    .map(mapCommunityReportForQueue)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export function getAdminReportById(id) {
@@ -216,6 +248,7 @@ export async function fetchAdminReportsPage(page = 1, { pageSize = ADMIN_API_PAG
   const pageResult = await adminApi.listReports(params);
   const items = (pageResult.items ?? [])
     .map(mapAdminReportListItem)
+    .map(mapCommunityReportForQueue)
     .sort((a, b) =>
       String(b.createdAtIso ?? b.createdAt).localeCompare(String(a.createdAtIso ?? a.createdAt)),
     );
@@ -236,6 +269,32 @@ export async function loadAdminReports() {
 
   const { items } = await fetchAdminReportsPage(1);
   return items;
+}
+
+export async function loadAdminModerationReports() {
+  if (USE_MOCK) {
+    return {
+      communityReports: getAdminReports(),
+      examReports: [],
+      userReports: [],
+      communityHasMore: false,
+      communityPage: 1,
+    };
+  }
+
+  const [communityResult, examReports, userReports] = await Promise.all([
+    fetchAdminReportsPage(1).catch(() => ({ items: [], hasMore: false, page: 1 })),
+    getExamQuestionReports().catch(() => []),
+    getConversationReports().catch(() => []),
+  ]);
+
+  return {
+    communityReports: communityResult.items ?? [],
+    examReports,
+    userReports,
+    communityHasMore: communityResult.hasMore ?? false,
+    communityPage: communityResult.page ?? 1,
+  };
 }
 
 export async function loadAdminReportById(id) {
