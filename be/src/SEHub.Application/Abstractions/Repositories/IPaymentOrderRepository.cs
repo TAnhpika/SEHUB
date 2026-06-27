@@ -16,4 +16,8 @@ public interface IPaymentOrderRepository
     Task AddAsync(PaymentOrder order, CancellationToken cancellationToken = default);
     Task UpdateAsync(PaymentOrder order, CancellationToken cancellationToken = default);
     Task<decimal> GetTotalRevenueAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<(DateOnly Date, decimal Amount)>> GetPaidRevenueByDateRangeAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default);
 }

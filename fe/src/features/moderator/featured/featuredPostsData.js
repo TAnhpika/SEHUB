@@ -281,7 +281,7 @@ export function getFeaturedInteractionCount(post) {
 }
 
 export function enrichFeaturedPost(post) {
-  const extra = FEATURED_POST_DETAILS[post.id] ?? {};
+  const extra = USE_MOCK ? (FEATURED_POST_DETAILS[post.id] ?? {}) : {};
   return {
     type: "post",
     categoryLabel: post.categoryLabel ?? tagToCategoryLabel(post.tag),

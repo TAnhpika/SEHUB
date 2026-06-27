@@ -1,3 +1,5 @@
+import * as adminApi from "@/api/adminApi";
+import { mapAdminUserActivityItem, mapAdminUserDetail } from "@/api/adminMapper";
 import { getUserBonusTokens } from "@/features/admin/payments/adminPaymentData";
 import {
   FREE_DAILY_TOKEN_QUOTA,
@@ -5,6 +7,8 @@ import {
 } from "@/features/admin/payments/adminPaymentPolicy";
 import { getAdminUserById, loadAdminUserById } from "@/features/admin/users/adminUserStore";
 import { getUserGamification } from "@/features/admin/users/adminUserGamification";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 export const ADMIN_USER_ACTIVITY_PAGE_SIZE = 5;
 
@@ -26,8 +30,24 @@ export function getAdminUserDetail(id) {
 
 function buildAdminUserDetailView(user) {
   const n = parseInt(String(user.id).replace(/\D/g, ""), 10) || 1;
-
   const gamification = getUserGamification(user);
+
+  if (!USE_MOCK) {
+    return {
+      ...user,
+      gamification,
+      roleLabel: USER_ROLE_LABEL[user.role] ?? user.role,
+      dailyTokenQuota:
+        user.role === "student"
+          ? user.plan === "Premium"
+            ? PREMIUM_DAILY_TOKEN_QUOTA
+            : FREE_DAILY_TOKEN_QUOTA
+          : null,
+      bonusTokens: user.role === "student" ? getUserBonusTokens(user.username) : null,
+      aiTokens: user.role === "student" ? getUserBonusTokens(user.username) : null,
+      emailVerified: true,
+    };
+  }
 
   return {
     ...user,
@@ -72,6 +92,21 @@ export async function loadAdminUserDetail(id) {
   const user = apiUser ?? getAdminUserById(id);
   if (!user) return null;
 
+  if (!USE_MOCK && user.apiId) {
+    try {
+      const dto = await adminApi.getUser(user.apiId);
+      const mapped = mapAdminUserDetail(dto);
+      return {
+        ...buildAdminUserDetailView({ ...user, ...mapped }),
+        ...mapped,
+        gamification: getUserGamification({ ...user, ...mapped }),
+        roleLabel: USER_ROLE_LABEL[mapped.role] ?? mapped.role,
+      };
+    } catch {
+      // fall through to store data
+    }
+  }
+
   const detail = buildAdminUserDetailView(user);
 
   return {
@@ -90,6 +125,8 @@ export async function loadAdminUserDetail(id) {
  * @param {string | undefined} userId
  */
 export function getAdminUserActivities(userId) {
+  if (!USE_MOCK) return [];
+
   const user = getAdminUserById(userId);
   if (!user) return [];
 
@@ -108,4 +145,21 @@ export function getAdminUserActivities(userId) {
     { id: `${userId}-9`, time: "6 ngày trước", text: `Nhận 500 token AI (khuyến mãi)`, type: "payment" },
     { id: `${userId}-10`, time: "1 tuần trước", text: `Đăng ký tài khoản · ${user.email}`, type: "user" },
   ];
+}
+
+export async function loadAdminUserActivities(userId) {
+  if (USE_MOCK) {
+    return getAdminUserActivities(userId);
+  }
+
+  const user = getAdminUserById(userId) ?? (await loadAdminUserById(userId));
+  const apiId = user?.apiId ?? userId;
+  if (!apiId) return [];
+
+  try {
+    const items = await adminApi.getUserActivity(apiId, { limit: 20 });
+    return (items ?? []).map(mapAdminUserActivityItem);
+  } catch {
+    return [];
+  }
 }

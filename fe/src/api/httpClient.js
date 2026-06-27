@@ -8,6 +8,7 @@ const API_ERROR_MESSAGES = {
     "Chưa cấu hình Google Drive trên server. Dev: restart BE (Development) để dùng lưu file local; prod: thêm GoogleDrive trong appsettings.",
   EMAIL_NOT_CONFIRMED:
     "Vui lòng xác minh email trước khi đăng nhập. Kiểm tra hộp thư hoặc yêu cầu gửi lại mã.",
+  AUTH_RATE_LIMIT_EXCEEDED: "Đăng nhập quá nhiều lần. Vui lòng thử lại sau vài phút.",
   OTP_INVALID: "Mã OTP không hợp lệ hoặc đã hết hạn.",
   STORAGE_UPLOAD_FAILED: "Không upload được file lên storage. Kiểm tra cấu hình Google Drive hoặc thử lại.",
 };
@@ -175,7 +176,7 @@ export async function refreshSession() {
   return refreshInFlight;
 }
 
-export async function apiRequest(path, { method = "GET", body, auth = true, retryOnUnauthorized = true, signal } = {}) {
+export async function apiRequest(path, { method = "GET", body, auth = true, retryOnUnauthorized = true, signal, cache } = {}) {
   const headers = {
     Accept: "application/json",
   };
@@ -197,6 +198,7 @@ export async function apiRequest(path, { method = "GET", body, auth = true, retr
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal,
+      ...(cache ? { cache } : {}),
     });
     return parseResponse(response);
   }

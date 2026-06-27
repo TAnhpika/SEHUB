@@ -114,7 +114,7 @@ export async function loadDocumentItemsForCourse(courseCode) {
     return mapMockDocsToSubjectItems(mockDocs, normalized);
   }
 
-  return buildMockDocumentItems(normalized);
+  return [];
 }
 
 export async function loadDocumentDetail(docOrId) {

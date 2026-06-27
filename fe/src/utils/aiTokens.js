@@ -1,9 +1,12 @@
+import * as profilesApi from "@/api/profilesApi";
+import { mapAiTokenStatusDto } from "@/api/profileMapper";
 import { isStaffRole, resolveIsPremium } from "@/utils/studentPlan";
 
 /** Chi phí mỗi lần giải thích AI — §3.3 */
 export const AI_EXPLAIN_TOKEN_COST = 10;
 
 const STORAGE_PREFIX = "sehubs_ai_usage_";
+const CACHE_PREFIX = "sehubs_ai_tokens_cache_";
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 let serverSnapshot = null;
@@ -15,6 +18,28 @@ function todayKey() {
 function getUserKey(user) {
   if (!user) return null;
   return user.username ?? user.email ?? null;
+}
+
+function readCachedSnapshot(userKey) {
+  if (!userKey) return null;
+
+  try {
+    const raw = localStorage.getItem(`${CACHE_PREFIX}${userKey}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed.date !== todayKey()) return null;
+    return parsed.snapshot ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedSnapshot(userKey, snapshot) {
+  if (!userKey || !snapshot) return;
+  localStorage.setItem(
+    `${CACHE_PREFIX}${userKey}`,
+    JSON.stringify({ date: todayKey(), snapshot }),
+  );
 }
 
 /**
@@ -33,7 +58,7 @@ export function clearServerAiTokenSnapshot() {
   serverSnapshot = null;
 }
 
-export function setServerAiTokenSnapshot(dto) {
+export function setServerAiTokenSnapshot(dto, user = null) {
   if (!dto) {
     serverSnapshot = null;
     return;
@@ -48,6 +73,11 @@ export function setServerAiTokenSnapshot(dto) {
     canExplain: Boolean(dto.canExplain),
     canChat: Boolean(dto.canChat),
   };
+
+  const userKey = getUserKey(user);
+  if (userKey && !USE_MOCK) {
+    writeCachedSnapshot(userKey, serverSnapshot);
+  }
 }
 
 export function applyServerRemainingTokens(remaining, cost = AI_EXPLAIN_TOKEN_COST) {
@@ -105,6 +135,20 @@ function getMockSnapshot(user) {
   };
 }
 
+function getCachedOrServerSnapshot(user) {
+  if (serverSnapshot) {
+    return serverSnapshot;
+  }
+
+  const cached = readCachedSnapshot(getUserKey(user));
+  if (cached) {
+    serverSnapshot = cached;
+    return cached;
+  }
+
+  return null;
+}
+
 /**
  * @returns {{ limit: number, used: number, remaining: number, canExplain: boolean, cost: number }}
  */
@@ -113,17 +157,50 @@ export function getAiTokenSnapshot(user) {
     return { limit: 0, used: 0, remaining: 0, canExplain: false, cost: AI_EXPLAIN_TOKEN_COST };
   }
 
-  if (!USE_MOCK && serverSnapshot) {
+  if (!USE_MOCK) {
+    const snapshot = getCachedOrServerSnapshot(user);
+    if (snapshot) {
+      return {
+        limit: snapshot.limit,
+        used: snapshot.used,
+        remaining: snapshot.remaining,
+        canExplain: snapshot.canExplain,
+        cost: snapshot.costExplain ?? AI_EXPLAIN_TOKEN_COST,
+      };
+    }
+
     return {
-      limit: serverSnapshot.limit,
-      used: serverSnapshot.used,
-      remaining: serverSnapshot.remaining,
-      canExplain: serverSnapshot.canExplain,
-      cost: serverSnapshot.costExplain ?? AI_EXPLAIN_TOKEN_COST,
+      limit: getAiDailyTokenLimit(user),
+      used: 0,
+      remaining: getAiDailyTokenLimit(user),
+      canExplain: getAiDailyTokenLimit(user) >= AI_EXPLAIN_TOKEN_COST,
+      cost: AI_EXPLAIN_TOKEN_COST,
     };
   }
 
   return getMockSnapshot(user);
+}
+
+/**
+ * Fetch authoritative AI token status from GET /profiles/me/ai-tokens.
+ * localStorage is used only as a read-through cache when offline or before refresh completes.
+ */
+export async function refreshAiTokensFromServer(user) {
+  if (!user || USE_MOCK) {
+    return getAiTokenSnapshot(user);
+  }
+
+  try {
+    const dto = await profilesApi.getMyAiTokens();
+    setServerAiTokenSnapshot(mapAiTokenStatusDto(dto), user);
+  } catch {
+    const cached = readCachedSnapshot(getUserKey(user));
+    if (cached) {
+      serverSnapshot = cached;
+    }
+  }
+
+  return getAiTokenSnapshot(user);
 }
 
 /**

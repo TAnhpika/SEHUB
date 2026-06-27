@@ -43,4 +43,13 @@ public class PostReportRepository : IPostReportRepository
         _context.PostReports.Update(report);
         return Task.CompletedTask;
     }
+
+    public Task<int> CountByReporterIdAsync(Guid reporterId, CancellationToken cancellationToken = default) =>
+        _context.PostReports.CountAsync(r => r.ReporterId == reporterId, cancellationToken);
+
+    public Task<int> CountAgainstAuthorIdAsync(Guid authorId, CancellationToken cancellationToken = default) =>
+        (from report in _context.PostReports
+         join post in _context.Posts on report.PostId equals post.Id
+         where post.AuthorId == authorId
+         select report).CountAsync(cancellationToken);
 }

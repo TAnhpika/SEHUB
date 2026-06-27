@@ -1,3 +1,7 @@
+import * as gamificationApi from "@/api/gamificationApi";
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+
 export const DAILY_TASKS = [
   {
     id: "tests-5",
@@ -43,4 +47,29 @@ export function buildDailyTasks(streakDays = 0) {
     ...task,
     current: index < completedTasks ? task.target : 0,
   }));
+}
+
+function mapDailyMissionDto(dto) {
+  return {
+    id: dto.code ?? dto.id,
+    title: dto.title ?? dto.name ?? "Nhiệm vụ",
+    current: Number(dto.current ?? 0),
+    target: Number(dto.target ?? 1),
+  };
+}
+
+export async function loadDailyTasks(streakDays = 0) {
+  if (USE_MOCK) {
+    return buildDailyTasks(streakDays);
+  }
+
+  try {
+    const missions = await gamificationApi.getMyDailyMissions();
+    if (!missions?.length) {
+      return [];
+    }
+    return missions.map(mapDailyMissionDto);
+  } catch {
+    return buildDailyTasks(streakDays);
+  }
 }

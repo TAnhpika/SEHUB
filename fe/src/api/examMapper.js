@@ -59,11 +59,31 @@ export function mapQuestionPublicDto(dto) {
   };
 }
 
+function resolveOptionDisplayText(dto) {
+  if (typeof dto === "string") {
+    return dto;
+  }
+
+  const text = dto?.text ?? dto?.Text;
+  if (typeof text === "string" && text.trim() && text !== "[object Object]") {
+    return text.trim();
+  }
+
+  const label = dto?.label ?? dto?.Label;
+  if (typeof label === "string" && label.trim().length > 1) {
+    return label.trim();
+  }
+
+  return typeof text === "string" ? text.trim() : "";
+}
+
 export function mapQuestionOptionDto(dto) {
+  const key = String(dto?.label ?? dto?.Label ?? dto?.key ?? "").trim();
+
   return {
-    key: dto.label,
-    label: dto.text,
-    optionId: dto.id,
+    key,
+    label: resolveOptionDisplayText(dto),
+    optionId: dto?.id ?? dto?.Id ?? null,
   };
 }
 

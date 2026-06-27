@@ -78,4 +78,26 @@ public class PaymentOrderRepository : IPaymentOrderRepository
         _context.PaymentOrders
             .Where(o => o.Status == PaymentOrderStatus.Paid)
             .SumAsync(o => o.Amount, cancellationToken);
+
+    public async Task<IReadOnlyList<(DateOnly Date, decimal Amount)>> GetPaidRevenueByDateRangeAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default)
+    {
+        var start = startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var end = endDate.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+
+        var rows = await _context.PaymentOrders
+            .AsNoTracking()
+            .Where(o =>
+                o.Status == PaymentOrderStatus.Paid
+                && o.PaidAt != null
+                && o.PaidAt >= start
+                && o.PaidAt <= end)
+            .GroupBy(o => DateOnly.FromDateTime(o.PaidAt!.Value))
+            .Select(g => new { Date = g.Key, Amount = g.Sum(o => o.Amount) })
+            .ToListAsync(cancellationToken);
+
+        return rows.Select(r => (r.Date, r.Amount)).ToList();
+    }
 }

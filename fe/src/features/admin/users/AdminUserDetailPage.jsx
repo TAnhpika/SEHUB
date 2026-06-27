@@ -17,7 +17,7 @@ import {
 } from "@/features/admin/users/adminUserStore";
 import {
   ADMIN_USER_ACTIVITY_PAGE_SIZE,
-  getAdminUserActivities,
+  loadAdminUserActivities,
   loadAdminUserDetail,
 } from "@/features/admin/users/adminUserDetailData";
 import { getRankBadgeClass } from "@/features/admin/users/adminUserGamification";
@@ -41,6 +41,7 @@ function AdminUserDetailPage() {
   const [actionError, setActionError] = useState("");
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,7 +57,15 @@ function AdminUserDetailPage() {
     };
   }, [id, refreshKey]);
 
-  const activities = useMemo(() => getAdminUserActivities(id), [id]);
+  useEffect(() => {
+    let cancelled = false;
+    loadAdminUserActivities(id).then((rows) => {
+      if (!cancelled) setActivities(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, refreshKey]);
 
   const activityTotalPages = Math.max(
     1,
@@ -220,7 +229,7 @@ function AdminUserDetailPage() {
           </div>
           <div className={detailStyles.profileMetaItem}>
             <dt>Đăng nhập cuối</dt>
-            <dd>{user.lastLogin}</dd>
+            <dd>{user.lastLogin ?? user.lastActivityDate ?? "—"}</dd>
           </div>
         </dl>
       </section>
@@ -262,7 +271,7 @@ function AdminUserDetailPage() {
         </article>
         <article className={styles.statCard}>
           <span className={styles.statLabel}>Tài liệu tải</span>
-          <span className={styles.statValue}>{user.documentsCount}</span>
+          <span className={styles.statValue}>{user.documentsCount ?? "—"}</span>
         </article>
         <article className={styles.statCard}>
           <span className={styles.statLabel}>Token AI</span>
@@ -286,18 +295,24 @@ function AdminUserDetailPage() {
                 <dt>Email</dt>
                 <dd>{user.email}</dd>
               </div>
-              <div className={styles.detailItem}>
-                <dt>Số điện thoại</dt>
-                <dd>{user.phone}</dd>
-              </div>
-              <div className={styles.detailItem}>
-                <dt>Đăng nhập OAuth</dt>
-                <dd>{user.oauthProvider}</dd>
-              </div>
-              <div className={styles.detailItem}>
-                <dt>IP / vị trí gần nhất</dt>
-                <dd>{user.lastLoginIp}</dd>
-              </div>
+              {user.phone ? (
+                <div className={styles.detailItem}>
+                  <dt>Số điện thoại</dt>
+                  <dd>{user.phone}</dd>
+                </div>
+              ) : null}
+              {user.oauthProvider ? (
+                <div className={styles.detailItem}>
+                  <dt>Đăng nhập OAuth</dt>
+                  <dd>{user.oauthProvider}</dd>
+                </div>
+              ) : null}
+              {user.lastLoginIp ? (
+                <div className={styles.detailItem}>
+                  <dt>IP / vị trí gần nhất</dt>
+                  <dd>{user.lastLoginIp}</dd>
+                </div>
+              ) : null}
             </dl>
           </section>
 

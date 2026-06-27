@@ -27,6 +27,7 @@ import {
   getSubjectOptionsForSemester,
   PRACTICE_SEMESTER_OPTIONS,
 } from "@/features/moderator/practiceExams/practiceExamData";
+import { loadReviewCourses, REVIEW_COURSES } from "@/features/review/ReviewQuestionsPage/reviewData";
 import {
   generateExamPaperCode,
   loadExistingExamPaperIdentifiers,
@@ -74,11 +75,26 @@ function AddPracticeExamPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [existingPaperCodes, setExistingPaperCodes] = useState([]);
+  const [reviewCourses, setReviewCourses] = useState(REVIEW_COURSES);
 
   const subjectOptions = useMemo(
-    () => getSubjectOptionsForSemester(semester),
-    [semester],
+    () => getSubjectOptionsForSemester(semester, reviewCourses),
+    [semester, reviewCourses],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    loadReviewCourses()
+      .then((courses) => {
+        if (!cancelled) setReviewCourses(courses);
+      })
+      .catch(() => {
+        if (!cancelled) setReviewCourses([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;

@@ -16,6 +16,7 @@ public sealed class ExamsController : ControllerBase
     private readonly IAiExamChatApplicationService _aiExamChatService;
     private readonly IExamAttachmentService _examAttachmentService;
     private readonly IQuestionReportService _questionReportService;
+    private readonly IQuestionCommentService _questionCommentService;
 
     public ExamsController(
         IExamQueryService examQueryService,
@@ -23,7 +24,8 @@ public sealed class ExamsController : ControllerBase
         IAiExplanationApplicationService aiExplanationService,
         IAiExamChatApplicationService aiExamChatService,
         IExamAttachmentService examAttachmentService,
-        IQuestionReportService questionReportService)
+        IQuestionReportService questionReportService,
+        IQuestionCommentService questionCommentService)
     {
         _examQueryService = examQueryService;
         _examAttemptService = examAttemptService;
@@ -31,6 +33,7 @@ public sealed class ExamsController : ControllerBase
         _aiExamChatService = aiExamChatService;
         _examAttachmentService = examAttachmentService;
         _questionReportService = questionReportService;
+        _questionCommentService = questionCommentService;
     }
 
     [HttpGet]
@@ -162,5 +165,40 @@ public sealed class ExamsController : ControllerBase
     {
         var result = await _questionReportService.ReportAsync(examId, questionId, request, cancellationToken);
         return Ok(result);
+    }
+
+    [HttpGet("{examId:guid}/questions/{questionId:guid}/comments")]
+    [Authorize(Policy = PolicyNames.RequirePremium)]
+    public async Task<IActionResult> GetQuestionComments(
+        Guid examId,
+        Guid questionId,
+        CancellationToken cancellationToken)
+    {
+        var result = await _questionCommentService.GetCommentsAsync(examId, questionId, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("{examId:guid}/questions/{questionId:guid}/comments")]
+    [Authorize(Policy = PolicyNames.RequirePremium)]
+    public async Task<IActionResult> CreateQuestionComment(
+        Guid examId,
+        Guid questionId,
+        [FromBody] CreateQuestionCommentRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _questionCommentService.CreateAsync(examId, questionId, request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpDelete("{examId:guid}/questions/{questionId:guid}/comments/{commentId:guid}")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> DeleteQuestionComment(
+        Guid examId,
+        Guid questionId,
+        Guid commentId,
+        CancellationToken cancellationToken)
+    {
+        await _questionCommentService.DeleteAsync(examId, questionId, commentId, cancellationToken);
+        return NoContent();
     }
 }

@@ -146,6 +146,11 @@ export function mapAdminUserDetail(dto) {
     streakCount: dto.streakCount ?? 0,
     aiTokensConsumedToday: dto.aiTokensConsumedToday ?? 0,
     lastActivityDate: dto.lastActivityDate ? formatAdminDateTime(dto.lastActivityDate) : null,
+    lastLogin: dto.lastLoginAt ? formatAdminDateTime(dto.lastLoginAt) : null,
+    postsCount: dto.postsCount ?? 0,
+    examsCompleted: dto.examsCompleted ?? 0,
+    reportsFiled: dto.reportsFiled ?? 0,
+    reportsAgainst: dto.reportsAgainst ?? 0,
   };
 }
 
@@ -326,20 +331,73 @@ export function mapExamDetailToWizard(dto) {
   };
 }
 
-export function mapMockOcrQuestionsToCreateItems(questions) {
-  return (questions ?? []).map((question, index) => {
-    const options = (question.options ?? []).map((text, optionIndex) => ({
+function normalizeCreateExamOption(option, optionIndex) {
+  if (typeof option === "string") {
+    return {
       id: crypto.randomUUID(),
       label: String.fromCharCode(65 + optionIndex),
-      text: String(text ?? ""),
-    }));
-    const correctOption = options[question.correct] ?? options[0];
+      text: option.trim(),
+    };
+  }
+
+  const label =
+    String(option?.label ?? option?.Label ?? "").trim() ||
+    String.fromCharCode(65 + optionIndex);
+  const text = String(option?.text ?? option?.Text ?? "").trim();
+
+  return {
+    id: option?.id ?? option?.Id ?? crypto.randomUUID(),
+    label,
+    text,
+  };
+}
+
+function resolveCorrectOptionIds(question, options) {
+  const fromRequest = (question.correctOptionIds ?? question.CorrectOptionIds ?? [])
+    .map((id) => String(id ?? "").trim())
+    .filter(Boolean);
+  if (fromRequest.length > 0) {
+    const optionIds = new Set(options.map((option) => String(option.id)));
+    const valid = fromRequest.filter((id) => optionIds.has(id));
+    if (valid.length > 0) {
+      return valid;
+    }
+  }
+
+  const singleId = question.correctOptionId ?? question.CorrectOptionId;
+  if (singleId) {
+    return [String(singleId)];
+  }
+
+  if (Number.isInteger(question.correct) && question.correct >= 0) {
+    const match = options[question.correct];
+    if (match?.id) {
+      return [String(match.id)];
+    }
+  }
+
+  return options[0]?.id ? [String(options[0].id)] : [];
+}
+
+export function mapMockOcrQuestionsToCreateItems(questions) {
+  return (questions ?? []).map((question, index) => {
+    const options = (question.options ?? []).map(normalizeCreateExamOption);
+    const correctOptionIds = resolveCorrectOptionIds(question, options);
+    const fallbackCorrect = options.find((option) => correctOptionIds.includes(String(option.id))) ?? options[0];
+    const questionType = String(question.questionType ?? question.QuestionType ?? "").toLowerCase();
+    const isMulti = questionType === "multiselect";
+    const content = String(question.content ?? question.Content ?? question.text ?? "").trim();
 
     return {
-      orderIndex: index + 1,
-      content: question.text?.trim() ?? "",
+      orderIndex: question.orderIndex ?? question.OrderIndex ?? index + 1,
+      content,
+      questionType: isMulti ? "MultiSelect" : "SingleChoice",
+      requiredSelectCount: isMulti
+        ? question.requiredSelectCount ?? question.RequiredSelectCount ?? correctOptionIds.length
+        : null,
       options,
-      correctOptionId: correctOption?.id ?? crypto.randomUUID(),
+      correctOptionId: fallbackCorrect?.id ?? crypto.randomUUID(),
+      correctOptionIds,
     };
   });
 }
@@ -952,5 +1010,93 @@ export function mergeDashboardStats(mockPayload, stats, extras = {}) {
         percent: premiumPct,
       },
     },
+  };
+}
+
+export function mapAdminVoucherListItem(dto) {
+  return {
+    id: dto.id,
+    userId: dto.userId,
+    username: dto.username,
+    displayName: dto.displayName,
+    levelId: dto.levelId,
+    levelName: dto.levelName ?? "—",
+    discountPercent: dto.discountPercent ?? 0,
+    status: String(dto.status ?? "active").toLowerCase(),
+    grantedAt: formatAdminDateTime(dto.grantedAt),
+    expiresAt: formatAdminDate(dto.expiresAt),
+  };
+}
+
+export function mapAdminVoucherStats(dto) {
+  return {
+    total: dto.total ?? 0,
+    active: dto.active ?? 0,
+    used: dto.used ?? 0,
+    expired: dto.expired ?? 0,
+    revoked: dto.revoked ?? 0,
+    manual: 0,
+  };
+}
+
+export function mapDashboardCharts(dto) {
+  const toTraffic = (series) => ({
+    data: (series?.data ?? []).map((point) => ({
+      label: point.label,
+      value: Number(point.value ?? 0),
+    })),
+    peak: Number(series?.peak ?? 0),
+    seriesName: series?.seriesName ?? "Phiên hoạt động",
+    period: series?.period ?? "",
+    dataSource: "live",
+  });
+
+  return {
+    userGrowth: {
+      data: (dto.userRegistrations?.data ?? []).map((point) => ({
+        label: point.label,
+        value: Number(point.value ?? 0),
+      })),
+      seriesName: dto.userRegistrations?.seriesName ?? "Đăng ký mới",
+      summary: {
+        total: (dto.userRegistrations?.data ?? []).reduce((sum, row) => sum + Number(row.value ?? 0), 0),
+        delta: "",
+        period: dto.userRegistrations?.period ?? "",
+      },
+      dataSource: "live",
+    },
+    revenue: {
+      data: (dto.revenue?.data ?? []).map((point) => ({
+        label: point.label,
+        value: Number(point.value ?? 0),
+      })),
+      summary: {
+        total: "",
+        delta: "",
+        period: dto.revenue?.period ?? "",
+      },
+      valueSuffix: " tr",
+      dataSource: "live",
+    },
+    traffic: toTraffic(dto.traffic),
+  };
+}
+
+export function mapAdminAuditLogItem(dto) {
+  return {
+    id: dto.id,
+    time: formatAdminDateTime(dto.createdAt),
+    text: dto.text ?? dto.detail ?? dto.action ?? "",
+    type: dto.type ?? "payment",
+    sortKey: dto.createdAt,
+  };
+}
+
+export function mapAdminUserActivityItem(dto) {
+  return {
+    id: dto.id,
+    time: formatAdminDateTime(dto.createdAt),
+    text: dto.text ?? dto.action ?? "",
+    type: dto.type ?? "payment",
   };
 }

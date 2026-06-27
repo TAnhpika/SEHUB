@@ -11,4 +11,8 @@ public interface IUserProfileRepository
     Task<UserProfile?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default);
     Task AddAsync(UserProfile profile, CancellationToken cancellationToken = default);
     Task UpdateAsync(UserProfile profile, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<(DateOnly Date, int Count)>> GetRegistrationCountsByDateRangeAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default);
 }

@@ -10,4 +10,8 @@ public interface IUserDailyActivityRepository
         DateOnly startDate,
         DateOnly endDate,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<(DateOnly Date, int Count)>> GetDailyTotalsAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default);
 }

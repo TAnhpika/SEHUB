@@ -46,4 +46,19 @@ public sealed class UserDailyActivityRepository : IUserDailyActivityRepository
             .OrderBy(a => a.ActivityDate)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<(DateOnly Date, int Count)>> GetDailyTotalsAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await _context.UserDailyActivities
+            .AsNoTracking()
+            .Where(a => a.ActivityDate >= startDate && a.ActivityDate <= endDate)
+            .GroupBy(a => a.ActivityDate)
+            .Select(g => new { Date = g.Key, Count = g.Sum(a => a.ActivityCount) })
+            .ToListAsync(cancellationToken);
+
+        return rows.Select(r => (r.Date, r.Count)).ToList();
+    }
 }

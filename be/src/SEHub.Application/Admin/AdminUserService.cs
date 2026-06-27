@@ -23,6 +23,10 @@ public sealed class AdminUserService : IAdminUserService
     private readonly IAiTokenUsageRepository _tokenUsageRepository;
     private readonly IUserBanRepository _banRepository;
     private readonly ILevelConfigRepository _levelConfigRepository;
+    private readonly IPostRepository _postRepository;
+    private readonly IExamAttemptRepository _examAttemptRepository;
+    private readonly IPostReportRepository _reportRepository;
+    private readonly IPaymentAuditLogRepository _auditLogRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -32,6 +36,10 @@ public sealed class AdminUserService : IAdminUserService
         IAiTokenUsageRepository tokenUsageRepository,
         IUserBanRepository banRepository,
         ILevelConfigRepository levelConfigRepository,
+        IPostRepository postRepository,
+        IExamAttemptRepository examAttemptRepository,
+        IPostReportRepository reportRepository,
+        IPaymentAuditLogRepository auditLogRepository,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
@@ -40,6 +48,10 @@ public sealed class AdminUserService : IAdminUserService
         _tokenUsageRepository = tokenUsageRepository;
         _banRepository = banRepository;
         _levelConfigRepository = levelConfigRepository;
+        _postRepository = postRepository;
+        _examAttemptRepository = examAttemptRepository;
+        _reportRepository = reportRepository;
+        _auditLogRepository = auditLogRepository;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -178,6 +190,26 @@ public sealed class AdminUserService : IAdminUserService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<AdminUserActivityItemDto>> GetUserActivityAsync(
+        Guid id,
+        int limit = 20,
+        CancellationToken cancellationToken = default)
+    {
+        _ = await _userRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("User", id);
+
+        var (logs, _) = await _auditLogRepository.GetPagedByUserIdAsync(id, 1, limit, cancellationToken);
+
+        return logs.Select(log => new AdminUserActivityItemDto
+        {
+            Id = log.Id,
+            Type = "payment",
+            Action = log.Action,
+            Text = PaymentAuditLogFormatter.FormatDetail(log.Action, log.PayloadJson),
+            CreatedAt = log.CreatedAt
+        }).ToList();
+    }
+
     private async Task ValidateRoleChangeAsync(Models.UserAccount user, string role, CancellationToken cancellationToken)
     {
         if (_currentUser.Role != RoleNames.Admin)
@@ -248,6 +280,11 @@ public sealed class AdminUserService : IAdminUserService
             ? await _banRepository.GetLatestByUserIdAsync(user.Id, cancellationToken)
             : null;
 
+        var postsCount = await _postRepository.CountByAuthorIdAsync(user.Id, cancellationToken);
+        var examsCompleted = await _examAttemptRepository.CountSubmittedByUserIdAsync(user.Id, cancellationToken);
+        var reportsFiled = await _reportRepository.CountByReporterIdAsync(user.Id, cancellationToken);
+        var reportsAgainst = await _reportRepository.CountAgainstAuthorIdAsync(user.Id, cancellationToken);
+
         return new AdminUserDetailDto
         {
             Id = user.Id,
@@ -266,7 +303,12 @@ public sealed class AdminUserService : IAdminUserService
             StreakCount = user.StreakCount,
             AiTokensConsumedToday = tokensToday,
             CreatedAt = user.CreatedAt,
-            LastActivityDate = user.LastActivityDate
+            LastActivityDate = user.LastActivityDate,
+            LastLoginAt = user.LastDailyLoginBonusAt,
+            PostsCount = postsCount,
+            ExamsCompleted = examsCompleted,
+            ReportsFiled = reportsFiled,
+            ReportsAgainst = reportsAgainst
         };
     }
 }

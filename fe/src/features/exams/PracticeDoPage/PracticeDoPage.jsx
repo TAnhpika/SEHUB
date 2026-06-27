@@ -14,7 +14,8 @@ import { faGithub } from "@fortawesome/free-brands-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
-import { buildExamQuestions, loadExamMeta } from "@/features/exams/examDetailData";
+import { buildExamQuestions, EXAM_USE_MOCK, loadExamMeta } from "@/features/exams/examDetailData";
+import ExamAttachmentViewer from "@/features/exams/ExamAttachmentViewer/ExamAttachmentViewer";
 import PracticeBriefPanel from "@/features/exams/PracticeBriefPanel/PracticeBriefPanel";
 import { getPracticeBrief } from "@/features/exams/practiceBriefData";
 import { formatDuration } from "@/features/exams/examSession";
@@ -56,6 +57,7 @@ function PracticeDoPage() {
   const questionNumber = Math.max(1, Number(questionIndex) || 1);
 
   const [exam, setExam] = useState(null);
+  const [apiExamId, setApiExamId] = useState(null);
   const [examReady, setExamReady] = useState(false);
 
   useEffect(() => {
@@ -63,19 +65,23 @@ function PracticeDoPage() {
 
     async function fetchExam() {
       setExamReady(false);
-      const mockExam = getExamById(courseCode, decodedExamId, "practice", scope);
-      if (mockExam) {
-        if (!cancelled) {
-          setExam(mockExam);
-          setExamReady(true);
+      if (EXAM_USE_MOCK) {
+        const mockExam = getExamById(courseCode, decodedExamId, "practice", scope);
+        if (mockExam) {
+          if (!cancelled) {
+            setExam(mockExam);
+            setApiExamId(null);
+            setExamReady(true);
+          }
+          return;
         }
-        return;
       }
 
       try {
         const meta = await loadExamMeta(courseCode, decodedExamId, "practice", scope);
         if (!cancelled) {
           setExam(meta?.exam ?? null);
+          setApiExamId(meta?.apiExamId ?? null);
         }
       } catch {
         if (!cancelled) {
@@ -102,9 +108,13 @@ function PracticeDoPage() {
   const question = questions[questionNumber - 1];
 
   const practiceBrief = useMemo(() => {
-    if (!exam || !question) return null;
+    if (!exam || !question || (apiExamId && (exam.attachments?.length ?? 0) > 0)) {
+      return null;
+    }
     return getPracticeBrief(exam.id, question.id, exam.courseCode, question.text);
-  }, [exam, question]);
+  }, [apiExamId, exam, question]);
+
+  const hasApiAttachments = Boolean(apiExamId && (exam?.attachments?.length ?? 0) > 0);
 
   const [submitMode, setSubmitMode] = useState("file");
   const [githubUrl, setGithubUrl] = useState("");
@@ -333,6 +343,10 @@ function PracticeDoPage() {
           <article className={styles.question}>
             <p className={styles["question-label"]}>Bài thực hành {questionNumber}</p>
             <p className={styles["question-text"]}>{question.text}</p>
+
+            {hasApiAttachments ? (
+              <ExamAttachmentViewer examApiId={apiExamId} attachments={exam.attachments} />
+            ) : null}
 
             {practiceBrief ? (
               <PracticeBriefPanel brief={practiceBrief} canDownload />

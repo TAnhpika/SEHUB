@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFire } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
@@ -6,6 +6,7 @@ import { useHoverDropdown } from "@/hooks/useHoverDropdown";
 import {
   buildDailyTasks,
   getCompletedTaskCount,
+  loadDailyTasks,
 } from "./streakData";
 import styles from "./StreakDropdown.module.css";
 
@@ -15,8 +16,25 @@ function StreakDropdown() {
   const rootRef = useRef(null);
   const panelId = useId();
   const streakDays = user?.streak ?? 0;
-  const dailyTasks = useMemo(() => buildDailyTasks(streakDays), [streakDays]);
+  const [dailyTasks, setDailyTasks] = useState(() => buildDailyTasks(streakDays));
   const completedCount = getCompletedTaskCount(dailyTasks);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchTasks() {
+      const tasks = await loadDailyTasks(streakDays);
+      if (!cancelled) {
+        setDailyTasks(tasks);
+      }
+    }
+
+    fetchTasks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [streakDays, user?.id]);
 
   useEffect(() => {
     if (!open) return undefined;
