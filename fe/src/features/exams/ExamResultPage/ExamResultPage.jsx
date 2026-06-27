@@ -94,64 +94,68 @@ function ReviewQuestionCard({ item, index, onOpenExplanation }) {
   const status = !hasAnswer ? "empty" : isCorrect ? "correct" : "wrong";
 
   return (
-    <article
+    <details
       className={`${styles["review-question"]} ${styles[`review-question-${status}`]}`}
     >
-      <header className={styles["review-question-head"]}>
-        <div className={styles["review-question-title-wrap"]}>
-          <span
-            className={`${styles["review-question-index"]} ${styles[`review-question-index-${status}`]}`}
-          >
-            {index + 1}
-          </span>
-          <p className={styles["review-question-text"]}>{item.text}</p>
-        </div>
-        <span
-          className={`${styles["review-status-badge"]} ${
-            !hasAnswer
-              ? styles["review-status-empty"]
-              : isCorrect
-                ? styles["review-status-correct"]
-                : styles["review-status-wrong"]
-          }`}
-        >
-          <FontAwesomeIcon icon={!hasAnswer ? faClock : isCorrect ? faCheck : faXmark} />
-          {!hasAnswer ? "CHƯA TRẢ LỜI" : isCorrect ? "CHÍNH XÁC" : "CHƯA ĐÚNG"}
-        </span>
-      </header>
-
-      <ul className={styles["review-options"]}>
-        {(item.options ?? []).map((option) => {
-          const optionState = getOptionReviewState(item, option.key);
-          return (
-            <li
-              key={option.key}
-              className={`${styles["review-option"]} ${styles[`review-option-${optionState}`]}`}
+      <summary className={styles["review-question-summary"]}>
+        <div className={styles["review-question-head"]}>
+          <div className={styles["review-question-title-wrap"]}>
+            <span
+              className={`${styles["review-question-index"]} ${styles[`review-question-index-${status}`]}`}
             >
-              <span className={styles["review-option-key"]}>{option.key}</span>
-              <div className={styles["review-option-body"]}>
-                <span className={styles["review-option-label"]}>{option.label}</span>
-                {optionState === "wrong" && (
-                  <span className={styles["review-option-tag-wrong"]}>LỰA CHỌN CỦA BẠN</span>
-                )}
-                {optionState === "correct" && (
-                  <span className={styles["review-option-tag-correct"]}>ĐÁP ÁN ĐÚNG</span>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+              {index + 1}
+            </span>
+            <p className={styles["review-question-text"]}>{item.text}</p>
+          </div>
+          <span
+            className={`${styles["review-status-badge"]} ${
+              !hasAnswer
+                ? styles["review-status-empty"]
+                : isCorrect
+                  ? styles["review-status-correct"]
+                  : styles["review-status-wrong"]
+            }`}
+          >
+            <FontAwesomeIcon icon={!hasAnswer ? faClock : isCorrect ? faCheck : faXmark} />
+            {!hasAnswer ? "CHƯA TRẢ LỜI" : isCorrect ? "CHÍNH XÁC" : "CHƯA ĐÚNG"}
+          </span>
+        </div>
+      </summary>
 
-      <button
-        type="button"
-        className={styles["review-explain-link"]}
-        onClick={() => onOpenExplanation(index)}
-      >
-        <FontAwesomeIcon icon={faWandMagicSparkles} />
-        Xem giải thích chi tiết
-      </button>
-    </article>
+      <div className={styles["review-question-body"]}>
+        <ul className={styles["review-options"]}>
+          {(item.options ?? []).map((option) => {
+            const optionState = getOptionReviewState(item, option.key);
+            return (
+              <li
+                key={option.key}
+                className={`${styles["review-option"]} ${styles[`review-option-${optionState}`]}`}
+              >
+                <span className={styles["review-option-key"]}>{option.key}</span>
+                <div className={styles["review-option-body"]}>
+                  <span className={styles["review-option-label"]}>{option.label}</span>
+                  {optionState === "wrong" && (
+                    <span className={styles["review-option-tag-wrong"]}>LỰA CHỌN CỦA BẠN</span>
+                  )}
+                  {optionState === "correct" && (
+                    <span className={styles["review-option-tag-correct"]}>ĐÁP ÁN ĐÚNG</span>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+
+        <button
+          type="button"
+          className={styles["review-explain-link"]}
+          onClick={() => onOpenExplanation(index)}
+        >
+          <FontAwesomeIcon icon={faWandMagicSparkles} />
+          Xem giải thích chi tiết
+        </button>
+      </div>
+    </details>
   );
 }
 

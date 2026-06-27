@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -110,9 +111,23 @@ function ConversationChat({
   const inputRef = useRef(null);
   const imageInputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const messageListRef = useRef(null);
 
   const renderedMessages = useMemo(() => messages, [messages]);
   const inputDisabled = sending || isBlockedEitherWay;
+
+  const rowVirtualizer = useVirtualizer({
+    count: renderedMessages.length,
+    getScrollElement: () => messageListRef.current,
+    estimateSize: () => 72,
+    overscan: 8,
+  });
+
+  useEffect(() => {
+    if (loading || renderedMessages.length === 0) return;
+    rowVirtualizer.scrollToIndex(renderedMessages.length - 1, { align: "end" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- scroll when message count changes
+  }, [renderedMessages.length, loading]);
 
   async function handleSendText() {
     const text = draft.trim();
@@ -241,34 +256,47 @@ function ConversationChat({
         </div>
       </header>
 
-      <div className={styles.body}>
+      <div ref={messageListRef} className={styles.body}>
         {loading && <p className={styles.loading}>Đang tải tin nhắn...</p>}
 
         {!loading && renderedMessages.length === 0 && (
           <p className={styles.loading}>Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện.</p>
         )}
 
-        {renderedMessages.map((message) => {
-          if (message.type === "date") {
-            return (
-              <div key={message.id} className={styles["date-divider"]}>
-                <span>{message.label}</span>
-              </div>
-            );
-          }
+        {!loading && renderedMessages.length > 0 && (
+          <div
+            className={styles.messageVirtualList}
+            style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const message = renderedMessages[virtualRow.index];
+              const isSent = message.type === "sent";
 
-          const isSent = message.type === "sent";
-
-          return (
-            <div
-              key={message.id}
-              className={`${styles["message-row"]} ${isSent ? styles.sent : styles.received}`}
-            >
-              <MessageBubble message={message} onImageClick={setLightboxImage} />
-              <span className={styles["message-time"]}>{message.time}</span>
-            </div>
-          );
-        })}
+              return (
+                <div
+                  key={message.id}
+                  ref={rowVirtualizer.measureElement}
+                  data-index={virtualRow.index}
+                  className={`${styles["message-row"]} ${isSent ? styles.sent : styles.received} ${message.type === "date" ? styles["date-row"] : ""}`}
+                  style={{
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  {message.type === "date" ? (
+                    <div className={styles["date-divider"]}>
+                      <span>{message.label}</span>
+                    </div>
+                  ) : (
+                    <>
+                      <MessageBubble message={message} onImageClick={setLightboxImage} />
+                      <span className={styles["message-time"]}>{message.time}</span>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <footer className={styles.footer}>

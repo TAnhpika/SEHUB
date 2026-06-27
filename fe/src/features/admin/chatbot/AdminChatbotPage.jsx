@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import {
   createAdminChatbotKnowledge,
@@ -36,6 +37,7 @@ const EMPTY_KNOWLEDGE = {
 
 function AdminChatbotPage() {
   const { showToast } = useToast();
+  const { confirm } = useConfirmDialog();
   const [tab, setTab] = useState("settings");
   const [settingsForm, setSettingsForm] = useState({
     systemPrompt: "",
@@ -121,7 +123,13 @@ function AdminChatbotPage() {
   }
 
   async function handleDeleteKnowledge(id) {
-    if (!window.confirm("Xóa mục knowledge này?")) return;
+    const confirmed = await confirm({
+      title: "Xóa knowledge",
+      description: "Xóa mục knowledge này?",
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
+    if (!confirmed) return;
 
     try {
       await deleteAdminChatbotKnowledge(id);

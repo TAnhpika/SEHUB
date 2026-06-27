@@ -152,7 +152,7 @@ function NotificationDropdown() {
         className={`${styles.trigger} ${open ? styles["trigger-open"] : ""}`}
         onClick={handleTriggerClick}
         aria-label={`Thông báo (${unreadItems} chưa đọc)`}
-        aria-haspopup="dialog"
+        aria-haspopup="true"
         aria-expanded={open}
         aria-controls={panelId}
       >
@@ -161,7 +161,7 @@ function NotificationDropdown() {
       </button>
 
       {open && (
-        <div id={panelId} className={styles.dropdown} role="dialog" aria-label="Thông báo">
+        <div id={panelId} className={styles.dropdown} role="menu" aria-label="Thông báo">
           <header className={styles.header}>
             <div className={styles["header-text"]}>
               <h2 className={styles.title}>Thông báo</h2>
@@ -185,9 +185,10 @@ function NotificationDropdown() {
                 const icon = TYPE_ICONS[item.type] ?? faBell;
 
                 return (
-                  <li key={item.id}>
+                  <li key={item.id} role="none">
                     <button
                       type="button"
+                      role="menuitem"
                       className={`${styles.item} ${item.read ? styles["item-read"] : styles["item-unread"]}`}
                       onClick={() => handleItemClick(item)}
                     >

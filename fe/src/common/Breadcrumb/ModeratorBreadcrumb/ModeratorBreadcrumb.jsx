@@ -4,15 +4,24 @@ import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import styles from "./ModeratorBreadcrumb.module.css";
 
 /**
- * @param {{ crumbs: Array<{ label: string, to?: string }> }} props
+ * @param {{ crumbs?: Array<{ label: string, to?: string }>, current?: string }} props
+ * Pass `current` for the legacy final-exam wizard trail, or `crumbs` for custom segments.
  */
-function ModeratorBreadcrumb({ crumbs = [] }) {
-  if (crumbs.length === 0) return null;
+function ModeratorBreadcrumb({ crumbs = [], current }) {
+  const resolvedCrumbs = current
+    ? [
+        { label: "Trang chủ", to: "/home" },
+        { label: "Đóng góp" },
+        { label: current },
+      ]
+    : crumbs;
+
+  if (resolvedCrumbs.length === 0) return null;
 
   return (
     <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-      {crumbs.map((crumb, index) => {
-        const isLast = index === crumbs.length - 1;
+      {resolvedCrumbs.map((crumb, index) => {
+        const isLast = index === resolvedCrumbs.length - 1;
 
         return (
           <span key={`${crumb.label}-${index}`} className={styles.segment}>

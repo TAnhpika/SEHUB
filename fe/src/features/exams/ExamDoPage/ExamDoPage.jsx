@@ -10,6 +10,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { buildExamQuestions, EXAM_TYPE_LABELS, EXAM_USE_MOCK, loadExamMeta, loadReviewQuestions, resolveExamApiId } from "@/features/exams/examDetailData";
 import {
   persistAttemptAnswers,
@@ -55,6 +56,7 @@ function ExamDoPage({ page = "review" }) {
   const { pathname, state: locationState } = useLocation();
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { confirm } = useConfirmDialog();
   const isFocusMode = isExamFocusPath(pathname);
   const scope = isFocusMode
     ? resolveExamScope(pathname, locationState)
@@ -334,32 +336,47 @@ function ExamDoPage({ page = "review" }) {
     setCurrentIndex(index);
   }
 
-  function handleSubmitClick() {
+  async function handleSubmitClick() {
     const unanswered = questions.length - answeredCount;
     const message =
       unanswered > 0
         ? `Bạn còn ${unanswered} câu chưa trả lời. Nộp bài ngay?`
         : "Bạn có chắc muốn nộp bài?";
 
-    if (!window.confirm(message)) return;
+    const confirmed = await confirm({
+      title: "Nộp bài",
+      description: message,
+      confirmLabel: "Nộp bài",
+    });
+    if (!confirmed) return;
     submitExam(false);
   }
 
-  function handleExitClick(event) {
+  async function handleExitClick(event) {
     if (answeredCount > 0) {
-      const ok = window.confirm(
-        "Tiến độ làm bài đang được lưu tạm. Thoát và quay lại xem đề?",
-      );
-      if (!ok) event.preventDefault();
+      event.preventDefault();
+      const ok = await confirm({
+        title: "Thoát bài thi",
+        description: "Tiến độ làm bài đang được lưu tạm. Thoát và quay lại xem đề?",
+        confirmLabel: "Thoát",
+      });
+      if (ok) {
+        navigate(detailPath);
+      }
     }
   }
 
-  function handleExitFocus() {
+  async function handleExitFocus() {
     const message =
       answeredCount > 0
         ? "Tiến độ đã lưu tạm. Thoát màn làm bài và quay lại xem đề?"
         : "Thoát màn làm bài và quay lại xem đề?";
-    if (!window.confirm(message)) return;
+    const confirmed = await confirm({
+      title: "Thoát bài thi",
+      description: message,
+      confirmLabel: "Thoát",
+    });
+    if (!confirmed) return;
     navigate(detailPath);
   }
 

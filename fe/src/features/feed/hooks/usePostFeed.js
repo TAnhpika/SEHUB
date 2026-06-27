@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useToast } from "@/common/Toast/ToastProvider";
 import { loadPosts, POSTS_PER_PAGE, removePost } from "@/features/feed/feedData";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 export function usePostFeed({ scrollTargetId = "home-top" } = {}) {
+  const { confirm } = useConfirmDialog();
+  const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -126,7 +130,12 @@ export function usePostFeed({ scrollTargetId = "home-top" } = {}) {
   }, []);
 
   const handleDeletePost = useCallback(async (post) => {
-    const confirmed = window.confirm("Bạn có chắc muốn xóa bài viết này?");
+    const confirmed = await confirm({
+      title: "Xóa bài viết",
+      description: "Bạn có chắc muốn xóa bài viết này?",
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
     if (!confirmed) return;
 
     try {
@@ -137,9 +146,9 @@ export function usePostFeed({ scrollTargetId = "home-top" } = {}) {
       setEditOnOpen(false);
       setFocusCommentsOnOpen(false);
     } catch (err) {
-      window.alert(err.message ?? "Không xóa được bài viết.");
+      showToast(err.message ?? "Không xóa được bài viết.");
     }
-  }, []);
+  }, [confirm, showToast]);
 
   return {
     posts,

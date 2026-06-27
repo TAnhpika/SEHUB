@@ -168,6 +168,23 @@
   margin: 0.25rem 0 0.875rem;
 }
 
+.messageVirtualList {
+  position: relative;
+  width: 100%;
+}
+
+.messageVirtualList .message-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.date-row {
+  max-width: none;
+  align-items: center;
+}
+
 .date-divider span {
   padding: 0.25rem 0.75rem;
   font-size: 0.625rem;

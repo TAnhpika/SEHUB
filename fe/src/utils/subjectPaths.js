@@ -1,8 +1,10 @@
 const SEGMENTS = {
   review: "final-exam",
-  practice: "pratical-exam",
+  practice: "practical-exam",
   documents: "documents",
 };
+
+const LEGACY_PRACTICE_SEGMENT = "pratical-exam";
 
 /**
  * @param {"review" | "practice" | "documents"} pageKey
@@ -18,10 +20,16 @@ export function getSubjectScopeFromPath(pathname) {
   return pathname.startsWith("/home/") ? "home" : "community";
 }
 
-const HOME_SUBJECT_PREFIXES = ["/home/final-exam", "/home/pratical-exam", "/home/documents"];
+const HOME_SUBJECT_PREFIXES = [
+  "/home/final-exam",
+  "/home/practical-exam",
+  "/home/pratical-exam",
+  "/home/documents",
+];
 
 const SUBJECT_CONTENT_PREFIXES = [
   "/community/final-exam",
+  "/community/practical-exam",
   "/community/pratical-exam",
   "/community/documents",
   ...HOME_SUBJECT_PREFIXES,
@@ -76,7 +84,7 @@ export function getSubjectNavLinks(scope = "community") {
 
   return [
     { to: `${base}/final-exam`, label: "Câu hỏi ôn tập", key: "review" },
-    { to: `${base}/pratical-exam`, label: "Câu hỏi thực hành", key: "practice" },
+    { to: `${base}/practical-exam`, label: "Câu hỏi thực hành", key: "practice" },
     { to: `${base}/documents`, label: "Tài liệu", key: "documents" },
   ];
 }

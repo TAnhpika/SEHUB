@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import UserAvatar from "@/common/UserAvatar/UserAvatar";
 import FollowButton from "@/features/social/FollowButton/FollowButton";
 import styles from "./FriendResultCard.module.css";
 
@@ -8,13 +9,11 @@ function FriendResultCard({ user, onFollowChange }) {
   return (
     <div className={styles.card}>
       <Link to={`/profile/${user.username}`} className={styles.link}>
-        <span className={styles.avatar} aria-hidden="true">
-          {user.avatarUrl ? (
-            <img src={user.avatarUrl} alt="" className={styles["avatar-image"]} />
-          ) : (
-            user.initial ?? displayName.charAt(0).toUpperCase()
-          )}
-        </span>
+        <UserAvatar
+          src={user.avatarUrl}
+          initial={user.initial ?? displayName}
+          className={styles.avatar}
+        />
 
         <div className={styles.info}>
           <p className={styles.username}>{displayName}</p>

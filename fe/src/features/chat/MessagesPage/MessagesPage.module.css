@@ -189,14 +189,24 @@
 @media (max-width: 900px) {
   .page {
     grid-template-columns: minmax(0, 1fr);
-    height: auto;
-    min-height: calc(100vh - var(--header-height) - 2.5rem);
+    height: calc(100vh - var(--header-height) - 2.5rem);
+    min-height: 0;
+  }
+
+  .pageMobileChat .inboxMobileHidden {
+    display: none;
+  }
+
+  .pageMobileChat .chat {
+    min-height: 0;
+    height: 100%;
   }
 
   .inbox {
-    max-height: 16rem;
+    min-height: 0;
+    height: 100%;
     border-right: none;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: none;
   }
 
   .chat {

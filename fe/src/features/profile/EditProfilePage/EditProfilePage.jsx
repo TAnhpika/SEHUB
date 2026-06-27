@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import UserAvatar from "@/common/UserAvatar/UserAvatar";
 import { readStoredUser } from "@/context/AuthProvider";
 import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
@@ -179,13 +180,11 @@ function EditProfilePage() {
         <section className={styles.section}>
           <h2 className={styles["section-title"]}>Ảnh đại diện</h2>
           <div className={styles["avatar-box"]}>
-            <span className={styles.avatar} aria-hidden="true">
-              {avatarPreview ? (
-                <img src={avatarPreview} alt="" className={styles["avatar-image"]} />
-              ) : (
-                avatarInitial
-              )}
-            </span>
+            <UserAvatar
+              src={avatarPreview}
+              initial={avatarInitial}
+              className={styles.avatar}
+            />
             <input
               ref={fileInputRef}
               type="file"

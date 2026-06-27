@@ -175,6 +175,8 @@ function ContentPostDetailPanel({
               src={item.coverImage.url}
               alt={item.coverImage.alt ?? item.title}
               className={styles.coverImage}
+              loading="lazy"
+              decoding="async"
             />
             <figcaption className={styles.mediaCaption}>
               <FontAwesomeIcon icon={faImage} />
@@ -195,7 +197,13 @@ function ContentPostDetailPanel({
             <div className={styles.inlineGrid}>
               {item.inlineImages.map((image) => (
                 <figure key={image.url} className={styles.inlineFigure}>
-                  <img src={image.url} alt={image.caption ?? "Ảnh trong bài"} className={styles.inlineImage} />
+                  <img
+                    src={image.url}
+                    alt={image.caption ?? "Ảnh trong bài"}
+                    className={styles.inlineImage}
+                    loading="lazy"
+                    decoding="async"
+                  />
                   {image.caption ? (
                     <figcaption className={styles.mediaCaption}>{image.caption}</figcaption>
                   ) : null}
@@ -218,10 +226,19 @@ function ContentPostDetailPanel({
                     <p className={styles.attachmentName}>{file.name}</p>
                     <p className={styles.attachmentSize}>{file.sizeLabel}</p>
                   </div>
-                  <button type="button" className={styles.attachmentBtn} aria-label={`Tải ${file.name}`}>
-                    <FontAwesomeIcon icon={faDownload} />
-                    Xem / tải
-                  </button>
+                  {file.url ? (
+                    <a
+                      href={file.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.attachmentBtn}
+                      download={file.name}
+                      aria-label={`Tải ${file.name}`}
+                    >
+                      <FontAwesomeIcon icon={faDownload} />
+                      Xem / tải
+                    </a>
+                  ) : null}
                 </li>
               ))}
             </ul>

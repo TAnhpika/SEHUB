@@ -15,14 +15,13 @@ import RichTextEditor from "@/common/RichTextEditor/RichTextEditor";
 import RichTextContent from "@/common/RichTextEditor/RichTextContent";
 import {
   loadPostById,
-  removeComment,
-  submitComment,
   toggleLike,
 } from "@/features/feed/feedData";
+import { usePostDetail } from "@/features/feed/hooks/usePostDetail";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
 import { copyPostLink, formatDisplayTitle, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
-import CommentMentionPicker, { insertMention } from "@/features/feed/CommentMentionPicker/CommentMentionPicker";
+import CommentMentionPicker from "@/features/feed/CommentMentionPicker/CommentMentionPicker";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./PostDetailPage.module.css";
 
@@ -44,12 +43,25 @@ function PostDetailPage() {
   const [loadError, setLoadError] = useState(null);
   const [likes, setLikes] = useState(0);
   const [liked, setLiked] = useState(false);
-  const [comments, setComments] = useState([]);
-  const [draft, setDraft] = useState("");
-  const [editingCommentId, setEditingCommentId] = useState(null);
-  const [editCommentDraft, setEditCommentDraft] = useState("");
-  const [submittingComment, setSubmittingComment] = useState(false);
-  const [replyTarget, setReplyTarget] = useState(null);
+
+  const {
+    comments,
+    draft,
+    setDraft,
+    editingCommentId,
+    editCommentDraft,
+    setEditCommentDraft,
+    replyTarget,
+    setReplyTarget,
+    hasDraft,
+    handleSubmitComment,
+    handleReply,
+    handleInsertMention,
+    handleStartEditComment,
+    handleCancelEditComment,
+    handleSaveEditComment,
+    handleDeleteComment,
+  } = usePostDetail(postId, { initialComments: post?.commentsList });
 
   useEffect(() => {
     let cancelled = false;
@@ -67,10 +79,6 @@ function PostDetailPage() {
         setPost(data);
         setLikes(data.likes);
         setLiked(Boolean(data.isLiked));
-        setComments(data.commentsList ?? []);
-        setDraft("");
-        setEditingCommentId(null);
-        setEditCommentDraft("");
       } catch (err) {
         if (!cancelled) {
           setLoadError(err.message ?? "Không tải được bài viết.");
@@ -112,7 +120,6 @@ function PostDetailPage() {
   }
 
   const isOwner = isOwnPost(post, user);
-  const hasDraft = draft.trim().length > 0;
   const shortDate = formatShortDate(post.publishedAt);
   const displayTitle = formatDisplayTitle(post.title);
 
@@ -142,75 +149,6 @@ function PostDetailPage() {
       showCopyToast();
     } catch {
       showCopyToast();
-    }
-  }
-
-  async function handleSubmitComment() {
-    const content = draft.trim();
-    if (!content || submittingComment) return;
-
-    setSubmittingComment(true);
-    try {
-      const newComment = await submitComment(post.id, content, replyTarget?.id ?? null);
-      setComments((prev) => [...prev, newComment]);
-      setDraft("");
-      setReplyTarget(null);
-    } catch (err) {
-      window.alert(err.message ?? "Không gửi được bình luận.");
-    } finally {
-      setSubmittingComment(false);
-    }
-  }
-
-  function handleReply(comment) {
-    setReplyTarget({
-      id: comment.id,
-      username: comment.author?.username,
-      name: comment.author?.name ?? comment.author?.displayName,
-    });
-    if (comment.author?.username) {
-      setDraft((prev) => insertMention(prev, comment.author.username));
-    }
-  }
-
-  function handleInsertMention(username) {
-    setDraft((prev) => insertMention(prev, username));
-  }
-
-  function handleStartEditComment(comment) {
-    setEditingCommentId(comment.id);
-    setEditCommentDraft(comment.content);
-  }
-
-  function handleCancelEditComment() {
-    setEditingCommentId(null);
-    setEditCommentDraft("");
-  }
-
-  function handleSaveEditComment(commentId) {
-    const content = editCommentDraft.trim();
-    if (!content) return;
-
-    setComments((prev) =>
-      prev.map((item) => (item.id === commentId ? { ...item, content } : item)),
-    );
-    setEditingCommentId(null);
-    setEditCommentDraft("");
-  }
-
-  async function handleDeleteComment(commentId) {
-    const confirmed = window.confirm("Bạn có chắc muốn xóa bình luận này?");
-    if (!confirmed) return;
-
-    try {
-      await removeComment(post.id, commentId);
-      setComments((prev) => prev.filter((item) => item.id !== commentId));
-      if (editingCommentId === commentId) {
-        setEditingCommentId(null);
-        setEditCommentDraft("");
-      }
-    } catch (err) {
-      window.alert(err.message ?? "Không xóa được bình luận.");
     }
   }
 
