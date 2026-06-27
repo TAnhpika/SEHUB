@@ -11,7 +11,6 @@ import {
   loadProfileActivity,
   loadRecentPostsByUsername,
 } from "@/features/profile/profileData";
-import ProfileInteractionActions from "@/features/social/ProfileInteractionActions/ProfileInteractionActions";
 import ProfilePageSkeleton from "@/features/profile/ProfilePageSkeleton/ProfilePageSkeleton";
 import * as profilesApi from "@/api/profilesApi";
 import styles from "./ProfilePage.module.css";
@@ -115,10 +114,8 @@ function ProfilePage() {
           profile={profile}
           isOwner={isOwner}
           isPremiumUsername={isOwner && isPremium}
+          onFollowChange={!isOwner ? handleFollowChange : undefined}
         />
-        {!isOwner && profile.userId ? (
-          <ProfileInteractionActions profile={profile} onFollowChange={handleFollowChange} />
-        ) : null}
       </div>
 
       <div className={styles.main}>
