@@ -9,10 +9,16 @@ import {
   faMedal,
 } from "@fortawesome/free-solid-svg-icons";
 import ProfileCardMenu from "@/features/profile/ProfileCard/ProfileCardMenu";
+import ProfileInteractionActions from "@/features/social/ProfileInteractionActions/ProfileInteractionActions";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./ProfileCard.module.css";
 
-function ProfileCard({ profile, isOwner = false, isPremiumUsername = false }) {
+function ProfileCard({
+  profile,
+  isOwner = false,
+  isPremiumUsername = false,
+  onFollowChange,
+}) {
   return (
     <aside className={styles.card}>
       {isOwner && <ProfileCardMenu username={profile.username} />}
@@ -63,6 +69,10 @@ function ProfileCard({ profile, isOwner = false, isPremiumUsername = false }) {
           />
         </div>
       </div>
+
+      {!isOwner && profile.userId && onFollowChange ? (
+        <ProfileInteractionActions profile={profile} onFollowChange={onFollowChange} />
+      ) : null}
 
       <div className={styles.stats}>
         <h2 className={styles["stats-title"]}>Thống kê</h2>
