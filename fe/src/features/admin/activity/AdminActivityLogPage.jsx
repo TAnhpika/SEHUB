@@ -28,32 +28,22 @@ const TYPE_META = {
   all: {
     label: "Tất cả",
     icon: faClipboardList,
-    accent: "#004ac6",
-    bg: "#e8f0fe",
   },
   exam: {
     label: "Đề thi",
     icon: faFileLines,
-    accent: "#2563eb",
-    bg: "#dbeafe",
   },
   report: {
     label: "Báo cáo",
     icon: faFlag,
-    accent: "#dc2626",
-    bg: "#fee2e2",
   },
   payment: {
     label: "Thanh toán",
     icon: faCreditCard,
-    accent: "#059669",
-    bg: "#d1fae5",
   },
   user: {
     label: "Tài khoản",
     icon: faUser,
-    accent: "#7c3aed",
-    bg: "#ede9fe",
   },
 };
 
@@ -210,11 +200,7 @@ function AdminActivityLogPage() {
             return (
               <div
                 key={type}
-                className={`${logStyles.statCard} ${highlight ? logStyles.statCardHighlight : ""}`}
-                style={{
-                  "--stat-accent": meta.accent,
-                  "--stat-bg": meta.bg,
-                }}
+                className={`${logStyles.statCard} ${logStyles[`statCard-${type}`]} ${highlight ? logStyles.statCardHighlight : ""}`}
               >
                 <span className={logStyles.statIcon}>
                   <FontAwesomeIcon icon={meta.icon} />
@@ -317,11 +303,7 @@ function AdminActivityLogPage() {
                       return (
                         <li key={item.id} className={logStyles.timelineItem}>
                           <span
-                            className={logStyles.node}
-                            style={{
-                              "--node-accent": meta.accent,
-                              "--node-bg": meta.bg,
-                            }}
+                            className={`${logStyles.node} ${logStyles[`node-${item.type}`]}`}
                             aria-hidden
                           >
                             <FontAwesomeIcon icon={meta.icon} />
