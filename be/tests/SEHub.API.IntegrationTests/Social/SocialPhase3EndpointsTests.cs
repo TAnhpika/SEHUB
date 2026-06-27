@@ -115,11 +115,81 @@ public sealed class SocialPhase3EndpointsTests : IClassFixture<CustomWebApplicat
 
         await using var scope = _factory.Services.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<SEHubDbContext>();
-        var report = await context.ConversationReports.FirstOrDefaultAsync(r =>
-            r.ConversationId == conversationId && r.ReporterId == CustomWebApplicationFactory.FreeUserId);
+        var report = await context.ConversationReports
+            .Where(r => r.ConversationId == conversationId && r.ReporterId == CustomWebApplicationFactory.FreeUserId)
+            .OrderByDescending(r => r.CreatedAt)
+            .FirstOrDefaultAsync();
 
         report.Should().NotBeNull();
         report!.Status.Should().Be(Domain.Enums.ReportStatus.Pending);
+    }
+
+    [Fact]
+    public async Task Moderator_CanListAndResolveConversationReports()
+    {
+        await SeedTargetUserAsync();
+
+        var token = await _factory.LoginAndGetTokenAsync(_client);
+
+        using (var unblockRequest = CreateAuthorizedDelete(token, $"/api/v1/users/{TargetUserId}/block"))
+        {
+            await _client.SendAsync(unblockRequest);
+        }
+
+        Guid conversationId;
+
+        using (var createRequest = CreateAuthorizedPost(token, $"/api/v1/conversations/with/{TargetUserId}"))
+        {
+            var createResponse = await _client.SendAsync(createRequest);
+            createResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var createBody = await createResponse.Content.ReadFromJsonAsync<ApiResponse<ConversationListItemDto>>();
+            conversationId = createBody!.Data!.ConversationId;
+        }
+
+        using (var reportRequest = CreateAuthorizedJsonPost(
+            token,
+            $"/api/v1/conversations/{conversationId}/report",
+            new ReportConversationRequest
+            {
+                Reason = "spam",
+                Detail = "Người dùng gửi tin nhắn spam liên tục trong cuộc trò chuyện."
+            }))
+        {
+            var reportResponse = await _client.SendAsync(reportRequest);
+            reportResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
+
+        Guid reportId;
+
+        using (var listRequest = CreateAuthorizedGet(modToken, "/api/v1/admin/moderation/conversation-reports?page=1&pageSize=10&status=Pending"))
+        {
+            var listResponse = await _client.SendAsync(listRequest);
+            listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var listBody = await listResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResult<ConversationReportDto>>>();
+            listBody!.Data!.Items.Should().ContainSingle(item =>
+                item.ConversationId == conversationId && item.Status == "Pending");
+            reportId = listBody.Data.Items.First(item => item.ConversationId == conversationId).Id;
+        }
+
+        using (var resolveRequest = CreateAuthorizedJsonPatch(
+            modToken,
+            $"/api/v1/admin/moderation/conversation-reports/{reportId}",
+            new ResolveConversationReportRequest
+            {
+                Status = "Resolved",
+                ResolutionNote = "ignored"
+            }))
+        {
+            var resolveResponse = await _client.SendAsync(resolveRequest);
+            resolveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var resolveBody = await resolveResponse.Content.ReadFromJsonAsync<ApiResponse<ConversationReportDto>>();
+            resolveBody!.Data!.Status.Should().Be("Resolved");
+        }
     }
 
     [Fact]
@@ -240,6 +310,16 @@ public sealed class SocialPhase3EndpointsTests : IClassFixture<CustomWebApplicat
     private static HttpRequestMessage CreateAuthorizedJsonPost<T>(string token, string path, T body)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json")
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return request;
+    }
+
+    private static HttpRequestMessage CreateAuthorizedJsonPatch<T>(string token, string path, T body)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Patch, path)
         {
             Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json")
         };
