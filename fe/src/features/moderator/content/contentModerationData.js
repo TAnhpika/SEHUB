@@ -59,8 +59,20 @@ Mình attach slide ôn và vài bài tập mẫu bên dưới. Cảm ơn mọi n
       },
     ],
     attachments: [
-      { id: "att-1", name: "CSD_FE_slide_week1-8.pdf", sizeLabel: "2.4 MB", type: "pdf" },
-      { id: "att-2", name: "bst_exercises.zip", sizeLabel: "890 KB", type: "zip" },
+      {
+        id: "att-1",
+        name: "CSD_FE_slide_week1-8.pdf",
+        sizeLabel: "2.4 MB",
+        type: "pdf",
+        url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      },
+      {
+        id: "att-2",
+        name: "bst_exercises.zip",
+        sizeLabel: "890 KB",
+        type: "zip",
+        url: "https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-zip-file.zip",
+      },
     ],
     allowComments: true,
     anonymous: false,

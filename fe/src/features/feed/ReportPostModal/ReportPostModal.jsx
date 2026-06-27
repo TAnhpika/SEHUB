@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFlag, faXmark } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import { Modal } from "@/common/Modal/Modal";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { submitReport } from "@/features/feed/feedData";
 import { MIN_REPORT_DETAIL_LENGTH, REPORT_REASONS } from "./reportData";
@@ -21,22 +22,16 @@ function ReportPostModal({ open, onClose, postId, postTitle }) {
     const previousHtmlOverflow = document.documentElement.style.overflow;
     const previousScrollbarGutter = document.documentElement.style.scrollbarGutter;
 
-    function handleKeyDown(event) {
-      if (event.key === "Escape") onClose();
-    }
-
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
     document.documentElement.style.scrollbarGutter = "auto";
-    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.body.style.overflow = previousBodyOverflow;
       document.documentElement.style.overflow = previousHtmlOverflow;
       document.documentElement.style.scrollbarGutter = previousScrollbarGutter;
-      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -77,14 +72,13 @@ function ReportPostModal({ open, onClose, postId, postTitle }) {
   }
 
   return (
-    <div className={styles.overlay} onClick={onClose} role="presentation">
-      <div
-        className={styles.dialog}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="report-post-title"
-        onClick={(event) => event.stopPropagation()}
-      >
+    <Modal
+      open={open}
+      onClose={onClose}
+      className={styles.overlay}
+      panelClassName={styles.dialog}
+      closeOnOverlay
+    >
         <button type="button" className={styles.close} aria-label="Đóng" onClick={onClose}>
           <FontAwesomeIcon icon={faXmark} />
         </button>
@@ -168,8 +162,7 @@ function ReportPostModal({ open, onClose, postId, postTitle }) {
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

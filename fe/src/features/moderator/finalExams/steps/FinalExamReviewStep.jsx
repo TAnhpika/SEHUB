@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import {
   ApiError,
   buildFinalExamContributionPayload,
@@ -16,6 +17,7 @@ import styles from "./FinalExamReviewStep.module.css";
 function FinalExamReviewStep() {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { confirm } = useConfirmDialog();
   const { user } = useAuth();
   const moderator = user?.username ?? "mod_sehub";
   const {
@@ -74,9 +76,11 @@ function FinalExamReviewStep() {
       await send(false);
     } catch (error) {
       if (!isEditMode && error instanceof ApiError && error.status === 409) {
-        const confirmed = window.confirm(
-          "Đề trùng nội dung (SHA-256) với đề đã có. Gửi duyệt anyway?",
-        );
+        const confirmed = await confirm({
+          title: "Đề trùng nội dung",
+          description: "Đề trùng nội dung (SHA-256) với đề đã có. Gửi duyệt anyway?",
+          confirmLabel: "Gửi duyệt",
+        });
         if (confirmed) {
           try {
             await send(true);

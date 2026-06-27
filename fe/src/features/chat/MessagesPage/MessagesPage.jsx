@@ -36,6 +36,16 @@ function MessagesPage() {
     isBlockedEitherWay: false,
   });
   const [reportOpen, setReportOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 900px)").matches : false,
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 900px)");
+    const handleChange = () => setIsMobile(mediaQuery.matches);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
 
   const handleReceiveMessage = useCallback((messageDto) => {
     const mapped = mapMessageItem(messageDto);
@@ -153,6 +163,7 @@ function MessagesPage() {
 
   const activeConversation =
     conversations.find((item) => item.conversationId === selectedId) ?? null;
+  const showMobileChat = isMobile && Boolean(activeConversation);
 
   useEffect(() => {
     if (!activeConversation?.otherUserId) {
@@ -258,8 +269,11 @@ function MessagesPage() {
   }
 
   return (
-    <div className={styles.page}>
-      <aside className={styles.inbox} aria-label="Danh sách hội thoại">
+    <div className={`${styles.page} ${showMobileChat ? styles.pageMobileChat : ""}`}>
+      <aside
+        className={`${styles.inbox} ${showMobileChat ? styles.inboxMobileHidden : ""}`}
+        aria-label="Danh sách hội thoại"
+      >
         <div className={styles["inbox-header"]}>
           <h1 className={styles["inbox-title"]}>Tin nhắn</h1>
           <button type="button" className={styles.compose} aria-label="Soạn tin nhắn mới" disabled>
@@ -337,6 +351,8 @@ function MessagesPage() {
             messages={messages}
             loading={messagesLoading}
             sending={sending}
+            compact={showMobileChat}
+            onBack={() => setSelectedId(null)}
             onSend={handleSend}
             isBlockedByMe={blockStatus.isBlockedByMe}
             isBlockedEitherWay={blockStatus.isBlockedEitherWay}

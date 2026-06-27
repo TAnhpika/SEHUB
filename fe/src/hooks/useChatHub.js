@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef } from "react";
-import * as signalR from "@microsoft/signalr";
 import { getAccessToken } from "@/api/httpClient";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5006";
@@ -36,46 +35,58 @@ export function useChatHub({
       return undefined;
     }
 
-    const connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${API_BASE_URL}/hubs/chat?access_token=${encodeURIComponent(token)}`, {
-        withCredentials: true,
-      })
-      .withAutomaticReconnect()
-      .build();
+    let cancelled = false;
+    let connection;
 
-    connection.on("ReceiveMessage", (message) => {
-      handlersRef.current.onReceiveMessage?.(message);
-    });
+    async function connect() {
+      const signalR = await import("@microsoft/signalr");
+      if (cancelled) return;
 
-    connection.on("UnreadCountUpdated", (payload) => {
-      handlersRef.current.onUnreadCountUpdated?.(payload?.totalUnread ?? 0);
-    });
+      connection = new signalR.HubConnectionBuilder()
+        .withUrl(`${API_BASE_URL}/hubs/chat?access_token=${encodeURIComponent(token)}`, {
+          withCredentials: true,
+        })
+        .withAutomaticReconnect()
+        .build();
 
-    connection.on("NotificationReceived", (payload) => {
-      handlersRef.current.onNotificationReceived?.(payload);
-    });
-
-    connection.on("NotificationUnreadUpdated", (payload) => {
-      handlersRef.current.onNotificationUnreadUpdated?.(payload?.totalUnread ?? 0);
-    });
-
-    connectionRef.current = connection;
-
-    connection
-      .start()
-      .catch(() => {
-        /* hub optional when offline */
+      connection.on("ReceiveMessage", (message) => {
+        handlersRef.current.onReceiveMessage?.(message);
       });
 
+      connection.on("UnreadCountUpdated", (payload) => {
+        handlersRef.current.onUnreadCountUpdated?.(payload?.totalUnread ?? 0);
+      });
+
+      connection.on("NotificationReceived", (payload) => {
+        handlersRef.current.onNotificationReceived?.(payload);
+      });
+
+      connection.on("NotificationUnreadUpdated", (payload) => {
+        handlersRef.current.onNotificationUnreadUpdated?.(payload?.totalUnread ?? 0);
+      });
+
+      connectionRef.current = connection;
+
+      connection.start().catch(() => {
+        /* hub optional when offline */
+      });
+    }
+
+    connect();
+
     return () => {
-      connection.stop();
+      cancelled = true;
+      connection?.stop();
       connectionRef.current = null;
     };
   }, [enabled]);
 
   const joinConversation = useCallback(async (conversationId) => {
     const connection = connectionRef.current;
-    if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
+    if (!connection) return;
+
+    const signalR = await import("@microsoft/signalr");
+    if (connection.state !== signalR.HubConnectionState.Connected) {
       return;
     }
 

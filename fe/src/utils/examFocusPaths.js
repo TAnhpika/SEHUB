@@ -1,5 +1,6 @@
 const FOCUS_FINAL_BASE = "/exam/focus/final-exam";
-const FOCUS_PRACTICE_BASE = "/exam/focus/pratical-exam";
+const FOCUS_PRACTICE_BASE = "/exam/focus/practical-exam";
+const LEGACY_FOCUS_PRACTICE_BASE = "/exam/focus/pratical-exam";
 
 /** Màn làm bài tập trung — không MainLayout (sidebar, header, chat) */
 export function isExamFocusPath(pathname = "") {
@@ -7,7 +8,10 @@ export function isExamFocusPath(pathname = "") {
 }
 
 export function isPracticeFocusPath(pathname = "") {
-  return pathname.startsWith(`${FOCUS_PRACTICE_BASE}/`);
+  return (
+    pathname.startsWith(`${FOCUS_PRACTICE_BASE}/`) ||
+    pathname.startsWith(`${LEGACY_FOCUS_PRACTICE_BASE}/`)
+  );
 }
 
 export function getExamFocusDoPath(courseCode, examId) {
@@ -43,7 +47,7 @@ export function getPracticeFocusResultPath(courseCode, examId, questionIndex, sc
 
 export function getExamDetailPath(courseCode, examId, scope = "home", examPage = "review") {
   const base = scope === "home" ? "/home" : "/community";
-  const segment = examPage === "practice" ? "pratical-exam" : "final-exam";
+  const segment = examPage === "practice" ? "practical-exam" : "final-exam";
   return `${base}/${segment}/${courseCode}/${encodeURIComponent(examId)}`;
 }
 

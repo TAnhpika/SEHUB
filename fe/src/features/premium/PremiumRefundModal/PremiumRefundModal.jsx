@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRotateLeft, faXmark } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import { Modal } from "@/common/Modal/Modal";
 import styles from "./PremiumRefundModal.module.css";
 
 /**
@@ -52,13 +53,13 @@ function PremiumRefundModal({
     : null;
 
   return (
-    <div className={styles.backdrop} role="presentation" onClick={onClose}>
-      <div
-        className={styles.modal}
-        role="dialog"
-        aria-labelledby="premium-refund-title"
-        onClick={(event) => event.stopPropagation()}
-      >
+    <Modal
+      open={open}
+      onClose={onClose}
+      className={styles.backdrop}
+      panelClassName={styles.modal}
+      closeOnOverlay
+    >
         <header className={styles.head}>
           <div className={styles.headMain}>
             <span className={styles.icon} aria-hidden="true">
@@ -115,8 +116,7 @@ function PremiumRefundModal({
             </Button>
           </footer>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

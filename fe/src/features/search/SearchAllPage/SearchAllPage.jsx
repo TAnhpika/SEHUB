@@ -3,13 +3,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import PostCard from "@/features/feed/PostCard/PostCard";
 import SearchResourceCard from "@/features/search/SearchResourceCard/SearchResourceCard";
 import SearchUserCard from "@/features/search/SearchUserCard/SearchUserCard";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   SEARCH_TABS,
-  getSearchCounts,
-  searchDocuments,
-  searchFinalExams,
   searchPosts,
-  searchPracticeExams,
   searchLocalContent,
   searchUsers,
 } from "@/features/search/searchAllData";
@@ -26,6 +23,7 @@ function SearchAllPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const query = searchParams.get("q")?.trim() ?? "";
+  const debouncedQuery = useDebouncedValue(query, 300);
   const activeTab = searchParams.get("tab") ?? "all";
 
   const [localResults, setLocalResults] = useState(EMPTY_LOCAL_RESULTS);
@@ -49,139 +47,88 @@ function SearchAllPage() {
   useEffect(() => {
     let cancelled = false;
 
-    async function fetchLocalResults() {
-      if (!query) {
+    async function fetchAllResults() {
+      if (!debouncedQuery) {
         setLocalResults(EMPTY_LOCAL_RESULTS);
         setLocalError(null);
+        setBlogResults([]);
+        setBlogsError(null);
+        setUserResults([]);
+        setUsersError(null);
+        setCounts({ all: 0, blogs: 0, documents: 0, exams: 0, practice: 0, users: 0 });
+        setLocalLoading(false);
+        setBlogsLoading(false);
+        setUsersLoading(false);
         return;
       }
 
       setLocalLoading(true);
-      setLocalError(null);
-
-      try {
-        const results = await searchLocalContent(query);
-        if (!cancelled) {
-          setLocalResults(results);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setLocalResults(EMPTY_LOCAL_RESULTS);
-          setLocalError(err.message ?? "Không tải được kết quả tài liệu và đề thi.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLocalLoading(false);
-        }
-      }
-    }
-
-    fetchLocalResults();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [query]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchBlogs() {
-      if (!query) {
-        setBlogResults([]);
-        setBlogsError(null);
-        return;
-      }
-
       setBlogsLoading(true);
-      setBlogsError(null);
-
-      try {
-        const posts = await searchPosts(query);
-        if (!cancelled) {
-          setBlogResults(posts);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setBlogResults([]);
-          setBlogsError(err.message ?? "Không tải được kết quả blogs.");
-        }
-      } finally {
-        if (!cancelled) {
-          setBlogsLoading(false);
-        }
-      }
-    }
-
-    fetchBlogs();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [query]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchUsers() {
-      if (!query) {
-        setUserResults([]);
-        setUsersError(null);
-        return;
-      }
-
       setUsersLoading(true);
+      setLocalError(null);
+      setBlogsError(null);
       setUsersError(null);
 
-      try {
-        const data = await searchUsers(query);
-        if (!cancelled) {
-          setUserResults(data.items);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setUserResults([]);
-          setUsersError(err.message ?? "Không tải được kết quả người dùng.");
-        }
-      } finally {
-        if (!cancelled) {
-          setUsersLoading(false);
-        }
-      }
-    }
+      const [localResult, blogsResult, usersResult] = await Promise.allSettled([
+        searchLocalContent(debouncedQuery),
+        searchPosts(debouncedQuery),
+        searchUsers(debouncedQuery),
+      ]);
 
-    fetchUsers();
+      if (cancelled) return;
 
-    return () => {
-      cancelled = true;
-    };
-  }, [query]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function updateCounts() {
-      if (!query) {
-        setCounts({ all: 0, blogs: 0, documents: 0, exams: 0, practice: 0, users: 0 });
-        return;
+      let local = EMPTY_LOCAL_RESULTS;
+      if (localResult.status === "fulfilled") {
+        local = localResult.value;
+        setLocalResults(local);
+      } else {
+        setLocalResults(EMPTY_LOCAL_RESULTS);
+        setLocalError(localResult.reason?.message ?? "Không tải được kết quả tài liệu và đề thi.");
       }
 
-      const nextCounts = await getSearchCounts(query, {
-        blogCount: blogResults.length,
-        userCount: userResults.length,
+      let posts = [];
+      if (blogsResult.status === "fulfilled") {
+        posts = blogsResult.value;
+        setBlogResults(posts);
+      } else {
+        setBlogResults([]);
+        setBlogsError(blogsResult.reason?.message ?? "Không tải được kết quả blogs.");
+      }
+
+      let users = [];
+      if (usersResult.status === "fulfilled") {
+        users = usersResult.value.items ?? [];
+        setUserResults(users);
+      } else {
+        setUserResults([]);
+        setUsersError(usersResult.reason?.message ?? "Không tải được kết quả người dùng.");
+      }
+
+      setCounts({
+        all:
+          posts.length +
+          local.documents.length +
+          local.exams.length +
+          local.practice.length +
+          users.length,
+        blogs: posts.length,
+        documents: local.documents.length,
+        exams: local.exams.length,
+        practice: local.practice.length,
+        users: users.length,
       });
 
-      if (!cancelled) {
-        setCounts(nextCounts);
-      }
+      setLocalLoading(false);
+      setBlogsLoading(false);
+      setUsersLoading(false);
     }
 
-    updateCounts();
+    fetchAllResults();
 
     return () => {
       cancelled = true;
     };
-  }, [query, blogResults.length, userResults.length, localResults]);
+  }, [debouncedQuery]);
 
   const tabDocuments = useMemo(
     () => (activeTab === "documents" ? localResults.documents : []),

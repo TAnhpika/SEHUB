@@ -6,6 +6,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import FollowButton from "@/features/social/FollowButton/FollowButton";
 import MessageUserButton from "@/features/social/MessageUserButton/MessageUserButton";
+import UserAvatar from "@/common/UserAvatar/UserAvatar";
 import styles from "./FriendProfileCard.module.css";
 
 function FriendProfileCard({ profile, onFollowChange }) {
@@ -15,13 +16,11 @@ function FriendProfileCard({ profile, onFollowChange }) {
         <span className={styles.badge} aria-hidden="true">
           <FontAwesomeIcon icon={faGem} />
         </span>
-        <span className={styles.avatar} aria-hidden="true">
-          {profile.avatarUrl ? (
-            <img src={profile.avatarUrl} alt="" className={styles["avatar-image"]} />
-          ) : (
-            profile.initial
-          )}
-        </span>
+        <UserAvatar
+          src={profile.avatarUrl}
+          initial={profile.initial ?? profile.displayName ?? profile.username}
+          className={styles.avatar}
+        />
         <h1 className={styles.username}>{profile.displayName ?? profile.username}</h1>
       </div>
 

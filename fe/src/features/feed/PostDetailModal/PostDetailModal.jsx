@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -10,22 +10,31 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
+import { Modal } from "@/common/Modal/Modal";
 import { useToast } from "@/common/Toast/ToastProvider";
 import * as postsApi from "@/api/postsApi";
-import RichTextEditor from "@/common/RichTextEditor/RichTextEditor";
 import RichTextContent from "@/common/RichTextEditor/RichTextContent";
 import {
   loadPostById,
-  removeComment,
   savePost,
-  submitComment,
 } from "@/features/feed/feedData";
+import { usePostDetail } from "@/features/feed/hooks/usePostDetail";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
 import { copyPostLink, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
-import CommentMentionPicker, { insertMention } from "@/features/feed/CommentMentionPicker/CommentMentionPicker";
+import CommentMentionPicker from "@/features/feed/CommentMentionPicker/CommentMentionPicker";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./PostDetailModal.module.css";
+
+const LazyRichTextEditor = lazy(() => import("@/common/RichTextEditor/RichTextEditor"));
+
+function RichTextEditorField(props) {
+  return (
+    <Suspense fallback={<p>Đang tải trình soạn thảo...</p>}>
+      <LazyRichTextEditor {...props} />
+    </Suspense>
+  );
+}
 
 function PostDetailModal({
   post,
@@ -41,9 +50,8 @@ function PostDetailModal({
   const navigate = useNavigate();
   const { user, isPremium } = useAuth();
   const { showCopyToast, showToast } = useToast();
-  const [comments, setComments] = useState([]);
+  const [commentSeed, setCommentSeed] = useState(undefined);
   const [commentCount, setCommentCount] = useState(0);
-  const [draft, setDraft] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
@@ -51,10 +59,6 @@ function PostDetailModal({
   const [displayBody, setDisplayBody] = useState("");
   const [likeCount, setLikeCount] = useState(0);
   const [viewCount, setViewCount] = useState(0);
-  const [editingCommentId, setEditingCommentId] = useState(null);
-  const [editCommentDraft, setEditCommentDraft] = useState("");
-  const [submittingComment, setSubmittingComment] = useState(false);
-  const [replyTarget, setReplyTarget] = useState(null);
   const [savingPost, setSavingPost] = useState(false);
   const onPostChangeRef = useRef(onPostChange);
   const commentsRef = useRef(null);
@@ -62,6 +66,41 @@ function PostDetailModal({
   useEffect(() => {
     onPostChangeRef.current = onPostChange;
   }, [onPostChange]);
+
+  const handleCommentsChange = useCallback(
+    (nextComments) => {
+      if (!post?.id) return;
+      setCommentCount(nextComments.length);
+      onPostChangeRef.current?.({
+        id: post.id,
+        comments: nextComments.length,
+        commentsList: nextComments,
+      });
+    },
+    [post?.id],
+  );
+
+  const {
+    comments,
+    draft,
+    setDraft,
+    editingCommentId,
+    editCommentDraft,
+    setEditCommentDraft,
+    replyTarget,
+    setReplyTarget,
+    hasDraft,
+    handleSubmitComment,
+    handleReply,
+    handleInsertMention,
+    handleStartEditComment,
+    handleCancelEditComment,
+    handleSaveEditComment,
+    handleDeleteComment,
+  } = usePostDetail(post?.id, {
+    initialComments: commentSeed,
+    onCommentsChange: handleCommentsChange,
+  });
 
   function emitPostChange(patch) {
     onPostChangeRef.current?.(patch);
@@ -77,20 +116,12 @@ function PostDetailModal({
       return undefined;
     }
 
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
     document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.body.style.overflow = "";
-      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   useEffect(() => {
     if (!post || !open) return undefined;
@@ -98,24 +129,22 @@ function PostDetailModal({
     let cancelled = false;
 
     async function fetchDetail() {
-      setDraft("");
+      setCommentSeed(undefined);
       setIsEditing(initialEditMode);
-      setEditingCommentId(null);
-      setEditCommentDraft("");
       setDisplayTitle(post.title);
       setDisplayBody(post.body ?? post.excerpt);
       setEditTitle(post.title);
       setEditBody(post.body ?? post.excerpt);
       setLikeCount(post.likes ?? 0);
       setViewCount(post.views ?? 0);
-      setComments(post.commentsList ?? []);
+      setCommentSeed(post.commentsList ?? []);
       setCommentCount(post.comments ?? 0);
 
       try {
         const detail = await loadPostById(post.id);
         if (cancelled || !detail) return;
 
-        setComments(detail.commentsList ?? []);
+        setCommentSeed(detail.commentsList ?? []);
         setCommentCount(detail.comments ?? 0);
         setDisplayTitle(detail.title);
         setDisplayBody(detail.body ?? detail.excerpt);
@@ -157,7 +186,6 @@ function PostDetailModal({
   if (!open || !post) return null;
 
   const isOwner = isOwnPost(post, user);
-  const hasDraft = draft.trim().length > 0;
 
   function openProfile(username) {
     if (!username) return;
@@ -166,46 +194,6 @@ function PostDetailModal({
 
   function handleCancelDraft() {
     setDraft("");
-  }
-
-  async function handleSubmitComment() {
-    const content = draft.trim();
-    if (!content || submittingComment) return;
-
-    setSubmittingComment(true);
-    try {
-      const newComment = await submitComment(post.id, content, replyTarget?.id ?? null);
-      const nextComments = [...comments, newComment];
-      const nextCount = commentCount + 1;
-      setComments(nextComments);
-      setCommentCount(nextCount);
-      emitPostChange({
-        id: post.id,
-        comments: nextCount,
-        commentsList: nextComments,
-      });
-      setDraft("");
-      setReplyTarget(null);
-    } catch (err) {
-      showToast(err.message ?? "Không gửi được bình luận.");
-    } finally {
-      setSubmittingComment(false);
-    }
-  }
-
-  function handleReply(comment) {
-    setReplyTarget({
-      id: comment.id,
-      username: comment.author?.username,
-      name: comment.author?.name ?? comment.author?.displayName,
-    });
-    if (comment.author?.username) {
-      setDraft((prev) => insertMention(prev, comment.author.username));
-    }
-  }
-
-  function handleInsertMention(username) {
-    setDraft((prev) => insertMention(prev, username));
   }
 
   function handleDraftKeyDown(event) {
@@ -267,60 +255,14 @@ function PostDetailModal({
     }
   }
 
-  function handleStartEditComment(comment) {
-    setEditingCommentId(comment.id);
-    setEditCommentDraft(comment.content);
-  }
-
-  function handleCancelEditComment() {
-    setEditingCommentId(null);
-    setEditCommentDraft("");
-  }
-
-  function handleSaveEditComment(commentId) {
-    const content = editCommentDraft.trim();
-    if (!content) return;
-
-    setComments((prev) =>
-      prev.map((item) => (item.id === commentId ? { ...item, content } : item)),
-    );
-    setEditingCommentId(null);
-    setEditCommentDraft("");
-  }
-
-  async function handleDeleteComment(commentId) {
-    const confirmed = window.confirm("Bạn có chắc muốn xóa bình luận này?");
-    if (!confirmed) return;
-
-    try {
-      await removeComment(post.id, commentId);
-      const nextComments = comments.filter((item) => item.id !== commentId);
-      const nextCount = Math.max(0, commentCount - 1);
-      setComments(nextComments);
-      setCommentCount(nextCount);
-      emitPostChange({
-        id: post.id,
-        comments: nextCount,
-        commentsList: nextComments,
-      });
-      if (editingCommentId === commentId) {
-        setEditingCommentId(null);
-        setEditCommentDraft("");
-      }
-    } catch (err) {
-      showToast(err.message ?? "Không xóa được bình luận.");
-    }
-  }
-
   return (
-    <div className={styles.overlay} onClick={onClose} role="presentation">
-      <div
-        className={styles.dialog}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="post-detail-title"
-        onClick={(event) => event.stopPropagation()}
-      >
+    <Modal
+      open={open}
+      onClose={onClose}
+      className={styles.overlay}
+      panelClassName={styles.dialog}
+      closeOnOverlay
+    >
         <header className={styles.header}>
           <h2 id="post-detail-title" className={styles["header-title"]}>
             Bài viết của {post.author.username}
@@ -374,7 +316,7 @@ function PostDetailModal({
                 </label>
                 <label className={styles.field}>
                   <span className={styles.label}>Nội dung</span>
-                  <RichTextEditor
+                  <RichTextEditorFieldField
                     value={editBody}
                     onChange={setEditBody}
                     variant="full"
@@ -467,7 +409,7 @@ function PostDetailModal({
 
                 {isEditingComment ? (
                   <div className={styles["comment-edit"]}>
-                    <RichTextEditor
+                    <RichTextEditorFieldField
                       value={editCommentDraft}
                       onChange={setEditCommentDraft}
                       variant="comment"
@@ -520,7 +462,7 @@ function PostDetailModal({
                     </button>
                   </div>
                 ) : null}
-                <RichTextEditor
+                <RichTextEditorField
                   value={draft}
                   onChange={setDraft}
                   placeholder="Viết bình luận công khai"
@@ -553,8 +495,7 @@ function PostDetailModal({
             </div>
           </section>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

@@ -14,6 +14,7 @@ import { faGithub } from "@fortawesome/free-brands-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { buildExamQuestions, EXAM_USE_MOCK, loadExamMeta } from "@/features/exams/examDetailData";
 import ExamAttachmentViewer from "@/features/exams/ExamAttachmentViewer/ExamAttachmentViewer";
 import PracticeBriefPanel from "@/features/exams/PracticeBriefPanel/PracticeBriefPanel";
@@ -49,6 +50,7 @@ function PracticeDoPage() {
   const navigate = useNavigate();
   const { pathname, state: locationState } = useLocation();
   const { showToast } = useToast();
+  const { confirm } = useConfirmDialog();
   const { user, isPremium } = useAuth();
   const fileInputRef = useRef(null);
   const scope = resolveExamScope(pathname, locationState);
@@ -272,7 +274,12 @@ function PracticeDoPage() {
       return;
     }
 
-    if (!window.confirm("Bạn có chắc muốn nộp bài thực hành này?")) {
+    const confirmed = await confirm({
+      title: "Nộp bài thực hành",
+      description: "Bạn có chắc muốn nộp bài thực hành này?",
+      confirmLabel: "Nộp bài",
+    });
+    if (!confirmed) {
       return;
     }
 

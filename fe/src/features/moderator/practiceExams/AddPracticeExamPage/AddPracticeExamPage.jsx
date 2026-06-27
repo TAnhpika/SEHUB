@@ -13,6 +13,7 @@ import Button from "@/common/Button/Button";
 import RichTextEditor from "@/common/RichTextEditor/RichTextEditor";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import ExamContributionAuditList from "@/features/moderator/exams/components/ExamContributionAuditList/ExamContributionAuditList";
 import {
@@ -57,6 +58,7 @@ function FileTypeIcon({ type }) {
 
 function AddPracticeExamPage() {
   const { showToast } = useToast();
+  const { confirm } = useConfirmDialog();
   const { user } = useAuth();
   const fileInputRef = useRef(null);
   const moderator = user?.username ?? "mod_sehub";
@@ -196,9 +198,11 @@ function AddPracticeExamPage() {
       await send(false);
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
-        const confirmed = window.confirm(
-          "Đề trùng metadata với đề đã có. Gửi duyệt anyway?",
-        );
+        const confirmed = await confirm({
+          title: "Đề trùng metadata",
+          description: "Đề trùng metadata với đề đã có. Gửi duyệt anyway?",
+          confirmLabel: "Gửi duyệt",
+        });
         if (confirmed) {
           try {
             await send(true);
