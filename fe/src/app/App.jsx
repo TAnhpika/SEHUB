@@ -14,38 +14,15 @@ import LoginPage from "@/features/auth/LoginPage/LoginPage";
 import RegisterPage from "@/features/auth/RegisterPage/RegisterPage";
 import ForgotPasswordPage from "@/features/auth/ForgotPasswordPage/ForgotPasswordPage";
 import VerifyEmailPage from "@/features/auth/VerifyEmailPage/VerifyEmailPage";
-import DocumentsPage from "@/features/documents/DocumentsPage/DocumentsPage";
 import FeedPage from "@/features/feed/FeedPage/FeedPage";
-import FriendProfilePage from "@/features/home/FriendProfilePage/FriendProfilePage";
-import FriendsPage from "@/features/home/FriendsPage/FriendsPage";
 import HomePage from "@/features/home/HomePage/HomePage";
-import SearchAllPage from "@/features/search/SearchAllPage/SearchAllPage";
 import LandingPage from "@/features/landing/LandingPage/LandingPage";
-import CreatePostPage from "@/features/posts/CreatePostPage/CreatePostPage";
-import PostDetailPage from "@/features/feed/PostDetailPage/PostDetailPage";
-import ProfilePage from "@/features/profile/ProfilePage/ProfilePage";
-import PracticeQuestionsPage from "@/features/practice/PracticeQuestionsPage/PracticeQuestionsPage";
-import ReviewQuestionsPage from "@/features/review/ReviewQuestionsPage/ReviewQuestionsPage";
-import SubjectDetailPage from "@/features/subjects/SubjectDetailPage/SubjectDetailPage";
-import ExamDetailPage from "@/features/exams/ExamDetailPage/ExamDetailPage";
-import ExamDoPage from "@/features/exams/ExamDoPage/ExamDoPage";
-import PracticeDoPage from "@/features/exams/PracticeDoPage/PracticeDoPage";
-import ExamResultPage from "@/features/exams/ExamResultPage/ExamResultPage";
-import PremiumRoute from "@/common/guards/PremiumRoute";
-import FeedbackPage from "@/features/feedback/FeedbackPage/FeedbackPage";
-import MessagesPage from "@/features/chat/MessagesPage/MessagesPage";
-import EditProfilePage from "@/features/profile/EditProfilePage/EditProfilePage";
-import PremiumPage from "@/features/premium/PremiumPage/PremiumPage";
-import CheckoutPage from "@/features/premium/CheckoutPage/CheckoutPage";
-import PaymentSuccessPage from "@/features/premium/PaymentSuccessPage/PaymentSuccessPage";
-import PaymentReturnPage from "@/features/premium/PaymentReturnPage/PaymentReturnPage";
-import PremiumRefundFormPage from "@/features/premium/PremiumRefundFormPage/PremiumRefundFormPage";
-import SupportPage from "@/features/support/SupportPage/SupportPage";
-import ChatbotAdvisorPage from "@/features/chatbot/ChatbotAdvisorPage/ChatbotAdvisorPage";
 import NotFound from "@/features/errors/NotFound/NotFound";
+import PremiumRoute from "@/common/guards/PremiumRoute";
 import PracticeFocusRedirect from "@/common/routes/PracticeFocusRedirect";
 import ExamFocusResultRedirect from "@/common/routes/ExamFocusResultRedirect";
 import ScrollToTop from "@/common/routes/ScrollToTop";
+import AuthBootstrapFallback from "@/common/loading/AuthBootstrapFallback";
 import AdminRoute from "@/common/guards/AdminRoute";
 import ModeratorRoute from "@/common/guards/ModeratorRoute";
 import AdminLayout from "@/common/Layout/AdminLayout/AdminLayout";
@@ -85,12 +62,33 @@ const ContentModerationHistoryPage = lazy(() => import("@/features/moderator/con
 const FeaturedPostsPage = lazy(() => import("@/features/moderator/featured/FeaturedPostsPage/FeaturedPostsPage"));
 const ReportsPage = lazy(() => import("@/features/moderator/reports/ReportsPage/ReportsPage"));
 
+const DocumentsPage = lazy(() => import("@/features/documents/DocumentsPage/DocumentsPage"));
+const FriendProfilePage = lazy(() => import("@/features/home/FriendProfilePage/FriendProfilePage"));
+const FriendsPage = lazy(() => import("@/features/home/FriendsPage/FriendsPage"));
+const SearchAllPage = lazy(() => import("@/features/search/SearchAllPage/SearchAllPage"));
+const CreatePostPage = lazy(() => import("@/features/posts/CreatePostPage/CreatePostPage"));
+const PostDetailPage = lazy(() => import("@/features/feed/PostDetailPage/PostDetailPage"));
+const ProfilePage = lazy(() => import("@/features/profile/ProfilePage/ProfilePage"));
+const PracticeQuestionsPage = lazy(() => import("@/features/practice/PracticeQuestionsPage/PracticeQuestionsPage"));
+const ReviewQuestionsPage = lazy(() => import("@/features/review/ReviewQuestionsPage/ReviewQuestionsPage"));
+const SubjectDetailPage = lazy(() => import("@/features/subjects/SubjectDetailPage/SubjectDetailPage"));
+const ExamDetailPage = lazy(() => import("@/features/exams/ExamDetailPage/ExamDetailPage"));
+const ExamDoPage = lazy(() => import("@/features/exams/ExamDoPage/ExamDoPage"));
+const PracticeDoPage = lazy(() => import("@/features/exams/PracticeDoPage/PracticeDoPage"));
+const ExamResultPage = lazy(() => import("@/features/exams/ExamResultPage/ExamResultPage"));
+const FeedbackPage = lazy(() => import("@/features/feedback/FeedbackPage/FeedbackPage"));
+const MessagesPage = lazy(() => import("@/features/chat/MessagesPage/MessagesPage"));
+const EditProfilePage = lazy(() => import("@/features/profile/EditProfilePage/EditProfilePage"));
+const PremiumPage = lazy(() => import("@/features/premium/PremiumPage/PremiumPage"));
+const CheckoutPage = lazy(() => import("@/features/premium/CheckoutPage/CheckoutPage"));
+const PaymentSuccessPage = lazy(() => import("@/features/premium/PaymentSuccessPage/PaymentSuccessPage"));
+const PaymentReturnPage = lazy(() => import("@/features/premium/PaymentReturnPage/PaymentReturnPage"));
+const PremiumRefundFormPage = lazy(() => import("@/features/premium/PremiumRefundFormPage/PremiumRefundFormPage"));
+const SupportPage = lazy(() => import("@/features/support/SupportPage/SupportPage"));
+const ChatbotAdvisorPage = lazy(() => import("@/features/chatbot/ChatbotAdvisorPage/ChatbotAdvisorPage"));
+
 function RouteFallback() {
-  return (
-    <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted, #64748b)" }}>
-      Đang tải…
-    </div>
-  );
+  return <AuthBootstrapFallback />;
 }
 
 function App() {

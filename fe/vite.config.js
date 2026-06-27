@@ -13,6 +13,24 @@ export default defineConfig({
     },
     dedupe: ["react", "react-dom"],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/react-dom") || id.includes("node_modules/react/") || id.includes("node_modules/react-router-dom")) {
+            return "react";
+          }
+          if (id.includes("node_modules/recharts")) {
+            return "recharts";
+          }
+          if (id.includes("node_modules/@microsoft/signalr")) {
+            return "signalr";
+          }
+          return undefined;
+        },
+      },
+    },
+  },
   server: {
     // Mở trình duyệt hệ thống (Chrome/Edge) thay vì Simple Browser của IDE — tránh lỗi onboarding extension.
     open: "/",

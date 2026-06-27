@@ -1,9 +1,9 @@
 .card {
+  position: relative;
   padding: 1.25rem 1.5rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  cursor: pointer;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -12,9 +12,29 @@
   box-shadow: var(--shadow-sm);
 }
 
-.card:focus-visible {
+.bodyBtn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+.bodyBtn:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+  border-radius: var(--radius-md);
+}
+
+.ownerMenu {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.5rem;
+  z-index: 1;
 }
 
 .header {
@@ -23,6 +43,7 @@
   justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 0.875rem;
+  padding-right: 2rem;
 }
 
 .author {

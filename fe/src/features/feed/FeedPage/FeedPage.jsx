@@ -1,82 +1,17 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
-import Button from "@/common/Button/Button";
-import Pagination from "@/common/Pagination/Pagination";
-import PostCard from "@/features/feed/PostCard/PostCard";
-import PostDetailModal from "@/features/feed/PostDetailModal/PostDetailModal";
-import PostFeedFilters from "@/features/feed/PostFeedFilters/PostFeedFilters";
-import { loadPosts, POSTS_PER_PAGE, removePost } from "@/features/feed/feedData";
+import { useNavigate } from "react-router-dom";
+import { usePostFeed } from "@/features/feed/hooks/usePostFeed";
+import PostFeedView from "@/features/feed/PostFeedView/PostFeedView";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-import styles from "./FeedPage.module.css";
+
+function formatPostCount(totalCount) {
+  if (totalCount === 0) return "Không có bài viết";
+  return `${totalCount} bài viết`;
+}
 
 function FeedPage() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [selectedPost, setSelectedPost] = useState(null);
-  const [editOnOpen, setEditOnOpen] = useState(false);
-  const [semesterFilter, setSemesterFilter] = useState("all");
-  const [majorFilter, setMajorFilter] = useState("all");
-  const [totalPages, setTotalPages] = useState(1);
+  const feed = usePostFeed({ scrollTargetId: "feed-top" });
   const { needsLoginPrompt, requireAuth } = useRequireAuth();
-  const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchPosts() {
-      setLoading(true);
-      setError(null);
-      try {
-        const result = await loadPosts({
-          page: currentPage,
-          pageSize: POSTS_PER_PAGE,
-          semester: semesterFilter,
-          major: majorFilter,
-        });
-        if (!cancelled) {
-          setPosts(result.items);
-          setTotalPages(Math.max(1, result.totalPages ?? 1));
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err.message ?? "Không tải được danh sách bài viết.");
-          setPosts([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchPosts();
-    return () => {
-      cancelled = true;
-    };
-  }, [currentPage, semesterFilter, majorFilter]);
-
-  const safePage = Math.min(currentPage, totalPages);
-
-  function handleSemesterChange(value) {
-    setSemesterFilter(value);
-    setSearchParams({});
-  }
-
-  function handleMajorChange(value) {
-    setMajorFilter(value);
-    setSearchParams({});
-  }
-
-  function goToPage(page) {
-    if (page < 1 || page > totalPages || page === safePage) return;
-    setSearchParams(page === 1 ? {} : { page: String(page) });
-    document.getElementById("feed-top")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
 
   function handleCreatePost() {
     if (needsLoginPrompt) {
@@ -86,115 +21,14 @@ function FeedPage() {
     navigate("/home/create-post");
   }
 
-  function handleOpenPost(post) {
-    setSelectedPost(post);
-    setEditOnOpen(false);
-  }
-
-  function handleEditPost(post) {
-    setSelectedPost(post);
-    setEditOnOpen(true);
-  }
-
-  function handleUpdatePost(updatedPost) {
-    setPosts((prev) =>
-      prev.map((item) => (item.id === updatedPost.id ? { ...item, ...updatedPost } : item)),
-    );
-    setSelectedPost(updatedPost);
-    setEditOnOpen(false);
-  }
-
-  function handlePostChange(patch) {
-    setPosts((prev) =>
-      prev.map((item) => (item.id === patch.id ? { ...item, ...patch } : item)),
-    );
-    setSelectedPost((prev) => (prev?.id === patch.id ? { ...prev, ...patch } : prev));
-  }
-
-  async function handleDeletePost(post) {
-    const confirmed = window.confirm("Bạn có chắc muốn xóa bài viết này?");
-    if (!confirmed) return;
-
-    try {
-      await removePost(post.id);
-      setPosts((prev) => prev.filter((item) => item.id !== post.id));
-      setSelectedPost(null);
-      setEditOnOpen(false);
-    } catch (err) {
-      window.alert(err.message ?? "Không xóa được bài viết.");
-    }
-  }
-
   return (
-    <div className={styles.page}>
-      <header className={styles["header-card"]}>
-        <div className={styles["header-text"]}>
-          <h1 className={styles.title}>Bài viết mới nhất</h1>
-          <p className={styles.subtitle}>2 bài viết hôm nay</p>
-        </div>
-
-        <div className={styles["header-actions"]}>
-          <Button
-            look="soft"
-            size="sm"
-            className={styles["create-btn"]}
-            onClick={handleCreatePost}
-          >
-            <FontAwesomeIcon icon={faPlus} />
-            Tạo bài viết
-          </Button>
-
-          <PostFeedFilters
-            semester={semesterFilter}
-            major={majorFilter}
-            onSemesterChange={handleSemesterChange}
-            onMajorChange={handleMajorChange}
-          />
-        </div>
-      </header>
-
-      <div className={styles.list}>
-        {loading ? (
-          <p className={styles.empty}>Đang tải bài viết...</p>
-        ) : error ? (
-          <p className={styles.empty} role="alert">
-            {error}
-          </p>
-        ) : posts.length > 0 ? (
-          posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              onOpen={handleOpenPost}
-              onEdit={handleEditPost}
-              onDelete={handleDeletePost}
-            />
-          ))
-        ) : (
-          <p className={styles.empty}>Không có bài viết phù hợp với bộ lọc.</p>
-        )}
-      </div>
-
-      <PostDetailModal
-        post={selectedPost}
-        open={Boolean(selectedPost)}
-        onClose={() => {
-          setSelectedPost(null);
-          setEditOnOpen(false);
-        }}
-        onUpdate={handleUpdatePost}
-        onPostChange={handlePostChange}
-        onDelete={handleDeletePost}
-        initialEditMode={editOnOpen}
-      />
-
-      <Pagination
-        currentPage={safePage}
-        totalPages={totalPages}
-        onPageChange={goToPage}
-        ariaLabel="Phân trang bài viết"
-      />
-    </div>
+    <PostFeedView
+      subtitle={formatPostCount(feed.totalCount)}
+      interactive={false}
+      createPostMode="auth-button"
+      onCreatePost={handleCreatePost}
+      feed={feed}
+    />
   );
 }
 

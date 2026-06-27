@@ -1,6 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBars } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import HeaderUserActions from "@/common/Header/HeaderUserActions/HeaderUserActions";
+import { useMainShellOptional } from "@/common/context/MainShellContext";
 import { useAuth } from "@/context";
 import logoSrc from "@/img/logo.png";
 import mainHeaderStyles from "@/common/Header/MainHeader/MainHeader.module.css";
@@ -9,6 +12,7 @@ import styles from "./GuestHeader.module.css";
 function GuestHeader() {
   const { pathname } = useLocation();
   const { isAuthenticated, isBootstrapping } = useAuth();
+  const mainShell = useMainShellOptional();
   const homePath = isAuthenticated ? "/home" : "/";
   const isHome = isAuthenticated ? pathname.startsWith("/home") : pathname === "/";
   const isCommunity = isAuthenticated
@@ -19,6 +23,17 @@ function GuestHeader() {
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
+        {mainShell?.layout === "community" ? (
+          <button
+            type="button"
+            className={mainHeaderStyles.menuBtn}
+            aria-label="Mở menu điều hướng"
+            onClick={() => mainShell.setSidebarOpen(true)}
+          >
+            <FontAwesomeIcon icon={faBars} />
+          </button>
+        ) : null}
+
         <Link to={homePath} className={styles.brand}>
           <img src={logoSrc} alt="" className={styles["brand-logo"]} decoding="async" aria-hidden="true" />
           <span className={styles["brand-text"]}>SEHub</span>

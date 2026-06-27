@@ -4,6 +4,7 @@ import MainSidebar from "@/common/Sidebar/MainSidebar/MainSidebar";
 import HomeSidebar from "@/common/Sidebar/HomeSidebar/HomeSidebar";
 import Footer from "@/common/Footer/Footer";
 import ChatFab from "@/features/chat/ChatFab/ChatFab";
+import { MainShellProvider } from "@/common/context/MainShellContext";
 import { isHomeSubjectArea } from "@/utils/subjectPaths";
 import styles from "./MainLayout.module.css";
 
@@ -36,8 +37,9 @@ function MainLayout() {
     isPaymentSuccessPage;
 
   return (
-    <div className={styles.layout}>
-      <MainHeader />
+    <MainShellProvider layout="main">
+      <div className={styles.layout}>
+        <MainHeader />
 
       <div
         className={[
@@ -88,7 +90,8 @@ function MainLayout() {
         !isPremiumPage &&
         !isCheckoutPage &&
         !isPaymentSuccessPage && <ChatFab />}
-    </div>
+      </div>
+    </MainShellProvider>
   );
 }
 

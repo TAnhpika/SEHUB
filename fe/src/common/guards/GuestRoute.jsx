@@ -1,11 +1,12 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/context";
+import AuthBootstrapFallback from "@/common/loading/AuthBootstrapFallback";
 
 function GuestRoute() {
   const { isAuthenticated, isBootstrapping, user } = useAuth();
 
   if (isBootstrapping) {
-    return null;
+    return <AuthBootstrapFallback />;
   }
 
   if (isAuthenticated) {
