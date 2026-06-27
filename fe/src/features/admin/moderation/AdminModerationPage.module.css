@@ -372,6 +372,16 @@
   background: #fee2e2;
 }
 
+.tagMuted {
+  color: #4b5563;
+  background: #f3f4f6;
+}
+
+.tagDanger {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
 .queueFooter {
   margin-top: 0.5rem;
   font-size: 0.75rem;
