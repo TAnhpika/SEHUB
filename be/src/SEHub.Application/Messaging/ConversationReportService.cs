@@ -1,5 +1,7 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Contracts.Common;
+using SEHub.Contracts.Messaging;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
@@ -14,17 +16,20 @@ public sealed class ConversationReportService : IConversationReportService
 
     private readonly IConversationReportRepository _reportRepository;
     private readonly IConversationRepository _conversationRepository;
+    private readonly IUserRepository _userRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
     public ConversationReportService(
         IConversationReportRepository reportRepository,
         IConversationRepository conversationRepository,
+        IUserRepository userRepository,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
         _reportRepository = reportRepository;
         _conversationRepository = conversationRepository;
+        _userRepository = userRepository;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -87,5 +92,109 @@ public sealed class ConversationReportService : IConversationReportService
         }, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<PagedResult<ConversationReportDto>> GetReportsAsync(
+        int page,
+        int pageSize,
+        string? status,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_currentUser.IsModeratorOrAdmin)
+        {
+            throw new ForbiddenException("Moderator access required.");
+        }
+
+        ReportStatus? statusFilter = null;
+        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<ReportStatus>(status, true, out var parsed))
+        {
+            statusFilter = parsed;
+        }
+
+        var (items, total) = await _reportRepository.GetPagedAsync(page, pageSize, statusFilter, cancellationToken);
+        var dtos = new List<ConversationReportDto>();
+        foreach (var item in items)
+        {
+            dtos.Add(await MapAsync(item, cancellationToken));
+        }
+
+        return new PagedResult<ConversationReportDto>
+        {
+            Items = dtos,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = total,
+        };
+    }
+
+    public async Task<ConversationReportDto> ResolveAsync(
+        Guid id,
+        ResolveConversationReportRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_currentUser.IsModeratorOrAdmin)
+        {
+            throw new ForbiddenException("Moderator access required.");
+        }
+
+        var actorId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+        var report = await _reportRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("ConversationReport", id);
+
+        if (!Enum.TryParse<ReportStatus>(request.Status, true, out var status))
+        {
+            throw new ForbiddenException("Invalid report status.");
+        }
+
+        report.Status = status;
+        report.ResolvedById = actorId;
+        report.ResolutionNote = request.ResolutionNote?.Trim();
+        report.UpdatedAt = DateTime.UtcNow;
+
+        await _reportRepository.UpdateAsync(report, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return await MapAsync(report, cancellationToken);
+    }
+
+    public async Task<int> GetPendingCountAsync(CancellationToken cancellationToken = default)
+    {
+        if (!_currentUser.IsModeratorOrAdmin)
+        {
+            throw new ForbiddenException("Moderator access required.");
+        }
+
+        return await _reportRepository.CountPendingAsync(cancellationToken);
+    }
+
+    private async Task<ConversationReportDto> MapAsync(
+        ConversationReport report,
+        CancellationToken cancellationToken)
+    {
+        var reporter = await _userRepository.GetByIdAsync(report.ReporterId, cancellationToken);
+        var reportedUserId = report.Conversation?.Participants
+            .FirstOrDefault(p => p.UserId != report.ReporterId)
+            ?.UserId;
+
+        var reportedUser = reportedUserId is Guid userId
+            ? await _userRepository.GetByIdAsync(userId, cancellationToken)
+            : null;
+
+        return new ConversationReportDto
+        {
+            Id = report.Id,
+            Code = $"URP-{report.Id.ToString()[..4].ToUpperInvariant()}",
+            Status = report.Status.ToString(),
+            Reason = report.Reason,
+            Detail = report.Detail,
+            ConversationId = report.ConversationId,
+            ReporterUsername = reporter?.Username ?? "unknown",
+            ReporterDisplayName = reporter?.DisplayName ?? "Unknown",
+            ReportedUserId = reportedUserId,
+            ReportedUsername = reportedUser?.Username,
+            ReportedDisplayName = reportedUser?.DisplayName,
+            CreatedAt = report.CreatedAt,
+            ResolutionNote = report.ResolutionNote,
+        };
     }
 }

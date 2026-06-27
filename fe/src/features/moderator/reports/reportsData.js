@@ -27,6 +27,8 @@ export const REASON_META = {
   wrong_question: { label: "Câu hỏi sai", tone: "danger" },
   typo: { label: "Lỗi format", tone: "muted" },
   duplicate: { label: "Trùng câu", tone: "muted" },
+  inappropriate: { label: "Nội dung không phù hợp", tone: "muted" },
+  copyright: { label: "Vi phạm bản quyền", tone: "muted" },
   other: { label: "Khác", tone: "muted" },
 };
 

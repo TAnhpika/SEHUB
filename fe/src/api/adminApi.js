@@ -183,6 +183,21 @@ export function resolveQuestionReport(id, body) {
   });
 }
 
+export function listConversationReports(params = {}) {
+  return apiRequest(`/api/v1/admin/moderation/conversation-reports${buildQuery(params)}`);
+}
+
+export function getPendingConversationReportCount() {
+  return apiRequest("/api/v1/admin/moderation/conversation-reports/pending-count");
+}
+
+export function resolveConversationReport(id, body) {
+  return apiRequest(`/api/v1/admin/moderation/conversation-reports/${id}`, {
+    method: "PATCH",
+    body,
+  });
+}
+
 export function confirmPayment(orderId, body = {}) {
   return apiRequest(`/api/v1/admin/payments/${orderId}/confirm`, {
     method: "POST",
