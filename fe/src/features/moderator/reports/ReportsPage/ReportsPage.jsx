@@ -13,12 +13,17 @@ import {
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import {
-  filterReports,
   loadModeratorCommunityReports,
   REASON_META,
   reloadModeratorCommunityReportsAfterResolve,
-  sortModeratorReports,
 } from "@/features/moderator/reports/reportsData";
+import {
+  REPORT_CATEGORY_LABELS,
+  REPORT_CATEGORY_OPTIONS,
+  REPORT_TAB_OPTIONS,
+} from "@/features/moderator/reports/shared/reportCategoryConstants";
+import ReasonTag from "@/features/moderator/reports/shared/ReasonTag";
+import { filterModerationReports } from "@/features/moderator/reports/shared/reportQueueUtils";
 import {
   getExamQuestionReports,
   resolveExamQuestionReport,
@@ -30,38 +35,14 @@ import {
 } from "@/features/moderator/reports/conversationReportStore";
 import styles from "./ReportsPage.module.css";
 
-const TAB_OPTIONS = [
-  { id: "pending", label: "Chờ xử lý" },
-  { id: "resolved", label: "Đã xử lý" },
-  { id: "all", label: "Tất cả" },
-];
-
-const CATEGORY_OPTIONS = [
-  { id: "all", label: "Tất cả loại" },
-  { id: "community", label: "Cộng đồng" },
-  { id: "user", label: "Người dùng" },
-  { id: "exam_question", label: "Câu hỏi đề" },
-];
-
-const CATEGORY_LABELS = {
-  community: "Cộng đồng",
-  user: "Người dùng",
-  exam_question: "Câu hỏi đề",
-};
+const TAB_OPTIONS = REPORT_TAB_OPTIONS;
+const CATEGORY_OPTIONS = REPORT_CATEGORY_OPTIONS;
+const CATEGORY_LABELS = REPORT_CATEGORY_LABELS;
 
 const STATUS_LABELS = {
   pending: "Chờ xử lý",
   resolved: "Đã xử lý",
 };
-
-function ReasonTag({ reason }) {
-  const meta = REASON_META[reason] ?? { label: reason, tone: "muted" };
-  return (
-    <span className={`${styles.tag} ${meta.tone === "danger" ? styles.tagDanger : styles.tagMuted}`}>
-      {meta.label}
-    </span>
-  );
-}
 
 function TrustScore({ score }) {
   const clamped = Math.max(0, Math.min(100, score));
@@ -207,27 +188,10 @@ function ReportsPage() {
   const pendingCount = reports.filter((r) => r.status === "pending").length;
   const resolvedCount = reports.filter((r) => r.status === "resolved").length;
 
-  const filtered = useMemo(() => {
-    const statusFiltered = filterReports(reports, tab === "all" ? "all" : tab);
-    const categoryFiltered =
-      category === "all"
-        ? statusFiltered
-        : statusFiltered.filter((report) => report.category === category);
-    const q = query.trim().toLowerCase();
-    const searched = !q
-      ? categoryFiltered
-      : categoryFiltered.filter(
-          (report) =>
-            report.code.toLowerCase().includes(q) ||
-            report.reporterUsername.toLowerCase().includes(q) ||
-            (report.reportedUser?.username ?? "").toLowerCase().includes(q) ||
-            (report.examId ?? "").toLowerCase().includes(q) ||
-            (REASON_META[report.reason]?.label ?? report.reason).toLowerCase().includes(q) ||
-            report.snippet.toLowerCase().includes(q),
-        );
-
-    return sortModeratorReports(searched, tab);
-  }, [reports, tab, category, query]);
+  const filtered = useMemo(
+    () => filterModerationReports(reports, { tab, category, query }),
+    [reports, tab, category, query],
+  );
 
   useEffect(() => {
     deepLinkSyncedRef.current = false;

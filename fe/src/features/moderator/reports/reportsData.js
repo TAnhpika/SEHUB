@@ -125,7 +125,7 @@ export function filterReports(reports, statusTab) {
 }
 
 function getReportSortTimestamp(report) {
-  const raw = report.createdAtIso ?? report.reportedAt;
+  const raw = report.createdAtIso ?? report.createdAt ?? report.reportedAt ?? report.timeLabel;
   const ms = new Date(raw).getTime();
   return Number.isNaN(ms) ? 0 : ms;
 }

@@ -18,147 +18,61 @@ import StatusBadge from "@/features/admin/shared/StatusBadge";
 import { getAdminUserDetailUrl } from "@/features/admin/adminMockData";
 import {
   REPORT_STATUS_LABELS,
+  banCommunityReportedUserViaApi,
   banReportedUser,
   deleteReportedPost,
   dismissReport,
   fetchAdminReportsPage,
-  getAdminReports,
-  loadAdminModerationReports,
-  loadAdminReports,
-  resolveReportBanViaApi,
   resolveReportDeleteViaApi,
   resolveReportDismissViaApi,
 } from "@/features/admin/moderation/adminReportData";
 import { banUserPermanentlyViaApi } from "@/features/admin/users/adminUserStore";
-import { resolveExamQuestionReport, getExamQuestionReports } from "@/features/exams/examQuestionReportStore";
+import { resolveExamQuestionReport } from "@/features/exams/examQuestionReportStore";
 import { EXAM_REPORT_ROUTING } from "@/features/exams/examQuestionReportData";
-import { resolveConversationReport, getConversationReports } from "@/features/moderator/reports/conversationReportStore";
+import { resolveConversationReport } from "@/features/moderator/reports/conversationReportStore";
 import { REASON_META } from "@/features/moderator/reports/reportsData";
+import {
+  REPORT_CATEGORY_LABELS,
+  REPORT_CATEGORY_OPTIONS,
+  REPORT_TAB_OPTIONS,
+} from "@/features/moderator/reports/shared/reportCategoryConstants";
+import ReasonTag from "@/features/moderator/reports/shared/ReasonTag";
+import {
+  filterModerationReports,
+  getReportedUsername,
+  getResolvedBannerTitle,
+  pickNextPendingReportId,
+} from "@/features/moderator/reports/shared/reportQueueUtils";
+import { useModerationReportsQueue } from "@/features/moderator/reports/shared/useModerationReportsQueue";
 import { submitViolatingAccountBan } from "@/features/moderator/violations/violationsData";
 import AdminTableFooter from "@/features/admin/shared/AdminTableFooter";
 import { ADMIN_PAGE_SIZES } from "@/features/admin/shared/adminPaginationConstants";
 import { useAdminPagination } from "@/features/admin/shared/useAdminPagination";
 import modStyles from "@/features/admin/moderation/AdminModerationPage.module.css";
 
-const TAB_OPTIONS = [
-  { id: "pending", label: "Chờ xử lý" },
-  { id: "resolved", label: "Đã xử lý" },
-  { id: "all", label: "Tất cả" },
-];
-
-const CATEGORY_OPTIONS = [
-  { id: "all", label: "Tất cả loại" },
-  { id: "community", label: "Cộng đồng" },
-  { id: "user", label: "Người dùng" },
-  { id: "exam_question", label: "Câu hỏi đề" },
-];
-
-const CATEGORY_LABELS = {
-  community: "Cộng đồng",
-  user: "Người dùng",
-  exam_question: "Câu hỏi đề",
-};
-
-function ReasonTag({ reason }) {
-  const meta = REASON_META[reason] ?? { label: reason, tone: "muted" };
-  return (
-    <span
-      className={`${modStyles.tag} ${
-        meta.tone === "danger" ? modStyles.tagDanger : modStyles.tagMuted
-      }`}
-    >
-      {meta.label}
-    </span>
-  );
-}
-
-function getReportedUsername(report) {
-  if (!report) return "";
-  if (report.category === "community") return report.reportedUser ?? "";
-  return report.reportedUser?.username?.replace(/^@/, "") ?? "";
-}
-
-function getResolvedBannerTitle(resolved) {
-  if (!resolved) return "Đã xử lý báo cáo";
-  if (resolved.category === "community") return `Đã xử lý báo cáo bài #${resolved.postId}`;
-  return `Đã xử lý báo cáo ${resolved.code ?? ""}`;
-}
-
 function AdminModerationPage() {
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [communityReports, setCommunityReports] = useState(getAdminReports);
-  const [examReports, setExamReports] = useState([]);
-  const [userReports, setUserReports] = useState([]);
-  const [hasMoreReports, setHasMoreReports] = useState(false);
+  const {
+    communityReports,
+    setCommunityReports,
+    communityHasMore,
+    communityPage,
+    setCommunityHasMore,
+    setCommunityPage,
+    isLoading,
+    loadError,
+    reports,
+    refreshAllReports,
+  } = useModerationReportsQueue({
+    onLoadError: (message) => showToast(message),
+  });
   const [loadingMoreReports, setLoadingMoreReports] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [apiReportPage, setApiReportPage] = useState(1);
   const [tab, setTab] = useState("pending");
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [lastResolved, setLastResolved] = useState(null);
-
-  const reports = useMemo(
-    () => [...examReports, ...communityReports, ...userReports],
-    [examReports, communityReports, userReports],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    setIsLoading(true);
-
-    loadAdminModerationReports()
-      .then((data) => {
-        if (!cancelled) {
-          setCommunityReports(data.communityReports);
-          setExamReports(data.examReports);
-          setUserReports(data.userReports);
-          setHasMoreReports(data.communityHasMore);
-          setApiReportPage(data.communityPage);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    function refreshExamReports() {
-      getExamQuestionReports()
-        .then((items) => {
-          if (!cancelled) setExamReports(items);
-        })
-        .catch(() => {
-          if (!cancelled) setExamReports([]);
-        });
-    }
-
-    function refreshUserReports() {
-      getConversationReports()
-        .then((items) => {
-          if (!cancelled) setUserReports(items);
-        })
-        .catch(() => {
-          if (!cancelled) setUserReports([]);
-        });
-    }
-
-    window.addEventListener("sehubs-exam-reports-changed", refreshExamReports);
-    window.addEventListener("sehubs-conversation-reports-changed", refreshUserReports);
-    return () => {
-      cancelled = true;
-      window.removeEventListener("sehubs-exam-reports-changed", refreshExamReports);
-      window.removeEventListener("sehubs-conversation-reports-changed", refreshUserReports);
-    };
-  }, []);
 
   const pendingCount = reports.filter((r) => r.status === "pending").length;
   const urgentCount = reports.filter(
@@ -166,36 +80,10 @@ function AdminModerationPage() {
   ).length;
   const resolvedCount = reports.filter((r) => r.status === "resolved").length;
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return reports.filter((r) => {
-      if (tab === "pending" && r.status !== "pending") return false;
-      if (tab === "resolved" && r.status !== "resolved") return false;
-      if (category !== "all" && r.category !== category) return false;
-      if (!q) return true;
-
-      const reasonLabel = REASON_META[r.reason]?.label ?? r.reason ?? "";
-      const searchable = [
-        r.code,
-        r.snippet,
-        r.reason,
-        reasonLabel,
-        r.postId,
-        r.reporter,
-        r.reportedUser,
-        r.reporterUsername,
-        r.reportedUser?.username,
-        r.examId,
-        r.post?.title,
-        r.post?.excerpt,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      return searchable.includes(q);
-    });
-  }, [reports, tab, category, query]);
+  const filtered = useMemo(
+    () => filterModerationReports(reports, { tab, category, query }),
+    [reports, tab, category, query],
+  );
 
   const reportPage = useAdminPagination(filtered, ADMIN_PAGE_SIZES.reports, [
     tab,
@@ -229,14 +117,74 @@ function AdminModerationPage() {
     ? getAdminUserDetailUrl(getReportedUsername(selected))
     : null;
 
-  async function refreshAllReports() {
-    const data = await loadAdminModerationReports();
-    setCommunityReports(data.communityReports);
-    setExamReports(data.examReports);
-    setUserReports(data.userReports);
-    setHasMoreReports(data.communityHasMore);
-    setApiReportPage(data.communityPage);
-    return [...data.examReports, ...data.communityReports, ...data.userReports];
+  async function handleLoadMoreReports() {
+    if (loadingMoreReports || !communityHasMore) return;
+    setLoadingMoreReports(true);
+    try {
+      const nextPage = communityPage + 1;
+      const { items, hasMore } = await fetchAdminReportsPage(nextPage);
+      setCommunityReports((prev) => [...prev, ...items]);
+      setCommunityHasMore(hasMore);
+      setCommunityPage(nextPage);
+    } finally {
+      setLoadingMoreReports(false);
+    }
+  }
+
+  function finishResolved(id, result, refreshedList, toastMsg = "Đã xử lý báo cáo.") {
+    setLastResolved(result);
+    showToast(toastMsg);
+    if (result?.status === "resolved") {
+      setSelectedId(pickNextPendingReportId(refreshedList ?? reports, id, tab));
+    }
+  }
+
+  async function handleCommunityResolve(mockFn, toastMsg, apiResolveFn) {
+    if (!selected || selected.category !== "community") return;
+    let result = null;
+    if (apiResolveFn) {
+      result = await apiResolveFn(selected.id);
+    }
+    if (!result) {
+      result = mockFn(selected.id);
+    } else if (mockFn !== dismissReport && mockFn !== deleteReportedPost) {
+      mockFn(selected.id);
+    }
+    if (!result) return;
+
+    const refreshedList = await refreshAllReports();
+    finishResolved(selected.id, result, refreshedList, toastMsg);
+  }
+
+  async function handleCommunityBan(durationDays, permanent = false) {
+    if (!selected || selected.category !== "community") return;
+    const reportedUserId = selected.reportedUserId;
+    const reason = selected.reason ?? selected.post?.excerpt ?? "Báo cáo vi phạm cộng đồng";
+
+    try {
+      let result = null;
+      if (reportedUserId) {
+        result = await banCommunityReportedUserViaApi(selected.id, reportedUserId, {
+          durationDays,
+          permanent,
+          reason,
+        });
+      }
+      if (!result) {
+        result = banReportedUser(selected.id, permanent ? "vĩnh viễn" : `${durationDays} ngày`);
+      }
+      if (!result) return;
+
+      const refreshedList = await refreshAllReports();
+      finishResolved(
+        selected.id,
+        result,
+        refreshedList,
+        permanent ? "Đã khóa vĩnh viễn." : `Đã khóa tài khoản ${durationDays} ngày.`,
+      );
+    } catch (err) {
+      showToast(err.message ?? "Không khóa được tài khoản.");
+    }
   }
 
   function selectReport(id) {
@@ -263,61 +211,15 @@ function AdminModerationPage() {
     );
   }
 
-  async function handleLoadMoreReports() {
-    if (loadingMoreReports || !hasMoreReports) return;
-    setLoadingMoreReports(true);
-    try {
-      const nextPage = apiReportPage + 1;
-      const { items, hasMore } = await fetchAdminReportsPage(nextPage);
-      setCommunityReports((prev) => [...prev, ...items]);
-      setHasMoreReports(hasMore);
-      setApiReportPage(nextPage);
-    } finally {
-      setLoadingMoreReports(false);
-    }
-  }
-
-  function finishResolved(id, result, toastMsg = "Đã xử lý báo cáo.") {
-    setLastResolved(result);
-    showToast(toastMsg);
-    if (result?.status === "resolved") {
-      const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
-      setSelectedId(nextPending[0]?.id ?? null);
-    }
-  }
-
-  async function handleCommunityResolve(mockFn, toastMsg, apiResolveFn) {
-    if (!selected || selected.category !== "community") return;
-    let result = null;
-    if (apiResolveFn) {
-      result = await apiResolveFn(selected.id);
-    }
-    if (!result) {
-      result = mockFn(selected.id);
-    } else if (mockFn !== dismissReport && mockFn !== deleteReportedPost) {
-      mockFn(selected.id);
-    }
-    if (!result) return;
-    const next = await loadAdminReports();
-    setCommunityReports(next);
-    setHasMoreReports(false);
-    setApiReportPage(1);
-    setLastResolved(result);
-    showToast(toastMsg);
-    if (result.status === "resolved") {
-      const nextPending = reports.filter((r) => r.id !== selected.id && r.status === "pending");
-      setSelectedId(nextPending[0]?.id ?? null);
-    }
-  }
-
   async function handleUserDismiss() {
     if (!selected || selected.category !== "user") return;
     try {
       await resolveConversationReport(selected.id, "ignored");
-      await refreshAllReports();
+      const refreshedList = await refreshAllReports();
       finishResolved(
         selected.id,
         { ...selected, status: "resolved", resolution: "ignored" },
+        refreshedList,
         "Đã bỏ qua báo cáo người dùng.",
       );
     } catch (err) {
@@ -352,7 +254,7 @@ function AdminModerationPage() {
         selected.id,
         permanent ? "banned_permanent" : `banned_${durationDays}d`,
       );
-      await refreshAllReports();
+      const refreshedList = await refreshAllReports();
       finishResolved(
         selected.id,
         {
@@ -360,6 +262,7 @@ function AdminModerationPage() {
           status: "resolved",
           resolution: permanent ? "banned_permanent" : `banned_${durationDays}d`,
         },
+        refreshedList,
         permanent ? "Đã khóa vĩnh viễn." : `Đã khóa tài khoản ${durationDays} ngày.`,
       );
     } catch (err) {
@@ -371,10 +274,11 @@ function AdminModerationPage() {
     if (!selected || selected.category !== "exam_question") return;
     try {
       await resolveExamQuestionReport(selected.id, "ignored");
-      await refreshAllReports();
+      const refreshedList = await refreshAllReports();
       finishResolved(
         selected.id,
         { ...selected, status: "resolved", resolution: "ignored" },
+        refreshedList,
         "Đã bỏ qua báo cáo câu hỏi.",
       );
     } catch (err) {
@@ -386,15 +290,20 @@ function AdminModerationPage() {
     if (!selected || selected.category !== "exam_question") return;
     try {
       await resolveExamQuestionReport(selected.id, "resolved_exam");
-      await refreshAllReports();
-      finishResolved(selected.id, { ...selected, status: "resolved", resolution: "resolved_exam" }, "Đã ghi nhận xử lý đề thi.");
+      const refreshedList = await refreshAllReports();
+      finishResolved(
+        selected.id,
+        { ...selected, status: "resolved", resolution: "resolved_exam" },
+        refreshedList,
+        "Đã ghi nhận xử lý đề thi.",
+      );
     } catch (err) {
       showToast(err.message ?? "Không xử lý được báo cáo.");
     }
   }
 
   const showLoadMore =
-    hasMoreReports && (category === "all" || category === "community");
+    communityHasMore && (category === "all" || category === "community");
 
   return (
     <AdminPageLayout
@@ -463,6 +372,12 @@ function AdminModerationPage() {
           </div>
         </div>
 
+        {loadError ? (
+          <div className={`${modStyles.banner} ${modStyles.bannerError}`} role="alert">
+            <p className={modStyles.bannerTitle}>{loadError}</p>
+          </div>
+        ) : null}
+
         {lastResolved ? (
           <div className={`${modStyles.banner} ${modStyles.bannerSuccess}`} role="status">
             <FontAwesomeIcon icon={faCheck} className={modStyles.bannerIcon} />
@@ -500,7 +415,7 @@ function AdminModerationPage() {
                 aria-label="Tìm báo cáo"
               />
               <div className={modStyles.filterTrack} role="group" aria-label="Lọc trạng thái">
-                {TAB_OPTIONS.map((opt) => (
+                {REPORT_TAB_OPTIONS.map((opt) => (
                   <button
                     key={opt.id}
                     type="button"
@@ -515,7 +430,7 @@ function AdminModerationPage() {
                 ))}
               </div>
               <div className={modStyles.filterTrack} role="group" aria-label="Lọc loại báo cáo">
-                {CATEGORY_OPTIONS.map((opt) => (
+                {REPORT_CATEGORY_OPTIONS.map((opt) => (
                   <button
                     key={opt.id}
                     type="button"
@@ -565,7 +480,7 @@ function AdminModerationPage() {
                               <p className={modStyles.queueReason}>{cardSubtitle}</p>
                               <div className={modStyles.tagRow}>
                                 <span className={`${modStyles.tag} ${modStyles.tagMuted}`}>
-                                  {CATEGORY_LABELS[report.category] ?? report.category}
+                                  {REPORT_CATEGORY_LABELS[report.category] ?? report.category}
                                 </span>
                                 {report.category !== "community" ? (
                                   <ReasonTag reason={report.reason} />
@@ -693,10 +608,16 @@ function AdminModerationPage() {
                 <footer className={modStyles.detailActions}>
                   {selected.status === "pending" ? (
                     <>
-                      <Button look="outline" onClick={handleExamDismiss}>
+                      <Button
+                        look="outline"
+                        className={modStyles.actionBtnDismiss}
+                        onClick={handleExamDismiss}
+                      >
                         Bỏ qua báo cáo
                       </Button>
-                      <Button onClick={handleExamResolved}>Đã xử lý đề</Button>
+                      <Button className={modStyles.actionBtnResolve} onClick={handleExamResolved}>
+                        Đã xử lý đề
+                      </Button>
                     </>
                   ) : (
                     <p className={modStyles.detailActionsMuted}>
@@ -767,17 +688,26 @@ function AdminModerationPage() {
                 <footer className={modStyles.detailActions}>
                   {selected.status === "pending" ? (
                     <>
-                      <Button look="outline" onClick={handleUserDismiss}>
+                      <Button
+                        look="outline"
+                        className={modStyles.actionBtnDismiss}
+                        onClick={handleUserDismiss}
+                      >
                         Bỏ qua báo cáo
                       </Button>
                       <Button
                         look="outline"
+                        className={modStyles.actionBtnBanTemp}
                         onClick={() => handleUserBan(7)}
                       >
                         <FontAwesomeIcon icon={faUserSlash} />
                         Khóa 7 ngày
                       </Button>
-                      <Button look="outline" onClick={() => handleUserBan(0, true)}>
+                      <Button
+                        look="outline"
+                        className={modStyles.actionBtnBanPerm}
+                        onClick={() => handleUserBan(0, true)}
+                      >
                         Khóa vĩnh viễn
                       </Button>
                     </>
@@ -856,6 +786,7 @@ function AdminModerationPage() {
                   {selected.status === "pending" ? (
                     <>
                       <Button
+                        className={modStyles.actionBtnDelete}
                         onClick={() =>
                           handleCommunityResolve(
                             deleteReportedPost,
@@ -868,6 +799,7 @@ function AdminModerationPage() {
                       </Button>
                       <Button
                         look="outline"
+                        className={modStyles.actionBtnKeep}
                         onClick={() =>
                           handleCommunityResolve(
                             dismissReport,
@@ -880,26 +812,16 @@ function AdminModerationPage() {
                       </Button>
                       <Button
                         look="outline"
-                        onClick={() =>
-                          handleCommunityResolve(
-                            (id) => banReportedUser(id, "7 ngày"),
-                            "Đã khóa tài khoản 7 ngày.",
-                            resolveReportBanViaApi,
-                          )
-                        }
+                        className={modStyles.actionBtnBanTemp}
+                        onClick={() => handleCommunityBan(7)}
                       >
                         <FontAwesomeIcon icon={faUserSlash} />
                         Khóa 7 ngày
                       </Button>
                       <Button
                         look="outline"
-                        onClick={() =>
-                          handleCommunityResolve(
-                            (id) => banReportedUser(id, "vĩnh viễn"),
-                            "Đã khóa vĩnh viễn.",
-                            resolveReportBanViaApi,
-                          )
-                        }
+                        className={modStyles.actionBtnBanPerm}
+                        onClick={() => handleCommunityBan(0, true)}
                       >
                         Khóa vĩnh viễn
                       </Button>

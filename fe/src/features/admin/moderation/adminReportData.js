@@ -6,8 +6,11 @@ import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationCons
 import { addBannedUserFromReport } from "@/features/admin/moderation/adminBannedData";
 import { syncUserBanStatus } from "@/features/admin/users/adminUserStore";
 import { isValidGuid } from "@/features/feed/postUtils";
-import { getExamQuestionReports } from "@/features/exams/examQuestionReportStore";
-import { getConversationReports } from "@/features/moderator/reports/conversationReportStore";
+import { getExamQuestionReports, findExamQuestionReportById } from "@/features/exams/examQuestionReportStore";
+import { getConversationReports, findConversationReportById } from "@/features/moderator/reports/conversationReportStore";
+import { MODERATION_QUEUE_FETCH_SIZE } from "@/features/moderator/reports/shared/reportCategoryConstants";
+import { submitViolatingAccountBan } from "@/features/moderator/violations/violationsData";
+import { banUserPermanentlyViaApi } from "@/features/admin/users/adminUserStore";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
@@ -189,7 +192,8 @@ export function getAdminReports() {
 }
 
 export function getAdminReportById(id) {
-  return reportsStore.find((r) => r.id === id) ?? null;
+  const item = reportsStore.find((r) => r.id === id);
+  return item ? mapCommunityReportForQueue(item) : null;
 }
 
 function resolveReport(id, action, note) {
@@ -206,7 +210,7 @@ function resolveReport(id, action, note) {
     },
   };
   reportsStore = reportsStore.map((r) => (r.id === id ? entry : r));
-  return entry;
+  return mapCommunityReportForQueue(entry);
 }
 
 export function deleteReportedPost(id) {
@@ -279,21 +283,37 @@ export async function loadAdminModerationReports() {
       userReports: [],
       communityHasMore: false,
       communityPage: 1,
+      errors: [],
     };
   }
 
-  const [communityResult, examReports, userReports] = await Promise.all([
-    fetchAdminReportsPage(1).catch(() => ({ items: [], hasMore: false, page: 1 })),
-    getExamQuestionReports().catch(() => []),
-    getConversationReports().catch(() => []),
+  const [communityResult, examResult, userResult] = await Promise.allSettled([
+    fetchAdminReportsPage(1),
+    getExamQuestionReports({ pageSize: MODERATION_QUEUE_FETCH_SIZE }),
+    getConversationReports({ pageSize: MODERATION_QUEUE_FETCH_SIZE }),
   ]);
 
+  const errors = [];
+  const communityPayload =
+    communityResult.status === "fulfilled"
+      ? communityResult.value
+      : (errors.push("Không tải được báo cáo cộng đồng"), { items: [], hasMore: false, page: 1 });
+  const examReports =
+    examResult.status === "fulfilled"
+      ? examResult.value
+      : (errors.push("Không tải được báo cáo câu hỏi đề"), []);
+  const userReports =
+    userResult.status === "fulfilled"
+      ? userResult.value
+      : (errors.push("Không tải được báo cáo người dùng"), []);
+
   return {
-    communityReports: communityResult.items ?? [],
+    communityReports: communityPayload.items ?? [],
     examReports,
     userReports,
-    communityHasMore: communityResult.hasMore ?? false,
-    communityPage: communityResult.page ?? 1,
+    communityHasMore: communityPayload.hasMore ?? false,
+    communityPage: communityPayload.page ?? 1,
+    errors,
   };
 }
 
@@ -305,10 +325,17 @@ export async function loadAdminReportById(id) {
 
   try {
     const dto = await adminApi.getReport(id);
-    return mapAdminReportListItem(dto);
+    return mapCommunityReportForQueue(mapAdminReportListItem(dto));
   } catch {
-    return mockReport;
   }
+
+  const examReport = await findExamQuestionReportById(id);
+  if (examReport) return examReport;
+
+  const userReport = await findConversationReportById(id);
+  if (userReport) return userReport;
+
+  return mockReport;
 }
 
 export async function resolveAdminReportViaApi(id, body) {
@@ -318,7 +345,7 @@ export async function resolveAdminReportViaApi(id, body) {
 
   try {
     const dto = await adminApi.resolveReport(id, body);
-    return mapAdminReportListItem(dto);
+    return mapCommunityReportForQueue(mapAdminReportListItem(dto));
   } catch {
     return null;
   }
@@ -334,4 +361,36 @@ export async function resolveReportDismissViaApi(id) {
 
 export async function resolveReportBanViaApi(id) {
   return resolveAdminReportViaApi(id, { status: "Approved" });
+}
+
+export async function banCommunityReportedUserViaApi(
+  reportId,
+  reportedUserId,
+  { durationDays = 7, permanent = false, reason = "Báo cáo vi phạm cộng đồng" } = {},
+) {
+  if (USE_MOCK || !isValidGuid(String(reportId ?? ""))) {
+    return null;
+  }
+
+  if (!reportedUserId) {
+    throw new Error("Không xác định được người dùng bị báo cáo.");
+  }
+
+  const trimmedReason = reason.trim() || "Báo cáo vi phạm cộng đồng";
+  const banReason =
+    trimmedReason.length >= 10 ? trimmedReason : `${trimmedReason} — khóa từ báo cáo bài viết.`;
+
+  if (permanent) {
+    const banResult = await banUserPermanentlyViaApi(reportedUserId, {
+      reason: banReason,
+      adminUsername: "admin",
+    });
+    if (!banResult?.ok) {
+      throw new Error(banResult?.message ?? "Không khóa được tài khoản.");
+    }
+  } else {
+    await submitViolatingAccountBan(reportedUserId, durationDays, banReason);
+  }
+
+  return resolveReportBanViaApi(reportId);
 }
