@@ -4,6 +4,10 @@ import Button from "@/common/Button/Button";
 import Pagination from "@/common/Pagination/Pagination";
 import { useToast } from "@/common/Toast/ToastProvider";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
+import {
+  getExamListPaperLabel,
+  getExamSubjectCode,
+} from "@/utils/examDisplay";
 import AdminRowActions from "@/features/admin/shared/AdminRowActions";
 import AdminTableSortHeader from "@/features/admin/shared/AdminTableSortHeader";
 import StatusBadge from "@/features/admin/shared/StatusBadge";
@@ -57,8 +61,8 @@ function compareExams(a, b, sortBy, sortDir) {
   }
 
   const fields = {
-    code: [a.code, b.code],
-    title: [a.title, b.title],
+    code: [getExamSubjectCode(a), getExamSubjectCode(b)],
+    title: [getExamListPaperLabel(a), getExamListPaperLabel(b)],
     type: [a.type, b.type],
     status: [a.status, b.status],
     updatedAt: [a.updatedAt, b.updatedAt],
@@ -137,8 +141,13 @@ function AdminExamListPage() {
       if (trackFilter !== "all" && exam.track !== trackFilter) return false;
       if (semesterFilter !== "all" && exam.semester !== semesterFilter) return false;
       if (!q) return true;
+      const subjectCode = getExamSubjectCode(exam).toLowerCase();
+      const paperLabel = getExamListPaperLabel(exam).toLowerCase();
       return (
-        exam.code.toLowerCase().includes(q) || exam.title.toLowerCase().includes(q)
+        subjectCode.includes(q)
+        || paperLabel.includes(q)
+        || exam.code.toLowerCase().includes(q)
+        || exam.title.toLowerCase().includes(q)
       );
     });
   }, [exams, query, typeFilter, statusFilter, trackFilter, semesterFilter]);
@@ -333,7 +342,7 @@ function AdminExamListPage() {
                   onSort={handleSort}
                 />
                 <AdminTableSortHeader
-                  label="Tiêu đề"
+                  label="Mã đề thi / Tiêu đề"
                   column="title"
                   sortBy={sortBy}
                   sortDir={sortDir}
@@ -383,9 +392,9 @@ function AdminExamListPage() {
                 pageExams.map((exam) => (
                   <tr key={exam.id}>
                     <td>
-                      <span className={styles.cellMain}>{exam.code}</span>
+                      <span className={styles.cellMain}>{getExamSubjectCode(exam)}</span>
                     </td>
-                    <td>{exam.title}</td>
+                    <td>{getExamListPaperLabel(exam)}</td>
                     <td>{exam.type}</td>
                     <td>
                       <span className={styles.cellSub}>

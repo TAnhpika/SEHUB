@@ -201,17 +201,58 @@ export function mapAdminExamListItem(dto) {
   };
 }
 
+export function mapAdminReviewQuestion(question, index = 0) {
+  const options = question.options ?? [];
+  const optionTexts = options.map((opt) =>
+    typeof opt === "string" ? opt : String(opt?.text ?? opt?.Text ?? ""),
+  );
+
+  const correctOptionIds = new Set(
+    (question.correctOptionIds ?? question.CorrectOptionIds ?? [])
+      .map((id) => String(id))
+      .filter(Boolean),
+  );
+  const fallbackId = question.correctOptionId ?? question.CorrectOptionId;
+  if (fallbackId && correctOptionIds.size === 0) {
+    correctOptionIds.add(String(fallbackId));
+  }
+
+  const isMulti =
+    String(question.questionType ?? question.QuestionType ?? "").toLowerCase() === "multiselect"
+    || correctOptionIds.size > 1;
+
+  const correctIndices = options
+    .map((opt, optionIndex) => {
+      const optId = String(opt?.id ?? opt?.Id ?? "");
+      return correctOptionIds.has(optId) ? optionIndex : -1;
+    })
+    .filter((optionIndex) => optionIndex >= 0);
+
+  const legacyCorrect =
+    typeof question.correct === "number" && question.correct >= 0 ? question.correct : 0;
+
+  return {
+    id: question.orderIndex ?? question.OrderIndex ?? question.id ?? index + 1,
+    text: question.content ?? question.Content ?? question.text ?? "",
+    options: optionTexts,
+    correct: correctIndices[0] ?? legacyCorrect,
+    correctIndices: correctIndices.length > 0 ? correctIndices : [legacyCorrect],
+    isMulti,
+    requiredSelectCount:
+      question.requiredSelectCount
+      ?? question.RequiredSelectCount
+      ?? (isMulti ? Math.max(correctIndices.length, 2) : 1),
+  };
+}
+
 export function mapAdminExamDetail(dto) {
   const base = mapAdminExamListItem(dto);
 
   return {
     ...base,
-    questionsData: (dto.questions ?? []).map((question) => ({
-      id: question.id,
-      text: question.content,
-      options: (question.options ?? []).map((option) => option.text),
-      correct: (question.options ?? []).findIndex((option) => option.id === question.correctOptionId),
-    })),
+    questionsData: (dto.questions ?? []).map((question, index) =>
+      mapAdminReviewQuestion(question, index),
+    ),
   };
 }
 
@@ -407,15 +448,18 @@ export function mapAdminExamFormToCreateRequest(form, { questions = [] } = {}) {
     form.githubGuide ??
     "Nộp link repository GitHub công khai. README ghi rõ MSSV, họ tên và hướng dẫn chạy project.";
 
+  const isFinal = form.typeKey === "final";
+  const paperCode = form.title.trim();
+
   const description =
     form.typeKey === "practice"
       ? [form.description?.trim(), githubGuide].filter(Boolean).join("\n\n")
       : form.description?.trim() ?? "";
 
   return {
-    code: form.code.trim(),
-    title: form.title.trim(),
-    examType: form.typeKey === "practice" ? "Practice" : "Final",
+    code: isFinal ? paperCode : form.code.trim(),
+    title: isFinal ? paperCode : form.title.trim(),
+    examType: isFinal ? "Final" : "Practice",
     semester: form.semester,
     major: form.track ?? "SE",
     description,
@@ -424,10 +468,13 @@ export function mapAdminExamFormToCreateRequest(form, { questions = [] } = {}) {
 }
 
 export function mapAdminExamFormToUpdateRequest(form, { questions = null } = {}) {
+  const isFinal = form.typeKey === "final";
+  const paperCode = form.title.trim();
+
   const body = {
-    code: form.code.trim(),
-    title: form.title.trim(),
-    examType: form.typeKey === "practice" ? "Practice" : "Final",
+    code: isFinal ? paperCode : form.code.trim(),
+    title: isFinal ? paperCode : form.title.trim(),
+    examType: isFinal ? "Final" : "Practice",
     semester: form.semester,
     major: form.track ?? "SE",
     description: form.description?.trim() ?? "",

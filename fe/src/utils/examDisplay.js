@@ -1,4 +1,5 @@
 import {
+  formatExamPaperDisplayCode,
   getSeasonTerm,
   isValidExamPaperCode,
 } from "@/utils/examPaperCode";
@@ -87,7 +88,7 @@ export function resolvePublicExamName(dto) {
 
   for (const candidate of candidates) {
     if (isExamPaperCode(candidate)) {
-      return candidate;
+      return formatExamPaperDisplayCode(candidate);
     }
   }
 
@@ -96,7 +97,7 @@ export function resolvePublicExamName(dto) {
     const term = extractSeasonTermFromCandidates(...candidates) ?? getSeasonTerm();
     const built = buildExamPaperCode(subjectCode, { term, sequence: 1 });
     if (built) {
-      return built;
+      return formatExamPaperDisplayCode(built);
     }
   }
 
@@ -173,4 +174,12 @@ export function getExamSubjectCode(item) {
 
 export function getExamDisplayCode(item) {
   return item?.displayExamCode ?? resolvePublicExamName(item);
+}
+
+export function getExamListPaperLabel(item) {
+  if (item?.typeKey === "final") {
+    return getExamDisplayCode(item);
+  }
+
+  return item?.title ?? getExamDisplayTitle(item) ?? "—";
 }

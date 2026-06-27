@@ -115,17 +115,71 @@ export const REVIEW_COURSES = [
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
-export async function loadReviewCourses() {
+function mergeCourseCatalog(apiCourses = []) {
+  const staticCodes = new Set(
+    REVIEW_COURSES.flatMap((group) =>
+      (group.courses ?? []).map((course) => String(course.code ?? "").trim().toUpperCase()),
+    ),
+  );
+  const semesterMap = new Map();
+
+  const addGroup = (group, { skipStaticSubjects = false } = {}) => {
+    const semester = Number(group?.semester);
+    if (!Number.isFinite(semester) || semester <= 0) {
+      return;
+    }
+
+    if (!semesterMap.has(semester)) {
+      semesterMap.set(semester, new Map());
+    }
+
+    const codeMap = semesterMap.get(semester);
+    for (const course of group.courses ?? []) {
+      const code = String(course?.code ?? "").trim().toUpperCase();
+      if (!code) {
+        continue;
+      }
+
+      if (skipStaticSubjects && staticCodes.has(code)) {
+        continue;
+      }
+
+      codeMap.set(code, {
+        code,
+        major: course.major ?? "SE",
+      });
+    }
+  };
+
+  for (const group of REVIEW_COURSES) {
+    addGroup(group);
+  }
+
+  for (const group of apiCourses) {
+    addGroup(group, { skipStaticSubjects: true });
+  }
+
+  return [...semesterMap.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([semester, codeMap]) => ({
+      semester,
+      courses: [...codeMap.values()].sort((a, b) => a.code.localeCompare(b.code)),
+    }))
+    .filter((group) => group.courses.length > 0);
+}
+
+export async function loadReviewCourses({ apiOnly = false } = {}) {
   if (USE_MOCK) {
     return REVIEW_COURSES;
   }
 
   const data = await subjectsApi.listSubjects();
-  return Array.isArray(data) ? data : REVIEW_COURSES;
+  const apiCourses = Array.isArray(data) ? data : [];
+  return apiOnly ? apiCourses : mergeCourseCatalog(apiCourses);
 }
 
-export function useReviewCourses() {
-  const [courses, setCourses] = useState(REVIEW_COURSES);
+export function useReviewCourses({ apiOnly = false } = {}) {
+  const [courses, setCourses] = useState(apiOnly && !USE_MOCK ? [] : REVIEW_COURSES);
   const [loading, setLoading] = useState(!USE_MOCK);
 
   useEffect(() => {
@@ -135,7 +189,7 @@ export function useReviewCourses() {
     }
 
     let cancelled = false;
-    loadReviewCourses()
+    loadReviewCourses({ apiOnly })
       .then((data) => {
         if (!cancelled) {
           setCourses(data);
@@ -151,7 +205,7 @@ export function useReviewCourses() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [apiOnly]);
 
   return { courses, loading };
 }

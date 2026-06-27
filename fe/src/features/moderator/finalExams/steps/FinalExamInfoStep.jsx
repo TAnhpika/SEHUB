@@ -218,7 +218,7 @@ function FinalExamInfoStep() {
 
         <div className={styles.row}>
           <label className={styles.field}>
-            <span className={styles.label}>Mã đề</span>
+            <span className={styles.label}>Mã đề thi</span>
             <input
               type="text"
               className={styles.input}

@@ -16,7 +16,7 @@ export const TERM_OPTIONS = [
 
 import * as examsApi from "@/api/examsApi";
 import { getStudentDocumentsBySubject } from "@/features/admin/documents/adminDocumentData";
-import { normalizeCourseSubjectCode } from "@/utils/examDisplay";
+import { normalizeCourseSubjectCode, resolvePublicExamName } from "@/utils/examDisplay";
 import { parseExamPaperCode } from "@/utils/examPaperCode";
 import { getSubjectCatalogPath } from "@/utils/subjectPaths";
 
@@ -95,9 +95,9 @@ const UPLOAD_TIMES = [
   "2024-10-23, 22:54:46",
 ];
 
-function buildExamCode(courseCode, termCode, year, prefix = "FE", suffix = "") {
-  const base = `${prefix}-${courseCode}-${termCode}${year}`;
-  return suffix ? `${base}-${suffix}` : base;
+function buildExamCode(courseCode, termCode, year) {
+  const yy = String(year).slice(-2);
+  return `${courseCode}_${termCode}${yy}`;
 }
 
 export function getDocumentItemsForCourse(courseCode) {
@@ -128,8 +128,10 @@ export function getExamPapersForCourse(courseCode, examType, codePrefix = "FE") 
 
   YEARS.forEach((year) => {
     TERMS.forEach((term, termIndex) => {
+      const paperCode = buildExamCode(normalized, term.code, year);
       exams.push({
-        id: buildExamCode(normalized, term.code, year, codePrefix),
+        id: paperCode,
+        paperCode,
         courseCode: normalized,
         year: String(year),
         term: term.code,
@@ -141,8 +143,10 @@ export function getExamPapersForCourse(courseCode, examType, codePrefix = "FE") 
     });
   });
 
+  const extraPaper = buildExamCode(normalized, "SP", 2025);
   exams.push({
-    id: buildExamCode(normalized, "SP", 2025, codePrefix, "RE"),
+    id: extraPaper,
+    paperCode: extraPaper,
     courseCode: normalized,
     year: "2025",
     term: "SP",
@@ -178,12 +182,14 @@ function formatExamUploadedAt(value) {
 }
 
 function mapApiExamListItemToPaper(dto, courseCode, typeLabel) {
-  const code = dto.code || dto.id;
-  const parsed = parseExamPaperCode(code);
+  const paperCode = dto.code || dto.id;
+  const displayCode = resolvePublicExamName(dto);
+  const parsed = parseExamPaperCode(paperCode) ?? parseExamPaperCode(displayCode);
   const createdAt = dto.createdAt ?? dto.updatedAt;
 
   return {
-    id: code,
+    id: displayCode,
+    paperCode,
     apiId: dto.id,
     courseCode: courseCode.toUpperCase(),
     year: parsed?.year ?? String(new Date(createdAt).getFullYear()),
@@ -252,7 +258,12 @@ export async function loadExamById(courseCode, examId, pageKey, scope = "communi
   }
 
   const papers = await loadExamPapersForCourse(courseCode, pageKey);
-  const paper = papers.find((exam) => exam.id === examId || exam.apiId === examId);
+  const paper = papers.find(
+    (exam) =>
+      exam.id === examId
+      || exam.paperCode === examId
+      || String(exam.apiId) === String(examId),
+  );
   if (paper) {
     return paper;
   }
@@ -272,5 +283,10 @@ export function getExamById(courseCode, examId, pageKey, scope = "community") {
   }
 
   const exams = getExamPapersForCourse(normalizedCode, config.examType, config.codePrefix);
-  return exams.find((exam) => exam.id === examId) ?? null;
+  return (
+    exams.find(
+      (exam) =>
+        exam.id === examId || exam.paperCode === examId || String(exam.apiId) === String(examId),
+    ) ?? null
+  );
 }

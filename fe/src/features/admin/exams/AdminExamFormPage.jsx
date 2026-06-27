@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { mapAdminReviewQuestion } from "@/api/adminMapper";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { extractCourseSubjectCode } from "@/utils/examDisplay";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import {
   DEMO_DUPLICATE_SHA,
@@ -46,8 +48,14 @@ function buildInitialForm(exam) {
   }
   return {
     typeKey: exam.typeKey ?? "final",
-    code: exam.code,
-    title: exam.title,
+    code:
+      exam.typeKey === "final"
+        ? exam.subjectCode ?? extractCourseSubjectCode(exam.code, exam.title) ?? exam.code
+        : exam.code,
+    title:
+      exam.typeKey === "final"
+        ? exam.displayExamCode ?? exam.code ?? exam.title
+        : exam.title,
     track: exam.track,
     semester: exam.semester,
     description: exam.description ?? "",
@@ -132,7 +140,9 @@ function AdminExamFormPage() {
 
   function validateStep0() {
     if (!form.code.trim() || !form.title.trim()) {
-      showToast("Nhập mã môn và tiêu đề đề thi.");
+      showToast(
+        isFinal ? "Nhập mã môn học và mã đề thi." : "Nhập mã môn và tiêu đề đề thi.",
+      );
       return false;
     }
     return true;
@@ -212,7 +222,16 @@ function AdminExamFormPage() {
       setOcrDone(true);
       setOcrConfirmed(false);
       setStep(2);
-      showToast(`Đã import ${questions.length} câu hỏi từ Markdown.`);
+      const multiCount = questions.filter((question) => {
+        const type = String(question.questionType ?? question.QuestionType ?? "").toLowerCase();
+        const correctIds = question.correctOptionIds ?? question.CorrectOptionIds ?? [];
+        return type === "multiselect" || correctIds.length > 1;
+      }).length;
+      showToast(
+        multiCount > 0
+          ? `Đã import ${questions.length} câu (${multiCount} câu chọn nhiều đáp án).`
+          : `Đã import ${questions.length} câu hỏi từ Markdown.`,
+      );
     } catch (err) {
       showToast(err.message ?? "Import Markdown thất bại.");
     } finally {
@@ -222,19 +241,10 @@ function AdminExamFormPage() {
 
   const reviewQuestions = useMemo(() => {
     if (importedQuestions.length > 0) {
-      return importedQuestions.map((question, index) => {
-        const options = question.options ?? [];
-        const correctIndex = options.findIndex((opt) => opt.id === question.correctOptionId);
-        return {
-          id: question.orderIndex ?? index + 1,
-          text: question.content,
-          options: options.map((opt) => opt.text),
-          correct: correctIndex >= 0 ? correctIndex : 0,
-        };
-      });
+      return importedQuestions.map((question, index) => mapAdminReviewQuestion(question, index));
     }
 
-    return MOCK_OCR_QUESTIONS;
+    return MOCK_OCR_QUESTIONS.map((question, index) => mapAdminReviewQuestion(question, index));
   }, [importedQuestions]);
 
   function goNext() {
@@ -342,7 +352,7 @@ function AdminExamFormPage() {
     () => [
       { label: "Loại", value: isFinal ? "Cuối kỳ" : "Thực hành" },
       { label: "Mã môn", value: form.code || "—" },
-      { label: "Tiêu đề", value: form.title || "—" },
+      { label: isFinal ? "Mã đề thi" : "Tiêu đề", value: form.title || "—" },
       { label: "Ngành", value: getTrackLabel(form.track) },
       { label: "Kỳ", value: getSemesterLabel(form.semester) },
       isFinal
@@ -553,13 +563,13 @@ function AdminExamFormPage() {
             </div>
 
             <label className={styles.field}>
-              <span className={styles.label}>Tiêu đề đề thi *</span>
+              <span className={styles.label}>{isFinal ? "Mã đề thi *" : "Tiêu đề đề thi *"}</span>
               <input
                 className={styles.input}
                 value={form.title}
                 onChange={(e) => patchForm({ title: e.target.value })}
                 placeholder={
-                  isFinal ? "VD: Cuối kỳ Lập trình Web — đề 01" : "VD: Thực hành PRF192 — Lab GitHub"
+                  isFinal ? "VD: CEA201_SU25" : "VD: Thực hành PRF192 — Lab GitHub"
                 }
                 required
               />
@@ -729,19 +739,26 @@ function AdminExamFormPage() {
                   {reviewQuestions.length} câu {importedQuestions.length > 0 ? "Markdown" : "OCR"} — rà soát đáp án đúng
                 </p>
                 <ul className={examStyles.questionList}>
-                  {reviewQuestions.map((q, index) => (
+                  {reviewQuestions.map((q) => (
                     <li key={q.id} className={examStyles.questionItem}>
                       <p className={examStyles.questionText}>
-                        Câu {index + 1}. {q.text}
+                        Câu {q.id}. {q.text}
+                        {q.isMulti ? (
+                          <span className={examStyles.multiBadge}>
+                            Chọn {q.requiredSelectCount} đáp án
+                          </span>
+                        ) : null}
                       </p>
                       <ol className={examStyles.optionList}>
                         {q.options.map((opt, i) => (
                           <li
-                            key={opt}
-                            className={i === q.correct ? examStyles.optionCorrect : undefined}
+                            key={`${q.id}-${i}`}
+                            className={
+                              q.correctIndices?.includes(i) ? examStyles.optionCorrect : undefined
+                            }
                           >
                             {String.fromCharCode(65 + i)}. {opt}
-                            {i === q.correct ? " ✓" : ""}
+                            {q.correctIndices?.includes(i) ? " ✓" : ""}
                           </li>
                         ))}
                       </ol>
