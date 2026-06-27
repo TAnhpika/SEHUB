@@ -19,6 +19,7 @@ import {
 } from "@/features/admin/exams/adminExamData";
 import examStyles from "@/features/admin/exams/AdminExam.module.css";
 import styles from "@/features/admin/shared/adminPage.module.css";
+import { getExamListPaperLabel, getExamSubjectCode } from "@/utils/examDisplay";
 import { getPrimaryExamAttachment } from "@/utils/examAssetUrl";
 
 function AdminExamDetailPage() {
@@ -80,9 +81,12 @@ function AdminExamDetailPage() {
     );
   }
 
+  const subjectCode = getExamSubjectCode(exam);
+  const paperLabel = getExamListPaperLabel(exam);
+
   function handleDelete() {
     removeAdminExam(exam.id);
-    showToast(`Đã xóa ${exam.code}.`);
+    showToast(`Đã xóa ${paperLabel}.`);
     navigate("/admin/exams");
   }
 
@@ -94,12 +98,12 @@ function AdminExamDetailPage() {
 
   return (
     <AdminPageLayout
-      title={`[${exam.code}] ${exam.title}`}
+      title={`[${subjectCode}] ${paperLabel}`}
       subtitle={`${exam.type} · ${getTrackLabel(exam.track)} · ${getSemesterLabel(exam.semester)}`}
       breadcrumbs={[
         { label: "Dashboard", to: "/admin" },
         { label: "Quản lý đề thi", to: "/admin/exams" },
-        { label: exam.code },
+        { label: subjectCode },
       ]}
       actions={
         <>
@@ -114,6 +118,14 @@ function AdminExamDetailPage() {
     >
       <section className={styles.panel}>
         <dl className={styles.detailGrid}>
+          <div className={styles.detailItem}>
+            <dt>Mã môn</dt>
+            <dd>{subjectCode}</dd>
+          </div>
+          <div className={styles.detailItem}>
+            <dt>{exam.typeKey === "final" ? "Mã đề thi" : "Tiêu đề"}</dt>
+            <dd>{paperLabel}</dd>
+          </div>
           <div className={styles.detailItem}>
             <dt>Trạng thái</dt>
             <dd>
@@ -194,18 +206,27 @@ function AdminExamDetailPage() {
           <p className={styles.panelDesc}>Xem trước đáp án đúng (Admin)</p>
           <ul className={examStyles.questionList}>
             {questions.map((q, index) => (
-              <li key={q.id} className={examStyles.questionItem}>
+              <li key={q.id ?? index} className={examStyles.questionItem}>
                 <p className={examStyles.questionText}>
-                  Câu {index + 1}. {q.text}
+                  Câu {q.id ?? index + 1}. {q.text}
+                  {q.isMulti ? (
+                    <span className={examStyles.multiBadge}>
+                      Chọn {q.requiredSelectCount} đáp án
+                    </span>
+                  ) : null}
                 </p>
                 <ol className={examStyles.optionList}>
                   {q.options.map((opt, i) => (
                     <li
-                      key={opt}
-                      className={i === q.correct ? examStyles.optionCorrect : undefined}
+                      key={`${q.id ?? index}-${i}`}
+                      className={
+                        q.correctIndices?.includes(i) || i === q.correct
+                          ? examStyles.optionCorrect
+                          : undefined
+                      }
                     >
                       {String.fromCharCode(65 + i)}. {opt}
-                      {i === q.correct ? " ✓" : ""}
+                      {q.correctIndices?.includes(i) || i === q.correct ? " ✓" : ""}
                     </li>
                   ))}
                 </ol>
@@ -225,7 +246,7 @@ function AdminExamDetailPage() {
             </Link>
           </p>
           {submissions.length === 0 ? (
-            <p className={styles.hint}>Chưa có bài nộp cho môn {exam.code}.</p>
+            <p className={styles.hint}>Chưa có bài nộp cho môn {subjectCode}.</p>
           ) : (
             <ul className={examStyles.submissionList}>
               {submissions.map((sub) => (

@@ -113,4 +113,46 @@ public sealed class ExamMarkdownImportServiceTests
         Assert.Equal(6, question.Options.Count);
         Assert.Equal(3, question.CorrectOptionIds.Count);
     }
+
+    [Fact]
+    public void Parse_MultiSelectWithCommaAnswers_Q31Style_ParsesAsMultiSelect()
+    {
+        const string markdown = """
+            ## Câu 31 [MULTI:2]
+            In any Boolean algebra, what values are used for all variables and operations? (Choose two correct answers)
+
+            A. Values are 1, 0
+            B. Values are true, false
+            C. Values are decimal numbers
+            D. Values are 1, 0, true, false, and others
+
+            **Đáp án: A, B**
+
+            ---
+
+            ## Câu 43 [MULTI:2]
+            What are two roles of the instruction register (IR) during the instruction cycle?
+
+            A. To store the next instruction to be executed.
+            B. To hold the fetched instruction from memory.
+            C. To interpret the fetched instruction.
+            D. To calculate the address of the next instruction.
+            E. To transfer instructions to the program counter (PC).
+
+            **Đáp án: B, C**
+            """;
+
+        var result = _service.Parse(markdown);
+
+        var q31 = result.Questions.First(q => q.OrderIndex == 31);
+        var q43 = result.Questions.First(q => q.OrderIndex == 43);
+
+        Assert.Equal("MultiSelect", q31.QuestionType);
+        Assert.Equal(2, q31.RequiredSelectCount);
+        Assert.Equal(2, q31.CorrectOptionIds.Count);
+
+        Assert.Equal("MultiSelect", q43.QuestionType);
+        Assert.Equal(2, q43.RequiredSelectCount);
+        Assert.Equal(2, q43.CorrectOptionIds.Count);
+    }
 }

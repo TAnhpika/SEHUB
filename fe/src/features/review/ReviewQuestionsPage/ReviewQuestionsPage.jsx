@@ -3,7 +3,7 @@ import { getSubjectCatalogPath } from "@/utils/subjectPaths";
 import { useReviewCourses } from "./reviewData";
 
 function ReviewQuestionsPage({ scope = "community" }) {
-  const { courses, loading } = useReviewCourses();
+  const { courses, loading } = useReviewCourses({ apiOnly: true });
 
   if (loading) {
     return null;

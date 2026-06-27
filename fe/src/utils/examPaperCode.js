@@ -29,6 +29,7 @@ export const EXAM_TYPE_PREFIX = {
 
 const PAPER_CODE_PATTERN = /^(FE|PE)-([A-Za-z]{3}\d{3}[cC]?)-(SP|SU|FA)(\d{4})-(\d+)$/i;
 const LEGACY_PAPER_CODE_PATTERN = /^(FE|PE)-([A-Za-z0-9]+)-(SP|SU|FA)(\d{4})$/i;
+const SHORT_PAPER_CODE_PATTERN = /^([A-Za-z]{3}\d{3}[cC]?)_(SP|SU|FA)(\d{2})$/i;
 
 export function getSeasonTerm(date = new Date()) {
   const month = date.getMonth() + 1;
@@ -51,6 +52,19 @@ export function buildExamPaperCodePrefix(examType, subjectCode, date = new Date(
 
 export function parseExamPaperCode(value) {
   const normalized = stripRevisionLabel(String(value ?? "").trim());
+  const shortMatch = normalized.match(SHORT_PAPER_CODE_PATTERN);
+  if (shortMatch) {
+    const year = `20${shortMatch[3]}`;
+    return {
+      type: null,
+      subjectCode: normalizeSubjectCode(shortMatch[1]),
+      season: shortMatch[2].toUpperCase(),
+      year,
+      sequence: 1,
+      term: `${shortMatch[2].toUpperCase()}${year}`,
+    };
+  }
+
   const match = normalized.match(PAPER_CODE_PATTERN);
   if (!match) return null;
 
@@ -64,6 +78,27 @@ export function parseExamPaperCode(value) {
   };
 }
 
+export function formatExamPaperDisplayCode(value) {
+  const normalized = stripRevisionLabel(String(value ?? "").trim());
+  if (!normalized) {
+    return "";
+  }
+
+  const shortMatch = normalized.match(SHORT_PAPER_CODE_PATTERN);
+  if (shortMatch) {
+    const subject = normalizeSubjectCode(shortMatch[1]);
+    return `${subject}_${shortMatch[2].toUpperCase()}${shortMatch[3]}`;
+  }
+
+  const parsed = parseExamPaperCode(normalized);
+  if (parsed?.subjectCode && parsed?.season && parsed?.year) {
+    const yearSuffix = String(parsed.year).slice(-2);
+    return `${parsed.subjectCode}_${parsed.season}${yearSuffix}`;
+  }
+
+  return normalized;
+}
+
 export function isValidExamPaperCode(value, { allowLegacy = true } = {}) {
   const normalized = stripRevisionLabel(String(value ?? "").trim());
   if (!normalized || /^Môn\s/i.test(normalized)) {
@@ -71,6 +106,9 @@ export function isValidExamPaperCode(value, { allowLegacy = true } = {}) {
   }
   if (/-Rev(?:-\d+)?$/i.test(normalized) || /-REV-[a-f0-9]+$/i.test(normalized)) {
     return false;
+  }
+  if (SHORT_PAPER_CODE_PATTERN.test(normalized)) {
+    return true;
   }
   if (PAPER_CODE_PATTERN.test(normalized)) {
     return true;

@@ -4,6 +4,7 @@ using SEHub.Contracts.Exams;
 using SEHub.Contracts.Subjects;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
+using SEHub.Shared.Subjects;
 
 namespace SEHub.Infrastructure.Persistence.Repositories;
 
@@ -149,15 +150,35 @@ public class ExamRepository : IExamRepository
                 cancellationToken);
 
     public async Task<IReadOnlyList<SubjectSourceEntryDto>> GetDistinctPublishedSubjectsAsync(
-        CancellationToken cancellationToken = default) =>
-        await _context.Exams
+        CancellationToken cancellationToken = default)
+    {
+        var exams = await _context.Exams
             .Where(e => e.Status == ExamStatus.Published)
-            .GroupBy(e => new { e.Code, e.Semester, e.Major })
-            .Select(g => new SubjectSourceEntryDto
-            {
-                Code = g.Key.Code,
-                Semester = g.Key.Semester,
-                Major = g.Key.Major,
-            })
+            .Select(e => new { e.Code, e.Title, e.Semester, e.Major })
             .ToListAsync(cancellationToken);
+
+        var entries = new Dictionary<(int Semester, string Code, string Major), SubjectSourceEntryDto>();
+
+        foreach (var exam in exams)
+        {
+            var subjectCode = SubjectCodeResolver.Resolve(exam.Code, exam.Title, exam.Major);
+            if (subjectCode is null || exam.Semester <= 0 || string.IsNullOrWhiteSpace(exam.Major))
+            {
+                continue;
+            }
+
+            var major = exam.Major.Trim();
+            var key = (exam.Semester, subjectCode, major);
+            entries.TryAdd(
+                key,
+                new SubjectSourceEntryDto
+                {
+                    Code = subjectCode,
+                    Semester = exam.Semester,
+                    Major = major,
+                });
+        }
+
+        return entries.Values.ToList();
+    }
 }
