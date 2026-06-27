@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react";
+import * as subjectsApi from "@/api/subjectsApi";
+
 export const SEMESTER_OPTIONS = [
   { value: "all", label: "Tất cả học kỳ" },
   { value: "1", label: "Kỳ 1" },
@@ -109,3 +112,46 @@ export const REVIEW_COURSES = [
     ],
   },
 ];
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+
+export async function loadReviewCourses() {
+  if (USE_MOCK) {
+    return REVIEW_COURSES;
+  }
+
+  const data = await subjectsApi.listSubjects();
+  return Array.isArray(data) ? data : REVIEW_COURSES;
+}
+
+export function useReviewCourses() {
+  const [courses, setCourses] = useState(REVIEW_COURSES);
+  const [loading, setLoading] = useState(!USE_MOCK);
+
+  useEffect(() => {
+    if (USE_MOCK) {
+      setLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    loadReviewCourses()
+      .then((data) => {
+        if (!cancelled) {
+          setCourses(data);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { courses, loading };
+}

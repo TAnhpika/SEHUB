@@ -78,7 +78,12 @@ function AdminGamificationConfigPage() {
   });
 
   useEffect(() => {
-    hydrateGamificationFromApi().then(() => setRefreshKey((k) => k + 1));
+    hydrateGamificationFromApi().then((result) => {
+      if (result && result.ok === false) {
+        showToast(result.message ?? "Không tải được cấu hình gamification.");
+      }
+      setRefreshKey((k) => k + 1);
+    });
   }, []);
 
   const stats = useMemo(() => getGamificationStats(), [refreshKey]);

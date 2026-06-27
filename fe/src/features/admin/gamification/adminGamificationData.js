@@ -560,16 +560,18 @@ export function getActiveRankThresholds() {
 
 export async function hydrateGamificationFromApi() {
   if (USE_MOCK) {
-    return;
+    return { ok: true };
   }
+
+  const errors = [];
 
   try {
     const levels = await adminApi.getGamificationLevels();
     if ((levels ?? []).length > 0) {
       ranksStore = levels.map(mapLevelConfigToRankTier);
     }
-  } catch {
-    /* keep mock ranks */
+  } catch (error) {
+    errors.push(error?.message ?? "Không tải được cấp hạng.");
   }
 
   try {
@@ -577,8 +579,8 @@ export async function hydrateGamificationFromApi() {
     if ((badges ?? []).length > 0) {
       badgesStore = badges.map(mapBadgeAdminDto);
     }
-  } catch {
-    /* keep mock badges */
+  } catch (error) {
+    errors.push(error?.message ?? "Không tải được huy hiệu.");
   }
 
   try {
@@ -586,9 +588,15 @@ export async function hydrateGamificationFromApi() {
     if ((rules ?? []).length > 0) {
       pointRulesStore = rules.map(mapPointRuleAdminDto);
     }
-  } catch {
-    /* keep mock point rules */
+  } catch (error) {
+    errors.push(error?.message ?? "Không tải được quy tắc điểm.");
   }
+
+  if (errors.length > 0) {
+    return { ok: false, message: errors.join(" ") };
+  }
+
+  return { ok: true };
 }
 
 export async function saveRankTiersToApi() {

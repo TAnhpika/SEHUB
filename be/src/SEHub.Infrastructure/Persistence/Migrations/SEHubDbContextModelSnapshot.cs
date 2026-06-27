@@ -1570,6 +1570,55 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.ToTable("Questions");
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.QuestionComment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AuthorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ExamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("ParentCommentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentCommentId");
+
+                    b.HasIndex("QuestionId");
+
+                    b.HasIndex("ExamId", "QuestionId");
+
+                    b.ToTable("QuestionComments", (string)null);
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.QuestionOption", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1921,6 +1970,50 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.HasKey("UserId", "ActivityDate");
 
                     b.ToTable("UserDailyActivities", (string)null);
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.UserFeedback", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AttachmentUrlsJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)")
+                        .HasDefaultValue("[]");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("UserFeedbacks", (string)null);
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.UserFollow", b =>
@@ -2512,6 +2605,24 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Navigation("Exam");
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.QuestionComment", b =>
+                {
+                    b.HasOne("SEHub.Domain.Entities.QuestionComment", "ParentComment")
+                        .WithMany("Replies")
+                        .HasForeignKey("ParentCommentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SEHub.Domain.Entities.Question", "Question")
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ParentComment");
+
+                    b.Navigation("Question");
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.QuestionOption", b =>
                 {
                     b.HasOne("SEHub.Domain.Entities.Question", "Question")
@@ -2717,6 +2828,11 @@ namespace SEHub.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("SEHub.Domain.Entities.Question", b =>
                 {
                     b.Navigation("Options");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.QuestionComment", b =>
+                {
+                    b.Navigation("Replies");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.SubscriptionPlan", b =>

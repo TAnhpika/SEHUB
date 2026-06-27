@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Contracts.Exams;
+using SEHub.Contracts.Subjects;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 
@@ -75,6 +76,16 @@ public class ExamRepository : IExamRepository
             dbQuery = dbQuery.Where(e => e.Semester == semester);
         }
 
+        if (!string.IsNullOrWhiteSpace(query.Code))
+        {
+            var code = query.Code.Trim();
+            dbQuery = dbQuery.Where(e =>
+                e.Code == code
+                || e.Code.StartsWith(code + "-")
+                || e.Code.StartsWith(code + "_")
+                || e.Major == code);
+        }
+
         if (!string.IsNullOrWhiteSpace(query.Major))
         {
             dbQuery = dbQuery.Where(e => e.Major == query.Major);
@@ -136,4 +147,17 @@ public class ExamRepository : IExamRepository
             .FirstOrDefaultAsync(
                 e => e.RevisionOfExamId == publishedExamId && e.Status == ExamStatus.PendingApproval,
                 cancellationToken);
+
+    public async Task<IReadOnlyList<SubjectSourceEntryDto>> GetDistinctPublishedSubjectsAsync(
+        CancellationToken cancellationToken = default) =>
+        await _context.Exams
+            .Where(e => e.Status == ExamStatus.Published)
+            .GroupBy(e => new { e.Code, e.Semester, e.Major })
+            .Select(g => new SubjectSourceEntryDto
+            {
+                Code = g.Key.Code,
+                Semester = g.Key.Semester,
+                Major = g.Key.Major,
+            })
+            .ToListAsync(cancellationToken);
 }

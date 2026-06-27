@@ -14,5 +14,10 @@ public interface IPointTransactionRepository
         int pageSize,
         CancellationToken cancellationToken = default);
     Task<int> CountByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<int> CountPostedQualifyingEventsSinceAsync(
+        Guid userId,
+        IReadOnlyList<string> sourceTypes,
+        DateTime sinceUtc,
+        CancellationToken cancellationToken = default);
     Task VoidByIdempotencyKeyAsync(string idempotencyKey, CancellationToken cancellationToken = default);
 }

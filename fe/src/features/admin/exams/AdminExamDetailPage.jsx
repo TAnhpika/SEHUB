@@ -44,7 +44,7 @@ function AdminExamDetailPage() {
     };
   }, [id, refreshKey]);
 
-  const questions = exam ? getExamQuestions(exam.id) : [];
+  const questions = exam ? (exam.questionsData ?? getExamQuestions(exam.id)) : [];
   const submissions = useMemo(() => {
     void refreshKey;
     return exam?.typeKey === "practice" ? getExamSubmissions(exam.id) : [];

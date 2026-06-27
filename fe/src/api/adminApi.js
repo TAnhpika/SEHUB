@@ -335,3 +335,30 @@ export function deleteGamificationPointRule(id) {
 export function listModerationPracticeSubmissions(params = {}) {
   return apiRequest(`/api/v1/admin/moderation/practice-submissions${buildQuery(params)}`);
 }
+
+export function listVouchers(params = {}) {
+  return apiRequest(`/api/v1/admin/vouchers${buildQuery(params)}`);
+}
+
+export function grantVoucher(body) {
+  return apiRequest("/api/v1/admin/vouchers/grant", {
+    method: "POST",
+    body,
+  });
+}
+
+export function revokeVoucher(id) {
+  return apiRequest(`/api/v1/admin/vouchers/${id}/revoke`, { method: "PATCH" });
+}
+
+export function getDashboardCharts(params = {}) {
+  return apiRequest(`/api/v1/admin/dashboard/charts${buildQuery(params)}`);
+}
+
+export function listAuditLogs(params = {}) {
+  return apiRequest(`/api/v1/admin/audit-logs${buildQuery(params)}`);
+}
+
+export function getUserActivity(id, params = {}) {
+  return apiRequest(`/api/v1/admin/users/${id}/activity${buildQuery(params)}`);
+}

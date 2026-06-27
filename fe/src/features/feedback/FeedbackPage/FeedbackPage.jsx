@@ -9,6 +9,8 @@ import {
 import Button from "@/common/Button/Button";
 import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
+import * as feedbackApi from "@/api/feedbackApi";
+import { ApiError } from "@/api/httpClient";
 import {
   ACCEPTED_FILE_TYPES,
   formatFileSize,
@@ -26,6 +28,7 @@ function FeedbackPage() {
   const [errorDescription, setErrorDescription] = useState("");
   const [files, setFiles] = useState([]);
   const [fileError, setFileError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   function handleAddFiles(event) {
     const selectedFiles = Array.from(event.target.files ?? []);
@@ -70,7 +73,7 @@ function FeedbackPage() {
     setFileError("");
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     if (!username.trim()) {
@@ -83,8 +86,30 @@ function FeedbackPage() {
       return;
     }
 
-    showToast("Đã gửi báo cáo lỗi. Cảm ơn bạn đã phản hồi!");
-    handleClearForm();
+    setSubmitting(true);
+    try {
+      let attachmentUrls = [];
+
+      if (files.length > 0) {
+        const uploadResult = await feedbackApi.uploadFeedbackAttachments(files);
+        attachmentUrls = uploadResult?.urls ?? [];
+      }
+
+      await feedbackApi.submitFeedback({
+        username: username.trim(),
+        description: errorDescription.trim(),
+        attachmentUrls,
+      });
+
+      showToast("Đã gửi báo cáo lỗi. Cảm ơn bạn đã phản hồi!");
+      handleClearForm();
+    } catch (error) {
+      const message =
+        error instanceof ApiError ? error.message : "Không gửi được báo cáo lỗi. Vui lòng thử lại.";
+      showToast(message);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -204,10 +229,10 @@ function FeedbackPage() {
         </section>
 
         <div className={styles.actions}>
-          <Button type="submit" className={styles.submit}>
-            Gửi
+          <Button type="submit" className={styles.submit} disabled={submitting}>
+            {submitting ? "Đang gửi..." : "Gửi"}
           </Button>
-          <button type="button" className={styles.clear} onClick={handleClearForm}>
+          <button type="button" className={styles.clear} onClick={handleClearForm} disabled={submitting}>
             Xóa hết câu trả lời
           </button>
         </div>

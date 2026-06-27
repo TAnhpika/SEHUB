@@ -176,7 +176,7 @@ export async function loadBadgeCatalog() {
     badgeCatalogCache = (items ?? []).map(gamificationApi.mapBadgeCatalogItem);
     return badgeCatalogCache;
   } catch {
-    return BADGE_CATALOG;
+    return [];
   }
 }
 

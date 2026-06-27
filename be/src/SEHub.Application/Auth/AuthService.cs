@@ -248,7 +248,7 @@ public sealed class AuthService : IAuthService
 
         await EnsureNotBannedAsync(user.Id, cancellationToken);
 
-        await _gamificationPublisher.PublishAsync(new DailyLoginEvent(user.Id), cancellationToken);
+        await TryPublishDailyLoginAsync(user.Id, cancellationToken);
 
         user = await _userRepository.GetByIdAsync(user.Id, cancellationToken) ?? user;
 
@@ -298,7 +298,7 @@ public sealed class AuthService : IAuthService
 
         await EnsureNotBannedAsync(user.Id, cancellationToken);
 
-        await _gamificationPublisher.PublishAsync(new DailyLoginEvent(user.Id), cancellationToken);
+        await TryPublishDailyLoginAsync(user.Id, cancellationToken);
 
 
 
@@ -632,10 +632,9 @@ public sealed class AuthService : IAuthService
 
         var authUser = BuildAuthUserDto(user, isPremium, profile?.AvatarUrl);
 
-        var statsTask = _profileStatsService.GetMyStatsAsync(cancellationToken);
-        var subscriptionTask = _premiumService.GetSubscriptionAsync(cancellationToken);
-        var aiTokensTask = _aiTokenService.GetStatusAsync(userId, cancellationToken);
-        await Task.WhenAll(statsTask, subscriptionTask, aiTokensTask);
+        var stats = await _profileStatsService.GetMyStatsAsync(cancellationToken);
+        var subscription = await _premiumService.GetSubscriptionAsync(cancellationToken);
+        var aiTokens = await _aiTokenService.GetStatusAsync(userId, cancellationToken);
 
 
 
@@ -663,11 +662,11 @@ public sealed class AuthService : IAuthService
 
             EmailConfirmed = authUser.EmailConfirmed,
 
-            Stats = await statsTask,
+            Stats = stats,
 
-            Subscription = await subscriptionTask,
+            Subscription = subscription,
 
-            AiTokens = await aiTokensTask
+            AiTokens = aiTokens
 
         };
 
@@ -828,6 +827,30 @@ public sealed class AuthService : IAuthService
             }
 
         });
+
+    }
+
+
+
+    private async Task TryPublishDailyLoginAsync(Guid userId, CancellationToken cancellationToken)
+
+    {
+
+        try
+
+        {
+
+            await _gamificationPublisher.PublishAsync(new DailyLoginEvent(userId), cancellationToken);
+
+        }
+
+        catch (Exception ex)
+
+        {
+
+            _logger.LogWarning(ex, "Daily login gamification skipped for user {UserId}", userId);
+
+        }
 
     }
 

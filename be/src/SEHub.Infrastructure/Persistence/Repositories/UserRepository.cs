@@ -375,6 +375,11 @@ public class UserRepository : IUserRepository
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
+        var profileCreatedAt = await _context.UserProfiles
+            .Where(p => p.UserId == user.Id)
+            .Select(p => (DateTime?)p.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
         return new UserAccount
         {
             Id = user.Id,
@@ -394,7 +399,7 @@ public class UserRepository : IUserRepository
             HighestStreak = user.HighestStreak,
             LastActivityDate = user.LastActivityDate,
             LastDailyLoginBonusAt = user.LastDailyLoginBonusAt,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = profileCreatedAt ?? DateTime.UtcNow
         };
     }
 }

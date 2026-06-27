@@ -10,6 +10,7 @@ using SEHub.Application.Chatbot;
 using SEHub.Application.Documents;
 using SEHub.Application.Exams;
 using SEHub.Application.Exams.Validators;
+using SEHub.Application.Feedback;
 using SEHub.Application.Feed;
 using SEHub.Application.Feed.Validators;
 using SEHub.Application.Gamification;
@@ -22,6 +23,7 @@ using SEHub.Application.Premium;
 using SEHub.Application.Premium.Validators;
 using SEHub.Application.Profiles;
 using SEHub.Application.Profiles.Validators;
+using SEHub.Application.Subjects;
 using SEHub.Application.Users;
 using SEHub.Application.Messaging;
 using SEHub.Application.Notifications;
@@ -78,6 +80,10 @@ public static class DependencyInjection
         services.AddScoped<IAiTokenService, AiTokenService>();
         services.AddScoped<IPracticeSubmissionService, PracticeSubmissionService>();
         services.AddScoped<IQuestionReportService, QuestionReportService>();
+        services.AddScoped<IQuestionCommentService, QuestionCommentService>();
+
+        services.AddScoped<IFeedbackService, FeedbackService>();
+        services.AddScoped<ISubjectCatalogService, SubjectCatalogService>();
 
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IDocumentAccessService, DocumentAccessService>();
@@ -105,6 +111,7 @@ public static class DependencyInjection
         services.AddScoped<IUserBlockService, UserBlockService>();
 
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+        services.AddScoped<IAdminDashboardChartsService, AdminDashboardChartsService>();
         services.AddScoped<IAdminUserService, AdminUserService>();
         services.AddScoped<IAdminExamService, AdminExamService>();
         services.AddScoped<IAdminDocumentService, AdminDocumentService>();
@@ -112,6 +119,8 @@ public static class DependencyInjection
         services.AddScoped<IModerationService, ModerationService>();
         services.AddScoped<IAdminPaymentService, AdminPaymentService>();
         services.AddScoped<IAdminGamificationService, AdminGamificationService>();
+        services.AddScoped<IAdminVoucherService, AdminVoucherService>();
+        services.AddScoped<IAdminAuditLogService, AdminAuditLogService>();
         services.AddScoped<IAdminExportService, AdminExportService>();
         services.AddScoped<IAdminOverviewService, AdminOverviewService>();
         services.AddScoped<IOcrExamService, OcrExamService>();

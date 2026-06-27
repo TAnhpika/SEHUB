@@ -15,8 +15,8 @@ Gắn API ASP.NET Core (`be/`, base `http://localhost:5006/api/v1`) vào React F
 
 | Hạng mục | Trạng thái |
 | -------- | ---------- |
-| **Đã wire API** | Auth — `fe/src/api/httpClient.js`, `authApi.js`, `authMapper.js`, `AuthProvider.jsx`, Login/Register/Forgot |
-| **Chưa wire (mock)** | Feed (`MOCK_POSTS` → `feedData.js`), Profile (`PROFILE_MOCK`), Exams, Documents, Premium checkout, Admin/Moderator (`*MockData.js`) |
+| **Đã wire API** | Auth, Feed, Profile, Exams (incl. question comments + AI chat), Documents, Premium, Search (`searchAllData`), AI tokens (`GET /profiles/me/ai-tokens`), Streak daily missions (`GET /gamification/me/daily-missions`), Admin/Moderator reports (partial) |
+| **Chưa wire / mock fallback** | Featured sidebar, Activity heatmap, Guest review catalog (`reviewData`), Admin dashboard charts (partial mock), Moderator featured/violations (partial) |
 | **BE sẵn sàng** | 81 routes — Auth, Posts, Exams, PracticeSubmissions, Documents, Premium, Profiles, Admin/*, Health |
 | **Env** | `fe/.env.development` → `VITE_API_BASE_URL=http://localhost:5006` |
 | **Contract** | `{ success, data, message, errors[] }` — dùng `apiRequest()` trong `httpClient.js` |
@@ -39,9 +39,18 @@ Gắn API ASP.NET Core (`be/`, base `http://localhost:5006/api/v1`) vào React F
 - Thêm Redux, RTK Query, axios instance mới (dùng `httpClient.js`)
 - Xóa mock file rồi inline logic vào page
 - Sửa BE trừ khi phát hiện bug contract thật
-- Wire Chat, Notifications, QuestionComment (G2 — không có BE)
 - Wire moderator **exam contribution audit store** (local FE only — giữ mock)
 - Phá guest/community pages vẫn dùng mock catalog (`reviewData`, `REVIEW_COURSES`) trừ khi có API tương ứng
+
+### Đã wire (2026-06-27)
+
+| Module | FE | BE |
+|--------|----|----|
+| Search all | `searchAllData.js` → `postsApi`, `documentsApi`, `examsApi`, `usersApi` (parallel per-domain) | Existing list/search endpoints |
+| AI tokens | `aiTokens.js` → `profilesApi.getMyAiTokens` (server first, localStorage cache) | `GET /profiles/me/ai-tokens` |
+| Daily missions / streak tasks | `streakData.js` → `gamificationApi.getMyDailyMissions` | `GET /gamification/me/daily-missions` |
+| Question comments | `examsApi` get/create/delete comments | `ExamsController` comments routes |
+| Cleanup | Removed `examCommentsData.js`, `examAiChatData.js`, `examAiChatStore.js`; trimmed `ADMIN_REPORTS` from `adminMockData.js` |
 
 ---
 
@@ -108,7 +117,7 @@ Ví dụ PostCard expect: `{ id, title, author, tags, likes, comments, time, …
 ### Phase 3 — Exams (`ExamsController`, 11 routes)
 
 **Pages:** `ExamDetailPage`, `ExamDoPage`, `ExamResultPage`, `PracticeDoPage`  
-**Data:** `examDetailData.js`, `examCommentsData.js` (comments mock nếu không có BE)  
+**Data:** `examDetailData.js`, `examsApi.js` (comments + AI chat wired)  
 **API:** list, questions, attempts, answers, submit, result, `attempts/current`, ai-explain  
 **PremiumRoute:** giữ guard — BE trả 403 `PREMIUM_REQUIRED`  
 **Test:** free user mask answers; premium làm bài + submit

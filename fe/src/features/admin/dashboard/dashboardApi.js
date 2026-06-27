@@ -4,7 +4,7 @@ import {
   getMergedActivityLog,
 } from "@/features/admin/adminMockData";
 import * as adminApi from "@/api/adminApi";
-import { mergeDashboardStats } from "@/api/adminMapper";
+import { mergeDashboardStats, mapDashboardCharts } from "@/api/adminMapper";
 import { loadAdminActivityPreview } from "@/features/admin/activity/adminActivityData";
 import { getAdminDocuments } from "@/features/admin/documents/adminDocumentData";
 import { getAdminExams } from "@/features/admin/exams/adminExamData";
@@ -379,19 +379,24 @@ export async function fetchDashboardData(period) {
     return mockPayload;
   }
 
-  const [overview, activityPreview] = await Promise.all([
+  const [overview, activityPreview, charts] = await Promise.all([
     adminApi.getAdminOverview(),
     loadAdminActivityPreview(4),
+    adminApi.getDashboardCharts({ period }),
   ]);
 
   const stats = overview?.dashboard ?? overview?.Dashboard;
   const moderationStats = overview?.moderation ?? overview?.Moderation;
+  const chartData = mapDashboardCharts(charts);
 
   await delay(120);
   return {
     ...mergeDashboardStats(mockPayload, stats, {
       pendingReports: moderationStats?.pendingReports ?? stats?.pendingReports,
     }),
+    userGrowth: chartData.userGrowth,
+    revenue: chartData.revenue,
+    traffic: chartData.traffic,
     activity: activityPreview,
   };
 }

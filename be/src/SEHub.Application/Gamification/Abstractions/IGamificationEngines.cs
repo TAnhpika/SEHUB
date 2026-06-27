@@ -49,6 +49,9 @@ public interface IAchievementEngine
 public interface IGamificationReadService
 {
     Task<GamificationProfileDto> GetProfileGamificationAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<SEHub.Contracts.Gamification.DailyMissionProgressDto>> GetDailyMissionProgressAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default);
 }
 
 public interface ILeaderboardService

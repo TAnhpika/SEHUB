@@ -265,30 +265,33 @@ export function grantPremiumManual(userId, { planId, reason, adminUsername }) {
   return { ok: true, message: `Đã cấp Premium (${plan.label}) cho @${user.username}.` };
 }
 
-export function grantTokenManual(userId, { amount, reason, adminUsername }) {
+export async function grantTokenManual(userId, { amount, reason, adminUsername }) {
   const user = getAdminUserById(userId);
   if (!user) return { ok: false, message: "Không tìm thấy tài khoản." };
   if (user.role !== "student") {
     return { ok: false, message: "Chỉ cộng token cho Sinh viên." };
   }
 
-  const result = grantManualTokens({
+  const result = await grantManualTokens({
     username: user.username,
     amount: Number(amount),
     reason: reason?.trim() ?? "",
     adminUsername,
+    userId,
   });
 
   if (!result.ok) return result;
 
-  pushAudit({
-    at: new Date().toISOString(),
-    admin: adminUsername,
-    action: "manual_token",
-    userId,
-    username: user.username,
-    detail: `+${amount} token — ${reason?.trim()}`,
-  });
+  if (USE_MOCK) {
+    pushAudit({
+      at: new Date().toISOString(),
+      admin: adminUsername,
+      action: "manual_token",
+      userId,
+      username: user.username,
+      detail: `+${amount} token — ${reason?.trim()}`,
+    });
+  }
 
   return { ok: true, message: result.message ?? `Đã cộng token cho @${user.username}.` };
 }

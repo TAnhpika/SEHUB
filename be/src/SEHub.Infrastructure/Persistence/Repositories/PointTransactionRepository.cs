@@ -37,6 +37,26 @@ public class PointTransactionRepository : IPointTransactionRepository
     public Task<int> CountByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) =>
         _context.PointTransactions.CountAsync(t => t.UserId == userId, cancellationToken);
 
+    public Task<int> CountPostedQualifyingEventsSinceAsync(
+        Guid userId,
+        IReadOnlyList<string> sourceTypes,
+        DateTime sinceUtc,
+        CancellationToken cancellationToken = default)
+    {
+        if (sourceTypes.Count == 0)
+        {
+            return Task.FromResult(0);
+        }
+
+        return _context.PointTransactions.CountAsync(
+            t => t.UserId == userId
+                && t.Status == PointTransactionStatus.Posted
+                && t.Amount > 0
+                && t.CreatedAt >= sinceUtc
+                && sourceTypes.Contains(t.SourceType),
+            cancellationToken);
+    }
+
     public async Task VoidByIdempotencyKeyAsync(string idempotencyKey, CancellationToken cancellationToken = default)
     {
         var tx = await _context.PointTransactions

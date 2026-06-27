@@ -688,7 +688,7 @@ function ExamDetailPage({ page }) {
             <ExamCommentsPanel
               locked={commentsLocked}
               reason={!isAuthenticated ? "guest" : "premium"}
-              examId={exam.id}
+              examId={apiExamId ?? exam.id}
               questionId={currentQuestion.id}
               questionLabel={`Câu ${currentIndex + 1}`}
             />

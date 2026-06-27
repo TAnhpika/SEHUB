@@ -57,3 +57,14 @@ public sealed class LeaderboardEntryDto
     public int Points { get; init; }
     public string? LevelName { get; init; }
 }
+
+public sealed class DailyMissionProgressDto
+{
+    public Guid Id { get; init; }
+    public string Code { get; init; } = string.Empty;
+    public string Title { get; init; } = string.Empty;
+    public int Current { get; init; }
+    public int Target { get; init; }
+    public int RewardPoints { get; init; }
+    public bool IsCompleted { get; init; }
+}
