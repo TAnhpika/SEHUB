@@ -24,6 +24,10 @@ import {
   resolveExamQuestionReport,
 } from "@/features/exams/examQuestionReportStore";
 import { EXAM_REPORT_ROUTING } from "@/features/exams/examQuestionReportData";
+import {
+  getConversationReports,
+  resolveConversationReport,
+} from "@/features/moderator/reports/conversationReportStore";
 import styles from "./ReportsPage.module.css";
 
 const TAB_OPTIONS = [
@@ -35,11 +39,13 @@ const TAB_OPTIONS = [
 const CATEGORY_OPTIONS = [
   { id: "all", label: "Tất cả loại" },
   { id: "community", label: "Cộng đồng" },
+  { id: "user", label: "Người dùng" },
   { id: "exam_question", label: "Câu hỏi đề" },
 ];
 
 const CATEGORY_LABELS = {
   community: "Cộng đồng",
+  user: "Người dùng",
   exam_question: "Câu hỏi đề",
 };
 
@@ -85,6 +91,7 @@ function ReportsPage() {
   const [loadingMoreCommunity, setLoadingMoreCommunity] = useState(false);
   const [communityApiPage, setCommunityApiPage] = useState(1);
   const [examReports, setExamReports] = useState([]);
+  const [userReports, setUserReports] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [communityLoadError, setCommunityLoadError] = useState(null);
   const [tab, setTab] = useState("pending");
@@ -133,7 +140,21 @@ function ReportsPage() {
         return [];
       });
 
-    Promise.all([communityPromise, examPromise]).finally(() => {
+    const userPromise = getConversationReports()
+      .then((items) => {
+        if (!cancelled) {
+          setUserReports(items);
+        }
+        return items;
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setUserReports([]);
+        }
+        return [];
+      });
+
+    Promise.all([communityPromise, examPromise, userPromise]).finally(() => {
       if (!cancelled) {
         setIsLoading(false);
       }
@@ -157,18 +178,30 @@ function ReportsPage() {
         });
     }
 
+    function refreshUserReports() {
+      getConversationReports()
+        .then((items) => {
+          if (!cancelled) setUserReports(items);
+        })
+        .catch(() => {
+          if (!cancelled) setUserReports([]);
+        });
+    }
+
     window.addEventListener("sehubs-exam-reports-changed", refreshExamReports);
+    window.addEventListener("sehubs-conversation-reports-changed", refreshUserReports);
     window.addEventListener("storage", refreshExamReports);
     return () => {
       cancelled = true;
       window.removeEventListener("sehubs-exam-reports-changed", refreshExamReports);
+      window.removeEventListener("sehubs-conversation-reports-changed", refreshUserReports);
       window.removeEventListener("storage", refreshExamReports);
     };
   }, []);
 
   const reports = useMemo(
-    () => [...examReports, ...communityReports],
-    [examReports, communityReports],
+    () => [...examReports, ...communityReports, ...userReports],
+    [examReports, communityReports, userReports],
   );
 
   const pendingCount = reports.filter((r) => r.status === "pending").length;
@@ -275,6 +308,33 @@ function ReportsPage() {
     );
   }
 
+  function finishResolvedReport(id, resolution, reloadedList, setList) {
+    const target = reports.find((report) => report.id === id);
+    if (reloadedList) {
+      setList(reloadedList);
+      const resolved =
+        reloadedList.find((report) => report.id === id) ??
+        (target ? { ...target, status: "resolved", resolution } : null);
+      if (resolved) {
+        setLastResolved(resolved);
+      }
+    } else if (target) {
+      setLastResolved({ ...target, status: "resolved", resolution });
+    }
+
+    setTab("resolved");
+    setSelectedId(id);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("id", id);
+        return next;
+      },
+      { replace: true },
+    );
+    deepLinkSyncedRef.current = true;
+  }
+
   function resolveReportLocal(id, resolution) {
     const target = reports.find((report) => report.id === id);
     if (target?.category === "exam_question") {
@@ -282,6 +342,11 @@ function ReportsPage() {
         .then(() => getExamQuestionReports())
         .then((items) => setExamReports(items))
         .catch((err) => showToast(err.message ?? "Không xử lý được báo cáo câu hỏi."));
+    } else if (target?.category === "user") {
+      resolveConversationReport(id, resolution)
+        .then(() => getConversationReports())
+        .then((items) => setUserReports(items))
+        .catch((err) => showToast(err.message ?? "Không xử lý được báo cáo người dùng."));
     } else {
       setCommunityReports((prev) =>
         prev.map((report) =>
@@ -354,6 +419,15 @@ function ReportsPage() {
       setTab("resolved");
       setSelectedId(id);
       deepLinkSyncedRef.current = true;
+    } else if (target?.category === "user") {
+      try {
+        await resolveConversationReport(id, "ignored");
+        const reloaded = await getConversationReports();
+        finishResolvedReport(id, "ignored", reloaded, setUserReports);
+      } catch (err) {
+        showToast(err.message ?? "Không xử lý được báo cáo.");
+        return;
+      }
     } else {
       try {
         const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "dismiss");
@@ -366,7 +440,9 @@ function ReportsPage() {
     showToast(
       target?.category === "exam_question"
         ? "Đã bỏ qua — giữ nguyên câu hỏi trong ngân hàng đề."
-        : "Đã bỏ qua báo cáo — giữ nguyên nội dung.",
+        : target?.category === "user"
+          ? "Đã bỏ qua báo cáo người dùng."
+          : "Đã bỏ qua báo cáo — giữ nguyên nội dung.",
     );
     window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
   }
@@ -401,8 +477,8 @@ function ReportsPage() {
   return (
     <div className={styles.page}>
       <p className={styles.intro}>
-        Xử lý báo cáo cộng đồng và câu hỏi đề thi ôn tập. Báo cáo đề được Moderator rà soát,
-        Admin duyệt trước khi cập nhật ngân hàng câu hỏi.
+        Xử lý báo cáo cộng đồng, người dùng (tin nhắn) và câu hỏi đề thi ôn tập. Báo cáo đề được
+        Moderator rà soát, Admin duyệt trước khi cập nhật ngân hàng câu hỏi.
       </p>
 
       <div className={styles.metrics}>
@@ -713,7 +789,9 @@ function ReportsPage() {
                 </div>
 
                 <div className={styles.violationBox}>
-                  <p className={styles.violationLabel}>Nội dung vi phạm</p>
+                  <p className={styles.violationLabel}>
+                    {selected.category === "user" ? "Nội dung báo cáo" : "Nội dung vi phạm"}
+                  </p>
                   <blockquote className={styles.violationQuote}>
                     &ldquo;{selected.violatingContent}&rdquo;
                   </blockquote>
@@ -762,15 +840,24 @@ function ReportsPage() {
                         Ghi nhận — chuyển Admin sửa đề
                       </Button>
                     </>
+                  ) : selected.category === "user" ? (
+                    <>
+                      <Button look="outline" onClick={() => handleDismiss(selected.id)}>
+                        Bỏ qua báo cáo
+                      </Button>
+                      <Link to="/moderator/violations">
+                        <Button>Chuyển xử lý vi phạm</Button>
+                      </Link>
+                    </>
                   ) : (
                     <>
-                    <Button look="outline" onClick={() => handleDismiss(selected.id)}>
-                      Bỏ qua báo cáo
-                    </Button>
-                    <Button onClick={() => handleDelete(selected.id)}>
-                      <FontAwesomeIcon icon={faTrash} />
-                      Xóa nội dung
-                    </Button>
+                      <Button look="outline" onClick={() => handleDismiss(selected.id)}>
+                        Bỏ qua báo cáo
+                      </Button>
+                      <Button onClick={() => handleDelete(selected.id)}>
+                        <FontAwesomeIcon icon={faTrash} />
+                        Xóa nội dung
+                      </Button>
                     </>
                   )
                 ) : (
