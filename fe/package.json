@@ -17,10 +17,11 @@
     "@fortawesome/free-solid-svg-icons": "^7.2.0",
     "@fortawesome/react-fontawesome": "^3.3.1",
     "@microsoft/signalr": "^10.0.0",
+    "@tanstack/react-virtual": "^3.14.4",
+    "qrcode-generator": "^2.0.4",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.16.0",
-    "qrcode-generator": "^2.0.4",
     "recharts": "^3.8.1"
   },
   "devDependencies": {
