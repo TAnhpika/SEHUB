@@ -97,12 +97,12 @@
   border-radius: var(--radius-full);
   box-shadow: var(--shadow-sm);
   transition:
-    background 0.15s ease,
+    filter 0.15s ease,
     box-shadow 0.15s ease;
 }
 
 .card:hover .cta {
-  background: var(--color-primary-hover);
+  filter: brightness(1.05);
   box-shadow: var(--shadow-md);
 }
 
