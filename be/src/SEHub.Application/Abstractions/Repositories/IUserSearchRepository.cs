@@ -8,9 +8,13 @@ public interface IUserSearchRepository
         string search,
         int page,
         int pageSize,
+        Guid? excludeUserId = null,
         CancellationToken cancellationToken = default);
 
-    Task<int> CountAsync(string search, CancellationToken cancellationToken = default);
+    Task<int> CountAsync(
+        string search,
+        Guid? excludeUserId = null,
+        CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<UserSearchRow>> GetByIdsAsync(
         IReadOnlyList<Guid> userIds,
