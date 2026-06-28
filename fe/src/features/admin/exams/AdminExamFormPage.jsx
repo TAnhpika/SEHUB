@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { mapAdminReviewQuestion } from "@/api/adminMapper";
+import * as adminApi from "@/api/adminApi";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { extractCourseSubjectCode } from "@/utils/examDisplay";
+import { mergeQuestionImage } from "@/utils/examQuestionContent";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
+import AdminQuestionImageField from "@/features/admin/exams/AdminQuestionImageField";
 import {
   DEMO_DUPLICATE_SHA,
   EXAM_SEMESTERS,
@@ -84,6 +87,8 @@ function AdminExamFormPage() {
   const [forceUniqueSha, setForceUniqueSha] = useState(false);
   const [markdownText, setMarkdownText] = useState("");
   const [importedQuestions, setImportedQuestions] = useState([]);
+  const [questionImages, setQuestionImages] = useState({});
+  const [uploadingQuestionIndex, setUploadingQuestionIndex] = useState(null);
   const [importingMarkdown, setImportingMarkdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -219,6 +224,7 @@ function AdminExamFormPage() {
         return;
       }
       setImportedQuestions(questions);
+      setQuestionImages({});
       setOcrDone(true);
       setOcrConfirmed(false);
       setStep(2);
@@ -240,12 +246,57 @@ function AdminExamFormPage() {
   }
 
   const reviewQuestions = useMemo(() => {
-    if (importedQuestions.length > 0) {
-      return importedQuestions.map((question, index) => mapAdminReviewQuestion(question, index));
-    }
+    const source =
+      importedQuestions.length > 0
+        ? importedQuestions
+        : MOCK_OCR_QUESTIONS;
 
-    return MOCK_OCR_QUESTIONS.map((question, index) => mapAdminReviewQuestion(question, index));
-  }, [importedQuestions]);
+    return source.map((question, index) => {
+      const mapped = mapAdminReviewQuestion(question, index);
+      const imageUrl = questionImages[index] ?? mapped.imageUrl ?? null;
+      return {
+        ...mapped,
+        imageUrl,
+      };
+    });
+  }, [importedQuestions, questionImages]);
+
+  function getQuestionsForSave() {
+    const source =
+      importedQuestions.length > 0
+        ? importedQuestions
+        : MOCK_OCR_QUESTIONS;
+
+    return source.map((question, index) =>
+      mergeQuestionImage(question, questionImages[index]),
+    );
+  }
+
+  async function handleQuestionImageUpload(questionIndex, file) {
+    setUploadingQuestionIndex(questionIndex);
+    try {
+      const result = await adminApi.uploadExamQuestionImage(file);
+      const url = result?.url ?? result?.Url;
+      if (!url) {
+        throw new Error("Không nhận được URL ảnh.");
+      }
+      setQuestionImages((prev) => ({
+        ...prev,
+        [questionIndex]: url,
+      }));
+      showToast(`Đã tải ảnh cho câu ${questionIndex + 1}.`);
+    } finally {
+      setUploadingQuestionIndex(null);
+    }
+  }
+
+  function handleQuestionImageRemove(questionIndex) {
+    setQuestionImages((prev) => {
+      const next = { ...prev };
+      delete next[questionIndex];
+      return next;
+    });
+  }
 
   function goNext() {
     if (step === 0 && !validateStep0()) return;
@@ -262,9 +313,7 @@ function AdminExamFormPage() {
       status,
       ocrQuestions:
         isFinal && ocrDone
-          ? importedQuestions.length > 0
-            ? importedQuestions
-            : MOCK_OCR_QUESTIONS
+          ? getQuestionsForSave()
           : [],
       pdfFile,
       confirmDuplicate: forceUniqueSha,
@@ -736,10 +785,10 @@ function AdminExamFormPage() {
             {isFinal && ocrDone ? (
               <div className={examStyles.ocrPanel}>
                 <p className={examStyles.ocrPanelTitle}>
-                  {reviewQuestions.length} câu {importedQuestions.length > 0 ? "Markdown" : "OCR"} — rà soát đáp án đúng
+                  {reviewQuestions.length} câu {importedQuestions.length > 0 ? "Markdown" : "OCR"} — rà soát đáp án và thêm ảnh minh họa nếu cần
                 </p>
                 <ul className={examStyles.questionList}>
-                  {reviewQuestions.map((q) => (
+                  {reviewQuestions.map((q, questionIndex) => (
                     <li key={q.id} className={examStyles.questionItem}>
                       <p className={examStyles.questionText}>
                         Câu {q.id}. {q.text}
@@ -749,6 +798,14 @@ function AdminExamFormPage() {
                           </span>
                         ) : null}
                       </p>
+                      <AdminQuestionImageField
+                        questionIndex={questionIndex}
+                        imageUrl={q.imageUrl}
+                        uploading={uploadingQuestionIndex === questionIndex}
+                        onUpload={handleQuestionImageUpload}
+                        onRemove={handleQuestionImageRemove}
+                        onError={(message) => showToast(message)}
+                      />
                       <ol className={examStyles.optionList}>
                         {q.options.map((opt, i) => (
                           <li

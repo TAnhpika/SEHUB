@@ -16,14 +16,15 @@ public static class CloudinaryStartupValidator
             || string.IsNullOrWhiteSpace(options.ApiSecret))
         {
             logger.LogWarning(
-                "Cloudinary is not fully configured. Avatar, post image, and chat uploads will fail until Cloudinary:CloudName, ApiKey, and ApiSecret are set.");
+                "Cloudinary is not fully configured. Avatar, post, chat, and exam image uploads will fail until Cloudinary:CloudName, ApiKey, and ApiSecret are set.");
             return;
         }
 
         logger.LogInformation(
-            "Cloudinary folders: avatars={AvatarFolder}, posts={PostFolder}, chat={ChatFolder}",
+            "Cloudinary folders: avatars={AvatarFolder}, posts={PostFolder}, chat={ChatFolder}, exam={ExamFolder}",
             options.AvatarFolder,
             options.PostFolder,
-            options.ChatFolder);
+            options.ChatFolder,
+            options.ExamFolder);
     }
 }

@@ -14,6 +14,7 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import RichTextContent from "@/common/RichTextEditor/RichTextContent";
 import { useToast } from "@/common/Toast/ToastProvider";
 import {
   getMockPeerComparison,
@@ -105,7 +106,10 @@ function ReviewQuestionCard({ item, index, onOpenExplanation }) {
             >
               {index + 1}
             </span>
-            <p className={styles["review-question-text"]}>{item.text}</p>
+            <RichTextContent
+              value={item.text}
+              className={styles["review-question-text"]}
+            />
           </div>
           <span
             className={`${styles["review-status-badge"]} ${

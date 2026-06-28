@@ -9,6 +9,7 @@ import {
   faPaperPlane,
 } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
+import RichTextContent from "@/common/RichTextEditor/RichTextContent";
 import { useAuth } from "@/context";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { buildExamQuestions, EXAM_TYPE_LABELS, EXAM_USE_MOCK, loadExamMeta, loadReviewQuestions, resolveExamApiId } from "@/features/exams/examDetailData";
@@ -470,7 +471,10 @@ function ExamDoPage({ page = "review" }) {
           <div className={styles["main-column"]}>
             <article className={styles["question-card"]}>
               <p className={styles["question-label"]}>Câu {currentIndex + 1}</p>
-              <h3 className={styles["question-text"]}>{currentQuestion.text}</h3>
+              <RichTextContent
+                value={currentQuestion.text}
+                className={styles["question-text"]}
+              />
               {isMultiQuestion ? (
                 <p className={styles["multi-hint"]}>
                   Chọn đúng {requiredSelectCount} đáp án ({selectedKeys.length}/{requiredSelectCount}).

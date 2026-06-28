@@ -11,4 +11,5 @@ public sealed class CloudinaryOptions
     public string AvatarFolder { get; set; } = "sehub/avatars";
     public string PostFolder { get; set; } = "sehub/posts";
     public string ChatFolder { get; set; } = "sehub/chat";
+    public string ExamFolder { get; set; } = "exam";
 }

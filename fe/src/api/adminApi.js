@@ -88,6 +88,12 @@ export function importExamMarkdown(body) {
   });
 }
 
+export function uploadExamQuestionImage(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiUploadRequest("/api/v1/admin/exams/upload-question-image", formData);
+}
+
 export function uploadExamAttachment(examId, file) {
   const formData = new FormData();
   formData.append("file", file);

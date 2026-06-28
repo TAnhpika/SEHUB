@@ -1,0 +1,55 @@
+.root {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.questionPreview {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--moderator-text);
+}
+
+.preview {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.preview img {
+  display: block;
+  width: min(100%, 420px);
+  max-height: 240px;
+  object-fit: contain;
+  border: 1px solid var(--moderator-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.previewActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.removeButton {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.removeButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.fileInput {
+  display: none;
+}

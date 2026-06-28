@@ -128,6 +128,7 @@ public static class DependencyInjection
         services.AddScoped<IAdminOverviewService, AdminOverviewService>();
         services.AddScoped<IOcrExamService, OcrExamService>();
         services.AddScoped<IExamMarkdownImportService, ExamMarkdownImportService>();
+        services.AddScoped<IExamImageService, ExamImageService>();
 
         services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
         services.AddScoped<IValidator<RegisterRequest>, RegisterRequestValidator>();
