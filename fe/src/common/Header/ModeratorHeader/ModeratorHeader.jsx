@@ -18,6 +18,7 @@ import {
 } from "@/features/moderator/moderatorNavData";
 import ModeratorNotificationDropdown from "./ModeratorNotificationDropdown";
 import ModeratorSettingsDropdown from "./ModeratorSettingsDropdown";
+import ThemeSwitcher from "@/common/ThemeSwitcher/ThemeSwitcher";
 import styles from "./ModeratorHeader.module.css";
 
 function ModeratorHeader() {
@@ -126,6 +127,8 @@ function ModeratorHeader() {
 
             {menuOpen ? (
               <div className={styles.menu} role="menu">
+                <ThemeSwitcher variant="menu" />
+                <div className={styles.menuDivider} />
                 <p className={styles.menuHeading}>Tài khoản</p>
                 <Link
                   to={MODERATOR_HOME_PATH}

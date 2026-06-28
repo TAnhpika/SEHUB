@@ -7,12 +7,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import {
-  axisTickStyle,
-  CHART_COLORS,
-  chartMargin,
-  tooltipStyle,
-} from "./chartTheme";
+import { useThemeOptional } from "@/hooks/useTheme";
+import { getChartTheme } from "./chartTheme";
 import styles from "./recharts.module.css";
 
 /**
@@ -31,13 +27,15 @@ function RechartsLineChart({
   height = 240,
   yDomain,
 }) {
+  const { theme } = useThemeOptional() ?? { theme: "light" };
+  const { colors, chartMargin, axisTickStyle, tooltipStyle } = getChartTheme();
   const chartData = data.map((d) => ({ name: d.label, value: d.value }));
 
   return (
-    <div className={styles.chartWrap} style={{ height }}>
+    <div className={styles.chartWrap} style={{ height }} key={theme}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={chartData} margin={{ ...chartMargin, left: 4, bottom: 4 }}>
-          <CartesianGrid strokeDasharray="4 4" stroke={CHART_COLORS.grid} vertical={false} />
+          <CartesianGrid strokeDasharray="4 4" stroke={colors.grid} vertical={false} />
           <XAxis
             dataKey="name"
             tick={axisTickStyle}
@@ -61,10 +59,20 @@ function RechartsLineChart({
           <Line
             type="monotone"
             dataKey="value"
-            stroke={CHART_COLORS.primary}
+            stroke={colors.primary}
             strokeWidth={2.5}
-            dot={{ r: 4, fill: "#fff", stroke: CHART_COLORS.primary, strokeWidth: 2 }}
-            activeDot={{ r: 6, fill: CHART_COLORS.primary, stroke: "#fff", strokeWidth: 2 }}
+            dot={{
+              r: 4,
+              fill: colors.dotFill,
+              stroke: colors.primary,
+              strokeWidth: 2,
+            }}
+            activeDot={{
+              r: 6,
+              fill: colors.primary,
+              stroke: colors.dotFill,
+              strokeWidth: 2,
+            }}
           />
         </LineChart>
       </ResponsiveContainer>

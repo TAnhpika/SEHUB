@@ -8,7 +8,7 @@
   --sb-hover: rgba(255, 255, 255, 0.05);
   --sb-active-bg: rgba(37, 99, 235, 0.16);
   --sb-active-text: #60a5fa;
-  --sb-brand: var(--color-brand-navy, #2563eb);
+  --sb-brand: var(--color-primary);
 
   position: sticky;
   top: 0;
@@ -67,7 +67,7 @@
   height: 38px;
   padding: 4px;
   object-fit: contain;
-  background: #fff;
+  background: var(--moderator-surface);
   border-radius: 10px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
@@ -90,7 +90,7 @@
 .brandSub {
   font-size: 0.6875rem;
   font-weight: 600;
-  color: rgba(148, 163, 184, 0.85);
+  color: var(--moderator-text-subtle);
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
@@ -135,7 +135,7 @@
   padding: 0 0.625rem;
   font-size: 0.625rem;
   font-weight: 600;
-  color: rgba(100, 116, 139, 0.95);
+  color: var(--moderator-text-subtle);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -198,7 +198,7 @@
 }
 
 .link:hover .linkIcon {
-  color: #cbd5e1;
+  color: var(--moderator-text-muted);
   background: rgba(255, 255, 255, 0.07);
 }
 
@@ -238,8 +238,8 @@
 }
 
 .linkActive .badgeUrgent {
-  color: #fff;
-  background: #ef4444;
+  color: var(--color-auth-on-brand);
+  background: var(--color-danger);
   border-color: transparent;
 }
 
@@ -284,7 +284,7 @@
   flex-shrink: 0;
   margin-left: 0.15rem;
   font-size: 0.625rem;
-  color: rgba(148, 163, 184, 0.85);
+  color: var(--moderator-text-subtle);
   transition: transform 0.2s ease;
 }
 

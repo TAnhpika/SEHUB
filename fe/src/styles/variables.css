@@ -104,6 +104,12 @@
   --color-auth-input-border: rgba(195, 198, 215, 0.3);
   --color-auth-social-border: rgba(195, 198, 215, 0.5);
   --auth-panel-width: 42%;
+  --gradient-auth-form: linear-gradient(
+    160deg,
+    #f8fafc 0%,
+    #f1f5f9 45%,
+    #eef2ff 100%
+  );
   --gradient-auth-brand: linear-gradient(
     128deg,
     #5b8cff 0%,
@@ -145,4 +151,107 @@
   --scrollbar-thumb: var(--color-border);
   --scrollbar-thumb-hover: #cbd5e1;
   --scrollbar-track: transparent;
+
+  /* Skeleton & heatmap */
+  --skeleton-base: #e2e8f0;
+  --skeleton-shine: #f1f5f9;
+  --heatmap-empty: #ebedf0;
+  --heatmap-scale-1: #9be9a8;
+  --heatmap-scale-2: #40c463;
+  --heatmap-scale-3: #30a14e;
+  --heatmap-scale-4: #216e39;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-primary-light: rgba(37, 99, 235, 0.15);
+  --color-primary-soft: rgba(37, 99, 235, 0.22);
+  --color-primary-ring: rgba(96, 165, 250, 0.3);
+
+  --color-badge-bg: rgba(37, 99, 235, 0.2);
+  --color-badge-text: #93c5fd;
+
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-surface-muted: #334155;
+  --color-surface-elevated: #273449;
+
+  --color-text: #f1f5f9;
+  --color-text-muted: #cbd5e1;
+  --color-text-subtle: #94a3b8;
+
+  --color-border: #334155;
+  --color-border-light: #1e293b;
+
+  --color-danger-bg: rgba(239, 68, 68, 0.15);
+  --color-success-bg: rgba(34, 197, 94, 0.15);
+  --color-warning-bg: rgba(245, 158, 11, 0.15);
+
+  --color-icon-blue-bg: rgba(37, 99, 235, 0.15);
+  --color-icon-purple-bg: rgba(37, 99, 235, 0.15);
+  --color-icon-amber-bg: rgba(217, 119, 6, 0.15);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.45);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+  --color-feed-bg: #0b1220;
+
+  --gradient-hero: linear-gradient(
+    160deg,
+    #0f172a 0%,
+    #1e293b 45%,
+    #0f172a 100%
+  );
+
+  --color-auth-bg: #0f172a;
+  --color-auth-heading: #f1f5f9;
+  --color-auth-label: #cbd5e1;
+  --color-auth-link: #60a5fa;
+  --color-auth-input-bg: #1e293b;
+  --color-auth-input-border: rgba(148, 163, 184, 0.25);
+  --color-auth-social-border: rgba(148, 163, 184, 0.35);
+  --gradient-auth-form: linear-gradient(
+    160deg,
+    #0f172a 0%,
+    #1e293b 45%,
+    #1e3a5f 100%
+  );
+  --gradient-auth-brand: linear-gradient(
+    128deg,
+    #1e3a8a 0%,
+    #1d4ed8 30%,
+    #2563eb 55%,
+    #004ac6 75%,
+    #0a192f 100%
+  );
+  --shadow-auth-logo: 0 10px 15px -3px rgba(0, 0, 0, 0.35),
+    0 4px 6px -4px rgba(0, 0, 0, 0.25);
+  --shadow-auth-feature: 0 4px 20px rgba(0, 0, 0, 0.25);
+  --shadow-auth-submit: 0 10px 15px -3px rgba(37, 99, 235, 0.35),
+    0 4px 6px -4px rgba(37, 99, 235, 0.25);
+
+  --moderator-primary-soft: rgba(37, 99, 235, 0.18);
+  --moderator-primary-muted: rgba(37, 99, 235, 0.12);
+  --moderator-bg: #0f172a;
+  --moderator-surface: #1e293b;
+  --moderator-border: rgba(148, 163, 184, 0.25);
+  --moderator-border-light: rgba(148, 163, 184, 0.15);
+  --moderator-text: #f1f5f9;
+  --moderator-text-muted: #cbd5e1;
+  --moderator-text-subtle: #94a3b8;
+  --moderator-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+
+  --scrollbar-thumb: #475569;
+  --scrollbar-thumb-hover: #64748b;
+
+  --skeleton-base: #334155;
+  --skeleton-shine: #475569;
+  --heatmap-empty: #1e293b;
+  --heatmap-scale-1: rgba(37, 99, 235, 0.25);
+  --heatmap-scale-2: rgba(37, 99, 235, 0.45);
+  --heatmap-scale-3: rgba(37, 99, 235, 0.65);
+  --heatmap-scale-4: rgba(37, 99, 235, 0.85);
 }

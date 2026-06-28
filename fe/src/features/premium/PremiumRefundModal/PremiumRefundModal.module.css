@@ -41,8 +41,8 @@
   height: 2.25rem;
   flex-shrink: 0;
   border-radius: var(--radius-md);
-  color: #b45309;
-  background: #fffbeb;
+  color: var(--color-icon-amber);
+  background: var(--color-warning-bg);
 }
 
 .title {
@@ -132,7 +132,7 @@
 .error {
   margin: 0;
   font-size: 0.8125rem;
-  color: #b91c1c;
+  color: var(--color-danger);
 }
 
 .footer {

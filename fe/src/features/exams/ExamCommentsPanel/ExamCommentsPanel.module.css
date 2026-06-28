@@ -28,7 +28,7 @@
   padding: 0.5rem 0.875rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #004ac6;
+  color: var(--color-primary);
   text-decoration: none;
   background: var(--color-primary-light);
   border-radius: var(--radius-md);
@@ -63,7 +63,7 @@
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--color-text-muted);
-  background: #eceef0;
+  background: var(--color-surface-muted);
   border-radius: var(--radius-lg);
 }
 
@@ -72,7 +72,7 @@
   font-family: inherit;
   font-size: 0.75rem;
   font-weight: 700;
-  color: #004ac6;
+  color: var(--color-primary);
   background: none;
   border: none;
   cursor: pointer;
@@ -91,14 +91,14 @@
 
 .item {
   padding: 1rem;
-  background: #fff;
-  border: 1px solid #c3c6d7;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
 }
 
 .item-highlight {
-  border-left: 4px solid #004ac6;
+  border-left: 4px solid var(--color-primary);
   padding-left: 1.25rem;
 }
 
@@ -129,7 +129,7 @@
 
 .time {
   font-size: 0.625rem;
-  color: #737686;
+  color: var(--color-text-subtle);
 }
 
 .content {
@@ -162,7 +162,7 @@
 
 .like-active {
   font-weight: 700;
-  color: #004ac6;
+  color: var(--color-primary);
 }
 
 .composer {
@@ -178,15 +178,15 @@
   font-family: inherit;
   font-size: 0.75rem;
   color: var(--color-text);
-  background: #fff;
-  border: 1px solid #c3c6d7;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   resize: vertical;
 }
 
 .input:focus {
   outline: none;
-  border-color: #004ac6;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-ring);
 }
 
@@ -201,7 +201,7 @@
   height: 2rem;
   font-size: 0.75rem;
   color: #fff;
-  background: #004ac6;
+  background: var(--color-primary);
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;

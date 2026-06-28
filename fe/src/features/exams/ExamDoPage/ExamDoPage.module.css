@@ -23,7 +23,7 @@
   display: flex;
   flex-direction: column;
   padding: 0;
-  background: #fff;
+  background: var(--color-surface);
   border: none;
   border-radius: 0;
   box-shadow: none;
@@ -35,8 +35,8 @@
   gap: 0.75rem;
   flex-shrink: 0;
   padding: 0.625rem 1rem;
-  background: #fff;
-  border-bottom: 1px solid #c3c6d7;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .focus-meta {
@@ -49,12 +49,12 @@
   flex-wrap: wrap;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #434655;
+  color: var(--color-text-muted);
 }
 
 .focus-meta strong {
   font-weight: 700;
-  color: #004ac6;
+  color: var(--color-primary);
 }
 
 .pageFocus .workspace {
@@ -105,7 +105,7 @@
   font-family: inherit;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #434655;
+  color: var(--color-text-muted);
   text-decoration: none;
   background: none;
   border: none;
@@ -114,7 +114,7 @@
 }
 
 .back:hover {
-  color: #004ac6;
+  color: var(--color-primary);
 }
 
 .back svg {
@@ -123,10 +123,10 @@
 
 .info-card,
 .exam-panel {
-  background: #fff;
-  border: 1px solid #c3c6d7;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .info-card {
@@ -138,7 +138,7 @@
   margin-bottom: 1rem;
   font-size: 1.125rem;
   font-weight: 600;
-  color: #004ac6;
+  color: var(--color-primary);
   letter-spacing: -0.01em;
 }
 
@@ -155,7 +155,7 @@
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #434655;
+  color: var(--color-text-muted);
 }
 
 .info-item dd {
@@ -165,7 +165,7 @@
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #004ac6;
+  color: var(--color-primary);
   word-break: break-word;
 }
 
@@ -174,7 +174,7 @@
 }
 
 .time-critical {
-  color: #dc2626 !important;
+  color: var(--color-danger) !important;
 }
 
 .exam-panel {
@@ -188,7 +188,7 @@
   gap: 1rem;
   padding-bottom: 1rem;
   margin-bottom: 1.5rem;
-  border-bottom: 1px solid #c3c6d7;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .panel-heading {
@@ -198,7 +198,7 @@
 .exam-code {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #191c1e;
+  color: var(--color-text);
   letter-spacing: -0.02em;
   word-break: break-word;
 }
@@ -207,7 +207,7 @@
   margin-top: 0.125rem;
   font-size: 0.75rem;
   font-weight: 500;
-  color: #434655;
+  color: var(--color-text-muted);
 }
 
 .panel-actions {
@@ -226,19 +226,19 @@
   font-size: 0.875rem;
   font-weight: 600;
   color: #fff;
-  background: #22c55e;
-  border: 1px solid #22c55e;
+  background: var(--color-success);
+  border: 1px solid var(--color-success);
   border-radius: var(--radius-sm);
   cursor: pointer;
   box-shadow:
-    0 4px 6px -1px rgba(34, 197, 94, 0.25),
-    0 2px 4px -2px rgba(34, 197, 94, 0.2);
+    0 4px 6px -1px color-mix(in srgb, var(--color-success) 25%, transparent),
+    0 2px 4px -2px color-mix(in srgb, var(--color-success) 20%, transparent);
   transition: background 0.15s ease;
 }
 
 .submit-btn:hover {
-  background: #16a34a;
-  border-color: #16a34a;
+  background: color-mix(in srgb, var(--color-success) 88%, black);
+  border-color: color-mix(in srgb, var(--color-success) 88%, black);
 }
 
 .workspace {
@@ -254,8 +254,8 @@
 
 .question-card {
   padding: 1.5rem;
-  background: #fff;
-  border: 1px solid #c3c6d7;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
 }
 
@@ -265,7 +265,7 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #004ac6;
+  color: var(--color-primary);
 }
 
 .question-text {
@@ -273,13 +273,13 @@
   font-size: 1rem;
   font-weight: 600;
   line-height: 1.5;
-  color: #191c1e;
+  color: var(--color-text);
 }
 
 .multi-hint {
   margin: -0.75rem 0 1rem;
   font-size: 0.875rem;
-  color: #004ac6;
+  color: var(--color-primary);
 }
 
 .options {
@@ -299,8 +299,8 @@
   padding: 1rem 1.0625rem;
   font-family: inherit;
   text-align: left;
-  background: rgba(247, 249, 251, 0.5);
-  border: 1px solid #c3c6d7;
+  background: color-mix(in srgb, var(--color-surface-muted) 50%, transparent);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition:
@@ -310,14 +310,14 @@
 }
 
 .option:hover {
-  border-color: rgba(0, 74, 198, 0.35);
-  background: rgba(0, 74, 198, 0.04);
+  border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  background: color-mix(in srgb, var(--color-primary-light) 60%, transparent);
 }
 
 .option-selected {
-  background: rgba(0, 74, 198, 0.06);
-  border: 2px solid #004ac6;
-  box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.12);
+  background: var(--color-primary-light);
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
 .option-key {
@@ -329,21 +329,21 @@
   flex-shrink: 0;
   font-size: 0.75rem;
   font-weight: 500;
-  color: #434655;
-  background: #eceef0;
+  color: var(--color-text-muted);
+  background: var(--color-surface-muted);
   border-radius: var(--radius-lg);
 }
 
 .option-selected .option-key {
   color: #fff;
-  background: #004ac6;
+  background: var(--color-primary);
 }
 
 .option-label {
   flex: 1;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #191c1e;
+  color: var(--color-text);
 }
 
 .question-toolbar {
@@ -352,7 +352,7 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding-top: 1.5rem;
-  border-top: 1px solid #c3c6d7;
+  border-top: 1px solid var(--color-border);
 }
 
 .toolbar-spacer {
@@ -374,16 +374,16 @@
   padding: 0;
   font-family: inherit;
   font-size: 0.8125rem;
-  color: #191c1e;
+  color: var(--color-text);
   background: transparent;
-  border: 1px solid #c3c6d7;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   cursor: pointer;
 }
 
 .page-btn:not(:disabled):hover {
-  border-color: rgba(0, 74, 198, 0.2);
-  color: #004ac6;
+  border-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  color: var(--color-primary);
 }
 
 .page-btn:disabled {
@@ -395,7 +395,7 @@
   min-width: 4rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #191c1e;
+  color: var(--color-text);
   text-align: center;
 }
 
@@ -405,8 +405,8 @@
   gap: 0.875rem;
   min-width: 0;
   padding: 1rem;
-  background: #f8f9fb;
-  border: 1px solid #c3c6d7;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
 }
 
@@ -419,13 +419,13 @@
 .palette-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #191c1e;
+  color: var(--color-text);
 }
 
 .palette-meta {
   margin: 0;
   font-size: 0.75rem;
-  color: #434655;
+  color: var(--color-text-muted);
 }
 
 .legend {
@@ -435,7 +435,7 @@
   margin: 0;
   padding: 0;
   font-size: 0.6875rem;
-  color: #434655;
+  color: var(--color-text-muted);
   list-style: none;
 }
 
@@ -449,21 +449,21 @@
   width: 0.625rem;
   height: 0.625rem;
   border-radius: var(--radius-sm);
-  border: 1px solid #c3c6d7;
+  border: 1px solid var(--color-border);
 }
 
 .dot-current {
-  background: #004ac6;
-  border-color: #004ac6;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .dot-answered {
-  background: rgba(0, 74, 198, 0.15);
-  border-color: rgba(0, 74, 198, 0.35);
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .dot-empty {
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .grid {
@@ -483,9 +483,9 @@
   font-family: inherit;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #434655;
-  background: #fff;
-  border: 1px solid #c3c6d7;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition:
@@ -495,19 +495,19 @@
 }
 
 .grid-btn:hover {
-  border-color: rgba(0, 74, 198, 0.35);
+  border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .grid-btn-answered {
-  color: #004ac6;
-  background: rgba(0, 74, 198, 0.08);
-  border-color: rgba(0, 74, 198, 0.25);
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary-light) 80%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
 
 .grid-btn-active {
   color: #fff;
-  background: #004ac6;
-  border-color: #004ac6;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 @media (max-width: 960px) {

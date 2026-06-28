@@ -12,6 +12,7 @@ import WorkspaceSwitcher from "@/common/WorkspaceSwitcher/WorkspaceSwitcher";
 import { flattenAdminNavItems } from "@/features/admin/adminNavData";
 import AdminNotificationDropdown from "./AdminNotificationDropdown";
 import AdminSettingsMenu from "./AdminSettingsMenu";
+import ThemeSwitcher from "@/common/ThemeSwitcher/ThemeSwitcher";
 import styles from "./AdminHeader.module.css";
 
 function resolvePageTitle(pathname, search) {
@@ -122,6 +123,8 @@ function AdminHeader() {
 
             {menuOpen ? (
               <div className={styles.menu} role="menu">
+                <ThemeSwitcher variant="menu" />
+                <div className={styles.menuDivider} />
                 <div className={styles.menuWorkspace}>
                   <WorkspaceSwitcher
                     variant="menu-compact"

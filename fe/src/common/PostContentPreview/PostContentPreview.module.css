@@ -9,17 +9,17 @@
 
 .root a {
   font-weight: 500;
-  color: #2563eb;
+  color: var(--color-primary);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
 .root a:hover {
-  color: #1d4ed8;
+  color: var(--color-primary-hover);
 }
 
 .empty {
   margin: 0;
   font-size: 0.875rem;
-  color: #94a3b8;
+  color: var(--color-text-subtle);
 }

@@ -29,7 +29,7 @@
   grid-template-columns: 1fr;
   gap: 1.75rem;
   align-items: center;
-  background: linear-gradient(120deg, #eff6ff 0%, #f8fbff 42%, #ffffff 100%);
+  background: var(--gradient-hero);
   border: 1px solid var(--color-primary-soft);
   border-radius: 28px;
   box-shadow: 0 10px 36px rgba(37, 99, 235, 0.08);
@@ -381,7 +381,7 @@ a.contact-value:hover {
   text-align: center;
   background: var(--gradient-primary);
   border-radius: var(--radius-xl);
-  color: #fff;
+  color: var(--color-auth-on-brand);
 }
 
 .cta-title {
@@ -407,7 +407,7 @@ a.contact-value:hover {
 }
 
 .cta-btn-light {
-  background: #fff !important;
+  background: var(--color-surface) !important;
   color: var(--color-primary) !important;
   border-radius: var(--radius-full) !important;
 }
@@ -423,7 +423,7 @@ a.contact-value:hover {
   padding: 0.625rem 1.25rem;
   font-weight: 600;
   font-size: 0.875rem;
-  color: #fff;
+  color: var(--color-auth-on-brand);
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.75);
   border-radius: var(--radius-full);

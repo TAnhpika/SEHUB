@@ -10,7 +10,12 @@
 
 .skeleton {
   display: block;
-  background: linear-gradient(90deg, #f4f6f8 0%, #e8ecf1 50%, #f4f6f8 100%);
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base) 0%,
+    var(--skeleton-shine) 50%,
+    var(--skeleton-base) 100%
+  );
   background-size: 200% 100%;
   border-radius: var(--radius-lg);
   animation: profileShimmer 1.2s ease-in-out infinite;

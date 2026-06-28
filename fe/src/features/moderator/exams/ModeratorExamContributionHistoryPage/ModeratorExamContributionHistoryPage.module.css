@@ -12,8 +12,8 @@
 
 .metric {
   padding: 1rem 1.125rem;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.35);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 12px;
 }
 
@@ -21,13 +21,13 @@
   margin: 0;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .metricLabel {
   margin: 0.25rem 0 0;
   font-size: 0.8125rem;
-  color: #737686;
+  color: var(--moderator-text-subtle);
 }
 
 .toolbar {
@@ -53,7 +53,7 @@
 .filterLabel {
   font-size: 0.6875rem;
   font-weight: 700;
-  color: #737686;
+  color: var(--moderator-text-subtle);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -63,27 +63,27 @@
   padding: 0.5rem 0.75rem;
   font-family: inherit;
   font-size: 0.8125rem;
-  border: 1px solid #c3c6d7;
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
 }
 
 .panel {
   padding: 1.25rem 1.5rem;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.35);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 12px;
 }
 
 .loading {
   margin: 0;
   font-size: 0.875rem;
-  color: #737686;
+  color: var(--moderator-text-subtle);
 }
 
 .error {
   margin: 0;
   font-size: 0.875rem;
-  color: #b42318;
+  color: var(--color-danger);
 }
 
 .footer {
@@ -93,13 +93,13 @@
   align-items: center;
   padding-top: 1rem;
   margin-top: 0.5rem;
-  border-top: 1px solid rgba(195, 198, 215, 0.35);
+  border-top: 1px solid var(--moderator-border);
 }
 
 .footerMeta {
   margin: 0;
   font-size: 0.8125rem;
-  color: #737686;
+  color: var(--moderator-text-subtle);
 }
 
 .quickLinks {
@@ -112,7 +112,7 @@
 .quickLinks a {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #004ac6;
+  color: var(--moderator-primary);
   text-decoration: none;
 }
 

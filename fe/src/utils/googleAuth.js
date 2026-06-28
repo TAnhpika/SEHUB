@@ -85,7 +85,11 @@ export async function requestGoogleIdToken() {
 
     window.google.accounts.id.renderButton(container, {
       type: "standard",
-      theme: "outline",
+      theme:
+        typeof document !== "undefined" &&
+        document.documentElement.dataset.theme === "dark"
+          ? "filled_black"
+          : "outline",
       size: "large",
       text: "signin_with",
       width: 280,

@@ -13,7 +13,7 @@
 
 .header-icon {
   font-size: 1.25rem;
-  color: #004ac6;
+  color: var(--color-primary);
 }
 
 .title {
@@ -38,8 +38,8 @@
   max-height: 32rem;
   padding: 1rem;
   overflow-y: auto;
-  background: #f8f9fb;
-  border: 1px solid #e4e7ef;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
 
@@ -68,26 +68,26 @@
   height: 2rem;
   flex-shrink: 0;
   font-size: 0.8125rem;
-  color: #fff;
-  background: #004ac6;
+  color: var(--color-auth-on-brand);
+  background: var(--color-primary);
   border-radius: var(--radius-sm);
 }
 
 .message-user .avatar {
-  background: #434655;
+  background: var(--color-text-muted);
 }
 
 .bubble {
   max-width: 78%;
   padding: 0.625rem 0.875rem;
-  background: #fff;
-  border: 1px solid #e4e7ef;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
 
 .message-user .bubble {
-  background: #eef3ff;
-  border-color: rgba(0, 74, 198, 0.15);
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-soft);
 }
 
 .text {
@@ -124,14 +124,16 @@
   font: inherit;
   font-size: 0.875rem;
   line-height: 1.45;
+  color: var(--color-text);
+  background: var(--color-surface);
   resize: vertical;
-  border: 1px solid #d8dce6;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
 
 .input:focus {
-  outline: 2px solid rgba(0, 74, 198, 0.25);
-  border-color: #004ac6;
+  outline: 2px solid var(--color-primary-ring);
+  border-color: var(--color-primary);
 }
 
 .send {
@@ -140,8 +142,8 @@
   justify-content: center;
   width: 2.75rem;
   height: 2.75rem;
-  color: #fff;
-  background: #004ac6;
+  color: var(--color-auth-on-brand);
+  background: var(--color-primary);
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
