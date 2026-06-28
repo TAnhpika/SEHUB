@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMedal, faXmark } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import { Modal } from "@/common/Modal/Modal";
+import backdropStyles from "@/common/styles/modalBackdrop.module.css";
 import { RANK_COLORS } from "@/features/admin/gamification/adminGamificationPolicy";
 import gStyles from "@/features/admin/gamification/Gamification.module.css";
 import styles from "@/features/admin/shared/adminPage.module.css";
@@ -50,8 +52,6 @@ function RankFormModal({ open, editing, onClose, onSubmit, error = "" }) {
     }
   }, [open, editing]);
 
-  if (!open) return null;
-
   function patch(updates) {
     setForm((prev) => ({ ...prev, ...updates }));
   }
@@ -62,13 +62,13 @@ function RankFormModal({ open, editing, onClose, onSubmit, error = "" }) {
   }
 
   return (
-    <div className={gStyles.modalBackdrop} role="presentation" onClick={onClose}>
-      <div
-        className={gStyles.modal}
-        role="dialog"
-        aria-labelledby="rank-form-title"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal
+      open={open}
+      onClose={onClose}
+      className={backdropStyles.overlay}
+      panelClassName={gStyles.modal}
+      closeOnOverlay
+    >
         <header className={gStyles.modalHead}>
           <div>
             <h2 id="rank-form-title" className={gStyles.modalTitle}>
@@ -197,8 +197,7 @@ function RankFormModal({ open, editing, onClose, onSubmit, error = "" }) {
             <Button type="submit">{editing ? "Lưu thay đổi" : "Tạo cấp hạng"}</Button>
           </footer>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

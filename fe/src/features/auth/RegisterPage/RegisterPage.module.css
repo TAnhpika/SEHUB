@@ -9,21 +9,8 @@
 }
 
 .formSection {
-  position: relative;
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  min-width: 0;
-  height: 100%;
-  max-height: 100vh;
+  composes: form-section from "../authForm.module.css";
   padding: clamp(0.75rem, 1.6vh, 1.5rem) clamp(2rem, 4vw, 4rem);
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 85% 15%, rgba(77, 124, 255, 0.08) 0%, transparent 42%),
-    radial-gradient(circle at 10% 90%, rgba(0, 74, 198, 0.06) 0%, transparent 38%),
-    var(--gradient-auth-form);
 }
 
 .formSection::before {
@@ -56,18 +43,10 @@
 }
 
 .formCard {
-  display: flex;
-  flex-direction: column;
+  composes: form-card from "../authForm.module.css";
   gap: clamp(0.75rem, 1.4vh, 1.125rem);
   padding: clamp(1.125rem, 2vh, 1.75rem) clamp(1.375rem, 2.5vw, 2.125rem)
     clamp(0.875rem, 1.6vh, 1.25rem);
-  background: color-mix(in srgb, var(--moderator-surface) 82%, transparent);
-  border: 1px solid color-mix(in srgb, var(--moderator-surface) 90%, transparent);
-  border-radius: 1.25rem;
-  box-shadow:
-    var(--shadow-sm),
-    0 20px 45px -18px color-mix(in srgb, var(--moderator-primary) 18%, transparent);
-  backdrop-filter: blur(16px);
 }
 
 .header {
@@ -123,158 +102,61 @@
 }
 
 .field {
-  display: flex;
-  flex-direction: column;
+  composes: field from "../authForm.module.css";
   gap: 0.3125rem;
 }
 
 .label {
+  composes: label from "../authForm.module.css";
   font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-auth-label);
 }
 
 .input-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-wrap:focus-within .input-icon {
-  color: var(--color-primary);
+  composes: input-wrap from "../authForm.module.css";
 }
 
 .input-icon {
-  position: absolute;
+  composes: input-icon from "../authForm.module.css";
   left: 0.8125rem;
-  z-index: 1;
   font-size: 0.75rem;
-  color: var(--color-text-subtle);
-  pointer-events: none;
-  transition: color 0.2s ease;
 }
 
 .input {
-  width: 100%;
+  composes: input from "../authForm.module.css";
   padding: clamp(0.625rem, 1.15vh, 0.75rem) 2.25rem clamp(0.625rem, 1.15vh, 0.75rem) 2.125rem;
-  font-family: inherit;
   font-size: 0.8125rem;
-  color: var(--color-auth-heading);
-  background: var(--color-auth-input-bg);
-  border: 1.5px solid var(--color-auth-input-border);
   border-radius: 0.6875rem;
-  outline: none;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
 }
 
 .field:has(.toggle-password) .input {
   padding-right: 2.375rem;
 }
 
-.input::placeholder {
-  color: color-mix(in srgb, var(--color-text-subtle) 55%, transparent);
-}
-
-.input:hover {
-  border-color: color-mix(in srgb, var(--color-primary) 25%, transparent);
-}
-
-.input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-ring);
-}
-
 .toggle-password {
-  position: absolute;
+  composes: toggle-password from "../authForm.module.css";
   right: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 26px;
   height: 26px;
   font-size: 0.75rem;
-  color: var(--color-text-subtle);
-  background: none;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-}
-
-.toggle-password:hover {
-  color: var(--color-primary);
-  background: var(--moderator-primary-muted);
 }
 
 .submit-btn {
-  width: 100%;
+  composes: submit-btn from "../authForm.module.css";
   padding: clamp(0.6875rem, 1.25vh, 0.8125rem) 1.25rem;
-  font-family: inherit;
   font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--color-auth-on-brand);
-  cursor: pointer;
-  background: var(--gradient-primary);
-  border: none;
-  border-radius: 0.75rem;
-  box-shadow: var(--shadow-auth-submit);
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.2s ease,
-    filter 0.2s ease;
-}
-
-.submit-btn:hover:not(:disabled) {
-  filter: brightness(1.05);
-  transform: translateY(-1px);
-}
-
-.submit-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
 }
 
 .divider {
-  display: flex;
+  composes: divider from "../authForm.module.css";
   gap: 0.625rem;
-  align-items: center;
   font-size: 0.6875rem;
-  font-weight: 500;
-  color: var(--color-text-subtle);
-}
-
-.divider::before,
-.divider::after {
-  flex: 1;
-  height: 1px;
-  content: "";
-  background: var(--color-auth-social-border);
 }
 
 .google-btn {
-  display: flex;
+  composes: google-btn from "../authForm.module.css";
   gap: 0.5rem;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
   padding: clamp(0.625rem, 1.15vh, 0.75rem) 1.25rem;
-  font-family: inherit;
   font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-auth-heading);
-  cursor: pointer;
-  background: var(--color-auth-input-bg);
-  border: 1.5px solid var(--color-auth-social-border);
-  border-radius: 0.75rem;
-  transition:
-    border-color 0.2s ease,
-    background 0.2s ease;
-}
-
-.google-btn:hover {
-  background: var(--moderator-bg);
-  border-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .google-icon {

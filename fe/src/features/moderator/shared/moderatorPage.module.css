@@ -29,34 +29,15 @@
 }
 
 .panel {
-  padding: 1.25rem 1.5rem;
-  background: var(--moderator-surface);
-  border: 1px solid var(--moderator-border);
-  border-radius: 12px;
-  box-shadow: var(--shadow-sm);
+  composes: panel from "../../admin/shared/adminPage.module.css";
 }
 
 .table {
-  width: 100%;
-  font-size: 0.875rem;
-  border-collapse: collapse;
-}
-
-.table th,
-.table td {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  border-bottom: 1px solid var(--moderator-border);
-}
-
-.table th {
-  font-weight: 600;
-  color: var(--moderator-text-muted);
-  background: var(--moderator-bg);
+  composes: table from "../../admin/shared/adminPage.module.css";
 }
 
 .tableWrap {
-  overflow-x: auto;
+  composes: tableWrap from "../../admin/shared/adminPage.module.css";
 }
 
 .badgePending {

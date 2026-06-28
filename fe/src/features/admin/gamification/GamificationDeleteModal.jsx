@@ -1,6 +1,8 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash, faXmark } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import { Modal } from "@/common/Modal/Modal";
+import backdropStyles from "@/common/styles/modalBackdrop.module.css";
 import gStyles from "@/features/admin/gamification/Gamification.module.css";
 
 /**
@@ -13,16 +15,14 @@ import gStyles from "@/features/admin/gamification/Gamification.module.css";
  * }} props
  */
 function GamificationDeleteModal({ open, title, targetLabel, onClose, onConfirm }) {
-  if (!open) return null;
-
   return (
-    <div className={gStyles.modalBackdrop} role="presentation" onClick={onClose}>
-      <div
-        className={gStyles.modal}
-        role="alertdialog"
-        aria-labelledby="gam-delete-title"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal
+      open={open}
+      onClose={onClose}
+      className={backdropStyles.overlay}
+      panelClassName={gStyles.modal}
+      closeOnOverlay
+    >
         <header className={gStyles.modalHead}>
           <div>
             <h2 id="gam-delete-title" className={gStyles.modalTitle}>
@@ -44,8 +44,7 @@ function GamificationDeleteModal({ open, title, targetLabel, onClose, onConfirm 
             <FontAwesomeIcon icon={faTrash} /> Xóa
           </Button>
         </footer>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

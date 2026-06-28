@@ -1,4 +1,4 @@
-import { formatRelativeTimeFromApi, parseApiDate } from "@/utils/parseApiDate";
+import { formatRelativeTimeFromApi, parseApiDate } from "@/utils/dateTime";
 import { resolveAssetUrl } from "@/api/assetUrl";
 
 function mapPostImage(dto) {

@@ -1,15 +1,4 @@
-import { apiRequest } from "./httpClient";
-
-function buildQuery(params = {}) {
-  const search = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "" && value !== "all") {
-      search.set(key, String(value));
-    }
-  });
-  const qs = search.toString();
-  return qs ? `?${qs}` : "";
-}
+import { apiRequest, buildQuery } from "./httpClient";
 
 export function submitPractice(examId, body) {
   return apiRequest(`/api/v1/exams/${examId}/practice-submissions`, {

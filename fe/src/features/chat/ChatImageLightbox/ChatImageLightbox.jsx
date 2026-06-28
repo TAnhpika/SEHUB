@@ -1,11 +1,14 @@
 import { useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import styles from "./ChatImageLightbox.module.css";
 
 function ChatImageLightbox({ image, onClose, onBackdropClick, onImageClick }) {
+  useLockBodyScroll(Boolean(image?.url));
+
   useEffect(() => {
-    if (!image) return undefined;
+    if (!image?.url) return undefined;
 
     function handleKeyDown(event) {
       if (event.key === "Escape") {
@@ -13,12 +16,10 @@ function ChatImageLightbox({ image, onClose, onBackdropClick, onImageClick }) {
       }
     }
 
-    document.addEventListener("keydown", handleKeyDown);
-    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, [image, onClose]);
 

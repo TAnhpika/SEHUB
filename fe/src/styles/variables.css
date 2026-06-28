@@ -55,6 +55,10 @@
   --layout-max-width: 1680px;
   --layout-gutter: 1.25rem;
   --header-height: 72px;
+  /* Stacking — exam focus fullscreen must stay below global overlays */
+  --z-exam-focus: 9999;
+  --z-overlay: 10000;
+  --z-toast: 10001;
   /* Sidebar trái — căn theo Figma (padding đối xứng ~16px) */
   --sidebar-inline-padding: 1rem;
   --feed-sidebar-fixed: 252px;

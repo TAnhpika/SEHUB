@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrophy, faXmark } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import { Modal } from "@/common/Modal/Modal";
+import backdropStyles from "@/common/styles/modalBackdrop.module.css";
 import {
   BADGE_CATEGORIES,
   TRIGGER_TYPES,
@@ -58,8 +60,6 @@ function BadgeFormModal({ open, editing, onClose, onSubmit, error = "" }) {
     [form.triggerType, form.triggerValue],
   );
 
-  if (!open) return null;
-
   function patch(updates) {
     setForm((prev) => ({ ...prev, ...updates }));
   }
@@ -70,13 +70,13 @@ function BadgeFormModal({ open, editing, onClose, onSubmit, error = "" }) {
   }
 
   return (
-    <div className={gStyles.modalBackdrop} role="presentation" onClick={onClose}>
-      <div
-        className={gStyles.modal}
-        role="dialog"
-        aria-labelledby="badge-form-title"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal
+      open={open}
+      onClose={onClose}
+      className={backdropStyles.overlay}
+      panelClassName={gStyles.modal}
+      closeOnOverlay
+    >
         <header className={gStyles.modalHead}>
           <div>
             <h2 id="badge-form-title" className={gStyles.modalTitle}>
@@ -211,8 +211,7 @@ function BadgeFormModal({ open, editing, onClose, onSubmit, error = "" }) {
             <Button type="submit">{editing ? "Lưu danh hiệu" : "Tạo danh hiệu"}</Button>
           </footer>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

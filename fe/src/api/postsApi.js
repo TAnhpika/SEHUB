@@ -1,15 +1,4 @@
-import { apiRequest, apiUploadRequest } from "./httpClient";
-
-function buildQuery(params = {}) {
-  const search = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "" && value !== "all") {
-      search.set(key, String(value));
-    }
-  });
-  const qs = search.toString();
-  return qs ? `?${qs}` : "";
-}
+import { apiRequest, apiUploadRequest, buildQuery } from "./httpClient";
 
 export function listPosts(params = {}) {
   return apiRequest(`/api/v1/posts${buildQuery(params)}`);

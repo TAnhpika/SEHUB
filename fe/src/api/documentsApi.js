@@ -1,17 +1,6 @@
-import { apiRequest, getAccessToken } from "./httpClient";
+import { apiRequest, buildQuery, getAccessToken } from "./httpClient";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5006";
-
-function buildQuery(params = {}) {
-  const search = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "" && value !== "all") {
-      search.set(key, String(value));
-    }
-  });
-  const qs = search.toString();
-  return qs ? `?${qs}` : "";
-}
 
 export function listDocuments(params = {}) {
   return apiRequest(`/api/v1/documents${buildQuery(params)}`);
