@@ -12,6 +12,11 @@ import {
   mapImportedExamQuestions,
   sanitizeWizardQuestionContent,
 } from "@/features/moderator/finalExams/finalExamData";
+import {
+  appendQuestionImageToContent,
+  extractQuestionImageUrl,
+  stripQuestionImageMarkup,
+} from "@/utils/examQuestionContent";
 
 const ROLE_MAP = {
   student: "student",
@@ -231,9 +236,14 @@ export function mapAdminReviewQuestion(question, index = 0) {
   const legacyCorrect =
     typeof question.correct === "number" && question.correct >= 0 ? question.correct : 0;
 
+  const rawText = question.content ?? question.Content ?? question.text ?? "";
+  const imageUrl =
+    question.imageUrl ?? question.ImageUrl ?? extractQuestionImageUrl(rawText) ?? null;
+
   return {
     id: question.orderIndex ?? question.OrderIndex ?? question.id ?? index + 1,
-    text: question.content ?? question.Content ?? question.text ?? "",
+    text: stripQuestionImageMarkup(rawText),
+    imageUrl,
     options: optionTexts,
     correct: correctIndices[0] ?? legacyCorrect,
     correctIndices: correctIndices.length > 0 ? correctIndices : [legacyCorrect],
@@ -427,7 +437,9 @@ export function mapMockOcrQuestionsToCreateItems(questions) {
     const fallbackCorrect = options.find((option) => correctOptionIds.includes(String(option.id))) ?? options[0];
     const questionType = String(question.questionType ?? question.QuestionType ?? "").toLowerCase();
     const isMulti = questionType === "multiselect";
-    const content = String(question.content ?? question.Content ?? question.text ?? "").trim();
+    const baseContent = String(question.content ?? question.Content ?? question.text ?? "").trim();
+    const imageUrl = question.imageUrl ?? question.ImageUrl ?? extractQuestionImageUrl(baseContent);
+    const content = appendQuestionImageToContent(baseContent, imageUrl);
 
     return {
       orderIndex: question.orderIndex ?? question.OrderIndex ?? index + 1,

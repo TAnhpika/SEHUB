@@ -16,17 +16,20 @@ public sealed class ExamsController : ControllerBase
     private readonly IOcrExamService _ocrExamService;
     private readonly IExamMarkdownImportService _markdownImportService;
     private readonly IExamAttachmentService _examAttachmentService;
+    private readonly IExamImageService _examImageService;
 
     public ExamsController(
         IAdminExamService adminExamService,
         IOcrExamService ocrExamService,
         IExamMarkdownImportService markdownImportService,
-        IExamAttachmentService examAttachmentService)
+        IExamAttachmentService examAttachmentService,
+        IExamImageService examImageService)
     {
         _adminExamService = adminExamService;
         _ocrExamService = ocrExamService;
         _markdownImportService = markdownImportService;
         _examAttachmentService = examAttachmentService;
+        _examImageService = examImageService;
     }
 
     [HttpGet]
@@ -106,6 +109,27 @@ public sealed class ExamsController : ControllerBase
     public IActionResult ImportMarkdown([FromBody] ImportExamMarkdownRequest request)
     {
         var result = _markdownImportService.Parse(request.Markdown);
+        return Ok(result);
+    }
+
+    [HttpPost("upload-question-image")]
+    [Authorize(Policy = PolicyNames.RequireModerator)]
+    [RequestSizeLimit(5_242_880)]
+    public async Task<IActionResult> UploadQuestionImage(IFormFile file, CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest(new { message = "File is required." });
+        }
+
+        await using var stream = file.OpenReadStream();
+        var result = await _examImageService.UploadQuestionImageAsync(
+            stream,
+            file.FileName,
+            file.ContentType,
+            file.Length,
+            cancellationToken);
+
         return Ok(result);
     }
 

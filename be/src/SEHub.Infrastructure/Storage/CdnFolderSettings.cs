@@ -11,11 +11,13 @@ public sealed class CdnFolderSettings : ICdnFolderSettings
         Avatars = NormalizeFolder(settings.AvatarFolder, "sehub/avatars");
         Posts = NormalizeFolder(settings.PostFolder, "sehub/posts");
         Chat = NormalizeFolder(settings.ChatFolder, "sehub/chat");
+        Exam = NormalizeFolder(settings.ExamFolder, "exam");
     }
 
     public string Avatars { get; }
     public string Posts { get; }
     public string Chat { get; }
+    public string Exam { get; }
 
     private static string NormalizeFolder(string? value, string fallback)
     {

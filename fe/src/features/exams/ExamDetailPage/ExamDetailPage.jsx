@@ -15,6 +15,7 @@ import {
   faShuffle,
 } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
+import RichTextContent from "@/common/RichTextEditor/RichTextContent";
 import { useAuth } from "@/context";
 import { useRequirePremium } from "@/hooks/useRequirePremium";
 import ExamAiExplanation from "@/features/exams/ExamAiExplanation/ExamAiExplanation";
@@ -549,7 +550,10 @@ function ExamDetailPage({ page }) {
                   {correctAnswerRevealed ? " · Đáp án đã hiện" : ""}
                 </p>
               )}
-              <h3 className={styles["question-text"]}>{currentQuestion?.text}</h3>
+              <RichTextContent
+                value={currentQuestion?.text}
+                className={styles["question-text"]}
+              />
               {currentQuestion?.questionType === "MultiSelect" && currentQuestion?.requiredSelectCount ? (
                 <p className={styles["multi-hint"]}>
                   Chọn đúng {currentQuestion.requiredSelectCount} đáp án.

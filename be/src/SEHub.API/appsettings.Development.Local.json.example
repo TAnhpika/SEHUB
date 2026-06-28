@@ -41,7 +41,8 @@
     "Secure": true,
     "AvatarFolder": "sehub/avatars",
     "PostFolder": "sehub/posts",
-    "ChatFolder": "sehub/chat"
+    "ChatFolder": "sehub/chat",
+    "ExamFolder": "exam"
   },
 
   "PayOS": {
