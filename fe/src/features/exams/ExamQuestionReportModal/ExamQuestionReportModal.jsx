@@ -116,7 +116,7 @@ function ExamQuestionReportModal({
               Báo cáo câu hỏi ôn tập
             </h2>
             <p className={styles.subtitle}>
-              {examId} · Câu {questionIndex}
+              {courseCode ?? examId} · Câu {questionIndex}
             </p>
             <p className={styles.subtitle}>{EXAM_REPORT_ROUTING.description}</p>
           </div>

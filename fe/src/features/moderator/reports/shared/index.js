@@ -8,9 +8,13 @@ export function getReportResolutionMessage(report) {
   }
 
   if (report.category === "user") {
-    return String(report.resolution ?? "").includes("banned")
-      ? "Tài khoản đã bị khóa và báo cáo đã đóng."
-      : "Báo cáo đã bỏ qua.";
+    if (report.resolution === "escalated_violations") {
+      return "Đã chuyển tài khoản sang trang Tài khoản vi phạm.";
+    }
+    if (String(report.resolution ?? "").includes("banned")) {
+      return "Tài khoản đã bị khóa và báo cáo đã đóng.";
+    }
+    return "Báo cáo đã được ghi nhận";
   }
 
   if (report.resolution === "deleted") return "Nội dung vi phạm đã được xóa.";
@@ -28,6 +32,7 @@ export {
   MODERATION_QUEUE_FETCH_SIZE,
 } from "./reportCategoryConstants";
 export { default as ReasonTag } from "./ReasonTag";
+export { buildViolationsHref } from "./violationsLink";
 export {
   filterModerationReports,
   getReportedUsername,

@@ -7,6 +7,8 @@ using SEHub.Application.Messaging;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Exams;
 using SEHub.Contracts.Messaging;
+using SEHub.Application.Users;
+using SEHub.Contracts.Users;
 using SEHub.Shared.Constants;
 
 namespace SEHub.API.Controllers.Admin;
@@ -21,19 +23,22 @@ public sealed class ModerationController : ControllerBase
     private readonly IAdminExportService _exportService;
     private readonly IQuestionReportService _questionReportService;
     private readonly IConversationReportService _conversationReportService;
+    private readonly IUserReportService _userReportService;
 
     public ModerationController(
         IModerationService moderationService,
         IPostService postService,
         IAdminExportService exportService,
         IQuestionReportService questionReportService,
-        IConversationReportService conversationReportService)
+        IConversationReportService conversationReportService,
+        IUserReportService userReportService)
     {
         _moderationService = moderationService;
         _postService = postService;
         _exportService = exportService;
         _questionReportService = questionReportService;
         _conversationReportService = conversationReportService;
+        _userReportService = userReportService;
     }
 
     [HttpGet("featured-posts")]
@@ -151,6 +156,44 @@ public sealed class ModerationController : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _conversationReportService.ResolveAsync(id, request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("user-reports")]
+    public async Task<IActionResult> GetUserReports(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? status = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _userReportService.GetReportsAsync(page, pageSize, status, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("user-reports/pending-count")]
+    public async Task<IActionResult> GetPendingUserReportCount(CancellationToken cancellationToken)
+    {
+        var count = await _userReportService.GetPendingCountAsync(cancellationToken);
+        return Ok(new { count });
+    }
+
+    [HttpPatch("user-reports/{id:guid}")]
+    public async Task<IActionResult> ResolveUserReport(
+        Guid id,
+        [FromBody] ResolveUserReportRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _userReportService.ResolveAsync(id, request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("reports/{id:guid}/escalate-violations")]
+    public async Task<IActionResult> EscalateUserReport(
+        Guid id,
+        [FromBody] EscalateUserReportRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _moderationService.EscalateUserReportAsync(id, request, cancellationToken);
         return Ok(result);
     }
 

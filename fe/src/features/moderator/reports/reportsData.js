@@ -214,6 +214,8 @@ export function mapAdminReportToModeratorCommunityReport(adminReport) {
     apiId: adminReport.id,
     code: formatReportCode(adminReport.id),
     category: "community",
+    kind: adminReport.kind ?? "post",
+    commentId: adminReport.commentId ?? null,
     status: adminReport.status,
     reason: inferReasonId(adminReport.reason),
     reporterUsername: `@${reporter}`,
@@ -221,15 +223,21 @@ export function mapAdminReportToModeratorCommunityReport(adminReport) {
     timeLabel: formatTimeLabel(createdAtIso),
     reportedAt: formatReportedAt(createdAtIso),
     createdAtIso,
-    snippet: adminReport.post?.excerpt ?? adminReport.post?.title ?? adminReport.reason,
+    snippet:
+      adminReport.kind === "comment"
+        ? adminReport.post?.excerpt ?? adminReport.reason
+        : adminReport.post?.excerpt ?? adminReport.post?.title ?? adminReport.reason,
     reportedUser: {
       username: `@${reportedUser}`,
       initial: toInitials(reportedUser),
       joinedAt: "—",
       trustScore: 50,
     },
+    reportedUserId: adminReport.reportedUserId ?? null,
     violatingContent:
-      adminReport.post?.excerpt ?? adminReport.post?.title ?? adminReport.reason ?? "—",
+      adminReport.kind === "comment"
+        ? adminReport.post?.excerpt ?? adminReport.reason ?? "—"
+        : adminReport.post?.excerpt ?? adminReport.post?.title ?? adminReport.reason ?? "—",
     reporterReason: adminReport.reason,
     resolution: mapResolutionFromAdminReport(adminReport),
   };
@@ -272,14 +280,14 @@ export async function loadModeratorCommunityReports(options = {}) {
   };
 }
 
-export async function reloadModeratorCommunityReportsAfterResolve(id, action) {
+export async function reloadModeratorCommunityReportsAfterResolve(id, action, kind = "post") {
   if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
     return null;
   }
 
   const dto =
     action === "delete"
-      ? await resolveReportDeleteViaApi(id)
+      ? await resolveReportDeleteViaApi(id, { kind })
       : await resolveReportDismissViaApi(id);
 
   if (!dto) {

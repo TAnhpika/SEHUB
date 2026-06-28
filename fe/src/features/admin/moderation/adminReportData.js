@@ -351,8 +351,9 @@ export async function resolveAdminReportViaApi(id, body) {
   }
 }
 
-export async function resolveReportDeleteViaApi(id) {
-  return resolveAdminReportViaApi(id, { status: "Approved", action: "delete_post" });
+export async function resolveReportDeleteViaApi(id, { kind = "post" } = {}) {
+  const action = kind === "comment" ? "delete_comment" : "delete_post";
+  return resolveAdminReportViaApi(id, { status: "Approved", action });
 }
 
 export async function resolveReportDismissViaApi(id) {

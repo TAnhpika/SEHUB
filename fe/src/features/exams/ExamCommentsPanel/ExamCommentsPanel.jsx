@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHeart, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
+import UserReportButton from "@/features/reports/UserReportButton/UserReportButton";
 import {
   addExamComment,
   loadExamComments,
@@ -113,7 +114,11 @@ function ExamCommentsPanel({ locked = false, reason = "premium", examId, questio
       {loading ? <p className={styles.empty}>Đang tải bình luận…</p> : null}
 
       <ul className={styles.list}>
-        {comments.map((comment) => (
+        {comments.map((comment) => {
+          const isOwn =
+            Boolean(user?.username && comment.username && user.username === comment.username);
+
+          return (
           <li key={comment.id} className={styles.item}>
             <div className={styles.avatar} style={{ backgroundColor: comment.avatarColor }}>
               {comment.initial}
@@ -124,15 +129,30 @@ function ExamCommentsPanel({ locked = false, reason = "premium", examId, questio
                 <span>{comment.timeAgo}</span>
               </div>
               <p className={styles.content}>{comment.content}</p>
-              {EXAM_USE_MOCK ? (
-                <button type="button" className={styles.like} onClick={() => handleLike(comment.id)}>
-                  <FontAwesomeIcon icon={faHeart} />
-                  {comment.likes > 0 ? comment.likes : ""}
-                </button>
-              ) : null}
+              <div className={styles.actions}>
+                {EXAM_USE_MOCK ? (
+                  <button type="button" className={styles.like} onClick={() => handleLike(comment.id)}>
+                    <FontAwesomeIcon icon={faHeart} />
+                    {comment.likes > 0 ? comment.likes : ""}
+                  </button>
+                ) : null}
+                {comment.userId && !isOwn ? (
+                  <UserReportButton
+                    userId={comment.userId}
+                    username={comment.username || comment.author}
+                    source="question_comment"
+                    examId={examId}
+                    questionId={questionId}
+                    questionCommentId={comment.id}
+                    className={styles.report}
+                    label="Báo cáo người dùng"
+                  />
+                ) : null}
+              </div>
             </div>
           </li>
-        ))}
+          );
+        })}
         {!loading && comments.length === 0 ? (
           <li className={styles.empty}>Chưa có bình luận — hãy là người đầu tiên.</li>
         ) : null}

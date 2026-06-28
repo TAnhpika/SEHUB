@@ -1,7 +1,9 @@
 import * as adminApi from "@/api/adminApi";
 import * as examsApi from "@/api/examsApi";
 import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
+import { resolveExamApiId } from "@/features/exams/examDetailData";
 import { MODERATION_QUEUE_FETCH_SIZE } from "@/features/moderator/reports/shared/reportCategoryConstants";
+import { isValidGuid } from "@/features/feed/postUtils";
 import { formatRelativeTime } from "@/utils/dateTime";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
@@ -159,7 +161,20 @@ export async function submitExamQuestionReport(payload) {
     return toModeratorReport(entry);
   }
 
-  const dto = await examsApi.reportExamQuestion(payload.examId, payload.question.id, {
+  let resolvedExamId = payload.examId;
+  if (!isValidGuid(String(resolvedExamId ?? ""))) {
+    resolvedExamId = await resolveExamApiId(payload.examId);
+  }
+
+  if (!resolvedExamId || !isValidGuid(String(resolvedExamId))) {
+    throw new Error("Không xác định được mã đề. Vui lòng tải lại trang và thử lại.");
+  }
+
+  if (!isValidGuid(String(payload.question?.id ?? ""))) {
+    throw new Error("Không xác định được câu hỏi. Vui lòng tải lại trang và thử lại.");
+  }
+
+  const dto = await examsApi.reportExamQuestion(resolvedExamId, payload.question.id, {
     reason: payload.reason,
     detail: payload.detail.trim(),
   });

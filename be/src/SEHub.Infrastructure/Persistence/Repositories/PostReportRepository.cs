@@ -35,6 +35,34 @@ public class PostReportRepository : IPostReportRepository
         return (items, total);
     }
 
+    public async Task<IReadOnlyList<PostReport>> GetRecentAsync(
+        int take,
+        ReportStatus? status,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.PostReports.AsQueryable();
+        if (status.HasValue)
+        {
+            query = query.Where(r => r.Status == status.Value);
+        }
+
+        return await query
+            .OrderByDescending(r => r.CreatedAt)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<int> CountAsync(ReportStatus? status, CancellationToken cancellationToken = default)
+    {
+        var query = _context.PostReports.AsQueryable();
+        if (status.HasValue)
+        {
+            query = query.Where(r => r.Status == status.Value);
+        }
+
+        return query.CountAsync(cancellationToken);
+    }
+
     public async Task AddAsync(PostReport report, CancellationToken cancellationToken = default) =>
         await _context.PostReports.AddAsync(report, cancellationToken);
 

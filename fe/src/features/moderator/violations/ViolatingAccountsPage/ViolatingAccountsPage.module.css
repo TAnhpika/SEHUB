@@ -4,6 +4,17 @@
   gap: 0.75rem;
 }
 
+.focusBanner {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  background: #eef4ff;
+  border: 1px solid #c7d7fe;
+  border-radius: var(--radius-lg);
+}
+
 .btnOutline,
 .btnPrimary {
   display: inline-flex;
