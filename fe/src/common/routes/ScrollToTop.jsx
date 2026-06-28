@@ -12,11 +12,11 @@ export function scrollContainersToTop() {
 }
 
 export default function ScrollToTop() {
-  const { pathname, search } = useLocation();
+  const { pathname } = useLocation();
 
   useEffect(() => {
     scrollContainersToTop();
-  }, [pathname, search]);
+  }, [pathname]);
 
   return null;
 }

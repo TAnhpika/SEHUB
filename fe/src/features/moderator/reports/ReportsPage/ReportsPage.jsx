@@ -11,7 +11,6 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
-import { scrollContainersToTop } from "@/common/routes/ScrollToTop";
 import { useToast } from "@/common/Toast/ToastProvider";
 import {
   loadModeratorCommunityReports,
@@ -88,13 +87,12 @@ function ReportsPage() {
   useEffect(() => {
     if (!selectedId) return;
 
-    const resetScroll = () => {
+    const resetDetailScroll = () => {
       detailScrollRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
-      scrollContainersToTop();
     };
 
-    resetScroll();
-    requestAnimationFrame(resetScroll);
+    resetDetailScroll();
+    requestAnimationFrame(resetDetailScroll);
   }, [selectedId]);
 
   useEffect(() => {
