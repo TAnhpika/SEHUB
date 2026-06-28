@@ -12,7 +12,7 @@ public class PostReportRepository : IPostReportRepository
     public PostReportRepository(SEHubDbContext context) => _context = context;
 
     public Task<PostReport?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
-        _context.PostReports.Include(r => r.Post).FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
+        _context.PostReports.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
 
     public Task<PostReport?> GetPendingByPostAndReporterAsync(Guid postId, Guid reporterId, CancellationToken cancellationToken = default) =>
         _context.PostReports.FirstOrDefaultAsync(
@@ -20,10 +20,21 @@ public class PostReportRepository : IPostReportRepository
             cancellationToken);
 
     public async Task<(IReadOnlyList<PostReport> Items, int TotalCount)> GetPagedAsync(
-        int page, int pageSize, ReportStatus? status, CancellationToken cancellationToken = default)
+        int page,
+        int pageSize,
+        ReportStatus? status,
+        bool nonPendingOnly = false,
+        CancellationToken cancellationToken = default)
     {
         var query = _context.PostReports.AsQueryable();
-        if (status.HasValue) query = query.Where(r => r.Status == status.Value);
+        if (nonPendingOnly)
+        {
+            query = query.Where(r => r.Status != ReportStatus.Pending);
+        }
+        else if (status.HasValue)
+        {
+            query = query.Where(r => r.Status == status.Value);
+        }
 
         var total = await query.CountAsync(cancellationToken);
         var items = await query

@@ -72,12 +72,25 @@ public sealed class ModerationService : IModerationService
     public async Task<PagedResult<ReportDto>> GetReportsAsync(int page, int pageSize, string? status, CancellationToken cancellationToken = default)
     {
         ReportStatus? statusFilter = null;
+        var nonPendingOnly = false;
         if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<ReportStatus>(status, true, out var parsed))
         {
-            statusFilter = parsed;
+            if (parsed == ReportStatus.Resolved)
+            {
+                nonPendingOnly = true;
+            }
+            else
+            {
+                statusFilter = parsed;
+            }
         }
 
-        var (items, total) = await _reportRepository.GetPagedAsync(page, pageSize, statusFilter, cancellationToken);
+        var (items, total) = await _reportRepository.GetPagedAsync(
+            page,
+            pageSize,
+            statusFilter,
+            nonPendingOnly,
+            cancellationToken);
         var dtos = await MapReportsAsync(items, cancellationToken);
 
         return new PagedResult<ReportDto>
@@ -112,19 +125,28 @@ public sealed class ModerationService : IModerationService
         report.ResolvedById = actorId;
         report.UpdatedAt = DateTime.UtcNow;
 
+        Post? deletedPost = null;
         if (request.Action?.Equals("delete_post", StringComparison.OrdinalIgnoreCase) == true)
         {
-            var post = await _postRepository.GetByIdAsync(report.PostId, cancellationToken);
-            if (post is not null)
+            var post = await _postRepository.GetByIdIncludingDeletedAsync(report.PostId, cancellationToken);
+            if (post is not null && !post.IsDeleted)
             {
                 await _postRepository.SoftDeleteAsync(post, actorId, cancellationToken);
-                await _gamificationService.PublishPostDeletedAsync(post.Id, post.AuthorId, cancellationToken);
+                deletedPost = post;
             }
         }
 
         await _reportRepository.UpdateAsync(report, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         InvalidateModerationStatsCache();
+
+        if (deletedPost is not null)
+        {
+            await _gamificationService.PublishPostDeletedAsync(
+                deletedPost.Id,
+                deletedPost.AuthorId,
+                cancellationToken);
+        }
 
         return await MapReportAsync(report, cancellationToken);
     }
@@ -169,7 +191,12 @@ public sealed class ModerationService : IModerationService
         }
 
         var pendingPosts = await _postRepository.CountByStatusAsync(PostStatus.Pending, cancellationToken);
-        var (_, pendingReports) = await _reportRepository.GetPagedAsync(1, 1, ReportStatus.Pending, cancellationToken);
+        var (_, pendingReports) = await _reportRepository.GetPagedAsync(
+            1,
+            1,
+            ReportStatus.Pending,
+            nonPendingOnly: false,
+            cancellationToken);
         var pendingSubmissions = await _submissionRepository.CountByStatusAsync(
             PracticeSubmissionStatus.Submitted,
             cancellationToken);

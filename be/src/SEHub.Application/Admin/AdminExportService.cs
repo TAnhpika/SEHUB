@@ -93,7 +93,12 @@ public sealed class AdminExportService : IAdminExportService
 
     public async Task<(byte[] Content, string FileName)> ExportReportsCsvAsync(CancellationToken cancellationToken = default)
     {
-        var (items, _) = await _reportRepository.GetPagedAsync(1, 5000, null, cancellationToken);
+        var (items, _) = await _reportRepository.GetPagedAsync(
+            1,
+            5000,
+            null,
+            nonPendingOnly: false,
+            cancellationToken);
         var sb = new StringBuilder();
         sb.AppendLine("report_id,post_id,reporter_id,reason,status,created_at");
         foreach (var report in items)

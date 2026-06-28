@@ -34,7 +34,12 @@ public sealed class AdminDashboardService : IAdminDashboardService
 
     public async Task<DashboardStatsDto> GetStatsAsync(CancellationToken cancellationToken = default)
     {
-        var (_, pendingReports) = await _reportRepository.GetPagedAsync(1, 1, ReportStatus.Pending, cancellationToken);
+        var (_, pendingReports) = await _reportRepository.GetPagedAsync(
+            1,
+            1,
+            ReportStatus.Pending,
+            nonPendingOnly: false,
+            cancellationToken);
 
         return new DashboardStatsDto
         {
