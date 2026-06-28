@@ -104,6 +104,14 @@ public sealed class ConversationsController : ControllerBase
         return Ok(new { read = true });
     }
 
+    [HttpDelete("{conversationId:guid}")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> ClearHistory(Guid conversationId, CancellationToken cancellationToken)
+    {
+        await _messagingService.ClearConversationHistoryAsync(conversationId, cancellationToken);
+        return NoContent();
+    }
+
     [HttpDelete("{conversationId:guid}/messages/{messageId:guid}")]
     [Authorize(Policy = PolicyNames.RequireAuthenticated)]
     public async Task<IActionResult> DeleteMessage(

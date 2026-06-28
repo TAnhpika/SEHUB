@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBars, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
@@ -19,8 +19,13 @@ function MainHeader() {
   const [searchQuery, setSearchQuery] = useState(() =>
     isSearchPage ? (searchParams.get("q") ?? "") : "",
   );
+  const skipSearchSyncRef = useRef(false);
 
   useEffect(() => {
+    if (skipSearchSyncRef.current) {
+      skipSearchSyncRef.current = false;
+      return;
+    }
     if (isSearchPage) {
       setSearchQuery(searchParams.get("q") ?? "");
     }
@@ -31,7 +36,9 @@ function MainHeader() {
     const trimmed = searchQuery.trim();
     if (!trimmed) return;
 
+    skipSearchSyncRef.current = true;
     navigate(`/home/search?q=${encodeURIComponent(trimmed)}`);
+    setSearchQuery("");
   }
 
   function handleMobileSearch() {

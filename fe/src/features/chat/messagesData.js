@@ -45,3 +45,7 @@ export async function sendConversationAttachment(
 export async function markConversationAsRead(conversationId) {
   await messagesApi.markConversationRead(conversationId);
 }
+
+export async function deleteConversationHistory(conversationId) {
+  await messagesApi.deleteConversation(conversationId);
+}

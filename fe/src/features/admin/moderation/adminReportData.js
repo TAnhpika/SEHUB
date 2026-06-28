@@ -336,12 +336,8 @@ export async function resolveAdminReportViaApi(id, body) {
     return null;
   }
 
-  try {
-    const dto = await adminApi.resolveReport(id, body);
-    return mapCommunityReportForQueue(mapAdminReportListItem(dto));
-  } catch {
-    return null;
-  }
+  const dto = await adminApi.resolveReport(id, body);
+  return mapCommunityReportForQueue(mapAdminReportListItem(dto));
 }
 
 export async function resolveReportDeleteViaApi(id) {

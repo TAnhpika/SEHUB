@@ -85,6 +85,26 @@ public sealed class SocialUserEndpointsTests : IClassFixture<CustomWebApplicatio
     }
 
     [Fact]
+    public async Task SearchUsers_DoesNotReturnCurrentUser()
+    {
+        await SeedTargetUserAsync();
+
+        var token = await _factory.LoginAndGetTokenAsync(_client);
+        using var request = CreateAuthorizedGet(
+            token,
+            "/api/v1/users/search?q=freeuser&page=1&pageSize=10");
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<ApiResponse<PagedResult<UserSearchResultDto>>>();
+        body.Should().NotBeNull();
+        body!.Success.Should().BeTrue();
+        body.Data!.Items.Should().NotContain(item => item.UserId == CustomWebApplicationFactory.FreeUserId);
+    }
+
+    [Fact]
     public async Task FollowUser_ThenUnfollow_UpdatesCounts()
     {
         await SeedTargetUserAsync();

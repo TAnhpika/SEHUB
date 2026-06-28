@@ -6,6 +6,7 @@ public class ConversationParticipant
     public Guid UserId { get; set; }
     public DateTime JoinedAt { get; set; }
     public DateTime? LastReadAt { get; set; }
+    public DateTime? HistoryClearedAt { get; set; }
 
     public Conversation Conversation { get; set; } = null!;
 }
