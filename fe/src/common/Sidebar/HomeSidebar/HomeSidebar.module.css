@@ -135,8 +135,8 @@
   border-color: var(--color-primary);
 
   --featured-max-visible: 3;
-  --featured-row-height: 2.625rem;
-  --featured-line-clamp: 1;
+  --featured-row-height: 3.5rem;
+  --featured-line-clamp: 2;
 }
 
 .promo {

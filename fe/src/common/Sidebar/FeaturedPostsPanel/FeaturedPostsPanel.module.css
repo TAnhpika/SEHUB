@@ -83,6 +83,24 @@
   /* layout tokens set on sidebar .featured */
 }
 
+.home .item {
+  min-height: var(--featured-row-height, 3.5rem);
+  flex-shrink: 0;
+}
+
+.home .link {
+  padding: 0.375rem 0.25rem;
+  line-height: 1.45;
+  -webkit-line-clamp: var(--featured-line-clamp, 2);
+  line-clamp: var(--featured-line-clamp, 2);
+}
+
+.home .posts {
+  max-height: calc(
+    var(--featured-row-height, 3.5rem) * var(--featured-max-visible, 3)
+  );
+}
+
 .community {
   /* layout tokens set on sidebar .featured */
 }
