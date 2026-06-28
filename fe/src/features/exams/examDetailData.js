@@ -5,7 +5,10 @@ import {
   mapQuestionAnswerDto,
   mapQuestionPublicDto,
 } from "@/api/examMapper";
-import { getExamById as getMockExamById } from "@/features/subjects/SubjectDetailPage/subjectDetailData";
+import {
+  getExamById as getMockExamById,
+  loadExamPapersForCourse,
+} from "@/features/subjects/SubjectDetailPage/subjectDetailData";
 import { isValidGuid } from "@/features/feed/postUtils";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
@@ -188,11 +191,30 @@ export async function resolveExamApiId(examIdOrCode) {
   return match?.id ?? null;
 }
 
+async function resolveExamApiIdFromPaperList(courseCode, examId, pageKey) {
+  if (!courseCode || !examId || pageKey !== "review") {
+    return null;
+  }
+
+  const papers = await loadExamPapersForCourse(courseCode, pageKey);
+  const normalizedExamId = String(examId).trim();
+  const paper = papers.find(
+    (item) =>
+      item.id === normalizedExamId
+      || item.paperCode === normalizedExamId
+      || String(item.apiId) === normalizedExamId,
+  );
+  return paper?.apiId ?? null;
+}
+
 export async function loadExamMeta(courseCode, examId, pageKey, scope = "community", options = {}) {
   if (!USE_MOCK) {
     let apiExamId = options.apiExamId ?? null;
     if (!apiExamId) {
       apiExamId = await resolveExamApiId(examId);
+    }
+    if (!apiExamId) {
+      apiExamId = await resolveExamApiIdFromPaperList(courseCode, examId, pageKey);
     }
 
     if (apiExamId) {

@@ -173,7 +173,7 @@
 }
 
 .bulkApprove {
-  color: var(--moderator-surface);
+  color: var(--moderator-on-primary);
   background: var(--moderator-primary);
   border: none;
 }
@@ -720,7 +720,7 @@
 }
 
 .detailApprove {
-  color: var(--moderator-surface);
+  color: var(--moderator-on-primary);
   background: var(--moderator-primary);
   border: none;
 }

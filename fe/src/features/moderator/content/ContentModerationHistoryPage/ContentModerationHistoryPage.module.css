@@ -124,7 +124,7 @@
   font-size: 0.6875rem;
   font-weight: 700;
   color: inherit;
-  background: rgba(255, 255, 255, 0.75);
+  background: var(--moderator-surface);
   border-radius: 9999px;
 }
 

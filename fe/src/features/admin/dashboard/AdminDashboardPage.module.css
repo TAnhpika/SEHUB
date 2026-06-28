@@ -65,7 +65,7 @@
 
 .periodBtn:hover:not(:disabled) {
   color: var(--dash-text);
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--moderator-surface-elevated);
 }
 
 .periodBtn:disabled {

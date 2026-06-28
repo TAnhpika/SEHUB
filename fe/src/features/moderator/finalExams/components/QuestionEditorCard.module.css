@@ -107,7 +107,7 @@
   line-height: 1.5;
   color: var(--moderator-text);
   resize: vertical;
-  background: var(--moderator-bg);
+  background: var(--moderator-input-bg);
   border: 1px solid var(--moderator-border);
   border-radius: 8px;
   outline: none;
@@ -141,7 +141,7 @@
   font-size: 0.8125rem;
   color: var(--moderator-text-muted);
   cursor: pointer;
-  background: var(--moderator-bg);
+  background: var(--moderator-input-bg);
   border: 1px solid var(--moderator-border);
   border-radius: 4px;
 }
@@ -164,7 +164,7 @@
   min-height: 70px;
   padding: 0.5rem;
   cursor: pointer;
-  background: var(--moderator-bg);
+  background: var(--moderator-input-bg);
   border: 1px solid var(--moderator-border);
   border-radius: 8px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;

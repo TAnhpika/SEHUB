@@ -10,7 +10,7 @@
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--moderator-text-subtle);
-  background: var(--moderator-bg);
+  background: var(--moderator-surface);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -43,6 +43,8 @@
   padding: 0.625rem 0.75rem;
   font: inherit;
   font-size: 0.875rem;
+  color: var(--moderator-text);
+  background: var(--moderator-input-bg);
   border: 1px solid var(--moderator-border);
   border-radius: var(--radius-md);
 }

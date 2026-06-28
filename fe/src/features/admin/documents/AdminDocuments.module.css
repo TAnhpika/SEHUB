@@ -70,7 +70,7 @@
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--moderator-text-muted);
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--moderator-surface);
   border-radius: 9999px;
 }
 
