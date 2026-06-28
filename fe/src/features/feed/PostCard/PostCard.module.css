@@ -4,12 +4,22 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease,
+    background 0.2s ease;
 }
 
 .card:hover {
-  border-color: var(--color-primary-soft);
-  box-shadow: var(--shadow-sm);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.card:has(.bodyBtn:focus-visible) {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
 }
 
 .bodyBtn {
@@ -79,8 +89,17 @@
 }
 
 .cardPinned {
-  border-left: 3px solid var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary-light) 35%, var(--color-surface));
+  border-left: 4px solid var(--color-primary);
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  padding-left: calc(1.5rem - 3px);
+}
+
+.cardPinned:hover {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary-light) 30%, var(--color-surface));
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
 .titleRow {
