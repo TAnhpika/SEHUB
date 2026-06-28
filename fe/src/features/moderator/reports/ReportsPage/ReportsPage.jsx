@@ -11,6 +11,7 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import { scrollContainersToTop } from "@/common/routes/ScrollToTop";
 import { useToast } from "@/common/Toast/ToastProvider";
 import {
   loadModeratorCommunityReports,
@@ -81,7 +82,20 @@ function ReportsPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [lastResolved, setLastResolved] = useState(null);
   const deepLinkSyncedRef = useRef(false);
+  const detailScrollRef = useRef(null);
   const urlReportId = searchParams.get("id");
+
+  useEffect(() => {
+    if (!selectedId) return;
+
+    const resetScroll = () => {
+      detailScrollRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      scrollContainersToTop();
+    };
+
+    resetScroll();
+    requestAnimationFrame(resetScroll);
+  }, [selectedId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -674,7 +688,7 @@ function ReportsPage() {
                 </p>
               </header>
 
-              <div className={styles.detailScroll}>
+              <div ref={detailScrollRef} className={styles.detailScroll}>
                 {selected.status === "resolved" ? (
                   <div className={styles.resolutionBox}>
                     <p className={styles.resolutionTitle}>Đã xử lý</p>
