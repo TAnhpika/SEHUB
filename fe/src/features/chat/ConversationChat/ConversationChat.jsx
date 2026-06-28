@@ -20,6 +20,7 @@ import {
 import ConversationAvatar from "@/features/chat/ConversationAvatar/ConversationAvatar";
 import EmojiPicker from "@/features/chat/EmojiPicker/EmojiPicker";
 import ChatImageLightbox from "@/features/chat/ChatImageLightbox/ChatImageLightbox";
+import { useToast } from "@/common/Toast/ToastProvider";
 import { formatPresenceLabel, presenceTier } from "@/utils/presenceStatus";
 import styles from "./ConversationChat.module.css";
 
@@ -103,6 +104,7 @@ function ConversationChat({
   onReport,
 }) {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [draft, setDraft] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
@@ -159,6 +161,10 @@ function ConversationChat({
     }
   }
 
+  function showComingSoonFeature() {
+    showToast("Tính năng đang phát triển...");
+  }
+
   function openOtherProfile() {
     if (!conversation?.username) return;
     navigate(`/profile/${conversation.username}`);
@@ -197,10 +203,20 @@ function ConversationChat({
         <div className={styles.actions}>
           {!compact && (
             <>
-              <button type="button" className={styles["action-btn"]} aria-label="Gọi thoại" disabled>
+              <button
+                type="button"
+                className={styles["action-btn"]}
+                aria-label="Gọi thoại"
+                onClick={showComingSoonFeature}
+              >
                 <FontAwesomeIcon icon={faPhone} />
               </button>
-              <button type="button" className={styles["action-btn"]} aria-label="Gọi video" disabled>
+              <button
+                type="button"
+                className={styles["action-btn"]}
+                aria-label="Gọi video"
+                onClick={showComingSoonFeature}
+              >
                 <FontAwesomeIcon icon={faVideo} />
               </button>
             </>
@@ -219,31 +235,35 @@ function ConversationChat({
               <div className={styles.menu} role="menu">
                 <button
                   type="button"
-                  className={styles["menu-item"]}
+                  className={`${styles["menu-item"]} ${styles["menu-item-profile"]}`}
                   role="menuitem"
                   onClick={() => {
                     setMenuOpen(false);
                     openOtherProfile();
                   }}
                 >
-                  <FontAwesomeIcon icon={faUser} />
+                  <span className={styles.menuItemIcon} aria-hidden="true">
+                    <FontAwesomeIcon icon={faUser} />
+                  </span>
                   Trang cá nhân
                 </button>
                 <button
                   type="button"
-                  className={styles["menu-item"]}
+                  className={`${styles["menu-item"]} ${styles["menu-item-report"]}`}
                   role="menuitem"
                   onClick={() => {
                     setMenuOpen(false);
                     onReport?.();
                   }}
                 >
-                  <FontAwesomeIcon icon={faFlag} />
+                  <span className={styles.menuItemIcon} aria-hidden="true">
+                    <FontAwesomeIcon icon={faFlag} />
+                  </span>
                   Báo cáo hội thoại
                 </button>
                 <button
                   type="button"
-                  className={styles["menu-item"]}
+                  className={`${styles["menu-item"]} ${isBlockedByMe ? styles["menu-item-unblock"] : styles["menu-item-block"]}`}
                   role="menuitem"
                   onClick={() => {
                     setMenuOpen(false);
@@ -254,7 +274,9 @@ function ConversationChat({
                     }
                   }}
                 >
-                  <FontAwesomeIcon icon={faBan} />
+                  <span className={styles.menuItemIcon} aria-hidden="true">
+                    <FontAwesomeIcon icon={faBan} />
+                  </span>
                   {isBlockedByMe ? "Bỏ chặn người dùng" : "Chặn người dùng"}
                 </button>
               </div>
