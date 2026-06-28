@@ -2,7 +2,7 @@ import { Outlet } from "react-router-dom";
 import ModeratorHeader from "@/common/Header/ModeratorHeader/ModeratorHeader";
 import ModeratorSidebar from "@/common/Sidebar/ModeratorSidebar/ModeratorSidebar";
 import { ModeratorPageProvider } from "@/features/moderator/context/ModeratorPageContext";
-import styles from "./ModeratorLayout.module.css";
+import styles from "../StaffLayout/StaffLayout.module.css";
 
 function ModeratorLayout() {
   return (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -10,6 +10,7 @@ import {
 import Pagination from "@/common/Pagination/Pagination";
 import { useAuth } from "@/context";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useAsyncData } from "@/hooks/useAsyncData";
 import {
   EXAMS_PER_PAGE,
   filterExamPapers,
@@ -42,39 +43,16 @@ function SubjectDetailPage({ page }) {
       : config.backTo;
   const code = courseCode?.toUpperCase() ?? "";
   const isDocumentsPage = page === "documents";
-  const [allExams, setAllExams] = useState([]);
-  const [listLoading, setListLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    setListLoading(true);
-
-    const loadPromise = isDocumentsPage
-      ? loadDocumentItemsForCourse(code)
-      : loadExamPapersForCourse(code, config.pageKey);
-
-    loadPromise
-      .then((items) => {
-        if (!cancelled) {
-          setAllExams(items);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setAllExams([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setListLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [code, config.pageKey, isDocumentsPage]);
+  const { data: allExams, loading: listLoading } = useAsyncData(
+    () =>
+      (isDocumentsPage
+        ? loadDocumentItemsForCourse(code)
+        : loadExamPapersForCourse(code, config.pageKey)
+      ).catch(() => []),
+    [code, config.pageKey, isDocumentsPage],
+    { initialData: [] },
+  );
 
   const exams = useMemo(
     () => filterExamPapers(allExams, yearFilter, termFilter),

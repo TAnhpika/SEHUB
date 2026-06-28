@@ -7,6 +7,8 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import { Modal } from "@/common/Modal/Modal";
+import backdropStyles from "@/common/styles/modalBackdrop.module.css";
 import {
   getRemainingTokenGrant,
   MAX_BONUS_TOKEN_BALANCE,
@@ -79,13 +81,13 @@ function AdminManualTokenModal({ open, students, onClose, onSubmit, error = "" }
   }
 
   return (
-    <div className={payStyles.modalBackdrop} role="presentation" onClick={handleClose}>
-      <div
-        className={payStyles.tokenModal}
-        role="dialog"
-        aria-labelledby="manual-token-title"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal
+      open={open}
+      onClose={handleClose}
+      className={backdropStyles.overlay}
+      panelClassName={payStyles.tokenModal}
+      closeOnOverlay
+    >
         <header className={payStyles.tokenModalHead}>
           <div className={payStyles.tokenModalHeadMain}>
             <span className={payStyles.tokenModalIcon} aria-hidden="true">
@@ -233,8 +235,7 @@ function AdminManualTokenModal({ open, students, onClose, onSubmit, error = "" }
             </Button>
           </footer>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

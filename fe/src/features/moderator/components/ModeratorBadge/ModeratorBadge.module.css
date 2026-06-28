@@ -51,16 +51,16 @@
 }
 
 .tone-bronze {
-  color: #92400e;
-  background: #fef3c7;
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
 }
 
 .tone-silver {
-  color: #475569;
-  background: #e2e8f0;
+  color: var(--moderator-text-muted);
+  background: var(--color-border);
 }
 
 .tone-gold {
-  color: #b45309;
-  background: #fef9c3;
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
 }

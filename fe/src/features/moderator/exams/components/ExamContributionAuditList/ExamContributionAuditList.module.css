@@ -16,21 +16,21 @@
   margin: 0;
   font-size: 1rem;
   font-weight: 700;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .desc {
   margin: 0.375rem 0 0;
   font-size: 0.8125rem;
   line-height: 1.5;
-  color: #737686;
+  color: var(--moderator-text-subtle);
 }
 
 .historyLink {
   flex-shrink: 0;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #004ac6;
+  color: var(--moderator-primary);
   text-decoration: none;
 }
 
@@ -42,10 +42,10 @@
   margin: 0;
   padding: 2rem 1rem;
   font-size: 0.875rem;
-  color: #737686;
+  color: var(--moderator-text-subtle);
   text-align: center;
-  background: #f7f9fb;
-  border: 1px dashed rgba(195, 198, 215, 0.6);
+  background: var(--moderator-bg);
+  border: 1px dashed var(--moderator-border);
   border-radius: 12px;
 }
 
@@ -64,8 +64,8 @@
   align-items: flex-start;
   justify-content: space-between;
   padding: 1rem 1.25rem;
-  background: #f7f9fb;
-  border: 1px solid rgba(195, 198, 215, 0.2);
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border-light);
   border-radius: 12px;
 }
 
@@ -84,21 +84,21 @@
   padding: 0.15rem 0.5rem;
   font-size: 0.6875rem;
   font-weight: 700;
-  color: #1e40af;
-  background: #dbeafe;
+  color: var(--color-primary-dark);
+  background: var(--moderator-primary-soft);
   border-radius: 9999px;
 }
 
 .typeBadgeFinal {
-  color: #5b21b6;
-  background: #ede9fe;
+  color: var(--color-premium);
+  background: color-mix(in srgb, var(--color-premium) 12%, var(--moderator-surface));
 }
 
 .action {
   margin: 0;
   font-size: 0.6875rem;
   font-weight: 700;
-  color: #737686;
+  color: var(--moderator-text-subtle);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -106,7 +106,7 @@
 .detail {
   margin: 0.35rem 0 0;
   font-size: 0.9375rem;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .detail strong {
@@ -116,13 +116,13 @@
 .meta {
   margin: 0.25rem 0 0;
   font-size: 0.75rem;
-  color: #737686;
+  color: var(--moderator-text-subtle);
 }
 
 .note {
   margin: 0.5rem 0 0;
   font-size: 0.8125rem;
-  color: #991b1b;
+  color: var(--color-danger);
 }
 
 .status {
@@ -134,31 +134,31 @@
 }
 
 .status-draft_saved {
-  color: #434655;
-  background: #eef0f4;
+  color: var(--moderator-text-muted);
+  background: var(--color-surface-muted);
 }
 
 .status-pending_admin {
-  color: #92400e;
-  background: #fef3c7;
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
 }
 
 .status-approved {
-  color: #166534;
-  background: #dcfce7;
+  color: var(--color-success);
+  background: var(--color-success-bg);
 }
 
 .status-rejected {
-  color: #991b1b;
-  background: #fee2e2;
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
 }
 
 .revisionBadge {
   padding: 0.15rem 0.5rem;
   font-size: 0.6875rem;
   font-weight: 700;
-  color: #92400e;
-  background: #fef3c7;
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
   border-radius: 9999px;
 }
 
@@ -175,16 +175,16 @@
   padding: 0.4rem 0.75rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #004ac6;
+  color: var(--moderator-primary);
   text-decoration: none;
   cursor: pointer;
-  background: #fff;
-  border: 1px solid rgba(0, 74, 198, 0.25);
+  background: var(--moderator-surface);
+  border: 1px solid color-mix(in srgb, var(--moderator-primary) 25%, transparent);
   border-radius: 8px;
 }
 
 .actionBtn:hover:not(:disabled) {
-  background: #eff6ff;
+  background: var(--moderator-primary-soft);
 }
 
 .actionBtn:disabled {

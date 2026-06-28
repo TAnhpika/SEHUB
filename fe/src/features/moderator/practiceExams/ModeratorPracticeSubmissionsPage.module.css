@@ -4,8 +4,8 @@
   gap: 1rem;
   padding: 1rem 1.25rem;
   margin-bottom: 1.25rem;
-  background: #f7f9fb;
-  border: 1px solid rgba(195, 198, 215, 0.35);
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border);
   border-radius: 12px;
 }
 
@@ -22,16 +22,16 @@
   padding: 0.625rem 1rem;
   font-family: inherit;
   font-size: 0.875rem;
-  color: #191c1e;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.5);
+  color: var(--moderator-text);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 10px;
   outline: none;
 }
 
 .searchInput:focus {
-  border-color: #004ac6;
-  box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.1);
+  border-color: var(--moderator-primary);
+  box-shadow: 0 0 0 3px var(--moderator-primary-muted);
 }
 
 .filterGroup {
@@ -54,16 +54,16 @@
   font-family: inherit;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #434655;
+  color: var(--moderator-text-muted);
   cursor: pointer;
-  background: #fff;
-  border: 1px solid #c3c6d7;
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
 }
 
 .btnReset:hover:not(:disabled) {
-  color: #004ac6;
-  border-color: #004ac6;
+  color: var(--moderator-primary);
+  border-color: var(--moderator-primary);
 }
 
 .btnReset:disabled {
@@ -78,19 +78,19 @@
   align-items: center;
   padding-top: 1.25rem;
   margin-top: 0.5rem;
-  border-top: 1px solid rgba(195, 198, 215, 0.35);
+  border-top: 1px solid var(--moderator-border);
 }
 
 .footerMeta {
   margin: 0;
   font-size: 0.8125rem;
-  color: #737686;
+  color: var(--moderator-text-subtle);
   text-align: center;
 }
 
 .footerMeta strong {
   font-weight: 600;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .filterField {
@@ -102,7 +102,7 @@
 .filterLabel {
   font-size: 0.6875rem;
   font-weight: 700;
-  color: #737686;
+  color: var(--moderator-text-subtle);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -112,7 +112,7 @@
   padding: 0.5rem 0.75rem;
   font-family: inherit;
   font-size: 0.8125rem;
-  border: 1px solid #c3c6d7;
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
 }
 
@@ -120,7 +120,7 @@
   padding: 0.35rem 0.75rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #004ac6;
+  color: var(--moderator-primary);
   background: rgba(210, 224, 254, 0.55);
   border-radius: 9999px;
 }
@@ -138,7 +138,7 @@
 .empty {
   margin: 0;
   font-size: 0.875rem;
-  color: #737686;
+  color: var(--moderator-text-subtle);
 }
 
 .list {
@@ -155,8 +155,8 @@
   grid-template-columns: 1fr minmax(260px, 320px);
   gap: 1rem 1.25rem;
   padding: 1rem 1.125rem;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.45);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 12px;
 }
 
@@ -182,7 +182,7 @@
   margin: 0;
   font-size: 1rem;
   font-weight: 700;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .status {
@@ -193,29 +193,29 @@
 }
 
 .status-pending {
-  color: #92400e;
-  background: #fef3c7;
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
 }
 
 .status-reviewed {
-  color: #1e40af;
-  background: #dbeafe;
+  color: var(--color-primary-dark);
+  background: var(--moderator-primary-soft);
 }
 
 .status-pass {
-  color: #166534;
-  background: #dcfce7;
+  color: var(--color-success);
+  background: var(--color-success-bg);
 }
 
 .status-fail {
-  color: #991b1b;
-  background: #fee2e2;
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
 }
 
 .meta {
   margin: 0.35rem 0 0;
   font-size: 0.8125rem;
-  color: #737686;
+  color: var(--moderator-text-subtle);
 }
 
 .repoLink {
@@ -223,6 +223,6 @@
   margin-top: 0.5rem;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #004ac6;
+  color: var(--moderator-primary);
   word-break: break-all;
 }

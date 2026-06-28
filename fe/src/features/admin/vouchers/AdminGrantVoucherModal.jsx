@@ -7,6 +7,8 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import { Modal } from "@/common/Modal/Modal";
+import backdropStyles from "@/common/styles/modalBackdrop.module.css";
 import { VOUCHER_TEMPLATES } from "@/features/admin/vouchers/adminVoucherPolicy";
 import payStyles from "@/features/admin/payments/AdminPayments.module.css";
 import voucherStyles from "@/features/admin/vouchers/AdminVouchers.module.css";
@@ -120,13 +122,13 @@ function AdminGrantVoucherModal({
   }
 
   return (
-    <div className={payStyles.modalBackdrop} role="presentation" onClick={onClose}>
-      <div
-        className={`${payStyles.tokenModal} ${voucherStyles.grantModal}`}
-        role="dialog"
-        aria-labelledby="grant-voucher-title"
-        onClick={(event) => event.stopPropagation()}
-      >
+    <Modal
+      open={open}
+      onClose={onClose}
+      className={backdropStyles.overlay}
+      panelClassName={`${payStyles.tokenModal} ${voucherStyles.grantModal}`}
+      closeOnOverlay
+    >
         <header className={payStyles.tokenModalHead}>
           <div className={payStyles.tokenModalHeadMain}>
             <span className={`${payStyles.tokenModalIcon} ${voucherStyles.modalIcon}`}>
@@ -316,8 +318,7 @@ function AdminGrantVoucherModal({
             </Button>
           </footer>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

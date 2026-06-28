@@ -64,7 +64,7 @@
   width: 44px;
   flex-shrink: 0;
   font-size: 1rem;
-  color: #fff;
+  color: var(--color-auth-on-brand);
   background: var(--color-primary);
   border: none;
   border-radius: var(--radius-lg);

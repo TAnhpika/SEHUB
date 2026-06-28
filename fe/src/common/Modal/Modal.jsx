@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import styles from "./Modal.module.css";
 
 const ModalContext = createContext(null);
@@ -25,6 +26,8 @@ export function Modal({
   const panelRef = useRef(null);
   const previousFocusRef = useRef(null);
   const resolvedTitleId = titleId ?? "app-modal-title";
+
+  useLockBodyScroll(open);
 
   useEffect(() => {
     if (!open) return undefined;

@@ -10,6 +10,7 @@ import { useAuth } from "@/context";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import NotificationDropdown from "@/common/Header/MainHeader/NotificationDropdown";
 import StreakDropdown from "@/common/Header/MainHeader/StreakDropdown";
+import ThemeSwitcher from "@/common/ThemeSwitcher/ThemeSwitcher";
 import { useHoverDropdown } from "@/hooks/useHoverDropdown";
 import styles from "@/common/Header/MainHeader/MainHeader.module.css";
 
@@ -60,6 +61,8 @@ function HeaderUserActions() {
         </button>
 
         <div className={styles["profile-menu"]} role="menu">
+          <ThemeSwitcher variant="menu" />
+          <div className={styles["menu-divider"]} role="separator" />
           <WorkspaceSwitcher
             variant="menu-compact"
             showHeading

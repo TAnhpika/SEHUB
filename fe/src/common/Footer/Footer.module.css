@@ -126,7 +126,7 @@
 }
 
 .newsletter-input::placeholder {
-  color: #94a3b8;
+  color: var(--color-text-subtle);
 }
 
 .newsletter-input:focus {
@@ -141,7 +141,7 @@
   align-items: center;
   justify-content: center;
   background: var(--color-primary);
-  color: #ffffff;
+  color: var(--color-auth-on-brand);
   border: none;
   border-radius: 0 8px 8px 0;
   cursor: pointer;
@@ -165,7 +165,7 @@
 
 .copyright {
   font-size: 0.8125rem;
-  color: #94a3b8;
+  color: var(--color-text-subtle);
 }
 
 .bottom-links {
@@ -178,7 +178,7 @@
   padding: 0;
   font-family: inherit;
   font-size: 0.8125rem;
-  color: #94a3b8;
+  color: var(--color-text-subtle);
   background: none;
   border: none;
   cursor: pointer;

@@ -1,10 +1,10 @@
 .card {
   position: relative;
   overflow: hidden;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.3);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--moderator-card-shadow);
 }
 
 .card::before {
@@ -14,7 +14,7 @@
   left: 0;
   width: 4px;
   content: "";
-  background: #c3c6d7;
+  background: var(--moderator-border);
 }
 
 .header {
@@ -28,7 +28,7 @@
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .importWarning {
@@ -36,16 +36,16 @@
   padding: 0.75rem 1rem;
   font-size: 0.8125rem;
   line-height: 1.5;
-  color: #78350f;
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning);
   border-radius: 8px;
 }
 
 .importWarning strong {
   display: block;
   margin-bottom: 0.25rem;
-  color: #92400e;
+  color: var(--color-warning);
 }
 
 .importWarning ul {
@@ -64,7 +64,7 @@
   width: 2.25rem;
   height: 2.25rem;
   font-size: 1rem;
-  color: #434655;
+  color: var(--moderator-text-muted);
   cursor: pointer;
   background: transparent;
   border: none;
@@ -73,8 +73,8 @@
 }
 
 .deleteBtn:hover {
-  color: #ba1a1a;
-  background: #fee2e2;
+  color: var(--moderator-badge-bg);
+  background: var(--color-danger-bg);
 }
 
 .field {
@@ -87,11 +87,11 @@
 .label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .required {
-  color: #ba1a1a;
+  color: var(--moderator-badge-bg);
 }
 
 .textareaWrap {
@@ -105,10 +105,10 @@
   font-family: inherit;
   font-size: 1rem;
   line-height: 1.5;
-  color: #191c1e;
+  color: var(--moderator-text);
   resize: vertical;
-  background: #f7f9fb;
-  border: 1px solid rgba(195, 198, 215, 0.5);
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
   outline: none;
   box-shadow: inset 0 2px 4px 1px rgba(0, 0, 0, 0.02);
@@ -121,7 +121,7 @@
 
 .textarea:focus,
 .textareaPlain:focus {
-  border-color: var(--moderator-primary, #004ac6);
+  border-color: var(--moderator-primary);
 }
 
 .textareaTools {
@@ -139,15 +139,15 @@
   width: 2rem;
   height: 2rem;
   font-size: 0.8125rem;
-  color: #434655;
+  color: var(--moderator-text-muted);
   cursor: pointer;
-  background: #f7f9fb;
-  border: 1px solid rgba(195, 198, 215, 0.3);
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border);
   border-radius: 4px;
 }
 
 .toolBtn:hover {
-  color: var(--moderator-primary, #004ac6);
+  color: var(--moderator-primary);
 }
 
 .answers {
@@ -164,21 +164,21 @@
   min-height: 70px;
   padding: 0.5rem;
   cursor: pointer;
-  background: #f7f9fb;
-  border: 1px solid rgba(195, 198, 215, 0.3);
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .answer-selected {
-  border-color: var(--moderator-primary, #004ac6);
-  box-shadow: 0 0 0 2px rgba(0, 74, 198, 0.12);
+  border-color: var(--moderator-primary);
+  box-shadow: 0 0 0 2px var(--moderator-primary-muted);
 }
 
 .radio {
   flex-shrink: 0;
   margin-top: 0.5rem;
-  accent-color: var(--moderator-primary, #004ac6);
+  accent-color: var(--moderator-primary);
 }
 
 .answerKey {
@@ -191,8 +191,8 @@
   margin-top: 0.25rem;
   font-size: 0.875rem;
   font-weight: 700;
-  color: #191c1e;
-  background: #e0e3e5;
+  color: var(--moderator-text);
+  background: var(--color-surface-muted);
   border-radius: 4px;
 }
 
@@ -202,7 +202,7 @@
   padding: 0.25rem 0;
   font-family: inherit;
   font-size: 1rem;
-  color: #191c1e;
+  color: var(--moderator-text);
   background: transparent;
   border: none;
   outline: none;
@@ -221,7 +221,7 @@
   font-family: inherit;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--moderator-primary, #004ac6);
+  color: var(--moderator-primary);
   cursor: pointer;
   background: none;
   border: none;
@@ -242,7 +242,7 @@
   width: 100%;
   padding: 0.625rem 0.75rem;
   font: inherit;
-  border: 1px solid rgba(195, 198, 215, 0.6);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
 }
 
@@ -253,9 +253,9 @@
   margin: 0 2rem 1rem;
   padding: 0.5rem 0.875rem;
   font: inherit;
-  color: #004ac6;
+  color: var(--moderator-primary);
   cursor: pointer;
-  background: #eef4ff;
+  background: var(--moderator-primary-soft);
   border: none;
   border-radius: 8px;
 }
@@ -266,7 +266,7 @@
   height: 1.75rem;
   font-size: 1.125rem;
   line-height: 1;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
   cursor: pointer;
   background: transparent;
   border: none;

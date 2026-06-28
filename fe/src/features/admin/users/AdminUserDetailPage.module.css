@@ -4,8 +4,8 @@
   gap: 1.25rem 1.5rem;
   align-items: center;
   padding: 1.5rem 1.5rem 1.25rem;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.45);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 12px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
@@ -42,14 +42,14 @@
   font-size: 1.375rem;
   font-weight: 700;
   line-height: 1.25;
-  color: #191c1e;
+  color: var(--moderator-text);
   letter-spacing: -0.02em;
 }
 
 .profileSub {
   margin: 0.35rem 0 0.625rem;
   font-size: 0.875rem;
-  color: #737686;
+  color: var(--moderator-text-muted);
 }
 
 .profileBadges {
@@ -83,7 +83,7 @@
   margin: 0 0 0.2rem;
   font-size: 0.6875rem;
   font-weight: 600;
-  color: #9ca3af;
+  color: var(--moderator-text-subtle);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -92,7 +92,7 @@
   margin: 0;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #191c1e;
+  color: var(--moderator-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -128,7 +128,7 @@
 
 .rankPoints {
   font-size: 0.8125rem;
-  color: #737686;
+  color: var(--moderator-text-muted);
 }
 
 .rankProgress {
@@ -154,5 +154,5 @@
   display: block;
   margin-top: 0.35rem;
   font-size: 0.75rem;
-  color: #737686;
+  color: var(--moderator-text-muted);
 }

@@ -1,8 +1,5 @@
+import Shimmer from "@/common/Skeleton/Shimmer";
 import styles from "./PostFeedSkeleton.module.css";
-
-function Shimmer({ className }) {
-  return <span className={`${styles.skeleton} ${className ?? ""}`} aria-hidden="true" />;
-}
 
 function PostFeedSkeletonCard() {
   return (

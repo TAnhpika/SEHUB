@@ -1,4 +1,6 @@
 import Button from "@/common/Button/Button";
+import { Modal } from "@/common/Modal/Modal";
+import backdropStyles from "@/common/styles/modalBackdrop.module.css";
 import permStyles from "@/features/admin/permissions/AdminPermissions.module.css";
 
 /**
@@ -16,40 +18,39 @@ function PermissionConfirmModal({ open, mode, user, onClose, onConfirm }) {
   const isGrant = mode === "grant";
 
   return (
-    <div className={permStyles.modalBackdrop} role="presentation" onClick={onClose}>
-      <div
-        className={permStyles.modal}
-        role="dialog"
-        aria-labelledby="perm-confirm-title"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 id="perm-confirm-title" className={permStyles.modalTitle}>
-          {isGrant ? "Gán quyền Moderator" : "Thu hồi quyền Mod"}
-        </h2>
-        <p className={permStyles.modalDesc}>
-          {isGrant
-            ? "Ứng viên sẽ truy cập khu vực /moderator: duyệt báo cáo, bài viết, chấm bài TH."
-            : "Tài khoản sẽ mất quyền truy cập Moderator ngay lập tức."}
-        </p>
-        <div className={permStyles.modalUser}>
-          <span className={permStyles.avatar}>{user.initial}</span>
-          <div>
-            <strong>{user.displayName}</strong>
-            <p className={permStyles.userMeta}>
-              <code>@{user.username}</code>
-            </p>
-          </div>
+    <Modal
+      open={open}
+      onClose={onClose}
+      className={backdropStyles.overlay}
+      panelClassName={`${backdropStyles.panel} ${permStyles.modal}`}
+      closeOnOverlay
+    >
+      <h2 id="perm-confirm-title" className={permStyles.modalTitle}>
+        {isGrant ? "Gán quyền Moderator" : "Thu hồi quyền Mod"}
+      </h2>
+      <p className={permStyles.modalDesc}>
+        {isGrant
+          ? "Ứng viên sẽ truy cập khu vực /moderator: duyệt báo cáo, bài viết, chấm bài TH."
+          : "Tài khoản sẽ mất quyền truy cập Moderator ngay lập tức."}
+      </p>
+      <div className={permStyles.modalUser}>
+        <span className={permStyles.avatar}>{user.initial}</span>
+        <div>
+          <strong>{user.displayName}</strong>
+          <p className={permStyles.userMeta}>
+            <code>@{user.username}</code>
+          </p>
         </div>
-        <footer className={permStyles.modalFooter}>
-          <Button type="button" look="outline" onClick={onClose}>
-            Hủy
-          </Button>
-          <Button type="button" onClick={onConfirm}>
-            {isGrant ? "Xác nhận gán Mod" : "Xác nhận thu hồi"}
-          </Button>
-        </footer>
       </div>
-    </div>
+      <footer className={permStyles.modalFooter}>
+        <Button type="button" look="outline" onClick={onClose}>
+          Hủy
+        </Button>
+        <Button type="button" onClick={onConfirm}>
+          {isGrant ? "Xác nhận gán Mod" : "Xác nhận thu hồi"}
+        </Button>
+      </footer>
+    </Modal>
   );
 }
 

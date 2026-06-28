@@ -24,7 +24,7 @@
 
 .solid {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-auth-on-brand);
 }
 
 .solid:hover:not(:disabled) {
@@ -50,7 +50,7 @@
 
 .soft:hover:not(:disabled) {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-auth-on-brand);
 }
 
 .lg {

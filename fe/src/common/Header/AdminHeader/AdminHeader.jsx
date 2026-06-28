@@ -2,16 +2,16 @@ import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faChevronDown,
   faHouse,
   faMagnifyingGlass,
-  faRightFromBracket,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import WorkspaceSwitcher from "@/common/WorkspaceSwitcher/WorkspaceSwitcher";
 import { flattenAdminNavItems } from "@/features/admin/adminNavData";
 import AdminNotificationDropdown from "./AdminNotificationDropdown";
 import AdminSettingsMenu from "./AdminSettingsMenu";
+import ThemeSwitcher from "@/common/ThemeSwitcher/ThemeSwitcher";
+import HeaderProfileMenu, { HeaderProfileLogoutItem } from "@/common/Header/shared/HeaderProfileMenu";
 import styles from "./AdminHeader.module.css";
 
 function resolvePageTitle(pathname, search) {
@@ -94,55 +94,43 @@ function AdminHeader() {
             <AdminNotificationDropdown />
           </div>
 
-          <div
-            className={`${styles.profile} ${menuOpen ? styles.profileOpen : ""}`}
+          <HeaderProfileMenu
+            open={menuOpen}
+            onToggle={() => setMenuOpen((open) => !open)}
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget)) {
+                setMenuOpen(false);
+              }
+            }}
+            initial={initial}
+            displayName={displayName}
+            roleLabel="Quản trị viên"
+            rootClassName={styles.profile}
+            rootOpenClassName={styles.profileOpen}
+            triggerClassName={styles.profileTrigger}
+            avatarClassName={styles.avatar}
+            metaClassName={styles.profileMeta}
+            nameClassName={styles.profileName}
+            roleClassName={styles.profileRole}
+            chevronClassName={styles.chevron}
+            chevronOpenClassName={styles.chevronOpen}
+            menuClassName={styles.menu}
           >
-            <button
-              type="button"
-              className={styles.profileTrigger}
-              aria-expanded={menuOpen}
-              aria-haspopup="menu"
-              onClick={() => setMenuOpen((open) => !open)}
-              onBlur={(e) => {
-                if (!e.currentTarget.parentElement?.contains(e.relatedTarget)) {
-                  setMenuOpen(false);
-                }
-              }}
-            >
-              <span className={styles.avatar}>{initial}</span>
-              <span className={styles.profileMeta}>
-                <span className={styles.profileName}>{displayName}</span>
-                <span className={styles.profileRole}>Quản trị viên</span>
-              </span>
-              <FontAwesomeIcon
-                icon={faChevronDown}
-                className={`${styles.chevron} ${menuOpen ? styles.chevronOpen : ""}`}
+            <ThemeSwitcher variant="menu" />
+            <div className={styles.menuDivider} />
+            <div className={styles.menuWorkspace}>
+              <WorkspaceSwitcher
+                variant="menu-compact"
+                onNavigate={() => setMenuOpen(false)}
               />
-            </button>
-
-            {menuOpen ? (
-              <div className={styles.menu} role="menu">
-                <div className={styles.menuWorkspace}>
-                  <WorkspaceSwitcher
-                    variant="menu-compact"
-                    onNavigate={() => setMenuOpen(false)}
-                  />
-                </div>
-                <div className={styles.menuDivider} />
-                <button
-                  type="button"
-                  className={`${styles.menuItem} ${styles.menuItemDanger}`}
-                  role="menuitem"
-                  onClick={handleLogout}
-                >
-                  <span className={`${styles.menuIcon} ${styles.menuIconDanger}`}>
-                    <FontAwesomeIcon icon={faRightFromBracket} />
-                  </span>
-                  Đăng xuất
-                </button>
-              </div>
-            ) : null}
-          </div>
+            </div>
+            <div className={styles.menuDivider} />
+            <HeaderProfileLogoutItem
+              className={`${styles.menuItem} ${styles.menuItemDanger}`}
+              iconClassName={`${styles.menuIcon} ${styles.menuIconDanger}`}
+              onClick={handleLogout}
+            />
+          </HeaderProfileMenu>
         </div>
       </div>
     </header>

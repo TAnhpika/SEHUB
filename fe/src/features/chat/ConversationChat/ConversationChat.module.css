@@ -209,7 +209,11 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
   padding: 0.875rem 1rem 0.625rem;
-  background: linear-gradient(180deg, #f8fafc 0%, #fff 12%);
+  background: linear-gradient(
+    180deg,
+    var(--color-surface-elevated) 0%,
+    var(--color-surface) 12%
+  );
 }
 
 .body::-webkit-scrollbar {
@@ -295,13 +299,13 @@
 
 .received .bubble {
   color: var(--color-text);
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid var(--color-border-light);
   border-bottom-left-radius: 0.375rem;
 }
 
 .sent .bubble {
-  color: #fff;
+  color: var(--color-auth-on-brand);
   background: var(--color-primary);
   border-bottom-right-radius: 0.375rem;
 }
@@ -323,7 +327,7 @@
 .typing span {
   width: 0.375rem;
   height: 0.375rem;
-  background: #94a3b8;
+  background: var(--color-text-subtle);
   border-radius: var(--radius-full);
   animation: typing 1.2s infinite ease-in-out;
 }
@@ -516,7 +520,7 @@
   width: 2.125rem;
   height: 2.125rem;
   font-size: 0.8125rem;
-  color: #fff;
+  color: var(--color-auth-on-brand);
   background: var(--color-primary);
   border: none;
   border-radius: var(--radius-full);
