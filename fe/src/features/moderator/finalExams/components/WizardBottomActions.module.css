@@ -5,11 +5,11 @@
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1rem 1.125rem;
-  background: rgba(255, 255, 255, 0.9);
+  background: color-mix(in srgb, var(--moderator-surface) 92%, transparent);
   border-top: 1px solid var(--moderator-border-light);
   border-radius: 16px 16px 0 0;
   backdrop-filter: blur(6px);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--moderator-card-shadow);
 }
 
 .draft {
@@ -19,7 +19,7 @@
   font-weight: 500;
   color: var(--moderator-primary);
   cursor: pointer;
-  background: rgba(210, 224, 254, 0.3);
+  background: var(--moderator-primary-muted);
   border: none;
   border-radius: 8px;
 }
@@ -51,7 +51,7 @@
   font-family: inherit;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--moderator-surface);
+  color: #ffffff;
   cursor: pointer;
   background: var(--moderator-primary);
   border: none;
