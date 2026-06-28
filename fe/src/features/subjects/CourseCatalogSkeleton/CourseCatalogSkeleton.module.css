@@ -1,0 +1,150 @@
+@keyframes catalogShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  display: block;
+  background: linear-gradient(90deg, #f4f6f8 0%, #e8ecf1 50%, #f4f6f8 100%);
+  background-size: 200% 100%;
+  border-radius: var(--radius-lg);
+  animation: catalogShimmer 1.2s ease-in-out infinite;
+}
+
+.page {
+  min-width: 0;
+  width: 100%;
+  padding-bottom: 0.5rem;
+}
+
+.header {
+  padding: 1.75rem 2rem;
+  margin-bottom: 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+}
+
+.title {
+  height: clamp(1.5rem, 2.5vw, 1.875rem);
+  width: 55%;
+  max-width: 18rem;
+}
+
+.subtitle {
+  height: 1rem;
+  width: 38%;
+  max-width: 14rem;
+  margin-top: 0.5rem;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  min-height: 5.5rem;
+  padding: 1.75rem 2rem;
+  margin-bottom: 1.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+}
+
+.filter {
+  width: 11.5rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+}
+
+.filterWide {
+  width: 13.5rem;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.semester-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.semester-accent {
+  width: 4px;
+  height: 1.25rem;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.semester-label {
+  height: 1.125rem;
+  width: 5rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.875rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.5rem;
+  padding: 1rem 1.25rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+}
+
+.code {
+  height: 1rem;
+  width: 4.5rem;
+}
+
+.badge {
+  width: 2.25rem;
+  height: 1.625rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .header,
+  .filter-bar {
+    padding: 1.25rem;
+  }
+
+  .filter,
+  .filterWide {
+    width: 100%;
+  }
+}

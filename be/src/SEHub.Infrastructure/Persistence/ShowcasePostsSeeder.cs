@@ -36,6 +36,8 @@ public static class ShowcasePostsSeeder
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Email == DemoDataSeeder.FreeStudentEmail);
 
+        await PatchLegacySe301ShowcasePostsAsync(context, logger);
+
         var now = DateTime.UtcNow;
         var templates = BuildTemplates(demoAuthor.Id, freeAuthor?.Id ?? demoAuthor.Id);
         var added = 0;
@@ -73,6 +75,47 @@ public static class ShowcasePostsSeeder
         logger.LogInformation("ShowcasePostsSeeder added {Count} showcase posts for home demo.", added);
     }
 
+    public static async Task PatchLegacySe301ShowcasePostsAsync(SEHubDbContext context, ILogger logger)
+    {
+        var templates = BuildTemplates(Guid.Empty, Guid.Empty);
+        var post1Template = templates[0];
+        var post2Template = templates[1];
+        var updated = false;
+
+        var post1 = await context.Posts.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == Post1Id);
+        if (post1 is not null
+            && (post1.Title.Contains("SE301", StringComparison.OrdinalIgnoreCase)
+                || post1.Content.Contains("SE301", StringComparison.OrdinalIgnoreCase)
+                || post1.Tags.Contains("SE301", StringComparison.OrdinalIgnoreCase)))
+        {
+            post1.Title = post1Template.Title;
+            post1.Content = post1Template.Content;
+            post1.Tags = post1Template.TagList;
+            updated = true;
+        }
+
+        var post2 = await context.Posts.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == Post2Id);
+        if (post2 is not null
+            && (post2.Title.Contains("SE301", StringComparison.OrdinalIgnoreCase)
+                || post2.Content.Contains("SE301", StringComparison.OrdinalIgnoreCase)
+                || post2.Content.Contains("Software Engineering", StringComparison.OrdinalIgnoreCase)
+                || post2.Tags.Contains("SE301", StringComparison.OrdinalIgnoreCase)))
+        {
+            post2.Title = post2Template.Title;
+            post2.Content = post2Template.Content;
+            post2.Tags = post2Template.TagList;
+            updated = true;
+        }
+
+        if (!updated)
+        {
+            return;
+        }
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Patched legacy SE301 showcase posts to PRF192 content.");
+    }
+
     private static IReadOnlyList<ShowcasePostTemplate> BuildTemplates(Guid demoAuthorId, Guid freeAuthorId)
     {
         return
@@ -87,13 +130,13 @@ public static class ShowcasePostsSeeder
                 <h3>Các bước tra cứu tài liệu</h3>
                 <ul>
                 <li>Vào mục <strong>Documents</strong>, chọn ngành (SE) và học kỳ tương ứng.</li>
-                <li>Lọc theo môn học (ví dụ SE301, CSD, PTTK) để tìm slide và bài đọc thêm.</li>
+                <li>Lọc theo môn học (ví dụ PRF192, CSD203, PRO192) để tìm slide và bài đọc thêm.</li>
                 <li>Tải file PDF hoặc xem trực tuyến; ghi chú lại phần chưa hiểu để hỏi trên diễn đàn.</li>
                 </ul>
                 <h3>Gợi ý học tập</h3>
                 <p>Nên đọc slide <em>trước</em> buổi học, làm bài tập nhóm sau buổi học, và ôn lại bằng đề thi thử trên SEHub trước kỳ thi. Tài khoản Premium mở khóa toàn bộ học liệu và chức năng thi.</p>
                 """,
-                "SE,Documents,Học liệu,SE301",
+                "SE,Documents,Học liệu,PRF192",
                 IsPinned: true,
                 IsFeatured: true,
                 ViewCount: 128,
@@ -101,21 +144,21 @@ public static class ShowcasePostsSeeder
             new ShowcasePostTemplate(
                 Post2Id,
                 demoAuthorId,
-                "Lộ trình ôn thi môn Software Engineering (SE301)",
+                "Lộ trình ôn thi môn PRF192 (Programming Fundamentals)",
                 """
                 <h2>Cấu trúc đề thi thường gặp</h2>
-                <p>Môn <strong>Software Engineering</strong> đánh giá cả lý thuyết quy trình phát triển phần mềm lẫn khả năng áp dụng vào tình huống đồ án.</p>
+                <p>Môn <strong>Programming Fundamentals (PRF192)</strong> đánh giá nền tảng Java: cú pháp, kiểu dữ liệu, điều khiển luồng và OOP cơ bản.</p>
                 <h3>Nội dung trọng tâm</h3>
                 <ul>
-                <li><strong>SDLC</strong>: Waterfall, V-Model, Iterative, Spiral — ưu/nhược và khi nào áp dụng.</li>
-                <li><strong>Agile &amp; Scrum</strong>: vai trò Product Owner, Scrum Master, Sprint, backlog, Definition of Done.</li>
-                <li><strong>Yêu cầu phần mềm</strong>: functional / non-functional, use case, user story.</li>
-                <li><strong>UML cơ bản</strong>: sơ đồ use case, class, sequence phục vụ phân tích thiết kế.</li>
+                <li><strong>Cú pháp Java</strong>: biến, toán tử, vòng lặp, mảng, chuỗi.</li>
+                <li><strong>OOP cơ bản</strong>: class, object, constructor, encapsulation.</li>
+                <li><strong>Xử lý ngoại lệ</strong>: try/catch, throw và best practices.</li>
+                <li><strong>Collections</strong>: ArrayList, HashMap — thao tác cơ bản.</li>
                 </ul>
                 <h3>Kế hoạch ôn 4 tuần</h3>
-                <p><strong>Tuần 1–2</strong>: đọc slide + làm câu hỏi trắc nghiệm. <strong>Tuần 3</strong>: luyện đề Final trên SEHub. <strong>Tuần 4</strong>: tổng ôn khái niệm và thuật ngữ tiếng Anh.</p>
+                <p><strong>Tuần 1–2</strong>: đọc slide + làm bài lab Java. <strong>Tuần 3</strong>: luyện đề Final PRF192 trên SEHub. <strong>Tuần 4</strong>: tổng ôn cú pháp và debug lỗi thường gặp.</p>
                 """,
-                "SE301,Ôn thi,Software Engineering",
+                "PRF192,Ôn thi,Java",
                 IsPinned: true,
                 IsFeatured: true,
                 ViewCount: 96,

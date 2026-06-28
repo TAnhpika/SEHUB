@@ -66,6 +66,7 @@ import {
   getPracticeDoPath,
   getPracticeResultPath,
 } from "@/utils/examFocusPaths";
+import ExamDetailSkeleton from "@/features/exams/ExamDetailSkeleton/ExamDetailSkeleton";
 import styles from "./ExamDetailPage.module.css";
 
 function ExamDetailPage({ page }) {
@@ -303,11 +304,7 @@ function ExamDetailPage({ page }) {
   }
 
   if (!examReady) {
-    return (
-      <div className={styles.page}>
-        <p>Đang tải đề thi...</p>
-      </div>
-    );
+    return <ExamDetailSkeleton />;
   }
 
   if (!exam) {
