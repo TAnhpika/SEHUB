@@ -166,4 +166,32 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
         var body = await response.Content.ReadFromJsonAsync<ApiResponse<PracticeSubmissionDto>>();
         body!.Data!.Status.Should().Be(nameof(PracticeSubmissionStatus.Reviewed));
     }
+
+    [Fact]
+    public async Task Moderator_ImportMarkdown_PlainCauHeader_ReturnsParsedQuestions()
+    {
+        var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
+
+        const string markdown = """
+            Câu 30
+            Chọn trong A, B, C, D đáp án thích hợp để điền vào chỗ trống で しんぶんをかいます。
+            A. うち
+            B. うみ
+            C. コンビニ
+            D. じゅぎょう
+
+            Đáp án: C
+            """;
+
+        var response = await _client.PostAsJsonAsync(
+            "/api/v1/admin/exams/import-markdown",
+            new ImportExamMarkdownRequest { Markdown = markdown });
+
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<ApiResponse<ImportExamMarkdownResponse>>();
+        body!.Data!.QuestionCount.Should().Be(1);
+        body.Data.Questions[0].OrderIndex.Should().Be(30);
+        body.Data.Questions[0].Options.Should().Contain(o => o.Label == "C" && o.Text == "コンビニ");
+    }
 }

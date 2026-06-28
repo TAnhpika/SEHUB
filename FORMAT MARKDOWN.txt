@@ -1,0 +1,125 @@
+Xuất đúng format markdown bên dưới — không thêm giải thích, không dùng bảng, không đánh số phương án kiểu 1. 2. 3.
+
+═══════════════════════════════════════
+CẤU TRÚC CHUNG
+═══════════════════════════════════════
+
+# Tên đề thi (tùy chọn, đặt trước câu 1)
+
+## Câu {N}
+{nội dung câu hỏi — 1 hoặc nhiều dòng}
+
+A. {phương án A}
+B. {phương án B}
+C. {phương án C}
+D. {phương án D}
+(E. F. G. H. nếu cần thêm phương án)
+
+**Đáp án: {X}**
+
+---
+
+(lặp lại cho câu tiếp theo)
+
+═══════════════════════════════════════
+LOẠI 1 — MỘT ĐÁP ÁN ĐÚNG (mặc định)
+═══════════════════════════════════════
+
+• Tiêu đề: ## Câu 1
+• Phương án: A. hoặc A) — chỉ dùng A–H
+• Mỗi câu nên có 4 phương án (A–D); tối thiểu 2
+• Đáp án: **Đáp án: B** hoặc Answer: B
+
+Ví dụ:
+## Câu 1
+Sông dài nhất Việt Nam?
+
+A. Sông Đà
+B. Sông Hồng
+C. Sông Mê Kông
+D. Sông Đồng Nai
+
+**Đáp án: A**
+
+═══════════════════════════════════════
+LOẠI 2 — NHIỀU ĐÁP ÁN ĐÚNG (chọn đủ mới có điểm)
+═══════════════════════════════════════
+
+• Tiêu đề: ## Câu {N} [MULTI:{số đáp án phải chọn}]
+• Có thể có >4 phương án (A–H)
+• Đáp án liệt kê bằng dấu phẩy hoặc chấm phẩy: **Đáp án: A, C, E**
+• Số đáp án trong dòng "Đáp án" phải khớp [MULTI:N]
+• Thí sinh phải chọn đúng và đủ N đáp án mới được điểm
+
+Ví dụ:
+## Câu 2 [MULTI:3]
+Chọn 3 ngôn ngữ lập trình hướng đối tượng:
+
+A. Java
+B. HTML
+C. C++
+D. Python
+E. CSS
+F. Assembly
+
+**Đáp án: A, C, D**
+
+═══════════════════════════════════════
+LOẠI 3 — ĐÚNG / SAI (True / False)
+═══════════════════════════════════════
+
+• Tiêu đề: ## Câu {N} (không cần tag đặc biệt — vẫn là một đáp án đúng)
+• Phương án: A. Đúng / B. Sai (hoặc Đúng–Sai, True–False — giữ nhãn A, B)
+• Đáp án: **Đáp án: A** (Đúng) hoặc **Đáp án: B** (Sai)
+
+Ví dụ:
+## Câu 3
+「あしたも 7時に学校へ行きます。」は正しい文です。
+
+A. Đúng
+B. Sai
+
+**Đáp án: A**
+
+═══════════════════════════════════════
+LOẠI 4 — ĐIỀN CHỖ TRỐNG / ĐỀ CÓ NHẮC A. B. C. D. TRONG ĐỀ BÀI
+═══════════════════════════════════════
+
+• Nội dung câu có thể nhắc "A. B. C. D." trong đề (không phải phương án) — giữ nguyên trong phần nội dung
+• Phương án thật vẫn liệt kê riêng từng dòng A. … B. … (bắt đầu đầu dòng)
+• Bỏ qua dòng OCR thừa kiểu "O A" (đánh dấu đáp án trên đề gốc) — không cần ghi vào markdown
+• Đáp án: **Đáp án: A** hoặc Đáp án: A. (có hoặc không dấu chấm sau chữ cái đều được)
+
+Ví dụ:
+## Câu 2
+Chọn đáp án thích hợp trong A. B. C. D để điền vào ngoặc cho câu sau:
+あしたも 7時に学校へ(
+).
+
+A. きます
+B. ききます
+C. はたらきます
+D. おきます
+
+**Đáp án: A**
+
+═══════════════════════════════════════
+QUY TẮC BẮT BUỘC
+═══════════════════════════════════════
+
+✓ Mỗi câu bắt đầu bằng ## Câu N hoặc Câu N (không bắt buộc dấu #)
+✓ Phương án luôn theo thứ tự A, B, C, D… (chỉ đổi nội dung, không đổi nhãn)
+✓ Dòng cuối mỗi câu luôn là đáp án: **Đáp án: X** hoặc **Đáp án: X, Y, Z**
+✓ Để trống 1 dòng giữa nội dung câu / phương án / đáp án (khuyến nghị)
+
+✗ Không dùng bảng markdown
+✗ Không dùng 1. 2. 3. cho phương án
+✗ Không gộp nhiều câu vào 1 block không có ## Câu N
+✗ Không viết đáp án dạng "A và C đều đúng" — phải liệt kê: A, C
+
+═══════════════════════════════════════
+KHI TÔI YÊU CẦU
+═══════════════════════════════════════
+
+"Tạo {N} câu môn {tên môn}, {M} câu multi-select" → xuất đủ N câu, đánh số ## Câu 1 … ## Câu N, xen kẽ 2 loại nếu được yêu cầu.
+Chỉ trả về markdown thuần, không bọc trong ```markdown.

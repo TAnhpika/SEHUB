@@ -155,4 +155,144 @@ public sealed class ExamMarkdownImportServiceTests
         Assert.Equal(2, q43.RequiredSelectCount);
         Assert.Equal(2, q43.CorrectOptionIds.Count);
     }
+
+    [Fact]
+    public void Parse_IncompleteSecondQuestion_ReturnsFirstAndWarning()
+    {
+        const string markdown = """
+            ## Câu 1
+            Nội dung câu hỏi?
+
+            A. Phương án A
+            B. Phương án B
+            C. Phương án C
+            D. Phương án D
+
+            **Đáp án: A**
+
+            ---
+
+            ## Câu 2 [MULTI:3]
+            Chọn đúng 3 đáp án:
+            """;
+
+        var result = _service.Parse(markdown);
+
+        Assert.Equal(1, result.QuestionCount);
+        Assert.Single(result.Warnings);
+        Assert.Contains("Câu 2:", result.Warnings[0]);
+    }
+
+    [Fact]
+    public void Parse_PlaceholderStyleMarkdown_ReturnsTwoQuestions()
+    {
+        const string markdown = """
+            ## Câu 1
+            Nội dung câu hỏi?
+
+            A. Phương án A
+            B. Phương án B
+            C. Phương án C
+            D. Phương án D
+
+            **Đáp án: B**
+
+            ---
+
+            ## Câu 2 [MULTI:3]
+            Chọn đúng 3 đáp án:
+
+            A. Đáp án A
+            B. Đáp án B
+            C. Đáp án C
+            D. Đáp án D
+            E. Đáp án E
+            F. Đáp án F
+
+            **Đáp án: A, C, E**
+            """;
+
+        var result = _service.Parse(markdown);
+
+        Assert.Equal(2, result.QuestionCount);
+        Assert.Equal("MultiSelect", result.Questions[1].QuestionType);
+        Assert.Equal(3, result.Questions[1].RequiredSelectCount);
+    }
+
+    [Fact]
+    public void Parse_JapaneseFillInBlankStemWithInlineOptionRefs_ParsesSuccessfully()
+    {
+        const string markdown = """
+            ## Câu 2
+            Chọn đáp án thích hợp trong A. B. C. D để điền vào ngoặc cho câu sau:
+            あしたも 7時に学校へ(
+            ).
+            O A
+
+            A. きます
+            B. ききます
+            C. はたらきます
+            D. おきます
+
+            **Đáp án: A**
+            """;
+
+        var result = _service.Parse(markdown);
+
+        Assert.Equal(1, result.QuestionCount);
+        Assert.Equal("SingleChoice", result.Questions[0].QuestionType);
+        Assert.Contains("A. B. C. D", result.Questions[0].Content);
+        Assert.DoesNotContain("O A", result.Questions[0].Content);
+        Assert.Equal(4, result.Questions[0].Options.Count);
+    }
+
+    [Fact]
+    public void Parse_AnswerWithTrailingDot_ParsesSuccessfully()
+    {
+        const string markdown = """
+            ## Câu 1
+            Câu hỏi?
+
+            A. Đúng
+            B. Sai
+
+            Đáp án: A.
+            """;
+
+        var result = _service.Parse(markdown);
+
+        Assert.Equal(1, result.QuestionCount);
+        Assert.Equal("A", result.Questions[0].Options[0].Label);
+    }
+
+    [Fact]
+    public void Parse_PlainCauHeaderWithoutHash_SplitsAndParses()
+    {
+        const string markdown = """
+            Câu 29
+            Câu hỏi 29?
+
+            A. Một
+            B. Hai
+            C. Ba
+            D. Bốn
+
+            Đáp án: D
+
+            Câu 30
+            Chọn trong A, B, C, D đáp án thích hợp để điền vào chỗ trống で しんぶんをかいます。
+            A. うち
+            B. うみ
+            C. コンビニ
+            D. じゅぎょう
+
+            Đáp án: C
+            """;
+
+        var result = _service.Parse(markdown);
+
+        Assert.Equal(2, result.QuestionCount);
+        Assert.Equal(30, result.Questions[1].OrderIndex);
+        Assert.Equal("C", result.Questions[1].Options.First(o => o.Id == result.Questions[1].CorrectOptionId).Label);
+    }
 }

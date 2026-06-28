@@ -186,7 +186,7 @@ export function applyRichTextAction(action, textarea, onChange) {
       return wrapSelection(textarea, '<div style="text-align: right">\n', "\n</div>", onChange);
 
     case "formula":
-      return wrapSelection(textarea, "$", "$", onChange, "x^2");
+      return wrapSelection(textarea, "$", "$", onChange, "");
 
     default:
       return undefined;

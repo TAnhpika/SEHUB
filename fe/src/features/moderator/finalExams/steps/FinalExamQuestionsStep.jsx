@@ -93,7 +93,15 @@ function FinalExamQuestionsStep() {
       setActiveQuestionIndex(0);
       setInputMode("manual");
 
-      if (warnings.length === 0) {
+      const skippedCount = warnings.length;
+      if (skippedCount > 0) {
+        const preview = warnings.slice(0, 2).join(" · ");
+        const suffix = skippedCount > 2 ? ` · +${skippedCount - 2} cảnh báo` : "";
+        showToast(
+          `Đã import ${mapped.length} câu. ${skippedCount} câu không hợp lệ: ${preview}${suffix}`,
+          6000,
+        );
+      } else {
         showToast(`Đã import ${mapped.length} câu hỏi từ Markdown.`);
       }
     } catch (err) {
@@ -197,9 +205,10 @@ function FinalExamQuestionsStep() {
         <section className={styles.markdownPanel}>
           <h2 className={styles.markdownTitle}>Import câu hỏi bằng Markdown</h2>
           <p className={styles.markdownDesc}>
-            Dán nội dung theo mẫu <code>## Câu 1</code>, <code>A.</code>–<code>H.</code>,{" "}
-            <code>**Đáp án: X**</code> hoặc <code>## Câu 2 [MULTI:3]</code> với{" "}
-            <code>**Đáp án: A, C, E**</code>.
+            Mỗi câu: tiêu đề <code>## Câu N</code> hoặc <code>Câu N</code>, nội dung, phương án <code>A.</code>–
+            <code>H.</code>, dòng <code>**Đáp án: X**</code> hoặc <code>Đáp án: X</code>. Đúng/sai dùng A. Đúng / B. Sai.
+            Nội dung có thể nhắc &quot;A. B. C. D.&quot; trong đề — phương án vẫn ghi riêng từng dòng.
+            Multi-select: <code>[MULTI:3]</code> và <code>**Đáp án: A, C, E**</code>.
           </p>
           <textarea
             className={styles.markdownInput}
@@ -209,8 +218,8 @@ function FinalExamQuestionsStep() {
             placeholder={MARKDOWN_IMPORT_PLACEHOLDER}
           />
           <p className={styles.markdownHint}>
-            Mỗi câu bắt đầu bằng <strong>## Câu N</strong> hoặc phân tách bằng <strong>---</strong>.
-            Câu chọn nhiều: thêm <strong>[MULTI:3]</strong> và <strong>**Đáp án: A, C, E**</strong>.
+            Phân tách các câu bằng <strong>## Câu N</strong> hoặc dòng <strong>---</strong>.
+            Câu thiếu phương án / thiếu dòng đáp án sẽ bị bỏ qua — xem toast cảnh báo sau khi import.
           </p>
           <div className={styles.markdownActions}>
             <Button type="button" onClick={handleImportMarkdown} disabled={importingMarkdown}>
