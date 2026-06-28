@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import Button from "@/common/Button/Button";
+import { Modal } from "@/common/Modal/Modal";
+import backdropStyles from "@/common/styles/modalBackdrop.module.css";
 import { EXAM_REJECT_REASONS } from "@/features/admin/exams/adminExamData";
 import styles from "./AdminExam.module.css";
 
@@ -57,13 +59,13 @@ function AdminExamRejectModal({ open, examTitle, onClose, onConfirm }) {
   }
 
   return (
-    <div className={styles.modalBackdrop} role="presentation" onClick={handleClose}>
-      <div
-        className={styles.modal}
-        role="dialog"
-        aria-labelledby="reject-exam-title"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal
+      open={open}
+      onClose={handleClose}
+      className={backdropStyles.overlay}
+      panelClassName={styles.modal}
+      closeOnOverlay
+    >
         <h2 id="reject-exam-title" className={styles.modalTitle}>
           Từ chối đề thi
         </h2>
@@ -113,8 +115,7 @@ function AdminExamRejectModal({ open, examTitle, onClose, onConfirm }) {
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

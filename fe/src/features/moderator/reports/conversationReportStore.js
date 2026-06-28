@@ -2,30 +2,10 @@ import * as adminApi from "@/api/adminApi";
 import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 import { MODERATION_QUEUE_FETCH_SIZE } from "@/features/moderator/reports/shared/reportCategoryConstants";
 import { REASON_META } from "@/features/moderator/reports/reportsData";
+import { inferReasonId, toReportInitials } from "@/features/reports/shared/reportFormatters";
 import { formatRelativeTime } from "@/utils/dateTime";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
-
-function inferReasonId(reasonText) {
-  const text = String(reasonText ?? "").toLowerCase();
-  if (text.includes("spam") || text.includes("quảng cáo")) return "spam";
-  if (text.includes("quấy") || text.includes("bắt nạt") || text.includes("harass")) return "harassment";
-  if (text.includes("sai") || text.includes("fake") || text.includes("lệch")) return "misinformation";
-  if (text.includes("độc") || text.includes("toxic") || text.includes("không phù hợp")) return "harmful";
-  if (text.includes("bản quyền") || text.includes("copyright")) return "copyright";
-  return "other";
-}
-
-function toInitials(value) {
-  const parts = String(value ?? "")
-    .replace(/^@/, "")
-    .split(/[\s_]+/);
-  const initials = parts
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("");
-  return initials || "?";
-}
 
 function toModeratorReport(entry) {
   const reporterUsername = entry.reporterUsername?.startsWith("@")
@@ -48,7 +28,7 @@ function toModeratorReport(entry) {
     status: entry.status?.toLowerCase?.() ?? entry.status,
     reason: entry.reasonId ?? inferReasonId(entry.reason),
     reporterUsername,
-    reporterInitial: toInitials(reporterUsername),
+    reporterInitial: toReportInitials(reporterUsername),
     timeLabel: entry.timeLabel ?? formatRelativeTime(entry.createdAt),
     reportedAt: entry.reportedAt ?? formatRelativeTime(entry.createdAt),
     createdAtIso: entry.createdAt,
@@ -59,7 +39,7 @@ function toModeratorReport(entry) {
     reportedUserId: entry.reportedUserId,
     reportedUser: {
       username: reportedUsername,
-      initial: toInitials(reportedUsername),
+      initial: toReportInitials(reportedUsername),
       joinedAt: "—",
       trustScore: 50,
     },

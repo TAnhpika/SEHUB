@@ -4,7 +4,7 @@ import {
   formatDateTimeFromApi,
   formatRelativeTimeFromApi,
   parseApiDate,
-} from "@/utils/parseApiDate";
+} from "@/utils/dateTime";
 
 function formatRelativeTime(dateStr) {
   return formatRelativeTimeFromApi(dateStr);

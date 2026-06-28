@@ -3,6 +3,8 @@ export const REFRESH_TOKEN_KEY = "sehubs_refresh_token";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5006";
 
+export { buildQuery } from "./queryUtils";
+
 const API_ERROR_MESSAGES = {
   STORAGE_NOT_CONFIGURED:
     "Chưa cấu hình Google Drive trên server. Dev: restart BE (Development) để dùng lưu file local; prod: thêm GoogleDrive trong appsettings.",
@@ -32,7 +34,6 @@ function resolveApiErrorMessage(payload, status) {
   return "Yêu cầu thất bại.";
 }
 
-let refreshInFlight = null;
 export class ApiError extends Error {
   constructor(message, { status, errors } = {}) {
     super(message);
@@ -99,27 +100,9 @@ async function parseResponse(response) {
   return payload;
 }
 
-export async function apiFormRequest(path, { method = "POST", formData, auth = true, retryOnUnauthorized = true } = {}) {
-  const headers = {
-    Accept: "application/json",
-  };
+let refreshInFlight = null;
 
-  if (auth) {
-    const token = getAccessToken();
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-  }
-
-  async function executeRequest() {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      method,
-      headers,
-      body: formData,
-    });
-    return parseResponse(response);
-  }
-
+async function withAuthRetry(path, { auth = true, retryOnUnauthorized = true, executeRequest }) {
   try {
     return await executeRequest();
   } catch (error) {
@@ -144,6 +127,30 @@ export async function apiFormRequest(path, { method = "POST", formData, auth = t
     await refreshSession();
     return executeRequest();
   }
+}
+
+export async function apiFormRequest(path, { method = "POST", formData, auth = true, retryOnUnauthorized = true } = {}) {
+  const headers = {
+    Accept: "application/json",
+  };
+
+  if (auth) {
+    const token = getAccessToken();
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+  }
+
+  async function executeRequest() {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers,
+      body: formData,
+    });
+    return parseResponse(response);
+  }
+
+  return withAuthRetry(path, { auth, retryOnUnauthorized, executeRequest });
 }
 
 async function performRefresh() {
@@ -203,30 +210,7 @@ export async function apiRequest(path, { method = "GET", body, auth = true, retr
     return parseResponse(response);
   }
 
-  try {
-    return await executeRequest();
-  } catch (error) {
-    if (!(error instanceof ApiError)) {
-      throw new ApiError(
-        `Không kết nối được máy chủ (${API_BASE_URL}). Hãy chạy SEHub.API rồi thử lại.`,
-        { status: 0 },
-      );
-    }
-
-    const shouldRefresh =
-      retryOnUnauthorized &&
-      auth &&
-      error.status === 401 &&
-      getRefreshToken() &&
-      !path.includes("/api/v1/auth/refresh");
-
-    if (!shouldRefresh) {
-      throw error;
-    }
-
-    await refreshSession();
-    return executeRequest();
-  }
+  return withAuthRetry(path, { auth, retryOnUnauthorized, executeRequest });
 }
 
 export async function apiUploadRequest(path, formData, { auth = true, retryOnUnauthorized = true } = {}) {
@@ -250,30 +234,7 @@ export async function apiUploadRequest(path, formData, { auth = true, retryOnUna
     return parseResponse(response);
   }
 
-  try {
-    return await executeRequest();
-  } catch (error) {
-    if (!(error instanceof ApiError)) {
-      throw new ApiError(
-        `Không kết nối được máy chủ (${API_BASE_URL}). Hãy chạy SEHub.API rồi thử lại.`,
-        { status: 0 },
-      );
-    }
-
-    const shouldRefresh =
-      retryOnUnauthorized &&
-      auth &&
-      error.status === 401 &&
-      getRefreshToken() &&
-      !path.includes("/api/v1/auth/refresh");
-
-    if (!shouldRefresh) {
-      throw error;
-    }
-
-    await refreshSession();
-    return executeRequest();
-  }
+  return withAuthRetry(path, { auth, retryOnUnauthorized, executeRequest });
 }
 
 export async function downloadCsv(path, { auth = true, retryOnUnauthorized = true } = {}) {
@@ -306,28 +267,5 @@ export async function downloadCsv(path, { auth = true, retryOnUnauthorized = tru
     URL.revokeObjectURL(url);
   }
 
-  try {
-    await executeRequest();
-  } catch (error) {
-    if (!(error instanceof ApiError)) {
-      throw new ApiError(
-        `Không kết nối được máy chủ (${API_BASE_URL}). Hãy chạy SEHub.API rồi thử lại.`,
-        { status: 0 },
-      );
-    }
-
-    const shouldRefresh =
-      retryOnUnauthorized &&
-      auth &&
-      error.status === 401 &&
-      getRefreshToken() &&
-      !path.includes("/api/v1/auth/refresh");
-
-    if (!shouldRefresh) {
-      throw error;
-    }
-
-    await refreshSession();
-    await executeRequest();
-  }
+  return withAuthRetry(path, { auth, retryOnUnauthorized, executeRequest });
 }
