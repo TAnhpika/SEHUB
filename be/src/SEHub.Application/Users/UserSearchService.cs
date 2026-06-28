@@ -44,10 +44,10 @@ public sealed class UserSearchService : IUserSearchService
         pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
 
         var trimmedQuery = query.Trim();
-        var total = await _searchRepository.CountAsync(trimmedQuery, cancellationToken);
-        var rows = await _searchRepository.SearchAsync(trimmedQuery, page, pageSize, cancellationToken);
-
         var viewerId = _currentUser.UserId;
+        var total = await _searchRepository.CountAsync(trimmedQuery, viewerId, cancellationToken);
+        var rows = await _searchRepository.SearchAsync(trimmedQuery, page, pageSize, viewerId, cancellationToken);
+
         IReadOnlySet<Guid> followingIds = new HashSet<Guid>();
         if (viewerId.HasValue && rows.Count > 0)
         {

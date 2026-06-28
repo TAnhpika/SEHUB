@@ -18,11 +18,19 @@ public sealed class MessageRepository : IMessageRepository
         Guid conversationId,
         int page,
         int pageSize,
+        DateTime? visibleAfter = null,
         CancellationToken cancellationToken = default)
     {
-        return await _context.Messages
+        var query = _context.Messages
             .AsNoTracking()
-            .Where(m => m.ConversationId == conversationId)
+            .Where(m => m.ConversationId == conversationId);
+
+        if (visibleAfter.HasValue)
+        {
+            query = query.Where(m => m.SentAt > visibleAfter.Value);
+        }
+
+        return await query
             .OrderByDescending(m => m.SentAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -30,8 +38,19 @@ public sealed class MessageRepository : IMessageRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<int> CountAsync(Guid conversationId, CancellationToken cancellationToken = default) =>
-        _context.Messages.CountAsync(m => m.ConversationId == conversationId, cancellationToken);
+    public Task<int> CountAsync(
+        Guid conversationId,
+        DateTime? visibleAfter = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Messages.Where(m => m.ConversationId == conversationId);
+        if (visibleAfter.HasValue)
+        {
+            query = query.Where(m => m.SentAt > visibleAfter.Value);
+        }
+
+        return query.CountAsync(cancellationToken);
+    }
 
     public Task<Message?> GetLatestAsync(Guid conversationId, CancellationToken cancellationToken = default) =>
         _context.Messages

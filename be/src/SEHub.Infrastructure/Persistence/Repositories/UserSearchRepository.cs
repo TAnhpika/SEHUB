@@ -16,9 +16,10 @@ public sealed class UserSearchRepository : IUserSearchRepository
         string search,
         int page,
         int pageSize,
+        Guid? excludeUserId = null,
         CancellationToken cancellationToken = default)
     {
-        var query = BuildQuery(search);
+        var query = BuildQuery(search, excludeUserId);
 
         var rows = await query
             .OrderBy(u => u.UserName)
@@ -37,8 +38,11 @@ public sealed class UserSearchRepository : IUserSearchRepository
         return rows;
     }
 
-    public Task<int> CountAsync(string search, CancellationToken cancellationToken = default) =>
-        BuildQuery(search).CountAsync(cancellationToken);
+    public Task<int> CountAsync(
+        string search,
+        Guid? excludeUserId = null,
+        CancellationToken cancellationToken = default) =>
+        BuildQuery(search, excludeUserId).CountAsync(cancellationToken);
 
     public async Task<IReadOnlyList<UserSearchRow>> GetByIdsAsync(
         IReadOnlyList<Guid> userIds,
@@ -66,11 +70,16 @@ public sealed class UserSearchRepository : IUserSearchRepository
         return rows.OrderBy(r => order.GetValueOrDefault(r.UserId, int.MaxValue)).ToList();
     }
 
-    private IQueryable<ApplicationUser> BuildQuery(string search)
+    private IQueryable<ApplicationUser> BuildQuery(string search, Guid? excludeUserId = null)
     {
         var query = _context.Users
             .AsNoTracking()
             .Where(u => !u.IsBanned);
+
+        if (excludeUserId.HasValue)
+        {
+            query = query.Where(u => u.Id != excludeUserId.Value);
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {

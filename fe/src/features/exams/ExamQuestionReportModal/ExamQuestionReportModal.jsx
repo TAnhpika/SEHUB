@@ -21,11 +21,7 @@ function ExamQuestionReportModal({
 
   if (!open || !question) return null;
 
-<<<<<<< HEAD
   async function handleSubmit({ reason, detail }) {
-=======
-  async function handleSubmit({ reason, reasonLabel, detail }) {
->>>>>>> 15fa31b4c9634aaa4f27b4b0408b3c74d0f67faf
     const report = await submitExamQuestionReport({
       examId,
       courseCode,
@@ -64,13 +60,7 @@ function ExamQuestionReportModal({
           <strong>{EXAM_REPORT_ROUTING.escalationLabel}</strong>
         </p>
       }
-<<<<<<< HEAD
       onSubmit={({ reasonId, detail }) => handleSubmit({ reason: reasonId, detail })}
-=======
-      onSubmit={({ reasonId, reasonLabel, detail }) =>
-        handleSubmit({ reason: reasonId, reasonLabel, detail })
-      }
->>>>>>> 15fa31b4c9634aaa4f27b4b0408b3c74d0f67faf
     />
   );
 }

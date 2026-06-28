@@ -14,12 +14,17 @@ public interface ICommentReportRepository
         int page,
         int pageSize,
         ReportStatus? status,
+        bool nonPendingOnly = false,
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CommentReport>> GetRecentAsync(
         int take,
         ReportStatus? status,
+        bool nonPendingOnly = false,
         CancellationToken cancellationToken = default);
-    Task<int> CountAsync(ReportStatus? status, CancellationToken cancellationToken = default);
+    Task<int> CountAsync(
+        ReportStatus? status,
+        bool nonPendingOnly = false,
+        CancellationToken cancellationToken = default);
     Task AddAsync(CommentReport report, CancellationToken cancellationToken = default);
     Task UpdateAsync(CommentReport report, CancellationToken cancellationToken = default);
 }

@@ -343,30 +343,18 @@ function ReportsPage() {
   }
 
   function finishCommunityResolve(id, resolution, reloaded) {
-    const target = reports.find((report) => report.id === id);
-    if (reloaded) {
-      setCommunityReports(reloaded);
-      const resolved =
-        reloaded.find((report) => report.id === id) ??
-        (target ? { ...target, status: "resolved", resolution } : null);
-      if (resolved) {
-        setLastResolved(resolved);
-      }
-      setTab("resolved");
-      setSelectedId(id);
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.set("id", id);
-          return next;
-        },
-        { replace: true },
-      );
-      deepLinkSyncedRef.current = true;
-      return;
+    if (!reloaded) {
+      throw new Error("Không xử lý được báo cáo cộng đồng.");
     }
 
-    resolveReportLocal(id, resolution);
+    const target = reports.find((report) => report.id === id);
+    setCommunityReports(reloaded);
+    const resolved =
+      reloaded.find((report) => report.id === id) ??
+      (target ? { ...target, status: "resolved", resolution } : null);
+    if (resolved) {
+      setLastResolved(resolved);
+    }
     setTab("resolved");
     setSelectedId(id);
     setSearchParams(
@@ -378,6 +366,44 @@ function ReportsPage() {
       { replace: true },
     );
     deepLinkSyncedRef.current = true;
+  }
+
+  async function syncCommunityReportsAfterNotFound(err, reportId) {
+    const message = String(err?.message ?? "");
+    const isNotFound =
+      err?.status === 404 || message.includes("không còn tồn tại") || message.includes("not found");
+
+    if (!isNotFound) {
+      return;
+    }
+
+    try {
+      const refreshed = await loadModeratorCommunityReports();
+      setCommunityReports(refreshed.items);
+      setHasMoreCommunityReports(refreshed.hasMore);
+      setCommunityApiPage(refreshed.page);
+
+      const nextPending = refreshed.items.find(
+        (report) => report.status === "pending" && report.id !== reportId,
+      );
+      const nextId = nextPending?.id ?? refreshed.items.find((report) => report.id !== reportId)?.id ?? null;
+      setSelectedId(nextId);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (nextId) {
+            next.set("id", nextId);
+          } else {
+            next.delete("id");
+          }
+          return next;
+        },
+        { replace: true },
+      );
+    } catch {
+      setCommunityReports((prev) => prev.filter((report) => report.id !== reportId));
+      setSelectedId(null);
+    }
   }
 
   async function handleLoadMoreCommunityReports() {
@@ -419,6 +445,7 @@ function ReportsPage() {
         );
         finishCommunityResolve(id, "ignored", reloaded);
       } catch (err) {
+        await syncCommunityReportsAfterNotFound(err, id);
         showToast(err.message ?? "Không xử lý được báo cáo.");
         return;
       }
@@ -469,6 +496,7 @@ function ReportsPage() {
         );
         finishCommunityResolve(id, "deleted", reloaded);
       } catch (err) {
+        await syncCommunityReportsAfterNotFound(err, id);
         showToast(err.message ?? "Không xóa được nội dung.");
         return;
       }

@@ -29,10 +29,15 @@ public class CommentReportRepository : ICommentReportRepository
         int page,
         int pageSize,
         ReportStatus? status,
+        bool nonPendingOnly = false,
         CancellationToken cancellationToken = default)
     {
         var query = _context.CommentReports.AsQueryable();
-        if (status.HasValue)
+        if (nonPendingOnly)
+        {
+            query = query.Where(r => r.Status != ReportStatus.Pending);
+        }
+        else if (status.HasValue)
         {
             query = query.Where(r => r.Status == status.Value);
         }
@@ -50,10 +55,15 @@ public class CommentReportRepository : ICommentReportRepository
     public async Task<IReadOnlyList<CommentReport>> GetRecentAsync(
         int take,
         ReportStatus? status,
+        bool nonPendingOnly = false,
         CancellationToken cancellationToken = default)
     {
         var query = _context.CommentReports.AsQueryable();
-        if (status.HasValue)
+        if (nonPendingOnly)
+        {
+            query = query.Where(r => r.Status != ReportStatus.Pending);
+        }
+        else if (status.HasValue)
         {
             query = query.Where(r => r.Status == status.Value);
         }
@@ -64,10 +74,17 @@ public class CommentReportRepository : ICommentReportRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<int> CountAsync(ReportStatus? status, CancellationToken cancellationToken = default)
+    public Task<int> CountAsync(
+        ReportStatus? status,
+        bool nonPendingOnly = false,
+        CancellationToken cancellationToken = default)
     {
         var query = _context.CommentReports.AsQueryable();
-        if (status.HasValue)
+        if (nonPendingOnly)
+        {
+            query = query.Where(r => r.Status != ReportStatus.Pending);
+        }
+        else if (status.HasValue)
         {
             query = query.Where(r => r.Status == status.Value);
         }

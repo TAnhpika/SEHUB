@@ -93,18 +93,26 @@ public sealed class ModerationService : IModerationService
     public async Task<PagedResult<ReportDto>> GetReportsAsync(int page, int pageSize, string? status, CancellationToken cancellationToken = default)
     {
         ReportStatus? statusFilter = null;
+        var nonPendingOnly = false;
         if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<ReportStatus>(status, true, out var parsed))
         {
-            statusFilter = parsed;
+            if (parsed == ReportStatus.Resolved)
+            {
+                nonPendingOnly = true;
+            }
+            else
+            {
+                statusFilter = parsed;
+            }
         }
 
-        var postTotal = await _reportRepository.CountAsync(statusFilter, cancellationToken);
-        var commentTotal = await _commentReportRepository.CountAsync(statusFilter, cancellationToken);
+        var postTotal = await _reportRepository.CountAsync(statusFilter, nonPendingOnly, cancellationToken);
+        var commentTotal = await _commentReportRepository.CountAsync(statusFilter, nonPendingOnly, cancellationToken);
         var total = postTotal + commentTotal;
 
         var fetchCount = Math.Max(page * pageSize, pageSize);
-        var posts = await _reportRepository.GetRecentAsync(fetchCount, statusFilter, cancellationToken);
-        var comments = await _commentReportRepository.GetRecentAsync(fetchCount, statusFilter, cancellationToken);
+        var posts = await _reportRepository.GetRecentAsync(fetchCount, statusFilter, nonPendingOnly, cancellationToken);
+        var comments = await _commentReportRepository.GetRecentAsync(fetchCount, statusFilter, nonPendingOnly, cancellationToken);
 
         var postDtos = await MapReportsAsync(posts, cancellationToken);
         var commentDtos = await MapCommentReportsAsync(comments, cancellationToken);
@@ -169,19 +177,28 @@ public sealed class ModerationService : IModerationService
         report.ResolvedById = actorId;
         report.UpdatedAt = DateTime.UtcNow;
 
+        Post? deletedPost = null;
         if (request.Action?.Equals("delete_post", StringComparison.OrdinalIgnoreCase) == true)
         {
-            var post = await _postRepository.GetByIdAsync(report.PostId, cancellationToken);
-            if (post is not null)
+            var post = await _postRepository.GetByIdIncludingDeletedAsync(report.PostId, cancellationToken);
+            if (post is not null && !post.IsDeleted)
             {
                 await _postRepository.SoftDeleteAsync(post, actorId, cancellationToken);
-                await _gamificationService.PublishPostDeletedAsync(post.Id, post.AuthorId, cancellationToken);
+                deletedPost = post;
             }
         }
 
         await _reportRepository.UpdateAsync(report, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         InvalidateModerationStatsCache();
+
+        if (deletedPost is not null)
+        {
+            await _gamificationService.PublishPostDeletedAsync(
+                deletedPost.Id,
+                deletedPost.AuthorId,
+                cancellationToken);
+        }
 
         return await MapReportAsync(report, cancellationToken);
     }
@@ -258,8 +275,8 @@ public sealed class ModerationService : IModerationService
         }
 
         var pendingPosts = await _postRepository.CountByStatusAsync(PostStatus.Pending, cancellationToken);
-        var pendingPostReports = await _reportRepository.CountAsync(ReportStatus.Pending, cancellationToken);
-        var pendingCommentReports = await _commentReportRepository.CountAsync(ReportStatus.Pending, cancellationToken);
+        var pendingPostReports = await _reportRepository.CountAsync(ReportStatus.Pending, cancellationToken: cancellationToken);
+        var pendingCommentReports = await _commentReportRepository.CountAsync(ReportStatus.Pending, cancellationToken: cancellationToken);
         var pendingUserReports = await _userReportRepository.CountPendingAsync(cancellationToken);
         var pendingConversationReports = await _conversationReportRepository.CountPendingAsync(cancellationToken);
         var pendingQuestionReports = await _questionReportRepository.CountPendingAsync(cancellationToken);

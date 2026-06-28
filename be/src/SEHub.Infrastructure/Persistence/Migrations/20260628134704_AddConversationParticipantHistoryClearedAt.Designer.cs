@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SEHub.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using SEHub.Infrastructure.Persistence;
 namespace SEHub.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(SEHubDbContext))]
-    partial class SEHubDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260628134704_AddConversationParticipantHistoryClearedAt")]
+    partial class AddConversationParticipantHistoryClearedAt
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -480,60 +483,6 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.HasIndex("PostId");
 
                     b.ToTable("Comments");
-                });
-
-            modelBuilder.Entity("SEHub.Domain.Entities.CommentReport", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CommentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Detail")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<Guid>("PostId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<Guid>("ReporterId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ResolutionNote")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<Guid?>("ResolvedById")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PostId");
-
-                    b.HasIndex("Status");
-
-                    b.HasIndex("Status", "CreatedAt");
-
-                    b.HasIndex("CommentId", "ReporterId", "Status");
-
-                    b.ToTable("CommentReports");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.Conversation", b =>
@@ -2243,109 +2192,6 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.ToTable("UserProfiles");
                 });
 
-            modelBuilder.Entity("SEHub.Domain.Entities.UserReport", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Detail")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<Guid?>("ExamId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("PostId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("QuestionCommentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("QuestionId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<Guid>("ReportedUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ReporterId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ResolutionNote")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<Guid?>("ResolvedById")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Source")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Status");
-
-                    b.HasIndex("Status", "CreatedAt");
-
-                    b.HasIndex("ReportedUserId", "ReporterId", "Source", "Status");
-
-                    b.ToTable("UserReports");
-                });
-
-            modelBuilder.Entity("SEHub.Domain.Entities.ViolationEscalation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("EscalatedById")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<Guid>("SourceReportId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("SourceType")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("ViolationEscalations");
-                });
-
             modelBuilder.Entity("SEHub.Domain.Entities.WeeklyMission", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2586,25 +2432,6 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("ParentComment");
-
-                    b.Navigation("Post");
-                });
-
-            modelBuilder.Entity("SEHub.Domain.Entities.CommentReport", b =>
-                {
-                    b.HasOne("SEHub.Domain.Entities.Comment", "Comment")
-                        .WithMany()
-                        .HasForeignKey("CommentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SEHub.Domain.Entities.Post", "Post")
-                        .WithMany()
-                        .HasForeignKey("PostId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Comment");
 
                     b.Navigation("Post");
                 });

@@ -46,8 +46,8 @@ public sealed class AdminDashboardService : IAdminDashboardService
 
     public async Task<DashboardStatsDto> GetStatsAsync(CancellationToken cancellationToken = default)
     {
-        var pendingPostReports = await _reportRepository.CountAsync(ReportStatus.Pending, cancellationToken);
-        var pendingCommentReports = await _commentReportRepository.CountAsync(ReportStatus.Pending, cancellationToken);
+        var pendingPostReports = await _reportRepository.CountAsync(ReportStatus.Pending, cancellationToken: cancellationToken);
+        var pendingCommentReports = await _commentReportRepository.CountAsync(ReportStatus.Pending, cancellationToken: cancellationToken);
         var pendingUserReports = await _userReportRepository.CountPendingAsync(cancellationToken);
         var pendingConversationReports = await _conversationReportRepository.CountPendingAsync(cancellationToken);
         var pendingQuestionReports = await _questionReportRepository.CountPendingAsync(cancellationToken);

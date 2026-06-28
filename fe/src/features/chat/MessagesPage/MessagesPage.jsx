@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
+import { faMagnifyingGlass, faPenToSquare, faTrash } from "@fortawesome/free-solid-svg-icons";
 import ConversationAvatar from "@/features/chat/ConversationAvatar/ConversationAvatar";
 import ConversationChat from "@/features/chat/ConversationChat/ConversationChat";
 import ChatEmptyState, { faCommentDots, faInbox } from "@/features/chat/ChatEmptyState/ChatEmptyState";
@@ -10,6 +10,7 @@ import {
   loadConversationMessages,
   loadConversations,
   markConversationAsRead,
+  deleteConversationHistory,
   sendConversationAttachment,
   sendConversationMessage,
 } from "@/features/chat/messagesData";
@@ -17,6 +18,7 @@ import { blockUser, getBlockStatus, unblockUser } from "@/api/blockApi";
 import { mapMessageItem, appendMessageIfNew, getMessagePreview } from "@/api/messagesMapper";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useChatHub } from "@/hooks/useChatHub";
 import { applyPresenceUpdate } from "@/utils/presenceStatus";
 import styles from "./MessagesPage.module.css";
@@ -24,6 +26,7 @@ import styles from "./MessagesPage.module.css";
 function MessagesPage() {
   const location = useLocation();
   const { showToast } = useToast();
+  const { confirm } = useConfirmDialog();
   const { user } = useAuth();
   const currentUserId = user?.id;
   const [conversations, setConversations] = useState([]);
@@ -40,6 +43,7 @@ function MessagesPage() {
     isBlockedEitherWay: false,
   });
   const [reportOpen, setReportOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== "undefined" ? window.matchMedia("(max-width: 900px)").matches : false,
   );
@@ -280,6 +284,38 @@ function MessagesPage() {
     }
   }
 
+  function toggleEditMode() {
+    setIsEditMode((current) => !current);
+  }
+
+  async function handleDeleteConversation(conversation) {
+    const confirmed = await confirm({
+      title: "Xóa lịch sử chat",
+      description: `Xóa lịch sử chat với ${conversation.name}? Hành động này chỉ áp dụng với bạn.`,
+      confirmLabel: "Xóa",
+      cancelLabel: "Hủy",
+      variant: "danger",
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await deleteConversationHistory(conversation.conversationId);
+      setConversations((current) =>
+        current.filter((item) => item.conversationId !== conversation.conversationId),
+      );
+
+      if (selectedId === conversation.conversationId) {
+        setSelectedId(null);
+        setMessages([]);
+      }
+
+      showToast("Đã xóa lịch sử chat.");
+    } catch (err) {
+      showToast(err.message ?? "Không xóa được lịch sử chat.");
+    }
+  }
+
   return (
     <div className={`${styles.page} ${showMobileChat ? styles.pageMobileChat : ""}`}>
       <aside
@@ -288,7 +324,13 @@ function MessagesPage() {
       >
         <div className={styles["inbox-header"]}>
           <h1 className={styles["inbox-title"]}>Tin nhắn</h1>
-          <button type="button" className={styles.compose} aria-label="Soạn tin nhắn mới" disabled>
+          <button
+            type="button"
+            className={`${styles.compose} ${isEditMode ? styles.composeActive : ""}`}
+            aria-label={isEditMode ? "Hoàn tất chỉnh sửa" : "Chỉnh sửa danh sách hội thoại"}
+            aria-pressed={isEditMode}
+            onClick={toggleEditMode}
+          >
             <FontAwesomeIcon icon={faPenToSquare} />
           </button>
         </div>
@@ -328,28 +370,43 @@ function MessagesPage() {
 
             return (
               <li key={conversation.conversationId}>
-                <button
-                  type="button"
-                  className={`${styles["conversation-item"]} ${isActive ? styles.active : ""}`}
-                  onClick={() => setSelectedId(conversation.conversationId)}
+                <div
+                  className={`${styles["conversation-item"]} ${isActive ? styles.active : ""} ${isEditMode ? styles["conversation-item-edit"] : ""}`}
                 >
-                  <ConversationAvatar conversation={conversation} />
+                  <button
+                    type="button"
+                    className={styles["conversation-open"]}
+                    onClick={() => setSelectedId(conversation.conversationId)}
+                  >
+                    <ConversationAvatar conversation={conversation} />
 
-                  <span className={styles["conversation-body"]}>
-                    <span className={styles["conversation-top"]}>
-                      <span className={styles["conversation-name"]}>{conversation.name}</span>
-                      <span className={styles["conversation-time"]}>{conversation.time}</span>
+                    <span className={styles["conversation-body"]}>
+                      <span className={styles["conversation-top"]}>
+                        <span className={styles["conversation-name"]}>{conversation.name}</span>
+                        <span className={styles["conversation-time"]}>{conversation.time}</span>
+                      </span>
+                      <span className={styles["conversation-preview-row"]}>
+                        <span className={styles["conversation-preview"]}>{conversation.preview}</span>
+                        {conversation.unread > 0 && (
+                          <span className={styles.badge} aria-label={`${conversation.unread} tin chưa đọc`}>
+                            {conversation.unread}
+                          </span>
+                        )}
+                      </span>
                     </span>
-                    <span className={styles["conversation-preview-row"]}>
-                      <span className={styles["conversation-preview"]}>{conversation.preview}</span>
-                      {conversation.unread > 0 && (
-                        <span className={styles.badge} aria-label={`${conversation.unread} tin chưa đọc`}>
-                          {conversation.unread}
-                        </span>
-                      )}
-                    </span>
-                  </span>
-                </button>
+                  </button>
+
+                  {isEditMode && (
+                    <button
+                      type="button"
+                      className={styles["delete-btn"]}
+                      aria-label={`Xóa lịch sử chat với ${conversation.name}`}
+                      onClick={() => handleDeleteConversation(conversation)}
+                    >
+                      <FontAwesomeIcon icon={faTrash} />
+                    </button>
+                  )}
+                </div>
               </li>
             );
           })}

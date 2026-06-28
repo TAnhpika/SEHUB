@@ -170,7 +170,7 @@
 }
 
 .table tbody tr:hover {
-  background: rgba(247, 249, 251, 0.6);
+  background: var(--moderator-primary-muted);
 }
 
 .account {
