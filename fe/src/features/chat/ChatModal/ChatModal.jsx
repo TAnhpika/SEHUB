@@ -11,10 +11,13 @@ import {
   sendConversationMessage,
 } from "@/features/chat/messagesData";
 import { mapMessageItem, appendMessageIfNew } from "@/api/messagesMapper";
+import { useAuth } from "@/context";
 import { useChatHub } from "@/hooks/useChatHub";
 import styles from "./ChatModal.module.css";
 
 function ChatModal({ onClose }) {
+  const { user } = useAuth();
+  const currentUserId = user?.id;
   const [conversations, setConversations] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -25,7 +28,7 @@ function ChatModal({ onClose }) {
   const { joinConversation } = useChatHub({
     onReceiveMessage: (messageDto) => {
       if (selectedId !== messageDto.conversationId) return;
-      const mapped = mapMessageItem(messageDto);
+      const mapped = mapMessageItem(messageDto, { currentUserId });
       setMessages((current) => appendMessageIfNew(current, mapped));
     },
   });
@@ -69,7 +72,7 @@ function ChatModal({ onClose }) {
     async function fetchMessages() {
       setMessagesLoading(true);
       try {
-        const { items } = await loadConversationMessages(selectedId);
+        const { items } = await loadConversationMessages(selectedId, { currentUserId });
         if (!cancelled) {
           setMessages(items);
           await markConversationAsRead(selectedId);
@@ -85,7 +88,7 @@ function ChatModal({ onClose }) {
     return () => {
       cancelled = true;
     };
-  }, [selectedId, joinConversation]);
+  }, [selectedId, joinConversation, currentUserId]);
 
   const activeConversation = conversations.find((item) => item.conversationId === selectedId) ?? null;
 
@@ -107,8 +110,8 @@ function ChatModal({ onClose }) {
             setSending(true);
             try {
               const mapped = file
-                ? await sendConversationAttachment(selectedId, file, trimmed)
-                : await sendConversationMessage(selectedId, trimmed);
+                ? await sendConversationAttachment(selectedId, file, trimmed, { currentUserId })
+                : await sendConversationMessage(selectedId, trimmed, { currentUserId });
               setMessages((current) => appendMessageIfNew(current, mapped));
             } finally {
               setSending(false);

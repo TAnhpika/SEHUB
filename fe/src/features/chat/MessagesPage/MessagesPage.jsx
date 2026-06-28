@@ -16,12 +16,15 @@ import {
 import { blockUser, getBlockStatus, unblockUser } from "@/api/blockApi";
 import { mapMessageItem, appendMessageIfNew, getMessagePreview } from "@/api/messagesMapper";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { useAuth } from "@/context";
 import { useChatHub } from "@/hooks/useChatHub";
 import styles from "./MessagesPage.module.css";
 
 function MessagesPage() {
   const location = useLocation();
   const { showToast } = useToast();
+  const { user } = useAuth();
+  const currentUserId = user?.id;
   const [conversations, setConversations] = useState([]);
   const [selectedId, setSelectedId] = useState(location.state?.conversationId ?? null);
   const [messages, setMessages] = useState([]);
@@ -48,8 +51,9 @@ function MessagesPage() {
   }, []);
 
   const handleReceiveMessage = useCallback((messageDto) => {
-    const mapped = mapMessageItem(messageDto);
+    const mapped = mapMessageItem(messageDto, { currentUserId });
     const preview = getMessagePreview(mapped);
+    const isMine = mapped.type === "sent";
 
     setConversations((current) =>
       current.map((item) =>
@@ -59,9 +63,9 @@ function MessagesPage() {
               preview,
               time: "Vừa xong",
               unread:
-                selectedId === item.conversationId && messageDto.isMine
+                selectedId === item.conversationId && isMine
                   ? item.unread
-                  : messageDto.isMine
+                  : isMine
                     ? item.unread
                     : item.unread + 1,
             }
@@ -72,7 +76,7 @@ function MessagesPage() {
     if (selectedId === messageDto.conversationId) {
       setMessages((current) => appendMessageIfNew(current, mapped));
     }
-  }, [selectedId]);
+  }, [currentUserId, selectedId]);
 
   const { joinConversation } = useChatHub({
     onReceiveMessage: handleReceiveMessage,
@@ -123,7 +127,7 @@ function MessagesPage() {
       setMessagesLoading(true);
 
       try {
-        const { items } = await loadConversationMessages(selectedId);
+        const { items } = await loadConversationMessages(selectedId, { currentUserId });
         if (!cancelled) {
           setMessages(items);
           await markConversationAsRead(selectedId);
@@ -148,7 +152,7 @@ function MessagesPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedId, joinConversation]);
+  }, [selectedId, joinConversation, currentUserId]);
 
   const filteredConversations = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -251,8 +255,8 @@ function MessagesPage() {
     setSending(true);
     try {
       const mapped = file
-        ? await sendConversationAttachment(selectedId, file, trimmed)
-        : await sendConversationMessage(selectedId, trimmed);
+        ? await sendConversationAttachment(selectedId, file, trimmed, { currentUserId })
+        : await sendConversationMessage(selectedId, trimmed, { currentUserId });
       setMessages((current) => appendMessageIfNew(current, mapped));
       setConversations((current) =>
         current.map((item) =>
