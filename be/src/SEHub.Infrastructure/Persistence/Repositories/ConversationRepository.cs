@@ -126,7 +126,10 @@ public sealed class ConversationRepository : IConversationRepository
         conversation.UpdatedAt = sentAt;
     }
 
-    public async Task<int> GetTotalUnreadCountAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<int> GetTotalUnreadCountAsync(
+        Guid userId,
+        IReadOnlyCollection<Guid>? excludeOtherUserIds = null,
+        CancellationToken cancellationToken = default)
     {
         var memberships = await _context.ConversationParticipants
             .AsNoTracking()
@@ -134,9 +137,33 @@ public sealed class ConversationRepository : IConversationRepository
             .Select(p => new { p.ConversationId, p.LastReadAt })
             .ToListAsync(cancellationToken);
 
+        if (memberships.Count == 0)
+        {
+            return 0;
+        }
+
+        HashSet<Guid>? hiddenConversationIds = null;
+        if (excludeOtherUserIds is { Count: > 0 })
+        {
+            var excluded = excludeOtherUserIds.ToHashSet();
+            var userConversationIds = memberships.Select(m => m.ConversationId).ToHashSet();
+            var hiddenIds = await _context.ConversationParticipants
+                .AsNoTracking()
+                .Where(p => excluded.Contains(p.UserId) && p.UserId != userId)
+                .Where(p => userConversationIds.Contains(p.ConversationId))
+                .Select(p => p.ConversationId)
+                .ToListAsync(cancellationToken);
+            hiddenConversationIds = hiddenIds.ToHashSet();
+        }
+
         var total = 0;
         foreach (var membership in memberships)
         {
+            if (hiddenConversationIds?.Contains(membership.ConversationId) == true)
+            {
+                continue;
+            }
+
             total += await CountUnreadAsync(
                 membership.ConversationId,
                 userId,
