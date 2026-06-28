@@ -138,6 +138,9 @@
   --moderator-sidebar-collapsed: 72px;
   --moderator-bg: #f7f9fb;
   --moderator-surface: #ffffff;
+  --moderator-surface-elevated: #ffffff;
+  --moderator-input-bg: #f8fafc;
+  --moderator-on-primary: #ffffff;
   --moderator-border: rgba(195, 198, 215, 0.3);
   --moderator-border-light: rgba(195, 198, 215, 0.2);
   --moderator-text: #191c1e;
@@ -238,15 +241,20 @@
     0 4px 6px -4px rgba(37, 99, 235, 0.25);
 
   --moderator-primary-soft: rgba(37, 99, 235, 0.18);
-  --moderator-primary-muted: rgba(37, 99, 235, 0.12);
+  --moderator-primary-muted: rgba(37, 99, 235, 0.2);
   --moderator-bg: #0f172a;
   --moderator-surface: #1e293b;
-  --moderator-border: rgba(148, 163, 184, 0.25);
-  --moderator-border-light: rgba(148, 163, 184, 0.15);
+  --moderator-surface-elevated: #273449;
+  --moderator-input-bg: #334155;
+  --moderator-on-primary: #ffffff;
+  --moderator-border: rgba(148, 163, 184, 0.38);
+  --moderator-border-light: rgba(148, 163, 184, 0.24);
   --moderator-text: #f1f5f9;
   --moderator-text-muted: #cbd5e1;
   --moderator-text-subtle: #94a3b8;
-  --moderator-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  --moderator-card-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(148, 163, 184, 0.1);
 
   --scrollbar-thumb: #475569;
   --scrollbar-thumb-hover: #64748b;

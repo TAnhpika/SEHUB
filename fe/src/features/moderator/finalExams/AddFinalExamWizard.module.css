@@ -20,7 +20,7 @@
 
 .loading {
   color: var(--moderator-text-muted);
-  background: var(--moderator-bg);
+  background: var(--moderator-surface);
   border: 1px solid var(--moderator-border);
 }
 

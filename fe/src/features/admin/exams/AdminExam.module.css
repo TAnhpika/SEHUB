@@ -75,14 +75,14 @@
   font-size: 0.6875rem;
   word-break: break-all;
   color: var(--moderator-text-muted);
-  background: var(--moderator-bg);
+  background: var(--moderator-input-bg);
   border-radius: 6px;
 }
 
 .ocrPanel {
   padding: 1rem 1.25rem;
   margin-top: 1rem;
-  background: var(--moderator-bg);
+  background: var(--moderator-input-bg);
   border: 1px solid var(--moderator-border);
   border-radius: 12px;
 }
@@ -154,12 +154,12 @@
   font-weight: 500;
   color: var(--moderator-text-muted);
   text-align: center;
-  background: var(--moderator-bg);
+  background: var(--moderator-input-bg);
   border-radius: 8px;
 }
 
 .stepActive {
-  color: #fff;
+  color: var(--moderator-on-primary);
   background: var(--moderator-primary);
 }
 
@@ -281,7 +281,7 @@
   grid-template-columns: 1fr minmax(260px, 300px);
   gap: 1rem 1.25rem;
   padding: 1rem;
-  background: var(--moderator-bg);
+  background: var(--moderator-input-bg);
   border: 1px solid var(--moderator-border);
   border-radius: 10px;
 }
