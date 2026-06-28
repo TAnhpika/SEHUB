@@ -241,7 +241,7 @@
   width: 100%;
   max-height: min(320px, 45vh);
   margin: 0.75rem 0;
-  background: var(--color-surface-muted, #f1f5f9);
+  background: var(--color-surface-muted);
   border-radius: var(--radius-lg);
   overflow: hidden;
 }

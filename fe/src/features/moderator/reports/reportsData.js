@@ -2,6 +2,12 @@ import * as adminApi from "@/api/adminApi";
 import { mapAdminReportListItem } from "@/api/adminMapper";
 import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 import {
+  formatReportCode,
+  inferReasonId,
+  toReportInitials,
+  COMMUNITY_REPORT_REASON_META,
+} from "@/features/reports/shared/reportFormatters";
+import {
   resolveReportDeleteViaApi,
   resolveReportDismissViaApi,
 } from "@/features/admin/moderation/adminReportData";
@@ -19,17 +25,15 @@ export const REPORT_STATUS_TABS = [
 ];
 
 export const REASON_META = {
-  spam: { label: "Spam", tone: "danger" },
+  ...COMMUNITY_REPORT_REASON_META,
   harmful: { label: "Nội dung độc hại", tone: "muted" },
-  harassment: { label: "Quấy rối", tone: "danger" },
-  misinformation: { label: "Thông tin sai", tone: "muted" },
   wrong_answer: { label: "Đáp án sai", tone: "danger" },
   wrong_question: { label: "Câu hỏi sai", tone: "danger" },
   typo: { label: "Lỗi format", tone: "muted" },
   duplicate: { label: "Trùng câu", tone: "muted" },
-  inappropriate: { label: "Nội dung không phù hợp", tone: "muted" },
-  copyright: { label: "Vi phạm bản quyền", tone: "muted" },
-  other: { label: "Khác", tone: "muted" },
+  inappropriate: COMMUNITY_REPORT_REASON_META.inappropriate,
+  copyright: COMMUNITY_REPORT_REASON_META.copyright,
+  other: COMMUNITY_REPORT_REASON_META.other,
 };
 
 export const REPORTS_MOCK = [
@@ -140,34 +144,6 @@ export function sortModeratorReports(reports, tab = "all") {
   });
 }
 
-function formatReportCode(id) {
-  const short = String(id ?? "")
-    .replace(/-/g, "")
-    .slice(0, 4)
-    .toUpperCase();
-  return short ? `RP-${short}` : "RP-0000";
-}
-
-function inferReasonId(reasonText) {
-  const text = String(reasonText ?? "").toLowerCase();
-  if (text.includes("spam")) return "spam";
-  if (text.includes("quấy") || text.includes("harass")) return "harassment";
-  if (text.includes("sai") || text.includes("fake")) return "misinformation";
-  if (text.includes("độc") || text.includes("toxic")) return "harmful";
-  return "other";
-}
-
-function toInitials(value) {
-  const parts = String(value ?? "")
-    .replace(/^@/, "")
-    .split(/[\s_]+/);
-  const initials = parts
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("");
-  return initials || "?";
-}
-
 function formatTimeLabel(dateStr) {
   const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return "—";
@@ -219,7 +195,7 @@ export function mapAdminReportToModeratorCommunityReport(adminReport) {
     status: adminReport.status,
     reason: inferReasonId(adminReport.reason),
     reporterUsername: `@${reporter}`,
-    reporterInitial: toInitials(reporter),
+    reporterInitial: toReportInitials(reporter),
     timeLabel: formatTimeLabel(createdAtIso),
     reportedAt: formatReportedAt(createdAtIso),
     createdAtIso,
@@ -229,7 +205,7 @@ export function mapAdminReportToModeratorCommunityReport(adminReport) {
         : adminReport.post?.excerpt ?? adminReport.post?.title ?? adminReport.reason,
     reportedUser: {
       username: `@${reportedUser}`,
-      initial: toInitials(reportedUser),
+      initial: toReportInitials(reportedUser),
       joinedAt: "—",
       trustScore: 50,
     },

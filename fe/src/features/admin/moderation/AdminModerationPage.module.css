@@ -1,12 +1,12 @@
 /* Hàng chờ báo cáo — workspace Admin */
 
 .page {
-  --mod-primary: #004ac6;
-  --mod-primary-soft: rgba(0, 74, 198, 0.08);
-  --mod-border: #e5e7eb;
-  --mod-surface: #ffffff;
-  --mod-muted: #6b7280;
-  --mod-text: #111827;
+  --mod-primary: var(--moderator-primary);
+  --mod-primary-soft: var(--moderator-primary-soft);
+  --mod-border: var(--moderator-border);
+  --mod-surface: var(--moderator-surface);
+  --mod-muted: var(--moderator-text-subtle);
+  --mod-text: var(--moderator-text);
   --mod-radius: 14px;
   --mod-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.04);
 
@@ -114,7 +114,7 @@
 
 .stepNumMuted {
   color: var(--mod-muted);
-  background: #f3f4f6;
+  background: var(--moderator-bg);
 }
 
 .stepText {
@@ -259,14 +259,14 @@
 
 .searchInput:focus {
   border-color: var(--mod-primary);
-  box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--moderator-primary) 12%, transparent);
 }
 
 .filterTrack {
   display: flex;
   gap: 0.125rem;
   padding: 0.1875rem;
-  background: #f3f4f6;
+  background: var(--moderator-bg);
   border-radius: 9999px;
 }
 
@@ -287,7 +287,7 @@
 .filterBtnActive {
   font-weight: 600;
   color: var(--mod-text);
-  background: #fff;
+  background: var(--moderator-surface);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
@@ -323,7 +323,7 @@
 }
 
 .queueCard:hover .queueCardInner {
-  background: #f9fafb;
+  background: var(--moderator-bg);
 }
 
 .queueCardActive .queueCardInner {
@@ -384,7 +384,7 @@
 
 .tagMuted {
   color: #4b5563;
-  background: #f3f4f6;
+  background: var(--moderator-bg);
 }
 
 .tagDanger {
@@ -469,7 +469,7 @@
   font-size: 0.875rem;
   line-height: 1.55;
   color: var(--mod-text);
-  background: #f9fafb;
+  background: var(--moderator-bg);
   border: 1px solid var(--mod-border);
   border-radius: 10px;
 }
@@ -591,14 +591,14 @@
 
 .detailActions .actionBtnDismiss {
   color: #4b5563;
-  background: #fff;
+  background: var(--moderator-surface);
   border: 1px solid #d1d5db;
 }
 
 .detailActions .actionBtnDismiss:hover:not(:disabled) {
-  color: #374151;
-  background: #f9fafb;
-  border-color: #9ca3af;
+  color: var(--moderator-text-muted);
+  background: var(--moderator-bg);
+  border-color: var(--moderator-text-subtle);
 }
 
 .detailActions .actionBtnResolve {

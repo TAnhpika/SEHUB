@@ -6,11 +6,11 @@
 }
 
 .tagMuted {
-  color: #4b5563;
-  background: #f3f4f6;
+  color: var(--moderator-text-muted);
+  background: var(--color-surface-muted);
 }
 
 .tagDanger {
-  color: #b91c1c;
-  background: #fee2e2;
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
 }

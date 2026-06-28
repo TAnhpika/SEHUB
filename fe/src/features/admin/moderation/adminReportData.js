@@ -2,6 +2,7 @@
 
 import * as adminApi from "@/api/adminApi";
 import { mapAdminReportListItem } from "@/api/adminMapper";
+import { formatReportCode } from "@/features/reports/shared/reportFormatters";
 import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 import { addBannedUserFromReport } from "@/features/admin/moderation/adminBannedData";
 import { syncUserBanStatus } from "@/features/admin/users/adminUserStore";
@@ -156,14 +157,6 @@ let reportsStore = [
     },
   },
 ];
-
-function formatReportCode(id) {
-  const short = String(id ?? "")
-    .replace(/-/g, "")
-    .slice(0, 4)
-    .toUpperCase();
-  return short ? `RP-${short}` : "RP-0000";
-}
 
 export function mapCommunityReportForQueue(report) {
   const reporter = report.reporter ?? "unknown";

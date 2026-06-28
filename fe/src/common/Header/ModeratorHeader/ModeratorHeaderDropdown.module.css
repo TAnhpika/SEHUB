@@ -9,8 +9,8 @@
   z-index: 50;
   width: min(18.5rem, calc(100vw - 2rem));
   padding: 0.5rem;
-  background: #fff;
-  border: 1px solid #e8edf3;
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border-light);
   border-radius: var(--radius-xl, 16px);
   box-shadow: var(--shadow-lg, 0 12px 40px rgba(37, 99, 235, 0.14));
   animation: panelIn 0.2s ease;
@@ -32,7 +32,7 @@
   margin: 0.25rem 0.5rem 0.375rem;
   font-size: 0.6875rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--moderator-text-subtle);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -41,7 +41,7 @@
   margin: 0 0.5rem 0.625rem;
   font-size: 0.75rem;
   line-height: 1.45;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
 }
 
 .list {
@@ -72,7 +72,7 @@
 
 .notifItem:hover,
 .linkItem:hover {
-  background: var(--color-surface-muted, #f1f5f9);
+  background: var(--color-surface-muted);
 }
 
 .notifTitle,
@@ -81,7 +81,7 @@
   font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1.4;
-  color: var(--color-text, #1e293b);
+  color: var(--moderator-text);
 }
 
 .notifDetail,
@@ -89,7 +89,7 @@
   margin: 0.125rem 0 0;
   font-size: 0.75rem;
   line-height: 1.35;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
 }
 
 .notifMeta {
@@ -98,7 +98,7 @@
   align-items: center;
   margin-top: 0.25rem;
   font-size: 0.6875rem;
-  color: #94a3b8;
+  color: var(--moderator-text-subtle);
 }
 
 .linkRow {
@@ -116,8 +116,8 @@
   height: 1.75rem;
   margin-top: 0.125rem;
   font-size: 0.75rem;
-  color: var(--color-primary, #2563eb);
-  background: var(--color-primary-light, #eff6ff);
+  color: var(--moderator-primary);
+  background: var(--moderator-primary-soft);
   border-radius: 8px;
 }
 
@@ -126,14 +126,14 @@
   padding: 1.25rem 0.75rem;
   font-size: 0.8125rem;
   line-height: 1.45;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
   text-align: center;
 }
 
 .panelFooter {
   margin: 0.375rem 0.5rem 0.25rem;
   padding-top: 0.5rem;
-  border-top: 1px solid #e8edf3;
+  border-top: 1px solid var(--moderator-border-light);
 }
 
 .footerLink {
@@ -141,7 +141,7 @@
   padding: 0.375rem 0.25rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--color-primary, #2563eb);
+  color: var(--moderator-primary);
   text-decoration: none;
 }
 

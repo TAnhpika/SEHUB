@@ -1,5 +1,6 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { tooltipStyle } from "./chartTheme";
+import { useThemeOptional } from "@/hooks/useTheme";
+import { getChartTheme } from "./chartTheme";
 import styles from "./recharts.module.css";
 
 function formatCenterTotal(total) {
@@ -17,10 +18,12 @@ function formatCenterTotal(total) {
  * }} props
  */
 function RechartsPieChart({ data, height = 220, centerLabel = "Tổng" }) {
+  const { theme } = useThemeOptional() ?? { theme: "light" };
+  const { colors, tooltipStyle } = getChartTheme();
   const total = data.reduce((s, d) => s + d.value, 0);
 
   return (
-    <div className={styles.pieWrap}>
+    <div className={styles.pieWrap} key={theme}>
       <div className={styles.pieChartBox} style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -33,7 +36,7 @@ function RechartsPieChart({ data, height = 220, centerLabel = "Tổng" }) {
               innerRadius="58%"
               outerRadius="82%"
               paddingAngle={2}
-              stroke="#fff"
+              stroke={colors.dotFill}
               strokeWidth={2}
             >
               {data.map((entry) => (

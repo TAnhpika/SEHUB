@@ -27,8 +27,8 @@
   top: 8%;
   background: radial-gradient(
     circle,
-    rgba(37, 99, 235, 0.1) 0%,
-    rgba(37, 99, 235, 0.03) 45%,
+    color-mix(in srgb, var(--color-primary) 10%, transparent) 0%,
+    color-mix(in srgb, var(--color-primary) 3%, transparent) 45%,
     transparent 70%
   );
   pointer-events: none;
@@ -137,7 +137,7 @@
   transform: translate(-35%, -50%);
   background: radial-gradient(
     circle,
-    rgba(37, 99, 235, 0.08) 0%,
+    color-mix(in srgb, var(--color-primary) 8%, transparent) 0%,
     transparent 70%
   );
   pointer-events: none;
@@ -174,12 +174,12 @@
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--color-primary-dark);
-  background: linear-gradient(135deg, #ffffff 0%, var(--color-primary-light) 100%);
+  background: linear-gradient(135deg, var(--moderator-surface) 0%, var(--color-primary-light) 100%);
   border: 1px solid var(--color-primary-soft);
   border-radius: var(--radius-xl);
   box-shadow:
-    0 2px 8px rgba(37, 99, 235, 0.08),
-    0 8px 24px rgba(37, 99, 235, 0.12);
+    var(--shadow-sm),
+    var(--shadow-md);
   white-space: nowrap;
 }
 
@@ -207,8 +207,8 @@
   border: 1px solid var(--color-border-light);
   border-radius: 28px;
   box-shadow:
-    0 4px 6px rgba(30, 41, 59, 0.04),
-    0 20px 40px rgba(37, 99, 235, 0.1);
+    var(--shadow-sm),
+    var(--shadow-md);
 }
 
 .chat-header {
@@ -279,11 +279,11 @@
   max-width: 92%;
   padding: 0.875rem 1rem;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-auth-on-brand);
   border-radius: 18px 18px 6px 18px;
   font-size: 0.8125rem;
   line-height: 1.55;
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.22);
+  box-shadow: var(--shadow-md);
 }
 
 .chat-input-wrap {
@@ -312,10 +312,10 @@
   align-items: center;
   justify-content: center;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-auth-on-brand);
   border-radius: var(--radius-full);
   font-size: 0.75rem;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+  box-shadow: var(--shadow-md);
 }
 
 @media (min-width: 900px) {
@@ -519,7 +519,7 @@
   align-items: center;
   justify-content: center;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-auth-on-brand);
   border-radius: var(--radius-lg);
   font-size: 1.125rem;
   flex-shrink: 0;

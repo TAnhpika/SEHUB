@@ -1,9 +1,6 @@
+import Shimmer from "@/common/Skeleton/Shimmer";
 import pageStyles from "@/features/profile/ProfilePage/ProfilePage.module.css";
 import styles from "./ProfilePageSkeleton.module.css";
-
-function Shimmer({ className }) {
-  return <span className={`${styles.skeleton} ${className ?? ""}`} aria-hidden="true" />;
-}
 
 function ProfilePageSkeleton({ showIntro = false }) {
   return (

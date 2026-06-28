@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import { Modal } from "@/common/Modal/Modal";
+import backdropStyles from "@/common/styles/modalBackdrop.module.css";
 import { EXAM_SEMESTERS } from "@/features/admin/exams/adminExamData";
 import {
   formatDocumentAccessLabel,
@@ -59,13 +61,13 @@ function DocumentEditModal({ open, document, onClose, onSubmit }) {
   }
 
   return (
-    <div className={docStyles.modalBackdrop} role="presentation" onClick={onClose}>
-      <div
-        className={`${docStyles.modal} ${docStyles.editModal}`}
-        role="dialog"
-        aria-labelledby="document-edit-title"
-        onClick={(event) => event.stopPropagation()}
-      >
+    <Modal
+      open={open}
+      onClose={onClose}
+      className={backdropStyles.overlay}
+      panelClassName={`${docStyles.modal} ${docStyles.editModal}`}
+      closeOnOverlay
+    >
         <header className={docStyles.modalHead}>
           <div>
             <h2 id="document-edit-title" className={docStyles.modalTitle}>
@@ -175,8 +177,7 @@ function DocumentEditModal({ open, document, onClose, onSubmit }) {
             <Button type="submit">Lưu thay đổi</Button>
           </footer>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

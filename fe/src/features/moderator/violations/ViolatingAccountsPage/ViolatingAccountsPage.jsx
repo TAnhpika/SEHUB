@@ -15,7 +15,7 @@ import FilterDropdown from "@/common/FilterDropdown/FilterDropdown";
 import Pagination from "@/common/Pagination/Pagination";
 import { useToast } from "@/common/Toast/ToastProvider";
 import ModeratorBadge from "@/features/moderator/components/ModeratorBadge/ModeratorBadge";
-import ModeratorConfirmDialog from "@/features/moderator/components/ModeratorConfirmDialog/ModeratorConfirmDialog";
+import ConfirmDialog from "@/common/ConfirmDialog/ConfirmDialog";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import ModeratorToolbar from "@/features/moderator/components/ModeratorToolbar/ModeratorToolbar";
 import ViolatingAccountDetailPanel from "@/features/moderator/violations/components/ViolatingAccountDetailPanel/ViolatingAccountDetailPanel";
@@ -501,7 +501,7 @@ function ViolatingAccountsPage() {
         ) : null}
       </div>
 
-      <ModeratorConfirmDialog
+      <ConfirmDialog
         open={Boolean(lockTarget)}
         title="Khóa tạm tài khoản"
         description={
@@ -556,9 +556,9 @@ function ViolatingAccountsPage() {
         <p className={styles.lockHint}>
           Moderator chỉ được khóa tạm 1 / 7 / 30 ngày. Khóa vĩnh viễn thuộc quyền Admin.
         </p>
-      </ModeratorConfirmDialog>
+      </ConfirmDialog>
 
-      <ModeratorConfirmDialog
+      <ConfirmDialog
         open={Boolean(warnTarget)}
         title="Gửi cảnh báo"
         description={

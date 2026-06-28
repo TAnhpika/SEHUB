@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Button from "@/common/Button/Button";
+import { Modal } from "@/common/Modal/Modal";
+import backdropStyles from "@/common/styles/modalBackdrop.module.css";
 import Pagination from "@/common/Pagination/Pagination";
 import { useToast } from "@/common/Toast/ToastProvider";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
@@ -453,32 +455,29 @@ function AdminExamListPage() {
         ) : null}
       </section>
 
-      {deleteTarget ? (
-        <div className={examStyles.modalBackdrop} role="presentation" onClick={() => setDeleteId(null)}>
-          <div
-            className={examStyles.modal}
-            role="alertdialog"
-            aria-labelledby="delete-exam-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 id="delete-exam-title" className={examStyles.modalTitle}>
-              Xóa đề thi?
-            </h2>
-            <p className={examStyles.modalDesc}>
-              Đề <strong>[{deleteTarget.code}] {deleteTarget.title}</strong> sẽ bị gỡ khỏi hệ
-              thống. Hành động không hoàn tác.
-            </p>
-            <div className={examStyles.modalActions}>
-              <Button look="outline" type="button" onClick={() => setDeleteId(null)}>
-                Hủy
-              </Button>
-              <Button type="button" onClick={confirmDelete}>
-                Xóa đề
-              </Button>
-            </div>
-          </div>
+      <Modal
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteId(null)}
+        className={backdropStyles.overlay}
+        panelClassName={examStyles.modal}
+        closeOnOverlay
+      >
+        <h2 id="delete-exam-title" className={examStyles.modalTitle}>
+          Xóa đề thi?
+        </h2>
+        <p className={examStyles.modalDesc}>
+          Đề <strong>[{deleteTarget?.code}] {deleteTarget?.title}</strong> sẽ bị gỡ khỏi hệ
+          thống. Hành động không hoàn tác.
+        </p>
+        <div className={examStyles.modalActions}>
+          <Button look="outline" type="button" onClick={() => setDeleteId(null)}>
+            Hủy
+          </Button>
+          <Button type="button" onClick={confirmDelete}>
+            Xóa đề
+          </Button>
         </div>
-      ) : null}
+      </Modal>
     </AdminPageLayout>
   );
 }

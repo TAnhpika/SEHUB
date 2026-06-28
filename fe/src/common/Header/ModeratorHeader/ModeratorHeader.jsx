@@ -3,10 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBars,
-  faChevronDown,
   faHouse,
   faMagnifyingGlass,
-  faRightFromBracket,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import WorkspaceSwitcher from "@/common/WorkspaceSwitcher/WorkspaceSwitcher";
@@ -18,6 +16,8 @@ import {
 } from "@/features/moderator/moderatorNavData";
 import ModeratorNotificationDropdown from "./ModeratorNotificationDropdown";
 import ModeratorSettingsDropdown from "./ModeratorSettingsDropdown";
+import ThemeSwitcher from "@/common/ThemeSwitcher/ThemeSwitcher";
+import HeaderProfileMenu, { HeaderProfileLogoutItem } from "@/common/Header/shared/HeaderProfileMenu";
 import styles from "./ModeratorHeader.module.css";
 
 function ModeratorHeader() {
@@ -100,65 +100,55 @@ function ModeratorHeader() {
             />
           </div>
 
-          <div className={`${styles.profile} ${menuOpen ? styles.profileOpen : ""}`}>
-            <button
-              type="button"
-              className={styles.profileTrigger}
-              aria-expanded={menuOpen}
-              aria-haspopup="menu"
-              onClick={() => setMenuOpen((open) => !open)}
-              onBlur={(e) => {
-                if (!e.currentTarget.parentElement?.contains(e.relatedTarget)) {
-                  setMenuOpen(false);
-                }
-              }}
+          <HeaderProfileMenu
+            open={menuOpen}
+            onToggle={() => setMenuOpen((open) => !open)}
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget)) {
+                setMenuOpen(false);
+              }
+            }}
+            initial={initial}
+            displayName={displayName}
+            roleLabel="Kiểm duyệt viên"
+            rootClassName={styles.profile}
+            rootOpenClassName={styles.profileOpen}
+            triggerClassName={styles.profileTrigger}
+            avatarClassName={styles.avatar}
+            metaClassName={styles.profileMeta}
+            nameClassName={styles.profileName}
+            roleClassName={styles.profileRole}
+            chevronClassName={styles.chevron}
+            chevronOpenClassName={styles.chevronOpen}
+            menuClassName={styles.menu}
+          >
+            <ThemeSwitcher variant="menu" />
+            <div className={styles.menuDivider} />
+            <p className={styles.menuHeading}>Tài khoản</p>
+            <Link
+              to={MODERATOR_HOME_PATH}
+              className={styles.menuItem}
+              role="menuitem"
+              onClick={() => setMenuOpen(false)}
             >
-              <span className={styles.avatar}>{initial}</span>
-              <span className={styles.profileMeta}>
-                <span className={styles.profileName}>{displayName}</span>
-                <span className={styles.profileRole}>Kiểm duyệt viên</span>
+              <span className={styles.menuIcon}>
+                <FontAwesomeIcon icon={faUser} />
               </span>
-              <FontAwesomeIcon
-                icon={faChevronDown}
-                className={`${styles.chevron} ${menuOpen ? styles.chevronOpen : ""}`}
+              Xử lý báo cáo
+            </Link>
+            <div className={styles.menuWorkspace}>
+              <WorkspaceSwitcher
+                variant="menu-compact"
+                onNavigate={() => setMenuOpen(false)}
               />
-            </button>
-
-            {menuOpen ? (
-              <div className={styles.menu} role="menu">
-                <p className={styles.menuHeading}>Tài khoản</p>
-                <Link
-                  to={MODERATOR_HOME_PATH}
-                  className={styles.menuItem}
-                  role="menuitem"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <span className={styles.menuIcon}>
-                    <FontAwesomeIcon icon={faUser} />
-                  </span>
-                  Xử lý báo cáo
-                </Link>
-                <div className={styles.menuWorkspace}>
-                  <WorkspaceSwitcher
-                    variant="menu-compact"
-                    onNavigate={() => setMenuOpen(false)}
-                  />
-                </div>
-                <div className={styles.menuDivider} />
-                <button
-                  type="button"
-                  className={`${styles.menuItem} ${styles.menuItemDanger}`}
-                  role="menuitem"
-                  onClick={handleLogout}
-                >
-                  <span className={`${styles.menuIcon} ${styles.menuIconDanger}`}>
-                    <FontAwesomeIcon icon={faRightFromBracket} />
-                  </span>
-                  Đăng xuất
-                </button>
-              </div>
-            ) : null}
-          </div>
+            </div>
+            <div className={styles.menuDivider} />
+            <HeaderProfileLogoutItem
+              className={`${styles.menuItem} ${styles.menuItemDanger}`}
+              iconClassName={`${styles.menuIcon} ${styles.menuIconDanger}`}
+              onClick={handleLogout}
+            />
+          </HeaderProfileMenu>
         </div>
       </div>
     </header>

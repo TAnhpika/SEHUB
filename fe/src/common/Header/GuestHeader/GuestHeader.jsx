@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBars } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import HeaderUserActions from "@/common/Header/HeaderUserActions/HeaderUserActions";
+import ThemeSwitcher from "@/common/ThemeSwitcher/ThemeSwitcher";
 import { useMainShellOptional } from "@/common/context/MainShellContext";
 import { useAuth } from "@/context";
 import logoSrc from "@/img/logo.png";
@@ -65,6 +66,7 @@ function GuestHeader() {
             <HeaderUserActions />
           ) : (
             <>
+              <ThemeSwitcher variant="compact" />
               <Link
                 to="/login"
                 className={styles["login-link"]}

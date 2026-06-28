@@ -1,16 +1,16 @@
 .stepper {
   padding: 2rem;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.2);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border-light);
   border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--moderator-card-shadow);
 }
 
 .title {
   margin: 0 0 2rem;
   font-size: 1.5rem;
   font-weight: 600;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .revisionNote {
@@ -18,8 +18,8 @@
   padding: 0.75rem 0.875rem;
   font-size: 0.8125rem;
   line-height: 1.45;
-  color: #92400e;
-  background: #fef3c7;
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
   border-radius: 8px;
 }
 
@@ -40,7 +40,7 @@
   left: 0.9375rem;
   width: 1px;
   content: "";
-  background: rgba(195, 198, 215, 0.4);
+  background: var(--moderator-border);
 }
 
 .item {
@@ -79,29 +79,29 @@
 
 .marker-done {
   font-size: 0.625rem;
-  color: #fff;
-  background: #2563eb;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  color: var(--moderator-surface);
+  background: var(--moderator-primary);
+  box-shadow: var(--shadow-sm);
 }
 
 .marker-active {
-  background: #fff;
-  border: 2px solid var(--moderator-primary, #004ac6);
-  box-shadow: 0 0 0 4px rgba(0, 74, 198, 0.2);
+  background: var(--moderator-surface);
+  border: 2px solid var(--moderator-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--moderator-primary) 20%, transparent);
 }
 
 .dot {
   display: block;
   width: 8px;
   height: 8px;
-  background: var(--moderator-primary, #004ac6);
+  background: var(--moderator-primary);
   border-radius: 9999px;
 }
 
 .marker-pending {
-  color: #737686;
-  background: #eceef0;
-  border: 1px solid #c3c6d7;
+  color: var(--moderator-text-subtle);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--moderator-border);
 }
 
 .copy {
@@ -114,22 +114,22 @@
   font-size: 0.875rem;
   font-weight: 500;
   line-height: 1.25;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .stepTitle-active {
   font-weight: 700;
-  color: var(--moderator-primary, #004ac6);
+  color: var(--moderator-primary);
 }
 
 .stepHint {
   font-size: 0.875rem;
   line-height: 1.4;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
 }
 
 .stepTitle-active + .stepHint {
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .historyLink {
@@ -139,7 +139,7 @@
   margin-top: 2rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--moderator-primary, #004ac6);
+  color: var(--moderator-primary);
   text-decoration: none;
 }
 

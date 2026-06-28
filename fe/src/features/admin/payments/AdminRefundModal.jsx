@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRotateLeft, faXmark } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import { Modal } from "@/common/Modal/Modal";
+import backdropStyles from "@/common/styles/modalBackdrop.module.css";
 import payStyles from "@/features/admin/payments/AdminPayments.module.css";
 
 /**
@@ -41,13 +43,13 @@ function AdminRefundModal({ open, payment, onClose, onSubmit, error = "" }) {
   }
 
   return (
-    <div className={payStyles.modalBackdrop} role="presentation" onClick={handleClose}>
-      <div
-        className={payStyles.tokenModal}
-        role="dialog"
-        aria-labelledby="refund-payment-title"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal
+      open={open}
+      onClose={handleClose}
+      className={backdropStyles.overlay}
+      panelClassName={payStyles.tokenModal}
+      closeOnOverlay
+    >
         <header className={payStyles.tokenModalHead}>
           <div className={payStyles.tokenModalHeadMain}>
             <span className={`${payStyles.tokenModalIcon} ${payStyles.refundModalIcon}`} aria-hidden="true">
@@ -107,8 +109,7 @@ function AdminRefundModal({ open, payment, onClose, onSubmit, error = "" }) {
             </Button>
           </footer>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

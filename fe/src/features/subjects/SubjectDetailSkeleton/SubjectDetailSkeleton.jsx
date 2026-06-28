@@ -1,8 +1,5 @@
+import Shimmer from "@/common/Skeleton/Shimmer";
 import styles from "./SubjectDetailSkeleton.module.css";
-
-function Shimmer({ className }) {
-  return <span className={`${styles.skeleton} ${className ?? ""}`} aria-hidden="true" />;
-}
 
 const EXAM_HEADERS = ["Mã đề", "Loại đề", "Số câu hỏi"];
 const DOCUMENT_HEADERS = ["Tên file", "Định dạng"];

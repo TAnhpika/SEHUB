@@ -16,7 +16,8 @@ import {
   ACTIVITY_BADGE_VARIANT,
   PENDING_ACTION_BADGE,
 } from "@/features/admin/dashboard/dashboardConstants";
-import { CHART_COLORS } from "@/features/admin/dashboard/charts/chartTheme";
+import { getChartTheme } from "@/features/admin/dashboard/charts/chartTheme";
+import { useThemeOptional } from "@/hooks/useTheme";
 import { useDashboardData } from "@/features/admin/dashboard/useDashboardData";
 import dash from "./AdminDashboardPage.module.css";
 
@@ -29,6 +30,7 @@ const ACTIVITY_TYPE_LABEL = {
 
 function AdminDashboardPage() {
   const { period, setPeriod, data, loading, error, refresh } = useDashboardData("month");
+  useThemeOptional();
 
   return (
     <AdminPageLayout title="Dashboard" hidePageHeader>
@@ -46,7 +48,7 @@ function AdminDashboardPage() {
       {!loading && data ? (
         <div
           className={dash.dashboard}
-          style={{ "--dash-chart": CHART_COLORS.primary }}
+          style={{ "--dash-chart": getChartTheme().colors.primary }}
         >
           <header className={dash.pageHead}>
             <h1 className={dash.pageHeroTitle}>Tổng quan hệ thống</h1>

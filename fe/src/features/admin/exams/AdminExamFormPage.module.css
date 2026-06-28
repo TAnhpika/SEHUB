@@ -6,7 +6,7 @@
   margin: 0 0 0.75rem;
   font-size: 0.6875rem;
   font-weight: 700;
-  color: #737686;
+  color: var(--moderator-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -24,19 +24,19 @@
   padding: 1rem 1.125rem;
   text-align: left;
   cursor: pointer;
-  background: #fff;
-  border: 2px solid rgba(195, 198, 215, 0.45);
+  background: var(--moderator-surface);
+  border: 2px solid var(--moderator-border);
   border-radius: 12px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .typeCard:hover:not(:disabled) {
-  border-color: #004ac6;
+  border-color: var(--moderator-primary);
 }
 
 .typeCardActive {
-  border-color: #004ac6;
-  box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.12);
+  border-color: var(--moderator-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--moderator-primary) 12%, transparent);
 }
 
 .typeCard:disabled {
@@ -47,14 +47,14 @@
 .typeCardLabel {
   font-size: 0.9375rem;
   font-weight: 600;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .typeCardDesc {
   margin: 0;
   font-size: 0.75rem;
   line-height: 1.45;
-  color: #737686;
+  color: var(--moderator-text-muted);
 }
 
 .flowHint {
@@ -62,8 +62,8 @@
   padding: 0.75rem 1rem;
   font-size: 0.8125rem;
   line-height: 1.5;
-  color: #434655;
-  background: #f7f9fb;
+  color: var(--moderator-text-muted);
+  background: var(--moderator-bg);
   border-left: 3px solid #004ac6;
   border-radius: 0 8px 8px 0;
 }
@@ -84,8 +84,8 @@
   justify-content: space-between;
   padding: 0.625rem 0.875rem;
   font-size: 0.8125rem;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.4);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
 }
 
@@ -131,7 +131,7 @@
   margin: 0 0 0.2rem;
   font-size: 0.6875rem;
   font-weight: 700;
-  color: #737686;
+  color: var(--moderator-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -139,7 +139,7 @@
 .summaryItem dd {
   margin: 0;
   font-size: 0.875rem;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .formActions {
@@ -148,5 +148,5 @@
   gap: 0.5rem;
   margin-top: 1.5rem;
   padding-top: 1.25rem;
-  border-top: 1px solid rgba(195, 198, 215, 0.35);
+  border-top: 1px solid var(--moderator-border);
 }

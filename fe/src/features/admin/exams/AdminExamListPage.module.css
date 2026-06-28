@@ -6,8 +6,8 @@
   gap: 1rem;
   padding: 1rem 1.25rem;
   margin-bottom: 1.25rem;
-  background: #f7f9fb;
-  border: 1px solid rgba(195, 198, 215, 0.35);
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border);
   border-radius: 12px;
 }
 
@@ -24,23 +24,23 @@
   padding: 0.625rem 1rem;
   font-family: inherit;
   font-size: 0.875rem;
-  color: #191c1e;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.5);
+  color: var(--moderator-text);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 10px;
   outline: none;
 }
 
 .searchInput:focus {
-  border-color: #004ac6;
-  box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.1);
+  border-color: var(--moderator-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--moderator-primary) 12%, transparent);
 }
 
 .resultChip {
   padding: 0.35rem 0.75rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #004ac6;
+  color: var(--moderator-primary);
   white-space: nowrap;
   background: rgba(210, 224, 254, 0.55);
   border-radius: 9999px;
@@ -70,7 +70,7 @@
 .selectField label {
   font-size: 0.6875rem;
   font-weight: 700;
-  color: #737686;
+  color: var(--moderator-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -80,15 +80,15 @@
   padding: 0.45rem 0.75rem;
   font-family: inherit;
   font-size: 0.8125rem;
-  color: #191c1e;
-  background: #fff;
+  color: var(--moderator-text);
+  background: var(--moderator-surface);
   border: 1px solid rgba(195, 198, 215, 0.55);
   border-radius: 8px;
   outline: none;
 }
 
 .selectField select:focus {
-  border-color: #004ac6;
+  border-color: var(--moderator-primary);
 }
 
 .sortField select {
@@ -107,16 +107,16 @@
   font-family: inherit;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #434655;
+  color: var(--moderator-text-muted);
   cursor: pointer;
-  background: #fff;
-  border: 1px solid #c3c6d7;
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
 }
 
 .btnReset:hover:not(:disabled) {
-  color: #004ac6;
-  border-color: #004ac6;
+  color: var(--moderator-primary);
+  border-color: var(--moderator-primary);
 }
 
 .btnReset:disabled {
@@ -132,19 +132,19 @@
   align-items: center;
   justify-content: center;
   padding: 1.25rem 1.25rem 1.5rem;
-  border-top: 1px solid rgba(195, 198, 215, 0.35);
+  border-top: 1px solid var(--moderator-border);
 }
 
 .footerMeta {
   margin: 0;
   font-size: 0.8125rem;
-  color: #737686;
+  color: var(--moderator-text-muted);
   text-align: center;
 }
 
 .footerMeta strong {
   font-weight: 600;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .pageBadge {
@@ -155,7 +155,7 @@
   margin-left: 0.5rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #434655;
+  color: var(--moderator-text-muted);
   background: #f2f4f6;
   border-radius: 6px;
 }

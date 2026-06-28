@@ -13,8 +13,8 @@
 
 .statCard {
   padding: 1rem 1.125rem;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.4);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 12px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
@@ -27,7 +27,7 @@
   height: 2rem;
   margin-bottom: 0.35rem;
   font-size: 0.875rem;
-  color: #004ac6;
+  color: var(--moderator-primary);
   background: #eff6ff;
   border-radius: 8px;
 }
@@ -35,7 +35,7 @@
 .statLabel {
   font-size: 0.6875rem;
   font-weight: 600;
-  color: #737686;
+  color: var(--moderator-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -44,13 +44,13 @@
   margin-top: 0.15rem;
   font-size: 1.375rem;
   font-weight: 700;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .statHint {
   margin-top: 0.2rem;
   font-size: 0.75rem;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .scopeBanner {
@@ -69,7 +69,7 @@
   margin: 0 0 0.25rem;
   font-size: 0.8125rem;
   font-weight: 700;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .scopeChip {
@@ -78,18 +78,18 @@
   gap: 0.1rem;
   padding: 0.45rem 0.75rem;
   font-size: 0.75rem;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.45);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
 }
 
 .scopeChip strong {
   font-size: 0.8125rem;
-  color: #004ac6;
+  color: var(--moderator-primary);
 }
 
 .scopeChip span {
-  color: #737686;
+  color: var(--moderator-text-muted);
 }
 
 .layout {
@@ -107,8 +107,8 @@
 
 .panelCard {
   overflow: hidden;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.35);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 14px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
@@ -119,8 +119,8 @@
   align-items: flex-start;
   justify-content: space-between;
   padding: 1.125rem 1.25rem;
-  background: #f7f9fc;
-  border-bottom: 1px solid rgba(195, 198, 215, 0.3);
+  background: var(--moderator-bg);
+  border-bottom: 1px solid var(--moderator-border);
 }
 
 .panelHeadMod {
@@ -138,8 +138,8 @@
   width: 2.25rem;
   height: 2.25rem;
   font-size: 1rem;
-  color: #004ac6;
-  background: #fff;
+  color: var(--moderator-primary);
+  background: var(--moderator-surface);
   border-radius: 10px;
   box-shadow: 0 2px 6px rgba(0, 74, 198, 0.1);
 }
@@ -159,13 +159,13 @@
   margin: 0 0 0.2rem;
   font-size: 1rem;
   font-weight: 700;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .panelDesc {
   margin: 0;
   font-size: 0.8125rem;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .searchWrap {
@@ -177,16 +177,16 @@
   padding: 0.55rem 0.85rem;
   font-family: inherit;
   font-size: 0.8125rem;
-  color: #191c1e;
-  background: #fff;
+  color: var(--moderator-text);
+  background: var(--moderator-surface);
   border: 1px solid rgba(195, 198, 215, 0.55);
   border-radius: 8px;
   outline: none;
 }
 
 .search:focus {
-  border-color: #004ac6;
-  box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.1);
+  border-color: var(--moderator-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--moderator-primary) 12%, transparent);
 }
 
 .userList {
@@ -203,8 +203,8 @@
   gap: 0.85rem;
   align-items: flex-start;
   padding: 0.9rem 1rem;
-  background: #fafbfc;
-  border: 1px solid rgba(195, 198, 215, 0.35);
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border);
   border-radius: 12px;
   transition:
     border-color 0.15s ease,
@@ -251,25 +251,25 @@
   margin: 0 0 0.15rem;
   font-size: 0.9375rem;
   font-weight: 600;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .userMeta {
   margin: 0;
   font-size: 0.75rem;
-  color: #737686;
+  color: var(--moderator-text-muted);
 }
 
 .userMeta code {
   font-family: ui-monospace, monospace;
-  color: #004ac6;
+  color: var(--moderator-primary);
 }
 
 .userNote {
   margin: 0.35rem 0 0;
   font-size: 0.75rem;
   line-height: 1.4;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .modStats {
@@ -345,7 +345,7 @@
   font-weight: 600;
   color: #fff;
   cursor: pointer;
-  background: #004ac6;
+  background: var(--moderator-primary);
   border: none;
   border-radius: 8px;
 }
@@ -357,7 +357,7 @@
 .emptyState {
   padding: 2rem 1rem;
   font-size: 0.875rem;
-  color: #737686;
+  color: var(--moderator-text-muted);
   text-align: center;
 }
 
@@ -382,7 +382,7 @@
   justify-content: space-between;
   padding: 0.75rem 1rem;
   font-size: 0.8125rem;
-  background: #fafbfc;
+  background: var(--moderator-bg);
   border: 1px solid rgba(195, 198, 215, 0.3);
   border-radius: 10px;
 }
@@ -398,12 +398,12 @@
 .auditDetail {
   flex: 1;
   min-width: 12rem;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .auditMeta {
   font-size: 0.75rem;
-  color: #737686;
+  color: var(--moderator-text-muted);
   white-space: nowrap;
 }
 
@@ -423,7 +423,7 @@
   width: 100%;
   max-width: 420px;
   padding: 1.5rem;
-  background: #fff;
+  background: var(--moderator-surface);
   border-radius: 16px;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
 }
@@ -432,14 +432,14 @@
   margin: 0 0 0.5rem;
   font-size: 1.125rem;
   font-weight: 700;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .modalDesc {
   margin: 0 0 1.25rem;
   font-size: 0.875rem;
   line-height: 1.5;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .modalUser {
@@ -448,7 +448,7 @@
   align-items: center;
   padding: 0.85rem 1rem;
   margin-bottom: 1.25rem;
-  background: #f7f9fc;
+  background: var(--moderator-bg);
   border-radius: 10px;
 }
 

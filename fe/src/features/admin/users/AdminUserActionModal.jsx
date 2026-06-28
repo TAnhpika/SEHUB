@@ -11,6 +11,8 @@ import {
   faCoins,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import { Modal } from "@/common/Modal/Modal";
+import backdropStyles from "@/common/styles/modalBackdrop.module.css";
 import { PREMIUM_PLANS } from "@/features/admin/payments/adminPaymentPolicy";
 import payStyles from "@/features/admin/payments/AdminPayments.module.css";
 
@@ -101,13 +103,13 @@ function AdminUserActionModal({ open, mode, user, onClose, onSubmit, error = "" 
   }
 
   return (
-    <div className={payStyles.modalBackdrop} role="presentation" onClick={onClose}>
-      <div
-        className={payStyles.tokenModal}
-        role="dialog"
-        aria-labelledby="user-action-title"
-        onClick={(event) => event.stopPropagation()}
-      >
+    <Modal
+      open={open}
+      onClose={onClose}
+      className={backdropStyles.overlay}
+      panelClassName={payStyles.tokenModal}
+      closeOnOverlay
+    >
         <header className={payStyles.tokenModalHead}>
           <div className={payStyles.tokenModalHeadMain}>
             <span className={payStyles.tokenModalIcon}>
@@ -197,8 +199,7 @@ function AdminUserActionModal({ open, mode, user, onClose, onSubmit, error = "" 
             </Button>
           </footer>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import {
   faComment,
   faEye,
@@ -120,17 +121,7 @@ function PostDetailModal({
     return result?.url ?? result?.Url ?? null;
   }, []);
 
-  useEffect(() => {
-    if (!open) {
-      return undefined;
-    }
-
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
+  useLockBodyScroll(open);
 
   useEffect(() => {
     if (!post || !open) return undefined;

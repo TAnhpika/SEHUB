@@ -24,13 +24,13 @@
   height: 4.5rem;
   margin-bottom: 1.25rem;
   font-size: 2rem;
-  color: #fff;
+  color: var(--color-auth-on-brand);
   background: var(--color-success);
   border-radius: var(--radius-full);
 }
 
 .iconWaiting {
-  background: #d97706;
+  background: var(--color-warning);
 }
 
 .title {
@@ -52,34 +52,34 @@
   margin-top: 1.25rem;
   padding: 1rem 1.125rem;
   text-align: left;
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning);
   border-radius: var(--radius-lg);
 }
 
 .alertTitle {
   font-size: 0.875rem;
   font-weight: 700;
-  color: #92400e;
+  color: var(--color-icon-amber);
 }
 
 .alertText {
   margin-top: 0.5rem;
   font-size: 0.8125rem;
   line-height: 1.6;
-  color: #78350f;
+  color: var(--color-text-muted);
 }
 
 .alertMeta {
   margin-top: 0.75rem;
   font-size: 0.8125rem;
-  color: #78350f;
+  color: var(--color-text-muted);
   word-break: break-all;
 }
 
 .alertMeta strong {
   font-weight: 700;
-  color: #92400e;
+  color: var(--color-icon-amber);
 }
 
 .details {
@@ -190,7 +190,7 @@
   height: 1.25rem;
   font-size: 0.6875rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--color-auth-on-brand);
   background: var(--color-primary);
   border-radius: var(--radius-sm);
 }

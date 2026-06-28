@@ -1,8 +1,8 @@
 .viewer {
   padding: 1.25rem 1.5rem;
   margin-bottom: 1.5rem;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.45);
+  background: var(--color-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 12px;
 }
 
@@ -23,28 +23,28 @@
   font-family: inherit;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-auth-on-brand);
   cursor: pointer;
-  background: #004ac6;
+  background: var(--moderator-primary);
   border: none;
   border-radius: 8px;
 }
 
 .headerDownloadBtn:hover {
-  background: #003d9e;
+  background: var(--moderator-primary-hover);
 }
 
 .fileName {
   margin: 0 0 0.25rem;
   font-size: 1.25rem;
   font-weight: 700;
-  color: #191c1e;
+  color: var(--color-text);
 }
 
 .meta {
   margin: 0;
   font-size: 0.875rem;
-  color: #434655;
+  color: var(--color-text-muted);
 }
 
 .planBadge {
@@ -55,20 +55,20 @@
 }
 
 .planBasic {
-  color: #1d4ed8;
-  background: #dbeafe;
+  color: var(--color-badge-text);
+  background: var(--color-primary-soft);
 }
 
 .planPremium {
-  color: #7c3aed;
-  background: #ede9fe;
+  color: var(--color-filter-active);
+  background: var(--color-primary-light);
 }
 
 .accessLabel {
   margin: 0 0 1rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #004ac6;
+  color: var(--moderator-primary);
 }
 
 .locked {
@@ -78,15 +78,15 @@
   align-items: center;
   padding: 2rem 1rem;
   text-align: center;
-  background: #f7f9fc;
-  border: 1px dashed rgba(195, 198, 215, 0.6);
+  background: var(--color-auth-bg);
+  border: 1px dashed var(--moderator-border);
   border-radius: 10px;
 }
 
 .locked h3 {
   margin: 0;
   font-size: 1.0625rem;
-  color: #191c1e;
+  color: var(--color-text);
 }
 
 .locked p {
@@ -94,12 +94,12 @@
   max-width: 28rem;
   font-size: 0.875rem;
   line-height: 1.5;
-  color: #434655;
+  color: var(--color-text-muted);
 }
 
 .lockIcon {
   font-size: 2rem;
-  color: #9ca3af;
+  color: var(--color-text-subtle);
 }
 
 .upgradeBtn {
@@ -107,14 +107,14 @@
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-auth-on-brand);
   text-decoration: none;
-  background: #004ac6;
+  background: var(--moderator-primary);
   border-radius: 8px;
 }
 
 .upgradeBtn:hover {
-  background: #003d9e;
+  background: var(--moderator-primary-hover);
 }
 
 .pages {
@@ -129,22 +129,22 @@
   margin: 0.35rem 0 0;
   font-size: 0.8125rem;
   line-height: 1.5;
-  color: #737686;
+  color: var(--color-text-subtle);
 }
 
 .pageView {
   padding: 1rem 1.125rem;
   margin-top: 1rem;
-  background: #f7f9fc;
-  border: 1px solid rgba(0, 74, 198, 0.12);
+  background: var(--color-auth-bg);
+  border: 1px solid var(--color-primary-soft);
   border-radius: 10px;
 }
 
 .previewFrame {
   width: 100%;
   min-height: 420px;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.45);
+  background: var(--color-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
 }
 
@@ -162,10 +162,10 @@
   justify-content: center;
   width: 2.25rem;
   height: 2.25rem;
-  color: #434655;
+  color: var(--color-text-muted);
   cursor: pointer;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.6);
+  background: var(--color-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
 }
 
@@ -175,8 +175,8 @@
 }
 
 .navBtn:not(:disabled):hover {
-  color: #004ac6;
-  border-color: rgba(0, 74, 198, 0.25);
+  color: var(--moderator-primary);
+  border-color: var(--color-primary-soft);
 }
 
 .pageIndicator {
@@ -184,7 +184,7 @@
   font-size: 0.875rem;
   font-weight: 600;
   text-align: center;
-  color: #434655;
+  color: var(--color-text-muted);
 }
 
 .limitBanner {
@@ -192,27 +192,27 @@
   padding: 0.65rem 0.85rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #b45309;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
+  color: var(--color-icon-amber);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning);
   border-radius: 8px;
 }
 
 .limitBanner a {
-  color: #004ac6;
+  color: var(--moderator-primary);
 }
 
 .fullNote {
   margin: 0;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #16a34a;
+  color: var(--color-success);
 }
 
 .overview {
   padding: 1rem 1.125rem;
-  background: #f7f9fc;
-  border: 1px solid rgba(0, 74, 198, 0.12);
+  background: var(--color-auth-bg);
+  border: 1px solid var(--color-primary-soft);
   border-radius: 10px;
 }
 
@@ -220,21 +220,21 @@
   margin: 0 0 0.5rem;
   font-size: 1rem;
   font-weight: 700;
-  color: #191c1e;
+  color: var(--color-text);
 }
 
 .overviewSummary {
   margin: 0 0 1rem;
   font-size: 0.875rem;
   line-height: 1.55;
-  color: #434655;
+  color: var(--color-text-muted);
 }
 
 .overviewHeading {
   margin: 0 0 0.5rem;
   font-size: 0.8125rem;
   font-weight: 700;
-  color: #004ac6;
+  color: var(--moderator-primary);
 }
 
 .overviewList {
@@ -242,13 +242,13 @@
   padding-left: 1.25rem;
   font-size: 0.875rem;
   line-height: 1.6;
-  color: #191c1e;
+  color: var(--color-text);
 }
 
 .overviewHint {
   margin: 0;
   font-size: 0.8125rem;
-  color: #737686;
+  color: var(--color-text-subtle);
 }
 
 .downloadBtnActive {
@@ -261,13 +261,13 @@
 }
 
 .pageVisible {
-  background: #f7f9fc;
-  border: 1px solid rgba(0, 74, 198, 0.12);
+  background: var(--color-auth-bg);
+  border: 1px solid var(--color-primary-soft);
 }
 
 .pageLocked {
-  background: #eef0f4;
-  border: 1px dashed #c3c6d7;
+  background: var(--color-surface-muted);
+  border: 1px dashed var(--color-border);
   opacity: 0.85;
 }
 
@@ -276,14 +276,14 @@
   margin-bottom: 0.35rem;
   font-size: 0.75rem;
   font-weight: 700;
-  color: #434655;
+  color: var(--color-text-muted);
 }
 
 .pageBody {
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.55;
-  color: #191c1e;
+  color: var(--color-text);
 }
 
 .pageBody p {
@@ -298,14 +298,14 @@
   margin: 0 0 0.65rem;
   font-size: 0.9375rem;
   font-weight: 700;
-  color: #004ac6;
+  color: var(--moderator-primary);
 }
 
 .pageBlocked {
   margin: 0;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #9ca3af;
+  color: var(--color-text-subtle);
 }
 
 .footer {
@@ -316,14 +316,14 @@
   justify-content: flex-end;
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(195, 198, 215, 0.35);
+  border-top: 1px solid var(--moderator-border-light);
 }
 
 .limitNote {
   margin: 0;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #b45309;
+  color: var(--color-icon-amber);
 }
 
 .downloadBtn {
@@ -333,15 +333,15 @@
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-auth-on-brand);
   cursor: pointer;
-  background: #004ac6;
+  background: var(--moderator-primary);
   border: none;
   border-radius: 8px;
 }
 
 .downloadBtn:disabled {
-  color: #9ca3af;
+  color: var(--color-text-subtle);
   cursor: not-allowed;
-  background: #e5e7eb;
+  background: var(--color-border);
 }

@@ -6,7 +6,7 @@
   justify-content: space-between;
   padding: 1rem 1rem 1.125rem;
   background: rgba(255, 255, 255, 0.9);
-  border-top: 1px solid rgba(195, 198, 215, 0.2);
+  border-top: 1px solid var(--moderator-border-light);
   border-radius: 16px 16px 0 0;
   backdrop-filter: blur(6px);
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
@@ -17,7 +17,7 @@
   font-family: inherit;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--moderator-primary, #004ac6);
+  color: var(--moderator-primary);
   cursor: pointer;
   background: rgba(210, 224, 254, 0.3);
   border: none;
@@ -36,10 +36,10 @@
   font-family: inherit;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--moderator-primary, #004ac6);
+  color: var(--moderator-primary);
   cursor: pointer;
-  background: #fff;
-  border: 1px solid var(--moderator-primary, #004ac6);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-primary);
   border-radius: 8px;
 }
 
@@ -51,16 +51,16 @@
   font-family: inherit;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #fff;
+  color: var(--moderator-surface);
   cursor: pointer;
-  background: var(--moderator-primary, #004ac6);
+  background: var(--moderator-primary);
   border: none;
   border-radius: 8px;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .continue:hover {
-  background: #003da3;
+  background: var(--moderator-primary-hover);
 }
 
 @media (max-width: 640px) {

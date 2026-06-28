@@ -2,7 +2,7 @@ import * as postsApi from "@/api/postsApi";
 import * as adminApi from "@/api/adminApi";
 import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 import { FEATURED_POSTS_UPDATED_EVENT } from "@/features/feed/feedData";
-import { formatRelativeTimeFromApi } from "@/utils/parseApiDate";
+import { formatRelativeTimeFromApi } from "@/utils/dateTime";
 
 export const MAX_PINNED_POSTS = 5;
 

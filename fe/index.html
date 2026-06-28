@@ -18,6 +18,18 @@
     />
   </head>
   <body>
+    <script>
+      (function () {
+        var key = "sehub-theme";
+        var stored = localStorage.getItem(key);
+        var theme = stored === "dark" || stored === "light" ? stored : "system";
+        var dark =
+          theme === "dark" ||
+          (theme === "system" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+      })();
+    </script>
     <div id="root"></div>
     <script>
       // Lọc lỗi promise từ extension/onboarding (chrome-extension://) — không phải lỗi SEHUB.

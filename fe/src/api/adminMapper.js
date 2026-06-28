@@ -620,75 +620,11 @@ function mapReportStatus(status) {
   return value === "pending" ? "pending" : "resolved";
 }
 
-function mapModerationPostStatus(status) {
-  const value = String(status ?? "Pending").toLowerCase();
-  if (value === "published") return "approved";
-  if (value === "rejected") return "rejected";
-  return "pending";
-}
-
-function toModerationInitials(name) {
-  const parts = String(name ?? "")
-    .trim()
-    .split(/\s+/);
-  if (parts.length >= 2) {
-    return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
-  }
-  return String(name ?? "?").slice(0, 2).toUpperCase() || "?";
-}
-
-export function mapModerationPostListItem(dto) {
-  const status = mapModerationPostStatus(dto.status);
-  const createdMs = new Date(dto.createdAt).getTime();
-  const { coverImage, inlineImages } = mapModerationPostImages(dto.images ?? []);
-
-  return {
-    id: dto.id,
-    apiId: dto.id,
-    type: "post",
-    title: dto.title,
-    excerpt: dto.excerpt ?? dto.title,
-    content: dto.excerpt ?? "",
-    semester: dto.semester ? `Học kỳ ${dto.semester}` : "—",
-    major: dto.major ?? "SE",
-    tags: dto.tags ?? [],
-    authorName: dto.author?.displayName || dto.author?.username || "—",
-    authorInitial: toModerationInitials(dto.author?.displayName || dto.author?.username),
-    studentId: dto.author?.username ?? "—",
-    submittedAtLabel: formatAdminDateTime(dto.createdAt),
-    timeLabel: formatAdminDateTime(dto.createdAt),
-    status,
-    sortOrder: Number.isNaN(createdMs) ? 0 : createdMs,
-    createdAt: dto.createdAt,
-    allowComments: true,
-    anonymous: false,
-    attachments: [],
-    coverImage,
-    inlineImages,
-    resubmission: status === "pending" && Boolean(dto.moderatedAt),
-    moderation: dto.moderatedAt
-      ? {
-          moderatorName: dto.moderatorUsername ?? "Moderator",
-          moderatorId: "—",
-          actionAtLabel: formatAdminDateTime(dto.moderatedAt),
-          note: status === "approved" ? dto.moderationNote ?? "Đã duyệt — hiển thị trên feed cộng đồng." : undefined,
-          reason: status === "rejected" ? dto.moderationNote ?? "—" : undefined,
-          resubmitHint:
-            status === "rejected"
-              ? "Tác giả có thể chỉnh sửa bài Rejected rồi gửi duyệt lại (Pending)."
-              : undefined,
-        }
-      : null,
-  };
-}
-
-export function mapModerationPostDetail(dto) {
-  const base = mapModerationPostListItem(dto);
-  return {
-    ...base,
-    content: dto.content ?? base.excerpt,
-  };
-}
+export {
+  mapModerationPostDetail,
+  mapModerationPostListItem,
+  mapModerationUiStatus,
+} from "./contentModerationMapper";
 
 export function mapAdminReportListItem(dto) {
   const status = mapReportStatus(dto.status);

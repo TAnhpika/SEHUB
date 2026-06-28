@@ -11,6 +11,7 @@ import GuestLayout from "@/common/Layout/GuestLayout/GuestLayout";
 import MainLayout from "@/common/Layout/MainLayout/MainLayout";
 import ExamFocusLayout from "@/common/Layout/ExamFocusLayout/ExamFocusLayout";
 import { AuthProvider } from "@/context";
+import { ThemeProvider } from "@/context/ThemeProvider";
 import LoginPage from "@/features/auth/LoginPage/LoginPage";
 import RegisterPage from "@/features/auth/RegisterPage/RegisterPage";
 import ForgotPasswordPage from "@/features/auth/ForgotPasswordPage/ForgotPasswordPage";
@@ -95,6 +96,7 @@ function RouteFallback() {
 
 function App() {
   return (
+    <ThemeProvider>
     <AuthProvider>
       <ToastProvider>
         <ConfirmDialogProvider>
@@ -306,6 +308,7 @@ function App() {
         </ConfirmDialogProvider>
       </ToastProvider>
     </AuthProvider>
+    </ThemeProvider>
   );
 }
 
