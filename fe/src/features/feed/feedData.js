@@ -138,49 +138,6 @@ export function getPostById(postId) {
   return MOCK_POSTS.find((post) => post.id === id) ?? null;
 }
 
-const COMMENT_PREVIEW_LIMIT = 2;
-
-export async function loadCommentPreviewsForPost(postId, { limit = COMMENT_PREVIEW_LIMIT } = {}) {
-  if (USE_MOCK) return [];
-
-  try {
-    const result = await postsApi.listComments(postId, {
-      page: 1,
-      pageSize: limit,
-    });
-    return (result.items ?? []).map(mapComment);
-  } catch {
-    return [];
-  }
-}
-
-async function attachCommentPreviews(posts) {
-  const needsPreview = posts.filter(
-    (post) => (post.comments ?? 0) > 0 && !(post.commentsList?.length > 0),
-  );
-  if (needsPreview.length === 0) return posts;
-
-  const previewById = new Map();
-  await Promise.all(
-    needsPreview.map(async (post) => {
-      try {
-        const result = await postsApi.listComments(post.id, {
-          page: 1,
-          pageSize: COMMENT_PREVIEW_LIMIT,
-        });
-        previewById.set(post.id, (result.items ?? []).map(mapComment));
-      } catch {
-        previewById.set(post.id, []);
-      }
-    }),
-  );
-
-  return posts.map((post) => {
-    const previews = previewById.get(post.id);
-    return previews ? { ...post, commentsList: previews } : post;
-  });
-}
-
 export async function loadPosts(options = {}) {
   if (USE_MOCK) {
     return { items: [...MOCK_POSTS], totalCount: MOCK_POSTS.length };
@@ -193,14 +150,10 @@ export async function loadPosts(options = {}) {
     major,
     tag,
     search,
-    withCommentPreviews = false,
   } = options;
   const data = await postsApi.listPosts({ page, pageSize, semester, major, tag, search });
 
-  let items = (data.items ?? []).map(mapPostListItem);
-  if (withCommentPreviews) {
-    items = await attachCommentPreviews(items);
-  }
+  const items = (data.items ?? []).map(mapPostListItem);
 
   return {
     items,

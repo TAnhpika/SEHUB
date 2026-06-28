@@ -239,30 +239,3 @@
 .statActive {
   color: var(--color-danger);
 }
-
-.commentPreviews {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  margin: -0.25rem 0 0.875rem;
-  padding: 0.75rem;
-  background: var(--color-surface-muted, #f8fafc);
-  border-radius: var(--radius-lg);
-  list-style: none;
-}
-
-.commentPreview {
-  font-size: 0.8125rem;
-  line-height: 1.45;
-  color: var(--color-text-muted);
-}
-
-.commentAuthor {
-  font-weight: 600;
-  color: var(--color-text);
-  margin-right: 0.375rem;
-}
-
-.commentText {
-  word-break: break-word;
-}
