@@ -21,7 +21,7 @@ export const EXAM_REPORT_ROUTING = {
   assigneeLabel: "Kiểm duyệt viên (Moderator)",
   escalationLabel: "Admin duyệt đề",
   description:
-    "Báo cáo được gửi tới Moderator để rà soát câu hỏi/đáp án. Sau khi chỉnh sửa, Admin duyệt lại trước khi cập nhật công khai (§2.4, §2.5).",
+    "Báo cáo được gửi tới Moderator để rà soát câu hỏi/đáp án. Sau khi chỉnh sửa, Admin duyệt lại trước khi cập nhật công khai.",
 };
 
 export const MIN_EXAM_REPORT_DETAIL_LENGTH = 10;

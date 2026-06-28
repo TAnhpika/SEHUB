@@ -57,8 +57,8 @@ function ExamCommentsPanel({ locked = false, reason = "premium", examId, questio
         <h3 className={styles.title}>Bình luận</h3>
         <p className={styles["locked-text"]}>
           {reason === "guest"
-            ? "Đăng nhập và nâng cấp Premium để thảo luận trực tiếp dưới từng câu hỏi (§3.3)."
-            : "Bình luận câu hỏi chỉ dành cho tài khoản Premium (§2.3)."}
+            ? "Đăng nhập và nâng cấp Premium để thảo luận trực tiếp dưới từng câu hỏi."
+            : "Bình luận câu hỏi chỉ dành cho tài khoản Premium."}
         </p>
         <Link to={reason === "guest" ? "/login" : "/home/premium"} className={styles.cta}>
           {reason === "guest" ? "Đăng nhập" : "Xem gói Premium"}

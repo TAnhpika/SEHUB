@@ -1,6 +1,6 @@
 .panel {
   --featured-max-visible: 3;
-  --featured-row-height: 3.75rem;
+  --featured-row-height: 4.25rem;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -23,13 +23,9 @@
 
 .posts {
   display: flex;
-  flex: 1;
+  flex: none;
   flex-direction: column;
-  min-height: 0;
-  max-height: min(
-    calc(var(--featured-row-height) * var(--featured-max-visible)),
-    100%
-  );
+  height: calc(var(--featured-row-height) * var(--featured-max-visible));
   margin: 0;
   padding: 0;
   overflow-x: hidden;
@@ -50,6 +46,7 @@
 }
 
 .item {
+  min-height: var(--featured-row-height);
   border-bottom: 1px solid var(--color-border);
 }
 
