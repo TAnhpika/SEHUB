@@ -13,8 +13,8 @@ const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 export { USE_MOCK as EXAM_USE_MOCK };
 
 export const DEMO_API_EXAM_CODES = {
-  final: "SE301-FINAL-01",
-  practice: "SE301-LAB-01",
+  final: "PRF192-FINAL-01",
+  practice: "PRF192-LAB-01",
 };
 
 export const SAMPLE_QUESTION = {

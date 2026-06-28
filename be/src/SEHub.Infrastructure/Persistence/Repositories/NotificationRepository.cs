@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Domain.Entities;
+using SEHub.Domain.Enums;
 using SEHub.Infrastructure.Persistence;
 
 namespace SEHub.Infrastructure.Persistence.Repositories;
@@ -26,7 +27,7 @@ public class NotificationRepository : INotificationRepository
         CancellationToken cancellationToken = default)
     {
         var query = _context.UserNotifications
-            .Where(n => n.UserId == userId)
+            .Where(n => n.UserId == userId && n.Type != NotificationType.Message)
             .OrderByDescending(n => n.CreatedAt);
 
         var total = await query.CountAsync(cancellationToken);
@@ -39,7 +40,9 @@ public class NotificationRepository : INotificationRepository
     }
 
     public Task<int> CountUnreadAsync(Guid userId, CancellationToken cancellationToken = default) =>
-        _context.UserNotifications.CountAsync(n => n.UserId == userId && !n.IsRead, cancellationToken);
+        _context.UserNotifications.CountAsync(
+            n => n.UserId == userId && !n.IsRead && n.Type != NotificationType.Message,
+            cancellationToken);
 
     public async Task AddAsync(UserNotification notification, CancellationToken cancellationToken = default) =>
         await _context.UserNotifications.AddAsync(notification, cancellationToken);

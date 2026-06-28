@@ -1,5 +1,6 @@
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Contracts.Subjects;
+using SEHub.Shared.Subjects;
 
 namespace SEHub.Application.Subjects;
 
@@ -36,7 +37,8 @@ public sealed class SubjectCatalogService : ISubjectCatalogService
 
         foreach (var category in categories)
         {
-            AddEntry(entries, category.Semester, category.Name, category.Major);
+            var subjectCode = SubjectCodeResolver.Resolve(category.Name) ?? category.Name.Trim();
+            AddEntry(entries, category.Semester, subjectCode, category.Major);
         }
 
         return entries.Values

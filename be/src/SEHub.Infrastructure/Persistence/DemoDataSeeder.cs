@@ -47,11 +47,16 @@ public static class DemoDataSeeder
 
     private const string DemoPostTag = "demo-seed";
     private const string DemoReportTag = "demo-seed-report";
-    private const string FinalExamCode = "SE301-FINAL-01";
-    private const string PracticeExamCode = "SE301-LAB-01";
-    private const string DocumentCategoryName = "SE301 - Software Engineering";
-    private const string DocumentTitle = "Slide SE301 - Chương 1";
-    private const string DocumentRelativePath = "demo/se301-ch1.pdf";
+    private const string FinalExamCode = "PRF192-FINAL-01";
+    private const string PracticeExamCode = "PRF192-LAB-01";
+    private const string DocumentCategoryName = "PRF192";
+    private const string DocumentTitle = "Slide PRF192 - Chương 1";
+    private const string DocumentRelativePath = "demo/prf192-ch1.pdf";
+    private const string LegacyFinalExamCode = "SE301-FINAL-01";
+    private const string LegacyPracticeExamCode = "SE301-LAB-01";
+    private const string LegacyDocumentCategoryName = "SE301 - Software Engineering";
+    private const string LegacyDocumentTitle = "Slide SE301 - Chương 1";
+    private const string LegacyDocumentRelativePath = "demo/se301-ch1.pdf";
     private const string SubscriptionPlanCode = "1m";
 
     private static readonly (string Code, decimal PriceVnd)[] OfficialSubscriptionPlanPrices =
@@ -107,6 +112,7 @@ public static class DemoDataSeeder
         {
             await EnsurePrerequisitesAsync(context, logger);
             await RestoreOfficialSubscriptionPlanPricesAsync(context, logger);
+            await RemoveLegacySe301DemoDataAsync(context, configuration, logger);
 
             var before = await CaptureCountsAsync(context, userManager);
             logger.LogInformation(
@@ -195,6 +201,141 @@ public static class DemoDataSeeder
         if (updated)
         {
             await context.SaveChangesAsync();
+        }
+    }
+
+    private static async Task RemoveLegacySe301DemoDataAsync(
+        SEHubDbContext context,
+        IConfiguration configuration,
+        ILogger logger)
+    {
+        var modPendingFinal = await context.Exams.FirstOrDefaultAsync(e => e.Id == ModPendingFinalExamId);
+        if (modPendingFinal is not null
+            && (modPendingFinal.Major == "SE301"
+                || modPendingFinal.Title.Contains("SE301", StringComparison.OrdinalIgnoreCase)))
+        {
+            modPendingFinal.Major = "SE";
+            modPendingFinal.Title = "Đề cuối kỳ PRF192 — chờ duyệt (Mod)";
+            modPendingFinal.Description = "Demo đề cuối kỳ Mod gửi chờ Admin duyệt.";
+            modPendingFinal.ContentHash = ComputeContentHash("mod-pending-final-prf192");
+            await context.SaveChangesAsync();
+            logger.LogInformation("Updated moderator pending final exam from SE301 to PRF192.");
+        }
+
+        var legacyExamIds = await context.Exams
+            .Where(e =>
+                e.Id != ModPendingFinalExamId
+                && (e.Code == LegacyFinalExamCode
+                    || e.Code == LegacyPracticeExamCode
+                    || e.Major == "SE301"))
+            .Select(e => e.Id)
+            .ToListAsync();
+
+        if (legacyExamIds.Count > 0)
+        {
+            var legacyQuestionIds = await context.Questions
+                .Where(q => legacyExamIds.Contains(q.ExamId))
+                .Select(q => q.Id)
+                .ToListAsync();
+
+            var legacyThreadIds = await context.AiExamChatThreads
+                .Where(t => legacyExamIds.Contains(t.ExamId))
+                .Select(t => t.Id)
+                .ToListAsync();
+
+            if (legacyThreadIds.Count > 0)
+            {
+                context.AiExamChatMessages.RemoveRange(
+                    await context.AiExamChatMessages
+                        .Where(m => legacyThreadIds.Contains(m.ThreadId))
+                        .ToListAsync());
+                context.AiExamChatThreads.RemoveRange(
+                    await context.AiExamChatThreads
+                        .Where(t => legacyThreadIds.Contains(t.Id))
+                        .ToListAsync());
+            }
+
+            context.QuestionReports.RemoveRange(
+                await context.QuestionReports
+                    .Where(r => legacyExamIds.Contains(r.ExamId) || legacyQuestionIds.Contains(r.QuestionId))
+                    .ToListAsync());
+            context.ExamAttempts.RemoveRange(
+                await context.ExamAttempts.Where(a => legacyExamIds.Contains(a.ExamId)).ToListAsync());
+            context.PracticeSubmissions.RemoveRange(
+                await context.PracticeSubmissions.Where(s => legacyExamIds.Contains(s.ExamId)).ToListAsync());
+            context.ExamAttachments.RemoveRange(
+                await context.ExamAttachments.Where(a => legacyExamIds.Contains(a.ExamId)).ToListAsync());
+            context.Exams.RemoveRange(
+                await context.Exams.Where(e => legacyExamIds.Contains(e.Id)).ToListAsync());
+
+            logger.LogInformation("Removed {Count} legacy SE301 demo exams and related records.", legacyExamIds.Count);
+        }
+
+        var legacyCategory = await context.DocumentCategories
+            .FirstOrDefaultAsync(c =>
+                c.Id == DemoDocumentCategoryId
+                || c.Name == LegacyDocumentCategoryName
+                || c.Name.Contains("SE301"));
+        if (legacyCategory is not null)
+        {
+            legacyCategory.Name = DocumentCategoryName;
+            legacyCategory.Semester = 1;
+            legacyCategory.Major = "SE";
+        }
+
+        var legacyDocument = await context.Documents
+            .FirstOrDefaultAsync(d =>
+                d.Id == DemoDocumentId
+                || d.Title == LegacyDocumentTitle
+                || d.Title.Contains("SE301")
+                || d.FilePath.Contains("se301"));
+        if (legacyDocument is not null)
+        {
+            legacyDocument.Title = DocumentTitle;
+            legacyDocument.FilePath = DocumentRelativePath;
+        }
+
+        var legacyDemoPosts = await context.Posts
+            .Where(p =>
+                (p.Tags.Contains(DemoPostTag) || p.Tags.Contains(ShowcasePostsSeeder.ShowcasePostTag))
+                && (p.Title.Contains("SE301") || p.Content.Contains("SE301") || p.Tags.Contains("SE301")))
+            .ToListAsync();
+        foreach (var post in legacyDemoPosts)
+        {
+            post.Title = ReplaceLegacySe301Text(post.Title);
+            post.Content = ReplaceLegacySe301Text(post.Content);
+            post.Tags = ReplaceLegacySe301Text(post.Tags);
+        }
+
+        if (legacyCategory is not null
+            || legacyDocument is not null
+            || modPendingFinal is not null
+            || legacyDemoPosts.Count > 0)
+        {
+            await context.SaveChangesAsync();
+        }
+
+        await ShowcasePostsSeeder.PatchLegacySe301ShowcasePostsAsync(context, logger);
+        RemoveLegacyDemoPdfFile(configuration, LegacyDocumentRelativePath);
+    }
+
+    private static string ReplaceLegacySe301Text(string value) =>
+        value
+            .Replace("SE301 - Software Engineering", "PRF192", StringComparison.OrdinalIgnoreCase)
+            .Replace("Software Engineering (SE301)", "PRF192 (Programming Fundamentals)", StringComparison.OrdinalIgnoreCase)
+            .Replace("môn SE301", "môn PRF192", StringComparison.OrdinalIgnoreCase)
+            .Replace("slide SE301", "slide PRF192", StringComparison.OrdinalIgnoreCase)
+            .Replace("ôn thi SE301", "ôn thi PRF192", StringComparison.OrdinalIgnoreCase)
+            .Replace("SE301", "PRF192", StringComparison.OrdinalIgnoreCase);
+
+    private static void RemoveLegacyDemoPdfFile(IConfiguration configuration, string relativePath)
+    {
+        var basePath = configuration["FileStorage:LocalPath"]
+            ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+        var fullPath = Path.Combine(basePath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        if (File.Exists(fullPath))
+        {
+            File.Delete(fullPath);
         }
     }
 
@@ -655,14 +796,14 @@ public static class DemoDataSeeder
         {
             Id = DemoFinalExamId,
             Code = FinalExamCode,
-            Title = "Đề cuối kỳ SE301",
+            Title = "Đề cuối kỳ PRF192",
             ExamType = ExamType.Final,
             Semester = 1,
             Major = "SE",
             QuestionCount = 2,
             Status = ExamStatus.Published,
-            ContentHash = ComputeContentHash("final-exam-se301"),
-            Description = "Đề thi cuối kỳ môn Software Engineering (SE301) — dữ liệu demo Development.",
+            ContentHash = ComputeContentHash("final-exam-prf192"),
+            Description = "Đề thi cuối kỳ môn Programming Fundamentals (PRF192) — dữ liệu demo Development.",
             CreatedAt = now,
             Questions =
             [
@@ -671,7 +812,7 @@ public static class DemoDataSeeder
                     Id = q1Id,
                     ExamId = DemoFinalExamId,
                     OrderIndex = 1,
-                    Content = "SDLC (Software Development Life Cycle) mô tả điều gì?",
+                    Content = "Trong Java, từ khóa nào dùng để khai báo hằng số?",
                     CorrectOptionId = q1CorrectId,
                     CreatedAt = now,
                     Options =
@@ -681,7 +822,7 @@ public static class DemoDataSeeder
                             Id = q1CorrectId,
                             QuestionId = q1Id,
                             Label = "A",
-                            Text = "Các giai đoạn phát triển phần mềm từ yêu cầu đến bảo trì",
+                            Text = "final",
                             CreatedAt = now
                         },
                         new QuestionOption
@@ -689,7 +830,7 @@ public static class DemoDataSeeder
                             Id = q1OptionBId,
                             QuestionId = q1Id,
                             Label = "B",
-                            Text = "Chỉ quy trình viết mã nguồn",
+                            Text = "const",
                             CreatedAt = now
                         },
                         new QuestionOption
@@ -697,7 +838,7 @@ public static class DemoDataSeeder
                             Id = q1OptionCId,
                             QuestionId = q1Id,
                             Label = "C",
-                            Text = "Quy trình kiểm thử phần cứng",
+                            Text = "static",
                             CreatedAt = now
                         },
                         new QuestionOption
@@ -705,7 +846,7 @@ public static class DemoDataSeeder
                             Id = q1OptionDId,
                             QuestionId = q1Id,
                             Label = "D",
-                            Text = "Phương pháp quản lý nhân sự dự án",
+                            Text = "define",
                             CreatedAt = now
                         }
                     ]
@@ -715,7 +856,7 @@ public static class DemoDataSeeder
                     Id = q2Id,
                     ExamId = DemoFinalExamId,
                     OrderIndex = 2,
-                    Content = "Trong Scrum, buổi họp nào dùng để lập kế hoạch cho Sprint tiếp theo?",
+                    Content = "Phương thức main trong Java phải có kiểu trả về gì?",
                     CorrectOptionId = q2CorrectId,
                     CreatedAt = now,
                     Options =
@@ -725,7 +866,7 @@ public static class DemoDataSeeder
                             Id = q2CorrectId,
                             QuestionId = q2Id,
                             Label = "A",
-                            Text = "Sprint Planning",
+                            Text = "void",
                             CreatedAt = now
                         },
                         new QuestionOption
@@ -733,7 +874,7 @@ public static class DemoDataSeeder
                             Id = q2OptionBId,
                             QuestionId = q2Id,
                             Label = "B",
-                            Text = "Daily Standup",
+                            Text = "int",
                             CreatedAt = now
                         },
                         new QuestionOption
@@ -741,7 +882,7 @@ public static class DemoDataSeeder
                             Id = q2OptionCId,
                             QuestionId = q2Id,
                             Label = "C",
-                            Text = "Sprint Retrospective",
+                            Text = "String",
                             CreatedAt = now
                         }
                     ]
@@ -771,9 +912,9 @@ public static class DemoDataSeeder
             Major = "SE",
             QuestionCount = 0,
             Status = ExamStatus.Published,
-            ContentHash = ComputeContentHash("practice-exam-se301-lab01"),
-            Description = "Nộp link repository GitHub chứa mã nguồn Lab 01 theo template. Dữ liệu demo Development.",
-            AssetUrl = "https://github.com/sehub-demo/se301-lab01-template",
+            ContentHash = ComputeContentHash("practice-exam-prf192-lab01"),
+            Description = "Nộp link repository GitHub chứa mã nguồn Lab 01 Java theo template. Dữ liệu demo Development.",
+            AssetUrl = "https://github.com/sehub-demo/prf192-lab01-template",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -784,30 +925,33 @@ public static class DemoDataSeeder
 
     private static async Task SeedModeratorPendingExamsAsync(SEHubDbContext context, ILogger logger)
     {
-        if (await context.Exams.AnyAsync(e => e.Code == ModPendingFinalCode))
-        {
-            return;
-        }
-
         var now = DateTime.UtcNow;
-        context.Exams.AddRange(
-            new Exam
+
+        if (!await context.Exams.AnyAsync(e => e.Id == ModPendingFinalExamId || e.Code == ModPendingFinalCode))
+        {
+            context.Exams.Add(new Exam
             {
                 Id = ModPendingFinalExamId,
                 Code = ModPendingFinalCode,
-                Title = "Đề cuối kỳ SE301 — chờ duyệt (Mod)",
+                Title = "Đề cuối kỳ PRF192 — chờ duyệt (Mod)",
                 ExamType = ExamType.Final,
                 Semester = 5,
-                Major = "SE301",
+                Major = "SE",
                 QuestionCount = 2,
                 Status = ExamStatus.PendingApproval,
-                ContentHash = ComputeContentHash("mod-pending-final-se301"),
+                ContentHash = ComputeContentHash("mod-pending-final-prf192"),
                 Description = "Demo đề cuối kỳ Mod gửi chờ Admin duyệt.",
                 SubmittedById = ModeratorUserId,
                 CreatedAt = now.AddDays(-2),
                 UpdatedAt = now.AddDays(-2)
-            },
-            new Exam
+            });
+            await context.SaveChangesAsync();
+            logger.LogInformation("Seeded moderator pending final exam {FinalCode}", ModPendingFinalCode);
+        }
+
+        if (!await context.Exams.AnyAsync(e => e.Id == ModPendingPracticeExamId || e.Code == ModPendingPracticeCode))
+        {
+            context.Exams.Add(new Exam
             {
                 Id = ModPendingPracticeExamId,
                 Code = ModPendingPracticeCode,
@@ -824,10 +968,9 @@ public static class DemoDataSeeder
                 CreatedAt = now.AddDays(-1),
                 UpdatedAt = now.AddDays(-1)
             });
-
-        await context.SaveChangesAsync();
-        logger.LogInformation("Seeded moderator pending exams {FinalCode} and {PracticeCode}",
-            ModPendingFinalCode, ModPendingPracticeCode);
+            await context.SaveChangesAsync();
+            logger.LogInformation("Seeded moderator pending practice exam {PracticeCode}", ModPendingPracticeCode);
+        }
     }
 
     private static async Task SeedDemoPracticeSubmissionsAsync(SEHubDbContext context, ILogger logger)
@@ -891,7 +1034,7 @@ public static class DemoDataSeeder
         ILogger logger)
     {
         var category = await context.DocumentCategories
-            .FirstOrDefaultAsync(c => c.Name == DocumentCategoryName);
+            .FirstOrDefaultAsync(c => c.Id == DemoDocumentCategoryId || c.Name == DocumentCategoryName);
 
         if (category is null)
         {
@@ -908,7 +1051,9 @@ public static class DemoDataSeeder
             logger.LogInformation("Seeded document category {Name}", DocumentCategoryName);
         }
 
-        if (!await context.Documents.AnyAsync(d => d.Title == DocumentTitle))
+        var document = await context.Documents
+            .FirstOrDefaultAsync(d => d.Id == DemoDocumentId || d.Title == DocumentTitle);
+        if (document is null)
         {
             context.Documents.Add(new Document
             {
@@ -924,6 +1069,14 @@ public static class DemoDataSeeder
             });
             await context.SaveChangesAsync();
             logger.LogInformation("Seeded document {Title}", DocumentTitle);
+        }
+        else if (document.Title != DocumentTitle || document.FilePath != DocumentRelativePath)
+        {
+            document.CategoryId = category.Id;
+            document.Title = DocumentTitle;
+            document.FilePath = DocumentRelativePath;
+            await context.SaveChangesAsync();
+            logger.LogInformation("Updated demo document to {Title}", DocumentTitle);
         }
 
         EnsureDemoPdfFile(configuration);
@@ -1358,8 +1511,8 @@ public static class DemoDataSeeder
                 Featured: false
             ),
             (
-                Title: "Mẹo ôn thi SE301 - Software Engineering",
-                Content: "Tập trung vào SDLC, Agile/Scrum, UML cơ bản và các mô hình quy trình. Làm thêm đề Final demo trên SEHub để luyện tập.",
+                Title: "Mẹo ôn thi PRF192 - Programming Fundamentals",
+                Content: "Tập trung vào cú pháp Java, OOP cơ bản, mảng và xử lý chuỗi. Làm thêm đề Final PRF192 demo trên SEHub để luyện tập.",
                 Featured: false
             ),
             (
@@ -1369,12 +1522,12 @@ public static class DemoDataSeeder
             ),
             (
                 Title: "Tổng hợp tài liệu học tập kỳ này",
-                Content: "Xem mục Documents để tải slide SE301 Chương 1. Premium mở khóa toàn bộ tài liệu và chức năng thi.",
+                Content: "Xem mục Documents để tải slide PRF192 Chương 1. Premium mở khóa toàn bộ tài liệu và chức năng thi.",
                 Featured: true
             ),
             (
-                Title: "Review môn SE301 sau giữa kỳ",
-                Content: "Phần lý thuyết về quy trình phát triển phần mềm chiếm tỷ trọng lớn. Nên ôn lại các khái niệm waterfall vs agile.",
+                Title: "Review môn PRF192 sau giữa kỳ",
+                Content: "Phần lý thuyết về biến, kiểu dữ liệu và lập trình hướng đối tượng chiếm tỷ trọng lớn. Nên ôn lại cú pháp Java và bài tập lab.",
                 Featured: false
             )
         };

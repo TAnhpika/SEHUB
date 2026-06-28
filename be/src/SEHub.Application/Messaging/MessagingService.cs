@@ -1,6 +1,5 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
-using SEHub.Application.Notifications;
 using SEHub.Application.Storage;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Messaging;
@@ -45,7 +44,6 @@ public sealed class MessagingService : IMessagingService
     private readonly IUserRepository _userRepository;
     private readonly IUserSearchRepository _searchRepository;
     private readonly IUserBlockRepository _blockRepository;
-    private readonly INotificationService _notificationService;
     private readonly IChatNotifier _chatNotifier;
     private readonly IUserPresenceService _presenceService;
     private readonly IFileStorageService _fileStorage;
@@ -60,7 +58,6 @@ public sealed class MessagingService : IMessagingService
         IUserRepository userRepository,
         IUserSearchRepository searchRepository,
         IUserBlockRepository blockRepository,
-        INotificationService notificationService,
         IChatNotifier chatNotifier,
         IUserPresenceService presenceService,
         IFileStorageService fileStorage,
@@ -74,7 +71,6 @@ public sealed class MessagingService : IMessagingService
         _userRepository = userRepository;
         _searchRepository = searchRepository;
         _blockRepository = blockRepository;
-        _notificationService = notificationService;
         _chatNotifier = chatNotifier;
         _presenceService = presenceService;
         _fileStorage = fileStorage;
@@ -208,7 +204,7 @@ public sealed class MessagingService : IMessagingService
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return await NotifyMessageSentAsync(message, userId, trimmed, cancellationToken);
+        return await NotifyMessageSentAsync(message, userId, cancellationToken);
     }
 
     public async Task<MessageDto> SendAttachmentMessageAsync(
@@ -298,13 +294,12 @@ public sealed class MessagingService : IMessagingService
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return await NotifyMessageSentAsync(message, userId, preview, cancellationToken);
+        return await NotifyMessageSentAsync(message, userId, cancellationToken);
     }
 
     private async Task<MessageDto> NotifyMessageSentAsync(
         Message message,
         Guid userId,
-        string preview,
         CancellationToken cancellationToken)
     {
         var dto = await MapMessageAsync(message, userId, cancellationToken);
@@ -319,24 +314,6 @@ public sealed class MessagingService : IMessagingService
         {
             var unread = await _conversationRepository.GetTotalUnreadCountAsync(participantId, cancellationToken);
             await _chatNotifier.NotifyUnreadCountUpdatedAsync(participantId, unread, cancellationToken);
-        }
-
-        var recipientId = participantIds.FirstOrDefault(id => id != userId);
-        if (recipientId != Guid.Empty)
-        {
-            var senderSummary = (await _searchRepository.GetByIdsAsync([userId], cancellationToken)).FirstOrDefault();
-            var senderName = senderSummary?.FullName ?? senderSummary?.Username ?? "Ai đó";
-            var notificationPreview = preview.Length > 80 ? $"{preview[..77]}..." : preview;
-
-            await _notificationService.CreateAsync(
-                recipientId,
-                NotificationType.Message,
-                $"{senderName} đã gửi tin nhắn cho bạn",
-                notificationPreview,
-                $"/home/messages?conversation={conversationId}",
-                userId,
-                conversationId,
-                cancellationToken);
         }
 
         return dto;

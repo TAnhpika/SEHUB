@@ -8,7 +8,6 @@ import {
   faFire,
   faUserPlus,
   faUserGroup,
-  faEnvelope,
   faRotateLeft,
   faClipboardCheck,
   faAt,
@@ -27,6 +26,10 @@ import { useHoverDropdown } from "@/hooks/useHoverDropdown";
 import { NOTIFICATION_META } from "./notificationData";
 import styles from "./NotificationDropdown.module.css";
 
+function isVisibleNotification(item) {
+  return item.type !== "message";
+}
+
 const TYPE_ICONS = {
   comment: faCommentDots,
   exam: faFileLines,
@@ -34,7 +37,6 @@ const TYPE_ICONS = {
   follow: faUserPlus,
   friendrequest: faUserGroup,
   friendaccepted: faUserGroup,
-  message: faEnvelope,
   like: faCommentDots,
   token: faBell,
   badge: faBell,
@@ -65,7 +67,7 @@ function NotificationDropdown() {
         getNotificationUnreadCount(),
       ]);
       const mapped = mapNotificationPage(page);
-      setItems(mapped.items);
+      setItems(mapped.items.filter(isVisibleNotification));
 
       if (typeof unread?.totalUnread === "number" && unread.totalUnread !== mapped.items.filter((i) => !i.read).length) {
         // keep badge in sync when server count differs from loaded page
@@ -80,6 +82,9 @@ function NotificationDropdown() {
   useChatHub({
     onNotificationReceived: (payload) => {
       const mapped = mapNotificationItem(payload);
+      if (!isVisibleNotification(mapped)) {
+        return;
+      }
       setItems((current) => {
         if (current.some((item) => item.id === mapped.id)) {
           return current;

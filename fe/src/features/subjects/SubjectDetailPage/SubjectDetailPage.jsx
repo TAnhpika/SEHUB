@@ -19,6 +19,7 @@ import {
   YEAR_OPTIONS,
 } from "./subjectDetailData";
 import { loadDocumentItemsForCourse } from "@/features/documents/studentDocumentsData";
+import SubjectDetailSkeleton from "@/features/subjects/SubjectDetailSkeleton/SubjectDetailSkeleton";
 import styles from "./SubjectDetailPage.module.css";
 
 function SubjectDetailPage({ page }) {
@@ -42,30 +43,18 @@ function SubjectDetailPage({ page }) {
   const code = courseCode?.toUpperCase() ?? "";
   const isDocumentsPage = page === "documents";
   const [allExams, setAllExams] = useState([]);
-  const [examsLoading, setExamsLoading] = useState(false);
+  const [listLoading, setListLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
-    if (isDocumentsPage) {
-      loadDocumentItemsForCourse(code)
-        .then((items) => {
-          if (!cancelled) {
-            setAllExams(items);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            setAllExams([]);
-          }
-        });
-      return () => {
-        cancelled = true;
-      };
-    }
+    setListLoading(true);
 
-    setExamsLoading(true);
-    loadExamPapersForCourse(code, config.pageKey)
+    const loadPromise = isDocumentsPage
+      ? loadDocumentItemsForCourse(code)
+      : loadExamPapersForCourse(code, config.pageKey);
+
+    loadPromise
       .then((items) => {
         if (!cancelled) {
           setAllExams(items);
@@ -78,7 +67,7 @@ function SubjectDetailPage({ page }) {
       })
       .finally(() => {
         if (!cancelled) {
-          setExamsLoading(false);
+          setListLoading(false);
         }
       });
 
@@ -134,6 +123,10 @@ function SubjectDetailPage({ page }) {
     }
 
     navigate(href, { state: getExamNavState(exam) });
+  }
+
+  if (listLoading) {
+    return <SubjectDetailSkeleton isDocuments={isDocumentsPage} />;
   }
 
   return (
@@ -256,11 +249,7 @@ function SubjectDetailPage({ page }) {
           </tbody>
         </table>
 
-        {examsLoading ? (
-          <p className={styles.empty}>Đang tải danh sách đề...</p>
-        ) : null}
-
-        {!examsLoading && exams.length === 0 && (
+        {exams.length === 0 && (
           <p className={styles.empty}>
             {isDocumentsPage
               ? "Chưa có tài liệu cho môn này."

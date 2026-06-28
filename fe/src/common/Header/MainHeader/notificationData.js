@@ -23,10 +23,6 @@ export const NOTIFICATION_META = {
     label: "Kết bạn",
     tone: "purple",
   },
-  message: {
-    label: "Tin nhắn",
-    tone: "blue",
-  },
   like: {
     label: "Thích",
     tone: "amber",
