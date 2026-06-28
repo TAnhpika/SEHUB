@@ -16,3 +16,7 @@ export function getMentionFriends({ search = "", limit = 20 } = {}) {
   const qs = params.toString();
   return apiRequest(`/api/v1/users/me/mention-friends${qs ? `?${qs}` : ""}`);
 }
+
+export function reportUser(userId, body) {
+  return apiRequest(`/api/v1/users/${userId}/report`, { method: "POST", body });
+}

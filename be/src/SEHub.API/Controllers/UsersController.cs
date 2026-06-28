@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SEHub.Application.Users;
+using SEHub.Contracts.Users;
 using SEHub.Shared.Constants;
 
 namespace SEHub.API.Controllers;
@@ -12,15 +13,18 @@ public sealed class UsersController : ControllerBase
     private readonly IUserSearchService _userSearchService;
     private readonly IFollowService _followService;
     private readonly IUserBlockService _blockService;
+    private readonly IUserReportService _userReportService;
 
     public UsersController(
         IUserSearchService userSearchService,
         IFollowService followService,
-        IUserBlockService blockService)
+        IUserBlockService blockService,
+        IUserReportService userReportService)
     {
         _userSearchService = userSearchService;
         _followService = followService;
         _blockService = blockService;
+        _userReportService = userReportService;
     }
 
     [HttpGet("search")]
@@ -116,5 +120,16 @@ public sealed class UsersController : ControllerBase
     {
         var result = await _blockService.GetBlockStatusAsync(userId, cancellationToken);
         return Ok(result);
+    }
+
+    [HttpPost("{userId:guid}/report")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> ReportUser(
+        Guid userId,
+        [FromBody] ReportUserRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _userReportService.ReportAsync(userId, request, cancellationToken);
+        return Ok(new { message = "Report submitted" });
     }
 }

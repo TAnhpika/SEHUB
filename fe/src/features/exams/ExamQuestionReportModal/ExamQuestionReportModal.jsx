@@ -21,7 +21,7 @@ function ExamQuestionReportModal({
 
   if (!open || !question) return null;
 
-  async function handleSubmit({ reason, reasonLabel, detail }) {
+  async function handleSubmit({ reason, detail }) {
     const report = await submitExamQuestionReport({
       examId,
       courseCode,
@@ -46,7 +46,7 @@ function ExamQuestionReportModal({
       subtitle={
         <>
           <p>
-            {examId} · Câu {questionIndex}
+            {courseCode ?? examId} · Câu {questionIndex}
           </p>
           <p>{EXAM_REPORT_ROUTING.description}</p>
         </>
@@ -60,9 +60,7 @@ function ExamQuestionReportModal({
           <strong>{EXAM_REPORT_ROUTING.escalationLabel}</strong>
         </p>
       }
-      onSubmit={({ reasonId, reasonLabel, detail }) =>
-        handleSubmit({ reason: reasonId, reasonLabel, detail })
-      }
+      onSubmit={({ reasonId, detail }) => handleSubmit({ reason: reasonId, detail })}
     />
   );
 }

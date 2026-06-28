@@ -1,10 +1,13 @@
+using Microsoft.Extensions.Caching.Memory;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Notifications;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Messaging;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
+using SEHub.Shared.Constants;
 
 namespace SEHub.Application.Messaging;
 
@@ -17,21 +20,27 @@ public sealed class ConversationReportService : IConversationReportService
     private readonly IConversationReportRepository _reportRepository;
     private readonly IConversationRepository _conversationRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMemoryCache _cache;
 
     public ConversationReportService(
         IConversationReportRepository reportRepository,
         IConversationRepository conversationRepository,
         IUserRepository userRepository,
+        IWorkflowNotificationService workflowNotifications,
         ICurrentUserService currentUser,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IMemoryCache cache)
     {
         _reportRepository = reportRepository;
         _conversationRepository = conversationRepository;
         _userRepository = userRepository;
+        _workflowNotifications = workflowNotifications;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _cache = cache;
     }
 
     public async Task ReportAsync(
@@ -80,9 +89,10 @@ public sealed class ConversationReportService : IConversationReportService
             throw new ConflictException("You have already reported this conversation.");
         }
 
+        var reportId = Guid.NewGuid();
         await _reportRepository.AddAsync(new ConversationReport
         {
-            Id = Guid.NewGuid(),
+            Id = reportId,
             ConversationId = conversationId,
             ReporterId = reporterId,
             Reason = trimmedReason,
@@ -92,6 +102,15 @@ public sealed class ConversationReportService : IConversationReportService
         }, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _cache.Remove(ModerationCacheKeys.Stats);
+
+        await _workflowNotifications.NotifyModeratorsConversationReportedAsync(
+            reportId,
+            conversationId,
+            reporterId,
+            trimmedReason,
+            trimmedDetail,
+            cancellationToken);
     }
 
     public async Task<PagedResult<ConversationReportDto>> GetReportsAsync(
@@ -153,6 +172,7 @@ public sealed class ConversationReportService : IConversationReportService
 
         await _reportRepository.UpdateAsync(report, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _cache.Remove(ModerationCacheKeys.Stats);
 
         return await MapAsync(report, cancellationToken);
     }

@@ -187,6 +187,28 @@ export function resolveConversationReport(id, body) {
   });
 }
 
+export function listUserReports(params = {}) {
+  return apiRequest(`/api/v1/admin/moderation/user-reports${buildQuery(params)}`);
+}
+
+export function getPendingUserReportCount() {
+  return apiRequest("/api/v1/admin/moderation/user-reports/pending-count");
+}
+
+export function resolveUserReport(id, body) {
+  return apiRequest(`/api/v1/admin/moderation/user-reports/${id}`, {
+    method: "PATCH",
+    body,
+  });
+}
+
+export function escalateUserReportToViolations(id, body) {
+  return apiRequest(`/api/v1/admin/moderation/reports/${id}/escalate-violations`, {
+    method: "POST",
+    body,
+  });
+}
+
 export function confirmPayment(orderId, body = {}) {
   return apiRequest(`/api/v1/admin/payments/${orderId}/confirm`, {
     method: "POST",

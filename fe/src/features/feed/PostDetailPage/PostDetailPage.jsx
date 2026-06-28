@@ -20,6 +20,8 @@ import {
 import { usePostDetail } from "@/features/feed/hooks/usePostDetail";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
+import CommentReportButton from "@/features/reports/CommentReportButton/CommentReportButton";
+import UserReportButton from "@/features/reports/UserReportButton/UserReportButton";
 import { copyPostLink, formatDisplayTitle, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
 import CommentMentionPicker from "@/features/feed/CommentMentionPicker/CommentMentionPicker";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
@@ -189,11 +191,23 @@ function PostDetailPage() {
 
           <div className={styles["header-actions"]}>
             {!isOwner && (
-              <PostReportButton
-                postId={post.id}
-                postTitle={displayTitle}
-                className={`${styles.share} ${styles.report}`}
-              />
+              <>
+                <PostReportButton
+                  postId={post.id}
+                  postTitle={displayTitle}
+                  className={`${styles.share} ${styles.report}`}
+                />
+                {post.author?.id ? (
+                  <UserReportButton
+                    userId={post.author.id}
+                    username={post.author.username}
+                    source="post"
+                    postId={post.id}
+                    className={`${styles.share} ${styles.report}`}
+                    label="Báo cáo tác giả"
+                  />
+                ) : null}
+              </>
             )}
             <button type="button" className={styles.share} aria-label="Chia sẻ" onClick={handleShare}>
               <FontAwesomeIcon icon={faShareNodes} />
@@ -270,7 +284,7 @@ function PostDetailPage() {
                   </div>
                 </button>
 
-                {commentIsOwner && !isEditingComment && (
+                {commentIsOwner && !isEditingComment ? (
                   <PostOwnerMenu
                     horizontal
                     showDivider
@@ -280,7 +294,14 @@ function PostDetailPage() {
                     onEdit={() => handleStartEditComment(comment)}
                     onDelete={() => handleDeleteComment(comment.id)}
                   />
-                )}
+                ) : !commentIsOwner ? (
+                  <CommentReportButton
+                    postId={post.id}
+                    commentId={comment.id}
+                    commentPreview={comment.content}
+                    className={`${styles.share} ${styles.report}`}
+                  />
+                ) : null}
               </div>
 
               {isEditingComment ? (

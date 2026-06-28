@@ -36,6 +36,7 @@ function mapApiComment(dto) {
   const displayName = dto.author?.displayName ?? dto.author?.username ?? "User";
   return {
     id: dto.id,
+    userId: dto.author?.id ?? null,
     author: displayName,
     username: dto.author?.username ?? "",
     initial: displayName.charAt(0).toUpperCase(),

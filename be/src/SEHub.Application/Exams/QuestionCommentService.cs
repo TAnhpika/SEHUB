@@ -172,6 +172,7 @@ public sealed class QuestionCommentService : IQuestionCommentService
 
             return new QuestionCommentAuthorDto
             {
+                Id = authorId,
                 Username = user?.Username ?? "unknown",
                 DisplayName = user?.DisplayName ?? user?.Username ?? "User",
                 AvatarUrl = profile?.AvatarUrl,

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faDownload,
@@ -87,8 +88,13 @@ function RankBadge({ rank }) {
 
 function ViolatingAccountsPage() {
   const { showToast } = useToast();
+  const [searchParams] = useSearchParams();
+  const focusUserId = searchParams.get("userId");
+  const focusUsername = searchParams.get("username");
+  const focusReason = searchParams.get("reason") ?? "";
+  const focusHandledRef = useRef(false);
   const [accounts, setAccounts] = useState([]);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() => focusUsername?.replace(/^@/, "") ?? "");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [rankFilter, setRankFilter] = useState("all");
@@ -148,6 +154,18 @@ function ViolatingAccountsPage() {
   useEffect(() => {
     refreshList();
   }, [refreshList]);
+
+  useEffect(() => {
+    if (!focusUserId || focusHandledRef.current) {
+      return;
+    }
+
+    focusHandledRef.current = true;
+    setDetailId(focusUserId);
+    if (focusReason) {
+      setLockReason(focusReason);
+    }
+  }, [focusUserId, focusReason]);
 
   useEffect(() => {
     if (!detailId) {
@@ -315,6 +333,13 @@ function ViolatingAccountsPage() {
       actions={headerActions}
     >
       <div className={styles.layout}>
+        {focusUserId && focusUsername ? (
+          <p className={styles.focusBanner} role="status">
+            Đang xử lý báo cáo cho{" "}
+            <strong>@{focusUsername.replace(/^@/, "")}</strong>
+            {focusReason ? ` — ${focusReason}` : ""}
+          </p>
+        ) : null}
         <section className={styles.card}>
           <ModeratorToolbar
             searchValue={query}
@@ -364,8 +389,9 @@ function ViolatingAccountsPage() {
                 ) : accounts.length === 0 ? (
                   <tr>
                     <td colSpan={7} className={styles.empty}>
-                      Không có tài khoản vi phạm nào. Chỉ hiển thị user đã từng bị cảnh báo hoặc
-                      khóa tạm.
+                      {focusUserId
+                        ? "Tài khoản chưa có lịch sử vi phạm — xem panel Chi tiết bên phải để cảnh báo hoặc khóa."
+                        : "Không có tài khoản vi phạm nào. Hiển thị user đã bị cảnh báo, khóa tạm hoặc được chuyển từ báo cáo."}
                     </td>
                   </tr>
                 ) : (

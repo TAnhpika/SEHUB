@@ -19,14 +19,21 @@ public sealed class ModerationService : IModerationService
 {
     private static readonly int[] AllowedBanDurations = [1, 7, 30];
     private const string DefaultWarningReason = "Vi phạm quy định cộng đồng SEHUB.";
-    private const string ModerationStatsCacheKey = "moderation:stats";
+    private const string ModerationStatsCacheKey = ModerationCacheKeys.Stats;
     private static readonly TimeSpan ModerationStatsCacheDuration = TimeSpan.FromSeconds(60);
 
     private readonly IPostReportRepository _reportRepository;
+    private readonly ICommentReportRepository _commentReportRepository;
+    private readonly ICommentRepository _commentRepository;
     private readonly IPostRepository _postRepository;
     private readonly IUserRepository _userRepository;
     private readonly IUserProfileRepository _profileRepository;
     private readonly IUserBanRepository _banRepository;
+    private readonly IViolationEscalationRepository _escalationRepository;
+    private readonly IViolationQueueRepository _violationQueueRepository;
+    private readonly IConversationReportRepository _conversationReportRepository;
+    private readonly IUserReportRepository _userReportRepository;
+    private readonly IQuestionReportRepository _questionReportRepository;
     private readonly IPracticeSubmissionRepository _submissionRepository;
     private readonly IExamRepository _examRepository;
     private readonly IGamificationService _gamificationService;
@@ -39,10 +46,17 @@ public sealed class ModerationService : IModerationService
 
     public ModerationService(
         IPostReportRepository reportRepository,
+        ICommentReportRepository commentReportRepository,
+        ICommentRepository commentRepository,
         IPostRepository postRepository,
         IUserRepository userRepository,
         IUserProfileRepository profileRepository,
         IUserBanRepository banRepository,
+        IViolationEscalationRepository escalationRepository,
+        IViolationQueueRepository violationQueueRepository,
+        IConversationReportRepository conversationReportRepository,
+        IUserReportRepository userReportRepository,
+        IQuestionReportRepository questionReportRepository,
         IPracticeSubmissionRepository submissionRepository,
         IExamRepository examRepository,
         IGamificationService gamificationService,
@@ -54,10 +68,17 @@ public sealed class ModerationService : IModerationService
         IMemoryCache cache)
     {
         _reportRepository = reportRepository;
+        _commentReportRepository = commentReportRepository;
+        _commentRepository = commentRepository;
         _postRepository = postRepository;
         _userRepository = userRepository;
         _profileRepository = profileRepository;
         _banRepository = banRepository;
+        _escalationRepository = escalationRepository;
+        _violationQueueRepository = violationQueueRepository;
+        _conversationReportRepository = conversationReportRepository;
+        _userReportRepository = userReportRepository;
+        _questionReportRepository = questionReportRepository;
         _submissionRepository = submissionRepository;
         _examRepository = examRepository;
         _gamificationService = gamificationService;
@@ -85,17 +106,26 @@ public sealed class ModerationService : IModerationService
             }
         }
 
-        var (items, total) = await _reportRepository.GetPagedAsync(
-            page,
-            pageSize,
-            statusFilter,
-            nonPendingOnly,
-            cancellationToken);
-        var dtos = await MapReportsAsync(items, cancellationToken);
+        var postTotal = await _reportRepository.CountAsync(statusFilter, nonPendingOnly, cancellationToken);
+        var commentTotal = await _commentReportRepository.CountAsync(statusFilter, nonPendingOnly, cancellationToken);
+        var total = postTotal + commentTotal;
+
+        var fetchCount = Math.Max(page * pageSize, pageSize);
+        var posts = await _reportRepository.GetRecentAsync(fetchCount, statusFilter, nonPendingOnly, cancellationToken);
+        var comments = await _commentReportRepository.GetRecentAsync(fetchCount, statusFilter, nonPendingOnly, cancellationToken);
+
+        var postDtos = await MapReportsAsync(posts, cancellationToken);
+        var commentDtos = await MapCommentReportsAsync(comments, cancellationToken);
+        var items = postDtos
+            .Concat(commentDtos)
+            .OrderByDescending(d => d.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
 
         return new PagedResult<ReportDto>
         {
-            Items = dtos,
+            Items = items,
             Page = page,
             PageSize = pageSize,
             TotalCount = total
@@ -104,18 +134,40 @@ public sealed class ModerationService : IModerationService
 
     public async Task<ReportDto> GetReportAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var report = await _reportRepository.GetByIdAsync(id, cancellationToken)
-            ?? throw new NotFoundException("PostReport", id);
+        var postReport = await _reportRepository.GetByIdAsync(id, cancellationToken);
+        if (postReport is not null)
+        {
+            return await MapReportAsync(postReport, cancellationToken);
+        }
 
-        return await MapReportAsync(report, cancellationToken);
+        var commentReport = await _commentReportRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Report", id);
+
+        return (await MapCommentReportsAsync([commentReport], cancellationToken))[0];
     }
 
     public async Task<ReportDto> ResolveReportAsync(Guid id, ResolveReportRequest request, CancellationToken cancellationToken = default)
     {
         var actorId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
-        var report = await _reportRepository.GetByIdAsync(id, cancellationToken)
-            ?? throw new NotFoundException("PostReport", id);
 
+        var postReport = await _reportRepository.GetByIdAsync(id, cancellationToken);
+        if (postReport is not null)
+        {
+            return await ResolvePostReportAsync(postReport, request, actorId, cancellationToken);
+        }
+
+        var commentReport = await _commentReportRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Report", id);
+
+        return await ResolveCommentReportAsync(commentReport, request, actorId, cancellationToken);
+    }
+
+    private async Task<ReportDto> ResolvePostReportAsync(
+        PostReport report,
+        ResolveReportRequest request,
+        Guid actorId,
+        CancellationToken cancellationToken)
+    {
         if (!Enum.TryParse<ReportStatus>(request.Status, true, out var status))
         {
             throw new ForbiddenException("Invalid report status.");
@@ -149,6 +201,38 @@ public sealed class ModerationService : IModerationService
         }
 
         return await MapReportAsync(report, cancellationToken);
+    }
+
+    private async Task<ReportDto> ResolveCommentReportAsync(
+        CommentReport report,
+        ResolveReportRequest request,
+        Guid actorId,
+        CancellationToken cancellationToken)
+    {
+        if (!Enum.TryParse<ReportStatus>(request.Status, true, out var status))
+        {
+            throw new ForbiddenException("Invalid report status.");
+        }
+
+        report.Status = status;
+        report.ResolvedById = actorId;
+        report.ResolutionNote = request.Action;
+        report.UpdatedAt = DateTime.UtcNow;
+
+        if (request.Action?.Equals("delete_comment", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            var comment = await _commentRepository.GetByIdAsync(report.CommentId, cancellationToken);
+            if (comment is not null && !comment.IsDeleted)
+            {
+                await _commentRepository.SoftDeleteAsync(comment, actorId, cancellationToken);
+            }
+        }
+
+        await _commentReportRepository.UpdateAsync(report, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        InvalidateModerationStatsCache();
+
+        return (await MapCommentReportsAsync([report], cancellationToken))[0];
     }
 
     public async Task<IReadOnlyList<BannedUserDto>> GetBannedUsersAsync(CancellationToken cancellationToken = default)
@@ -191,12 +275,16 @@ public sealed class ModerationService : IModerationService
         }
 
         var pendingPosts = await _postRepository.CountByStatusAsync(PostStatus.Pending, cancellationToken);
-        var (_, pendingReports) = await _reportRepository.GetPagedAsync(
-            1,
-            1,
-            ReportStatus.Pending,
-            nonPendingOnly: false,
-            cancellationToken);
+        var pendingPostReports = await _reportRepository.CountAsync(ReportStatus.Pending, cancellationToken: cancellationToken);
+        var pendingCommentReports = await _commentReportRepository.CountAsync(ReportStatus.Pending, cancellationToken: cancellationToken);
+        var pendingUserReports = await _userReportRepository.CountPendingAsync(cancellationToken);
+        var pendingConversationReports = await _conversationReportRepository.CountPendingAsync(cancellationToken);
+        var pendingQuestionReports = await _questionReportRepository.CountPendingAsync(cancellationToken);
+        var pendingReports = pendingPostReports
+            + pendingCommentReports
+            + pendingUserReports
+            + pendingConversationReports
+            + pendingQuestionReports;
         var pendingSubmissions = await _submissionRepository.CountByStatusAsync(
             PracticeSubmissionStatus.Submitted,
             cancellationToken);
@@ -291,7 +379,7 @@ public sealed class ModerationService : IModerationService
     public async Task<PagedResult<ViolatingUserDto>> GetViolatingUsersAsync(
         ViolationsQueryParams query, CancellationToken cancellationToken = default)
     {
-        var (userIds, total) = await _banRepository.GetViolatingUserIdsPagedAsync(
+        var (userIds, total) = await _violationQueueRepository.GetPagedUserIdsAsync(
             query.Page,
             query.PageSize,
             query.Search,
@@ -320,7 +408,8 @@ public sealed class ModerationService : IModerationService
     {
         var user = await SyncExpiredBanIfNeededAsync(userId, cancellationToken);
         var violationCount = await _banRepository.CountByUserIdAsync(userId, cancellationToken);
-        if (violationCount == 0)
+        var escalation = await _escalationRepository.GetByUserIdAsync(userId, cancellationToken);
+        if (violationCount == 0 && escalation is null)
         {
             throw new NotFoundException("ViolatingUser", userId);
         }
@@ -337,7 +426,14 @@ public sealed class ModerationService : IModerationService
             history.Add(await MapViolationHistoryAsync(record, cancellationToken));
         }
 
-        var summary = BuildViolatingUserDto(user, profile, violationCount, warningCount, latestBan);
+        var summary = BuildViolatingUserDto(
+            user,
+            profile,
+            violationCount,
+            warningCount,
+            latestBan,
+            latestBan?.CreatedAt ?? escalation?.CreatedAt,
+            latestBan?.Reason ?? escalation?.Reason);
 
         return new ViolatingUserDetailDto
         {
@@ -418,6 +514,116 @@ public sealed class ModerationService : IModerationService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return await MapViolatingUserAsync(userId, cancellationToken);
+    }
+
+    public async Task<EscalateUserReportResultDto> EscalateUserReportAsync(
+        Guid reportId,
+        EscalateUserReportRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (_currentUser.Role != RoleNames.Moderator && _currentUser.Role != RoleNames.Admin)
+        {
+            throw new ForbiddenException("Moderator access required.");
+        }
+
+        var actorId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+        var source = request.Source.Trim().ToLowerInvariant();
+
+        Guid reportedUserId;
+        string reason;
+        string sourceType;
+
+        if (source is "account" or "user")
+        {
+            var report = await _userReportRepository.GetByIdAsync(reportId, cancellationToken)
+                ?? throw new NotFoundException("UserReport", reportId);
+
+            if (report.Status != ReportStatus.Pending)
+            {
+                throw new ForbiddenException("Only pending reports can be escalated.");
+            }
+
+            reportedUserId = report.ReportedUserId;
+            reason = $"{report.Reason}: {report.Detail}".Trim();
+            sourceType = ViolationEscalationConstants.SourceUserReport;
+
+            report.Status = ReportStatus.Resolved;
+            report.ResolvedById = actorId;
+            report.ResolutionNote = ViolationEscalationConstants.ResolutionNote;
+            report.UpdatedAt = DateTime.UtcNow;
+            await _userReportRepository.UpdateAsync(report, cancellationToken);
+        }
+        else if (source is "conversation")
+        {
+            var report = await _conversationReportRepository.GetByIdAsync(reportId, cancellationToken)
+                ?? throw new NotFoundException("ConversationReport", reportId);
+
+            if (report.Status != ReportStatus.Pending)
+            {
+                throw new ForbiddenException("Only pending reports can be escalated.");
+            }
+
+            reportedUserId = report.Conversation?.Participants
+                .FirstOrDefault(p => p.UserId != report.ReporterId)
+                ?.UserId
+                ?? throw new ForbiddenException("Could not determine reported user.");
+
+            reason = $"{report.Reason}: {report.Detail}".Trim();
+            sourceType = ViolationEscalationConstants.SourceConversationReport;
+
+            report.Status = ReportStatus.Resolved;
+            report.ResolvedById = actorId;
+            report.ResolutionNote = ViolationEscalationConstants.ResolutionNote;
+            report.UpdatedAt = DateTime.UtcNow;
+            await _conversationReportRepository.UpdateAsync(report, cancellationToken);
+        }
+        else
+        {
+            throw new ForbiddenException("Source must be conversation or account.");
+        }
+
+        if (reason.Length > 1000)
+        {
+            reason = reason[..1000];
+        }
+
+        var existing = await _escalationRepository.GetByUserIdAsync(reportedUserId, cancellationToken);
+        if (existing is null)
+        {
+            await _escalationRepository.AddAsync(new ViolationEscalation
+            {
+                Id = Guid.NewGuid(),
+                UserId = reportedUserId,
+                SourceReportId = reportId,
+                SourceType = sourceType,
+                Reason = reason,
+                EscalatedById = actorId,
+                CreatedAt = DateTime.UtcNow
+            }, cancellationToken);
+        }
+        else
+        {
+            existing.SourceReportId = reportId;
+            existing.SourceType = sourceType;
+            existing.Reason = reason;
+            existing.EscalatedById = actorId;
+            existing.UpdatedAt = DateTime.UtcNow;
+            await _escalationRepository.UpdateAsync(existing, cancellationToken);
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        InvalidateModerationStatsCache();
+
+        var user = await _userRepository.GetByIdAsync(reportedUserId, cancellationToken)
+            ?? throw new NotFoundException("User", reportedUserId);
+
+        return new EscalateUserReportResultDto
+        {
+            UserId = user.Id,
+            Username = user.Username,
+            DisplayName = user.DisplayName,
+            ReportId = reportId
+        };
     }
 
     public async Task<ViolatingUserDto> WarnUserAsync(
@@ -572,10 +778,92 @@ public sealed class ModerationService : IModerationService
             dtos.Add(new ReportDto
             {
                 Id = report.Id,
+                Kind = "post",
                 PostId = report.PostId,
                 PostTitle = post?.Title ?? "Unknown",
                 PostExcerpt = post is null ? null : BuildExcerpt(post.Content),
                 Reason = report.Reason,
+                Status = report.Status.ToString(),
+                Reporter = new ReportUserSummaryDto
+                {
+                    Id = report.ReporterId,
+                    Username = reporter?.Username ?? "unknown",
+                    DisplayName = reporter?.DisplayName ?? "Unknown"
+                },
+                ReportedUser = author is null
+                    ? null
+                    : new ReportUserSummaryDto
+                    {
+                        Id = author.Id,
+                        Username = author.Username,
+                        DisplayName = author.DisplayName
+                    },
+                CreatedAt = report.CreatedAt,
+                ResolvedAt = report.Status != ReportStatus.Pending ? report.UpdatedAt : null
+            });
+        }
+
+        return dtos;
+    }
+
+    private async Task<IReadOnlyList<ReportDto>> MapCommentReportsAsync(
+        IReadOnlyList<CommentReport> reports,
+        CancellationToken cancellationToken)
+    {
+        if (reports.Count == 0)
+        {
+            return [];
+        }
+
+        var postIds = reports.Select(r => r.PostId).Distinct().ToList();
+        var commentIds = reports.Select(r => r.CommentId).Distinct().ToList();
+        var reporterIds = reports.Select(r => r.ReporterId).Distinct().ToList();
+
+        var posts = await _postRepository.GetByIdsIncludingDeletedAsync(postIds, cancellationToken);
+        var postsById = posts.ToDictionary(p => p.Id);
+
+        var comments = new List<Comment>();
+        foreach (var commentId in commentIds)
+        {
+            var comment = await _commentRepository.GetByIdAsync(commentId, cancellationToken);
+            if (comment is not null)
+            {
+                comments.Add(comment);
+            }
+        }
+
+        var commentsById = comments.ToDictionary(c => c.Id);
+        var authorIds = comments.Select(c => c.AuthorId).Distinct().ToList();
+        var userIds = reporterIds.Concat(authorIds).Distinct().ToList();
+        var usersById = ((await _userRepository.GetByIdsAsync(userIds, cancellationToken)) ?? [])
+            .ToDictionary(u => u.Id);
+
+        var dtos = new List<ReportDto>(reports.Count);
+        foreach (var report in reports)
+        {
+            postsById.TryGetValue(report.PostId, out var post);
+            commentsById.TryGetValue(report.CommentId, out var comment);
+            usersById.TryGetValue(report.ReporterId, out var reporter);
+            Models.UserAccount? author = null;
+            if (comment is not null)
+            {
+                usersById.TryGetValue(comment.AuthorId, out author);
+            }
+
+            var reasonText = string.IsNullOrWhiteSpace(report.Detail)
+                ? report.Reason
+                : $"{report.Reason}: {report.Detail}";
+
+            dtos.Add(new ReportDto
+            {
+                Id = report.Id,
+                Kind = "comment",
+                PostId = report.PostId,
+                CommentId = report.CommentId,
+                PostTitle = post?.Title ?? "Unknown",
+                PostExcerpt = post is null ? null : BuildExcerpt(post.Content),
+                CommentExcerpt = comment is null ? report.Detail : BuildExcerpt(comment.Content),
+                Reason = reasonText,
                 Status = report.Status.ToString(),
                 Reporter = new ReportUserSummaryDto
                 {
@@ -687,7 +975,8 @@ public sealed class ModerationService : IModerationService
     {
         var user = await SyncExpiredBanIfNeededAsync(userId, cancellationToken);
         var violationCount = await _banRepository.CountByUserIdAsync(userId, cancellationToken);
-        if (violationCount == 0)
+        var escalation = await _escalationRepository.GetByUserIdAsync(userId, cancellationToken);
+        if (violationCount == 0 && escalation is null)
         {
             throw new NotFoundException("ViolatingUser", userId);
         }
@@ -696,7 +985,14 @@ public sealed class ModerationService : IModerationService
         var warningCount = await _banRepository.CountByUserIdAndTypeAsync(userId, BanType.Warning, cancellationToken);
         var latestBan = await _banRepository.GetLatestByUserIdAsync(userId, cancellationToken);
 
-        return BuildViolatingUserDto(user, profile, violationCount, warningCount, latestBan);
+        return BuildViolatingUserDto(
+            user,
+            profile,
+            violationCount,
+            warningCount,
+            latestBan,
+            latestBan?.CreatedAt ?? escalation?.CreatedAt,
+            latestBan?.Reason ?? escalation?.Reason);
     }
 
     private static ViolatingUserDto BuildViolatingUserDto(
@@ -704,7 +1000,9 @@ public sealed class ModerationService : IModerationService
         Domain.Entities.UserProfile? profile,
         int violationCount,
         int warningCount,
-        UserBan? latestBan)
+        UserBan? latestBan,
+        DateTime? lastActionAt = null,
+        string? banReason = null)
     {
         var status = ResolveViolationStatus(user, latestBan);
         int? lockDurationDays = null;
@@ -729,8 +1027,8 @@ public sealed class ModerationService : IModerationService
             BanType = latestBan?.BanType.ToString(),
             BanUntil = user.BanUntil,
             LockDurationDays = lockDurationDays,
-            BanReason = latestBan?.Reason ?? user.BanReason,
-            LastActionAt = latestBan?.CreatedAt
+            BanReason = banReason ?? latestBan?.Reason ?? user.BanReason,
+            LastActionAt = lastActionAt ?? latestBan?.CreatedAt
         };
     }
 

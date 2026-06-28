@@ -1,6 +1,8 @@
 using System.Text.Json;
+using Microsoft.Extensions.Caching.Memory;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Notifications;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Feedback;
 using SEHub.Domain.Entities;
@@ -43,17 +45,20 @@ public sealed class FeedbackService : IFeedbackService
     private const int MaxFilesPerUpload = 10;
 
     private readonly IUserFeedbackRepository _feedbackRepository;
+    private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly ICurrentUserService _currentUser;
     private readonly IFileStorageService _fileStorage;
     private readonly IUnitOfWork _unitOfWork;
 
     public FeedbackService(
         IUserFeedbackRepository feedbackRepository,
+        IWorkflowNotificationService workflowNotifications,
         ICurrentUserService currentUser,
         IFileStorageService fileStorage,
         IUnitOfWork unitOfWork)
     {
         _feedbackRepository = feedbackRepository;
+        _workflowNotifications = workflowNotifications;
         _currentUser = currentUser;
         _fileStorage = fileStorage;
         _unitOfWork = unitOfWork;
@@ -97,6 +102,13 @@ public sealed class FeedbackService : IFeedbackService
 
         await _feedbackRepository.AddAsync(feedback, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _workflowNotifications.NotifyAdminsFeedbackSubmittedAsync(
+            feedback.Id,
+            _currentUser.UserId.Value,
+            username,
+            description,
+            cancellationToken);
 
         return MapToDto(feedback);
     }

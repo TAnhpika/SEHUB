@@ -39,6 +39,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     public static readonly Guid RejectedPostId = Guid.Parse("66666666-6666-6666-6666-666666666666");
     public static readonly Guid PendingPostId = Guid.Parse("77777777-7777-7777-7777-777777777777");
     public static readonly Guid RejectModerationPostId = Guid.Parse("77777777-7777-7777-7777-777777777778");
+    public static readonly Guid ReportSeedPostId = Guid.Parse("77777777-7777-7777-7777-777777777779");
+    public static readonly Guid ReportSeedCommentId = Guid.Parse("77777777-7777-7777-7777-77777777777a");
     public static readonly Guid ModeratorUserId = Guid.Parse("88888888-8888-8888-8888-888888888888");
     public const string ModeratorEmail = "moderator@test.local";
     public const string ModeratorPassword = "Mod@Test123";
@@ -311,6 +313,20 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             rejectCandidate.Status = PostStatus.Pending;
         }
 
+        if (!await context.Posts.AnyAsync(p => p.Id == ReportSeedPostId))
+        {
+            context.Posts.Add(new Post
+            {
+                Id = ReportSeedPostId,
+                AuthorId = FreeUserId,
+                Title = "Report Seed Post",
+                Content = "Published post with a comment for report integration tests.",
+                Tags = "report,integration",
+                Status = PostStatus.Published,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
         if (await userManager.FindByEmailAsync(ModeratorEmail) is null)
         {
             var moderator = new ApplicationUser
@@ -325,6 +341,18 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
             await userManager.CreateAsync(moderator, ModeratorPassword);
             await userManager.AddToRoleAsync(moderator, RoleNames.Moderator);
+        }
+
+        if (!await context.Comments.AnyAsync(c => c.Id == ReportSeedCommentId))
+        {
+            context.Comments.Add(new Comment
+            {
+                Id = ReportSeedCommentId,
+                PostId = ReportSeedPostId,
+                AuthorId = ModeratorUserId,
+                Content = "Offensive comment used for report integration tests.",
+                CreatedAt = DateTime.UtcNow
+            });
         }
 
         if (!await context.Posts.AnyAsync(p => p.Id == SoftDeletedPostId))

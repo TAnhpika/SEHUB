@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheck,
@@ -23,6 +23,8 @@ import {
   REPORT_TAB_OPTIONS,
 } from "@/features/moderator/reports/shared/reportCategoryConstants";
 import ReasonTag from "@/features/moderator/reports/shared/ReasonTag";
+import { buildViolationsHref } from "@/features/moderator/reports/shared/violationsLink";
+import { getReportResolutionMessage } from "@/features/moderator/reports/shared";
 import { filterModerationReports } from "@/features/moderator/reports/shared/reportQueueUtils";
 import {
   getExamQuestionReports,
@@ -31,6 +33,7 @@ import {
 import { EXAM_REPORT_ROUTING } from "@/features/exams/examQuestionReportData";
 import {
   getConversationReports,
+  escalateUserReportToViolations,
   resolveConversationReport,
 } from "@/features/moderator/reports/conversationReportStore";
 import styles from "./ReportsPage.module.css";
@@ -66,6 +69,7 @@ function TrustScore({ score }) {
 
 function ReportsPage() {
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [communityReports, setCommunityReports] = useState([]);
   const [hasMoreCommunityReports, setHasMoreCommunityReports] = useState(false);
@@ -183,11 +187,13 @@ function ReportsPage() {
 
     window.addEventListener("sehubs-exam-reports-changed", refreshExamReports);
     window.addEventListener("sehubs-conversation-reports-changed", refreshUserReports);
+    window.addEventListener("sehubs-user-reports-changed", refreshUserReports);
     window.addEventListener("storage", refreshExamReports);
     return () => {
       cancelled = true;
       window.removeEventListener("sehubs-exam-reports-changed", refreshExamReports);
       window.removeEventListener("sehubs-conversation-reports-changed", refreshUserReports);
+      window.removeEventListener("sehubs-user-reports-changed", refreshUserReports);
       window.removeEventListener("storage", refreshExamReports);
     };
   }, []);
@@ -319,7 +325,7 @@ function ReportsPage() {
         .then((items) => setExamReports(items))
         .catch((err) => showToast(err.message ?? "Không xử lý được báo cáo câu hỏi."));
     } else if (target?.category === "user") {
-      resolveConversationReport(id, resolution)
+      resolveConversationReport(id, resolution, target.userReportType)
         .then(() => getConversationReports())
         .then((items) => setUserReports(items))
         .catch((err) => showToast(err.message ?? "Không xử lý được báo cáo người dùng."));
@@ -423,7 +429,7 @@ function ReportsPage() {
       deepLinkSyncedRef.current = true;
     } else if (target?.category === "user") {
       try {
-        await resolveConversationReport(id, "ignored");
+        await resolveConversationReport(id, "ignored", target.userReportType);
         const reloaded = await getConversationReports();
         finishResolvedReport(id, "ignored", reloaded, setUserReports);
       } catch (err) {
@@ -432,7 +438,11 @@ function ReportsPage() {
       }
     } else {
       try {
-        const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "dismiss");
+        const reloaded = await reloadModeratorCommunityReportsAfterResolve(
+          id,
+          "dismiss",
+          target?.kind ?? "post",
+        );
         finishCommunityResolve(id, "ignored", reloaded);
       } catch (err) {
         await syncCommunityReportsAfterNotFound(err, id);
@@ -450,6 +460,26 @@ function ReportsPage() {
     window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
   }
 
+  async function handleEscalateToViolations(report) {
+    if (!report) return;
+
+    try {
+      const result = await escalateUserReportToViolations(report.id, report.userReportType);
+      const reloaded = await getConversationReports();
+      finishResolvedReport(report.id, "escalated_violations", reloaded, setUserReports);
+      navigate(
+        buildViolationsHref({
+          ...report,
+          reportedUserId: result?.userId ?? report.reportedUserId,
+        }),
+      );
+      showToast("Đã chuyển tài khoản sang trang Tài khoản vi phạm.");
+      window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
+    } catch (err) {
+      showToast(err.message ?? "Không chuyển được sang trang vi phạm.");
+    }
+  }
+
   async function handleDelete(id) {
     const target = reports.find((report) => report.id === id);
     if (target?.category === "exam_question") {
@@ -459,7 +489,11 @@ function ReportsPage() {
       deepLinkSyncedRef.current = true;
     } else {
       try {
-        const reloaded = await reloadModeratorCommunityReportsAfterResolve(id, "delete");
+        const reloaded = await reloadModeratorCommunityReportsAfterResolve(
+          id,
+          "delete",
+          target?.kind ?? "post",
+        );
         finishCommunityResolve(id, "deleted", reloaded);
       } catch (err) {
         await syncCommunityReportsAfterNotFound(err, id);
@@ -547,11 +581,7 @@ function ReportsPage() {
           <div className={styles.bannerBody}>
             <p className={styles.bannerTitle}>Đã xử lý báo cáo #{lastResolved.code}</p>
             <p className={styles.bannerMeta}>
-              {lastResolved.resolution === "deleted"
-                ? "Đã xóa nội dung"
-                : lastResolved.resolution === "forwarded_admin"
-                  ? "Đã chuyển Admin duyệt sửa đề"
-                  : "Đã bỏ qua báo cáo"}
+              {getReportResolutionMessage(lastResolved) ?? "Đã bỏ qua báo cáo"}
             </p>
           </div>
           <button
@@ -719,11 +749,8 @@ function ReportsPage() {
                   <div className={styles.resolutionBox}>
                     <p className={styles.resolutionTitle}>Đã xử lý</p>
                     <p className={styles.resolutionText}>
-                      {selected.resolution === "deleted"
-                        ? "Nội dung vi phạm đã được xóa."
-                        : selected.resolution === "forwarded_admin"
-                          ? "Moderator đã ghi nhận và chuyển Admin duyệt chỉnh sửa đề."
-                          : "Báo cáo đã bỏ qua — nội dung được giữ nguyên."}
+                      {getReportResolutionMessage(selected) ??
+                        "Báo cáo đã bỏ qua — nội dung được giữ nguyên."}
                     </p>
                   </div>
                 ) : null}
@@ -815,7 +842,7 @@ function ReportsPage() {
                   <div className={styles.metaItem}>
                     <dt>Tài khoản bị báo cáo</dt>
                     <dd>
-                      <Link to="/moderator/violations" className={styles.linkUser}>
+                      <Link to={buildViolationsHref(selected)} className={styles.linkUser}>
                         {selected.reportedUser.username}
                       </Link>
                     </dd>
@@ -849,9 +876,9 @@ function ReportsPage() {
                       <Button look="outline" onClick={() => handleDismiss(selected.id)}>
                         Bỏ qua báo cáo
                       </Button>
-                      <Link to="/moderator/violations">
-                        <Button>Chuyển xử lý vi phạm</Button>
-                      </Link>
+                      <Button onClick={() => handleEscalateToViolations(selected)}>
+                        Chuyển xử lý vi phạm
+                      </Button>
                     </>
                   ) : (
                     <>

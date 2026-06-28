@@ -609,9 +609,9 @@ function ExamDetailPage({ page }) {
                   {isReviewExam ? (
                     <ExamQuestionReportButton
                       className={`${styles["tool-btn"]} ${styles["tool-btn-active"]}`}
-                      examId={exam.id}
+                      examId={apiExamId ?? exam.id}
                       courseCode={exam.courseCode}
-                      questionIndex={currentQuestion?.id ?? currentIndex + 1}
+                      questionIndex={currentIndex + 1}
                       question={currentQuestion}
                     />
                   ) : (

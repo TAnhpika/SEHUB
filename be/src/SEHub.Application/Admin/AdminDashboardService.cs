@@ -10,6 +10,10 @@ public sealed class AdminDashboardService : IAdminDashboardService
     private readonly IPostRepository _postRepository;
     private readonly IExamRepository _examRepository;
     private readonly IPostReportRepository _reportRepository;
+    private readonly ICommentReportRepository _commentReportRepository;
+    private readonly IUserReportRepository _userReportRepository;
+    private readonly IConversationReportRepository _conversationReportRepository;
+    private readonly IQuestionReportRepository _questionReportRepository;
     private readonly IPaymentOrderRepository _paymentOrderRepository;
     private readonly ISubscriptionRepository _subscriptionRepository;
     private readonly IDocumentRepository _documentRepository;
@@ -19,6 +23,10 @@ public sealed class AdminDashboardService : IAdminDashboardService
         IPostRepository postRepository,
         IExamRepository examRepository,
         IPostReportRepository reportRepository,
+        ICommentReportRepository commentReportRepository,
+        IUserReportRepository userReportRepository,
+        IConversationReportRepository conversationReportRepository,
+        IQuestionReportRepository questionReportRepository,
         IPaymentOrderRepository paymentOrderRepository,
         ISubscriptionRepository subscriptionRepository,
         IDocumentRepository documentRepository)
@@ -27,6 +35,10 @@ public sealed class AdminDashboardService : IAdminDashboardService
         _postRepository = postRepository;
         _examRepository = examRepository;
         _reportRepository = reportRepository;
+        _commentReportRepository = commentReportRepository;
+        _userReportRepository = userReportRepository;
+        _conversationReportRepository = conversationReportRepository;
+        _questionReportRepository = questionReportRepository;
         _paymentOrderRepository = paymentOrderRepository;
         _subscriptionRepository = subscriptionRepository;
         _documentRepository = documentRepository;
@@ -34,12 +46,16 @@ public sealed class AdminDashboardService : IAdminDashboardService
 
     public async Task<DashboardStatsDto> GetStatsAsync(CancellationToken cancellationToken = default)
     {
-        var (_, pendingReports) = await _reportRepository.GetPagedAsync(
-            1,
-            1,
-            ReportStatus.Pending,
-            nonPendingOnly: false,
-            cancellationToken);
+        var pendingPostReports = await _reportRepository.CountAsync(ReportStatus.Pending, cancellationToken: cancellationToken);
+        var pendingCommentReports = await _commentReportRepository.CountAsync(ReportStatus.Pending, cancellationToken: cancellationToken);
+        var pendingUserReports = await _userReportRepository.CountPendingAsync(cancellationToken);
+        var pendingConversationReports = await _conversationReportRepository.CountPendingAsync(cancellationToken);
+        var pendingQuestionReports = await _questionReportRepository.CountPendingAsync(cancellationToken);
+        var pendingReports = pendingPostReports
+            + pendingCommentReports
+            + pendingUserReports
+            + pendingConversationReports
+            + pendingQuestionReports;
 
         return new DashboardStatsDto
         {
