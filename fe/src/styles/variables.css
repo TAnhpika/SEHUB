@@ -140,4 +140,9 @@
   --moderator-header-height: 64px;
   --moderator-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
   --moderator-radius: 12px;
+
+  --scrollbar-size: 8px;
+  --scrollbar-thumb: var(--color-border);
+  --scrollbar-thumb-hover: #cbd5e1;
+  --scrollbar-track: transparent;
 }

@@ -9,9 +9,10 @@ import styles from "./FeaturedPostsPanel.module.css";
 /** Matches --featured-max-visible in FeaturedPostsPanel.module.css */
 const MAX_VISIBLE_FEATURED = 3;
 
-function FeaturedPostsPanel({ className = "" }) {
+function FeaturedPostsPanel({ className = "", variant = "home" }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const variantClass = styles[variant] ?? styles.home;
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -29,7 +30,7 @@ function FeaturedPostsPanel({ className = "" }) {
   }, [reload]);
 
   return (
-    <div className={`${styles.panel} ${className}`.trim()}>
+    <div className={`${styles.panel} ${variantClass} ${className}`.trim()}>
       <h2 className={styles.title}>Bài viết nổi bật</h2>
       {loading ? (
         <p className={styles.empty}>Đang tải…</p>

@@ -1,6 +1,4 @@
 .panel {
-  --featured-max-visible: 3;
-  --featured-row-height: 4.25rem;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -23,9 +21,12 @@
 
 .posts {
   display: flex;
-  flex: none;
+  flex: 1 1 auto;
   flex-direction: column;
-  height: calc(var(--featured-row-height) * var(--featured-max-visible));
+  min-height: 0;
+  max-height: calc(
+    var(--featured-row-height, 3.5rem) * var(--featured-max-visible, 3)
+  );
   margin: 0;
   padding: 0;
   overflow-x: hidden;
@@ -46,7 +47,7 @@
 }
 
 .item {
-  min-height: var(--featured-row-height);
+  min-height: var(--featured-row-height, 3.5rem);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -61,7 +62,7 @@
   text-decoration: none;
   color: var(--color-text-muted);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: var(--featured-line-clamp, 2);
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -76,4 +77,12 @@
 
 .posts li:last-child .link {
   padding-bottom: 0;
+}
+
+.home {
+  /* layout tokens set on sidebar .featured */
+}
+
+.community {
+  /* layout tokens set on sidebar .featured */
 }
