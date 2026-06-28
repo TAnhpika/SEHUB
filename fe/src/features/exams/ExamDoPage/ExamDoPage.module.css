@@ -63,21 +63,29 @@
   gap: 0;
   padding: 1rem;
   overflow: hidden;
+  align-items: stretch;
 }
 
 .pageFocus .main-column {
   min-height: 0;
-  overflow: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .pageFocus .palette {
   min-height: 0;
   max-height: none;
-  overflow: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .pageFocus .grid {
+  flex: 1;
+  min-height: 0;
   max-height: none;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 @media (max-width: 640px) {
@@ -236,9 +244,14 @@
   transition: background 0.15s ease;
 }
 
-.submit-btn:hover {
+.submit-btn:hover:not(:disabled) {
   background: color-mix(in srgb, var(--color-success) 88%, black);
   border-color: color-mix(in srgb, var(--color-success) 88%, black);
+}
+
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .workspace {
@@ -510,6 +523,17 @@
   border-color: var(--color-primary);
 }
 
+[data-theme="dark"] .grid-btn-answered {
+  color: var(--color-badge-text);
+  background: color-mix(in srgb, var(--color-primary) 22%, var(--color-surface-muted));
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+[data-theme="dark"] .dot-answered {
+  background: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+}
+
 @media (max-width: 960px) {
   .info-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -525,6 +549,10 @@
 
   .grid {
     max-height: 10rem;
+  }
+
+  .pageFocus .grid {
+    max-height: none;
   }
 }
 

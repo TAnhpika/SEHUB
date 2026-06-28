@@ -77,6 +77,7 @@ function ExamDoPage({ page = "review" }) {
   const [elapsedMs, setElapsedMs] = useState(0);
   const [sessionReady, setSessionReady] = useState(false);
   const [useApiFlow, setUseApiFlow] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,6 +138,7 @@ function ExamDoPage({ page = "review" }) {
         && (useApiFlow || usesApiAttempt(session));
 
       try {
+        setIsSubmitting(true);
         if (shouldUseApi) {
           await submitApiAttempt(
             exam.id,
@@ -150,6 +152,7 @@ function ExamDoPage({ page = "review" }) {
           submitExamSession(exam.id, questions);
         }
       } catch (error) {
+        setIsSubmitting(false);
         showToast(error.message ?? "Không nộp được bài thi.");
         return;
       }
@@ -349,7 +352,7 @@ function ExamDoPage({ page = "review" }) {
       confirmLabel: "Nộp bài",
     });
     if (!confirmed) return;
-    submitExam(false);
+    await submitExam(false);
   }
 
   async function handleExitClick(event) {
@@ -444,9 +447,14 @@ function ExamDoPage({ page = "review" }) {
                 {formatDuration(timeRemainingMs)}
               </span>
             </div>
-            <button type="button" className={styles["submit-btn"]} onClick={handleSubmitClick}>
+            <button
+              type="button"
+              className={styles["submit-btn"]}
+              onClick={handleSubmitClick}
+              disabled={isSubmitting}
+            >
               <FontAwesomeIcon icon={faPaperPlane} />
-              Nộp bài
+              {isSubmitting ? "Đang nộp ..." : "Nộp bài"}
             </button>
           </header>
         ) : (
@@ -458,9 +466,14 @@ function ExamDoPage({ page = "review" }) {
               </p>
             </div>
             <div className={styles["panel-actions"]}>
-              <button type="button" className={styles["submit-btn"]} onClick={handleSubmitClick}>
+              <button
+                type="button"
+                className={styles["submit-btn"]}
+                onClick={handleSubmitClick}
+                disabled={isSubmitting}
+              >
                 <FontAwesomeIcon icon={faPaperPlane} />
-                Nộp bài
+                {isSubmitting ? "Đang nộp ..." : "Nộp bài"}
               </button>
             </div>
           </header>
