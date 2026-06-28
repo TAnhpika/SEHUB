@@ -89,6 +89,61 @@ public sealed class SocialPhase2EndpointsTests : IClassFixture<CustomWebApplicat
         }
     }
 
+    [Fact]
+    public async Task Messaging_ClearHistory_HidesConversationForDeleterOnly()
+    {
+        await SeedTargetUserAsync();
+
+        var token = await _factory.LoginAndGetTokenAsync(_client);
+        var targetToken = await LoginTargetUserAsync();
+
+        Guid conversationId;
+        using (var createRequest = CreateAuthorizedPost(token, $"/api/v1/conversations/with/{TargetUserId}"))
+        {
+            var createResponse = await _client.SendAsync(createRequest);
+            createResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var createBody = await createResponse.Content.ReadFromJsonAsync<ApiResponse<ConversationListItemDto>>();
+            conversationId = createBody!.Data!.ConversationId;
+        }
+
+        using (var sendRequest = CreateAuthorizedJsonPost(
+            token,
+            $"/api/v1/conversations/{conversationId}/messages",
+            new SendMessageRequest { Content = "Message before clear" }))
+        {
+            var sendResponse = await _client.SendAsync(sendRequest);
+            sendResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        using (var deleteRequest = CreateAuthorizedDelete(token, $"/api/v1/conversations/{conversationId}"))
+        {
+            var deleteResponse = await _client.SendAsync(deleteRequest);
+            deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        }
+
+        using (var listRequest = CreateAuthorizedGet(token, "/api/v1/conversations"))
+        {
+            var listResponse = await _client.SendAsync(listRequest);
+            var listBody = await listResponse.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<ConversationListItemDto>>>();
+            listBody!.Data!.Should().NotContain(item => item.ConversationId == conversationId);
+        }
+
+        using (var messagesRequest = CreateAuthorizedGet(token, $"/api/v1/conversations/{conversationId}/messages"))
+        {
+            var messagesResponse = await _client.SendAsync(messagesRequest);
+            var messagesBody = await messagesResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResult<MessageDto>>>();
+            messagesBody!.Data!.Items.Should().BeEmpty();
+        }
+
+        using (var targetMessagesRequest = CreateAuthorizedGet(targetToken, $"/api/v1/conversations/{conversationId}/messages"))
+        {
+            var messagesResponse = await _client.SendAsync(targetMessagesRequest);
+            var messagesBody = await messagesResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResult<MessageDto>>>();
+            messagesBody!.Data!.Items.Should().ContainSingle(m => m.Content == "Message before clear");
+        }
+    }
+
     private async Task SeedTargetUserAsync()
     {
         using var scope = _factory.Services.CreateScope();

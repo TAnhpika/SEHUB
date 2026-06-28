@@ -52,6 +52,12 @@ export function markConversationRead(conversationId) {
   });
 }
 
+export function deleteConversation(conversationId) {
+  return apiRequest(`/api/v1/conversations/${encodeURIComponent(conversationId)}`, {
+    method: "DELETE",
+  });
+}
+
 export function reportConversation(conversationId, { reason, detail }) {
   return apiRequest(`/api/v1/conversations/${encodeURIComponent(conversationId)}/report`, {
     method: "POST",

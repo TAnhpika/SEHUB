@@ -17,6 +17,11 @@ public interface IConversationRepository
         Guid userId,
         DateTime readAt,
         CancellationToken cancellationToken = default);
+    Task ClearParticipantHistoryAsync(
+        Guid conversationId,
+        Guid userId,
+        DateTime clearedAt,
+        CancellationToken cancellationToken = default);
     Task UpdateConversationPreviewAsync(
         Guid conversationId,
         string preview,

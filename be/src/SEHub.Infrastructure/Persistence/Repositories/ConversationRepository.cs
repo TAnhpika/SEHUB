@@ -71,23 +71,39 @@ public sealed class ConversationRepository : IConversationRepository
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        var conversationIds = await _context.ConversationParticipants
+        var memberships = await _context.ConversationParticipants
             .AsNoTracking()
             .Where(p => p.UserId == userId)
-            .Select(p => p.ConversationId)
+            .Select(p => new { p.ConversationId, p.HistoryClearedAt })
             .ToListAsync(cancellationToken);
 
-        if (conversationIds.Count == 0)
+        if (memberships.Count == 0)
         {
             return Array.Empty<Conversation>();
         }
 
-        return await _context.Conversations
+        var conversationIds = memberships.Select(m => m.ConversationId).ToList();
+        var clearedAtByConversation = memberships.ToDictionary(m => m.ConversationId, m => m.HistoryClearedAt);
+
+        var conversations = await _context.Conversations
             .AsNoTracking()
             .Include(c => c.Participants)
             .Where(c => conversationIds.Contains(c.Id))
             .OrderByDescending(c => c.LastMessageAt ?? c.CreatedAt)
             .ToListAsync(cancellationToken);
+
+        return conversations
+            .Where(conversation =>
+            {
+                if (!clearedAtByConversation.TryGetValue(conversation.Id, out var clearedAt) || clearedAt is null)
+                {
+                    return true;
+                }
+
+                var lastMessageAt = conversation.LastMessageAt ?? conversation.CreatedAt;
+                return lastMessageAt > clearedAt;
+            })
+            .ToList();
     }
 
     public Task<ConversationParticipant?> GetParticipantAsync(
@@ -108,6 +124,19 @@ public sealed class ConversationRepository : IConversationRepository
             ?? throw new InvalidOperationException("Participant not found.");
 
         participant.LastReadAt = readAt;
+    }
+
+    public async Task ClearParticipantHistoryAsync(
+        Guid conversationId,
+        Guid userId,
+        DateTime clearedAt,
+        CancellationToken cancellationToken = default)
+    {
+        var participant = await GetParticipantAsync(conversationId, userId, cancellationToken)
+            ?? throw new InvalidOperationException("Participant not found.");
+
+        participant.HistoryClearedAt = clearedAt;
+        participant.LastReadAt = clearedAt;
     }
 
     public async Task UpdateConversationPreviewAsync(
@@ -134,7 +163,7 @@ public sealed class ConversationRepository : IConversationRepository
         var memberships = await _context.ConversationParticipants
             .AsNoTracking()
             .Where(p => p.UserId == userId)
-            .Select(p => new { p.ConversationId, p.LastReadAt })
+            .Select(p => new { p.ConversationId, p.LastReadAt, p.HistoryClearedAt })
             .ToListAsync(cancellationToken);
 
         if (memberships.Count == 0)
@@ -168,6 +197,7 @@ public sealed class ConversationRepository : IConversationRepository
                 membership.ConversationId,
                 userId,
                 membership.LastReadAt,
+                membership.HistoryClearedAt,
                 cancellationToken);
         }
 
@@ -179,27 +209,49 @@ public sealed class ConversationRepository : IConversationRepository
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        var lastReadAt = await _context.ConversationParticipants
+        var participant = await _context.ConversationParticipants
             .AsNoTracking()
             .Where(p => p.ConversationId == conversationId && p.UserId == userId)
-            .Select(p => p.LastReadAt)
+            .Select(p => new { p.LastReadAt, p.HistoryClearedAt })
             .FirstOrDefaultAsync(cancellationToken);
 
-        return await CountUnreadAsync(conversationId, userId, lastReadAt, cancellationToken);
+        if (participant is null)
+        {
+            return 0;
+        }
+
+        return await CountUnreadAsync(
+            conversationId,
+            userId,
+            participant.LastReadAt,
+            participant.HistoryClearedAt,
+            cancellationToken);
     }
 
     private Task<int> CountUnreadAsync(
         Guid conversationId,
         Guid userId,
         DateTime? lastReadAt,
+        DateTime? historyClearedAt,
         CancellationToken cancellationToken)
     {
-        var readAt = lastReadAt ?? DateTime.MinValue;
+        var readAt = GetEffectiveReadBoundary(lastReadAt, historyClearedAt);
         return _context.Messages.CountAsync(
             m => m.ConversationId == conversationId &&
                  m.SenderId != userId &&
                  m.SentAt > readAt,
             cancellationToken);
+    }
+
+    private static DateTime GetEffectiveReadBoundary(DateTime? lastReadAt, DateTime? historyClearedAt)
+    {
+        var readAt = lastReadAt ?? DateTime.MinValue;
+        if (historyClearedAt.HasValue && historyClearedAt.Value > readAt)
+        {
+            return historyClearedAt.Value;
+        }
+
+        return readAt;
     }
 
     public Task<bool> IsParticipantAsync(
