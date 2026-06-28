@@ -37,6 +37,30 @@ public interface IWorkflowNotificationService
         string reason,
         CancellationToken cancellationToken = default);
 
+    Task NotifyModeratorsCommentReportedAsync(
+        Guid reportId,
+        Guid postId,
+        Guid commentId,
+        Guid reporterUserId,
+        string reason,
+        CancellationToken cancellationToken = default);
+
+    Task NotifyModeratorsUserReportedAsync(
+        Guid reportId,
+        Guid reportedUserId,
+        Guid reporterUserId,
+        string reason,
+        string detail,
+        CancellationToken cancellationToken = default);
+
+    Task NotifyModeratorsConversationReportedAsync(
+        Guid reportId,
+        Guid conversationId,
+        Guid reporterUserId,
+        string reason,
+        string detail,
+        CancellationToken cancellationToken = default);
+
     Task NotifyModeratorsQuestionReportedAsync(
         Guid reportId,
         Question question,
@@ -97,6 +121,13 @@ public interface IWorkflowNotificationService
     Task NotifyAdminsPaymentWaitingConfirmationAsync(
         PaymentOrder order,
         Guid studentUserId,
+        CancellationToken cancellationToken = default);
+
+    Task NotifyAdminsFeedbackSubmittedAsync(
+        Guid feedbackId,
+        Guid submitterUserId,
+        string username,
+        string description,
         CancellationToken cancellationToken = default);
 }
 
@@ -263,6 +294,76 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             $"{actorName} báo cáo một bài viết",
             $"Lý do: {reasonLabel}",
             "/moderator/reports",
+            reporterUserId,
+            reportId,
+            cancellationToken);
+    }
+
+    public async Task NotifyModeratorsCommentReportedAsync(
+        Guid reportId,
+        Guid postId,
+        Guid commentId,
+        Guid reporterUserId,
+        string reason,
+        CancellationToken cancellationToken = default)
+    {
+        var actorName = await ResolveActorNameAsync(reporterUserId, cancellationToken);
+        var reasonLabel = FormatReportReason(reason);
+
+        await NotifyRoleMembersAsync(
+            [RoleNames.Moderator, RoleNames.Admin],
+            NotificationType.Moderation,
+            $"{actorName} báo cáo một bình luận",
+            $"Lý do: {reasonLabel}",
+            $"/moderator/reports?id={reportId}",
+            reporterUserId,
+            reportId,
+            cancellationToken);
+    }
+
+    public async Task NotifyModeratorsUserReportedAsync(
+        Guid reportId,
+        Guid reportedUserId,
+        Guid reporterUserId,
+        string reason,
+        string detail,
+        CancellationToken cancellationToken = default)
+    {
+        var actorName = await ResolveActorNameAsync(reporterUserId, cancellationToken);
+        var reportedUser = await _userRepository.GetByIdAsync(reportedUserId, cancellationToken);
+        var reportedLabel = reportedUser?.Username ?? "tài khoản";
+        var reasonLabel = FormatReportReason(reason);
+        var preview = Truncate(detail, 120);
+
+        await NotifyRoleMembersAsync(
+            [RoleNames.Moderator, RoleNames.Admin],
+            NotificationType.Moderation,
+            $"{actorName} báo cáo người dùng @{reportedLabel}",
+            $"Lý do: {reasonLabel} — {preview}",
+            $"/moderator/reports?id={reportId}",
+            reporterUserId,
+            reportId,
+            cancellationToken);
+    }
+
+    public async Task NotifyModeratorsConversationReportedAsync(
+        Guid reportId,
+        Guid conversationId,
+        Guid reporterUserId,
+        string reason,
+        string detail,
+        CancellationToken cancellationToken = default)
+    {
+        var actorName = await ResolveActorNameAsync(reporterUserId, cancellationToken);
+        var reasonLabel = FormatReportReason(reason);
+        var preview = Truncate(detail, 120);
+
+        await NotifyRoleMembersAsync(
+            [RoleNames.Moderator, RoleNames.Admin],
+            NotificationType.Moderation,
+            $"{actorName} báo cáo cuộc trò chuyện",
+            $"Lý do: {reasonLabel} — {preview}",
+            $"/moderator/reports?id={reportId}",
             reporterUserId,
             reportId,
             cancellationToken);
@@ -458,6 +559,27 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             "/admin/payments",
             studentUserId,
             order.Id,
+            cancellationToken);
+    }
+
+    public async Task NotifyAdminsFeedbackSubmittedAsync(
+        Guid feedbackId,
+        Guid submitterUserId,
+        string username,
+        string description,
+        CancellationToken cancellationToken = default)
+    {
+        var actorName = await ResolveActorNameAsync(submitterUserId, cancellationToken);
+        var preview = Truncate(description, 120);
+
+        await NotifyRoleMembersAsync(
+            [RoleNames.Admin],
+            NotificationType.Moderation,
+            $"{actorName} gửi phản hồi / báo lỗi",
+            $"@{username}: {preview}",
+            "/admin/feedback",
+            submitterUserId,
+            feedbackId,
             cancellationToken);
     }
 

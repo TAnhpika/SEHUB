@@ -1,9 +1,11 @@
+using Microsoft.Extensions.Caching.Memory;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Notifications;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
+using SEHub.Shared.Constants;
 
 namespace SEHub.Application.Feed;
 
@@ -19,6 +21,7 @@ public sealed class CommentReportService : ICommentReportService
     private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMemoryCache _cache;
 
     public CommentReportService(
         ICommentReportRepository reportRepository,
@@ -26,7 +29,8 @@ public sealed class CommentReportService : ICommentReportService
         IPostRepository postRepository,
         IWorkflowNotificationService workflowNotifications,
         ICurrentUserService currentUser,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IMemoryCache cache)
     {
         _reportRepository = reportRepository;
         _commentRepository = commentRepository;
@@ -34,6 +38,7 @@ public sealed class CommentReportService : ICommentReportService
         _workflowNotifications = workflowNotifications;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _cache = cache;
     }
 
     public async Task ReportAsync(
@@ -108,11 +113,13 @@ public sealed class CommentReportService : ICommentReportService
         }, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        await _workflowNotifications.NotifyModeratorsPostReportedAsync(
+        _cache.Remove(ModerationCacheKeys.Stats);
+        await _workflowNotifications.NotifyModeratorsCommentReportedAsync(
             reportId,
             postId,
+            commentId,
             reporterId,
-            $"{trimmedReason}: {trimmedDetail}",
+            trimmedReason,
             cancellationToken);
     }
 }

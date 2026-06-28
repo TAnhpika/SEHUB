@@ -19,7 +19,7 @@ public sealed class ModerationService : IModerationService
 {
     private static readonly int[] AllowedBanDurations = [1, 7, 30];
     private const string DefaultWarningReason = "Vi phạm quy định cộng đồng SEHUB.";
-    private const string ModerationStatsCacheKey = "moderation:stats";
+    private const string ModerationStatsCacheKey = ModerationCacheKeys.Stats;
     private static readonly TimeSpan ModerationStatsCacheDuration = TimeSpan.FromSeconds(60);
 
     private readonly IPostReportRepository _reportRepository;
@@ -33,6 +33,7 @@ public sealed class ModerationService : IModerationService
     private readonly IViolationQueueRepository _violationQueueRepository;
     private readonly IConversationReportRepository _conversationReportRepository;
     private readonly IUserReportRepository _userReportRepository;
+    private readonly IQuestionReportRepository _questionReportRepository;
     private readonly IPracticeSubmissionRepository _submissionRepository;
     private readonly IExamRepository _examRepository;
     private readonly IGamificationService _gamificationService;
@@ -55,6 +56,7 @@ public sealed class ModerationService : IModerationService
         IViolationQueueRepository violationQueueRepository,
         IConversationReportRepository conversationReportRepository,
         IUserReportRepository userReportRepository,
+        IQuestionReportRepository questionReportRepository,
         IPracticeSubmissionRepository submissionRepository,
         IExamRepository examRepository,
         IGamificationService gamificationService,
@@ -76,6 +78,7 @@ public sealed class ModerationService : IModerationService
         _violationQueueRepository = violationQueueRepository;
         _conversationReportRepository = conversationReportRepository;
         _userReportRepository = userReportRepository;
+        _questionReportRepository = questionReportRepository;
         _submissionRepository = submissionRepository;
         _examRepository = examRepository;
         _gamificationService = gamificationService;
@@ -257,7 +260,14 @@ public sealed class ModerationService : IModerationService
         var pendingPosts = await _postRepository.CountByStatusAsync(PostStatus.Pending, cancellationToken);
         var pendingPostReports = await _reportRepository.CountAsync(ReportStatus.Pending, cancellationToken);
         var pendingCommentReports = await _commentReportRepository.CountAsync(ReportStatus.Pending, cancellationToken);
-        var pendingReports = pendingPostReports + pendingCommentReports;
+        var pendingUserReports = await _userReportRepository.CountPendingAsync(cancellationToken);
+        var pendingConversationReports = await _conversationReportRepository.CountPendingAsync(cancellationToken);
+        var pendingQuestionReports = await _questionReportRepository.CountPendingAsync(cancellationToken);
+        var pendingReports = pendingPostReports
+            + pendingCommentReports
+            + pendingUserReports
+            + pendingConversationReports
+            + pendingQuestionReports;
         var pendingSubmissions = await _submissionRepository.CountByStatusAsync(
             PracticeSubmissionStatus.Submitted,
             cancellationToken);
@@ -585,6 +595,7 @@ public sealed class ModerationService : IModerationService
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        InvalidateModerationStatsCache();
 
         var user = await _userRepository.GetByIdAsync(reportedUserId, cancellationToken)
             ?? throw new NotFoundException("User", reportedUserId);

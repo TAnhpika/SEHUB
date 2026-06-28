@@ -40,6 +40,7 @@ function UserReportButton({
       questionCommentId: questionCommentId ?? undefined,
     });
     window.dispatchEvent(new CustomEvent("sehubs-user-reports-changed"));
+    window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
     showToast("Đã gửi báo cáo người dùng. SEHub sẽ xem xét trong thời gian sớm nhất.");
   }
 

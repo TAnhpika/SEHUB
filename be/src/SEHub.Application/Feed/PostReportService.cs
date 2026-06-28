@@ -1,9 +1,11 @@
+using Microsoft.Extensions.Caching.Memory;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Notifications;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
+using SEHub.Shared.Constants;
 
 namespace SEHub.Application.Feed;
 
@@ -14,19 +16,22 @@ public sealed class PostReportService : IPostReportService
     private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMemoryCache _cache;
 
     public PostReportService(
         IPostReportRepository reportRepository,
         IPostRepository postRepository,
         IWorkflowNotificationService workflowNotifications,
         ICurrentUserService currentUser,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IMemoryCache cache)
     {
         _reportRepository = reportRepository;
         _postRepository = postRepository;
         _workflowNotifications = workflowNotifications;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _cache = cache;
     }
 
     public async Task ReportAsync(Guid postId, string reason, CancellationToken cancellationToken = default)
@@ -53,6 +58,7 @@ public sealed class PostReportService : IPostReportService
         }, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _cache.Remove(ModerationCacheKeys.Stats);
         await _workflowNotifications.NotifyModeratorsPostReportedAsync(
             reportId,
             postId,

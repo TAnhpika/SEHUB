@@ -69,6 +69,8 @@ function ReportConversationModal({ open, onClose, conversationId, conversationNa
         reason: reasonLabel,
         detail: trimmedDetail,
       });
+      window.dispatchEvent(new CustomEvent("sehubs-conversation-reports-changed"));
+      window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
       showToast("Đã gửi báo cáo hội thoại. SEHub sẽ xem xét trong thời gian sớm nhất.");
       onClose();
     } catch (err) {

@@ -1,10 +1,13 @@
+using Microsoft.Extensions.Caching.Memory;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Users;
+using SEHub.Application.Notifications;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
+using SEHub.Shared.Constants;
 
 namespace SEHub.Application.Users;
 
@@ -18,23 +21,29 @@ public sealed class UserReportService : IUserReportService
     private readonly IUserRepository _userRepository;
     private readonly IPostRepository _postRepository;
     private readonly IQuestionCommentRepository _questionCommentRepository;
+    private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMemoryCache _cache;
 
     public UserReportService(
         IUserReportRepository reportRepository,
         IUserRepository userRepository,
         IPostRepository postRepository,
         IQuestionCommentRepository questionCommentRepository,
+        IWorkflowNotificationService workflowNotifications,
         ICurrentUserService currentUser,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IMemoryCache cache)
     {
         _reportRepository = reportRepository;
         _userRepository = userRepository;
         _postRepository = postRepository;
         _questionCommentRepository = questionCommentRepository;
+        _workflowNotifications = workflowNotifications;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _cache = cache;
     }
 
     public async Task ReportAsync(
@@ -143,9 +152,10 @@ public sealed class UserReportService : IUserReportService
             throw new ConflictException("You have already reported this user for this context.");
         }
 
+        var reportId = Guid.NewGuid();
         await _reportRepository.AddAsync(new UserReport
         {
-            Id = Guid.NewGuid(),
+            Id = reportId,
             ReportedUserId = reportedUserId,
             ReporterId = reporterId,
             Source = source,
@@ -160,6 +170,15 @@ public sealed class UserReportService : IUserReportService
         }, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _cache.Remove(ModerationCacheKeys.Stats);
+
+        await _workflowNotifications.NotifyModeratorsUserReportedAsync(
+            reportId,
+            reportedUserId,
+            reporterId,
+            trimmedReason,
+            trimmedDetail,
+            cancellationToken);
     }
 
     public async Task<PagedResult<UserReportDto>> GetReportsAsync(
@@ -221,6 +240,7 @@ public sealed class UserReportService : IUserReportService
 
         await _reportRepository.UpdateAsync(report, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _cache.Remove(ModerationCacheKeys.Stats);
 
         return await MapAsync(report, cancellationToken);
     }
