@@ -35,4 +35,6 @@ public interface IUserRepository
     Task UpdateRoleAsync(Guid userId, string role, CancellationToken cancellationToken = default);
     Task GrantAiTokensAsync(Guid userId, int amount, CancellationToken cancellationToken = default);
     Task UpdateDisplayNameAsync(Guid userId, string displayName, CancellationToken cancellationToken = default);
+    Task UpdateLastSeenAtAsync(Guid userId, DateTime lastSeenAtUtc, CancellationToken cancellationToken = default);
+    Task<DateTime?> GetLastSeenAtAsync(Guid userId, CancellationToken cancellationToken = default);
 }

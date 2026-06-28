@@ -13,6 +13,7 @@ import {
 import { mapMessageItem, appendMessageIfNew } from "@/api/messagesMapper";
 import { useAuth } from "@/context";
 import { useChatHub } from "@/hooks/useChatHub";
+import { applyPresenceUpdate } from "@/utils/presenceStatus";
 import styles from "./ChatModal.module.css";
 
 function ChatModal({ onClose }) {
@@ -30,6 +31,9 @@ function ChatModal({ onClose }) {
       if (selectedId !== messageDto.conversationId) return;
       const mapped = mapMessageItem(messageDto, { currentUserId });
       setMessages((current) => appendMessageIfNew(current, mapped));
+    },
+    onPresenceUpdated: (presenceDto) => {
+      setConversations((current) => current.map((item) => applyPresenceUpdate(item, presenceDto)));
     },
   });
 

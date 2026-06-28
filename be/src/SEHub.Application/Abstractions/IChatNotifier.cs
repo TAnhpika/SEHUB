@@ -13,4 +13,8 @@ public interface IChatNotifier
         Guid userId,
         int totalUnread,
         CancellationToken cancellationToken = default);
+
+    Task NotifyPresenceUpdatedAsync(
+        UserPresenceDto presence,
+        CancellationToken cancellationToken = default);
 }

@@ -47,6 +47,7 @@ public sealed class MessagingService : IMessagingService
     private readonly IUserBlockRepository _blockRepository;
     private readonly INotificationService _notificationService;
     private readonly IChatNotifier _chatNotifier;
+    private readonly IUserPresenceService _presenceService;
     private readonly IFileStorageService _fileStorage;
     private readonly IImageCdnStorageService _cdnStorage;
     private readonly ICdnFolderSettings _cdnFolders;
@@ -61,6 +62,7 @@ public sealed class MessagingService : IMessagingService
         IUserBlockRepository blockRepository,
         INotificationService notificationService,
         IChatNotifier chatNotifier,
+        IUserPresenceService presenceService,
         IFileStorageService fileStorage,
         IImageCdnStorageService cdnStorage,
         ICdnFolderSettings cdnFolders,
@@ -74,6 +76,7 @@ public sealed class MessagingService : IMessagingService
         _blockRepository = blockRepository;
         _notificationService = notificationService;
         _chatNotifier = chatNotifier;
+        _presenceService = presenceService;
         _fileStorage = fileStorage;
         _cdnStorage = cdnStorage;
         _cdnFolders = cdnFolders;
@@ -404,6 +407,7 @@ public sealed class MessagingService : IMessagingService
             conversation.Id,
             currentUserId,
             cancellationToken);
+        var presence = await _presenceService.GetSnapshotAsync(otherParticipant.UserId, cancellationToken);
 
         return new ConversationListItemDto
         {
@@ -414,7 +418,9 @@ public sealed class MessagingService : IMessagingService
             OtherAvatarUrl = other?.AvatarUrl,
             LastMessagePreview = conversation.LastMessagePreview,
             LastMessageAt = conversation.LastMessageAt,
-            UnreadCount = unread
+            UnreadCount = unread,
+            OtherUserIsOnline = presence.IsOnline,
+            OtherUserLastSeenAt = presence.LastSeenAt
         };
     }
 

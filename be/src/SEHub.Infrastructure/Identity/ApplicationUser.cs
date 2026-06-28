@@ -12,6 +12,7 @@ public class ApplicationUser : IdentityUser<Guid>
     public int HighestStreak { get; set; }
     public DateTime? LastActivityDate { get; set; }
     public DateTime? LastDailyLoginBonusAt { get; set; }
+    public DateTime? LastSeenAt { get; set; }
     public bool IsBanned { get; set; }
     public DateTime? BanUntil { get; set; }
     public string? BanReason { get; set; }

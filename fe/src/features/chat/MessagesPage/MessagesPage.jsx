@@ -18,6 +18,7 @@ import { mapMessageItem, appendMessageIfNew, getMessagePreview } from "@/api/mes
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import { useChatHub } from "@/hooks/useChatHub";
+import { applyPresenceUpdate } from "@/utils/presenceStatus";
 import styles from "./MessagesPage.module.css";
 
 function MessagesPage() {
@@ -78,8 +79,15 @@ function MessagesPage() {
     }
   }, [currentUserId, selectedId]);
 
+  const handlePresenceUpdated = useCallback((presenceDto) => {
+    setConversations((current) =>
+      current.map((item) => applyPresenceUpdate(item, presenceDto)),
+    );
+  }, []);
+
   const { joinConversation } = useChatHub({
     onReceiveMessage: handleReceiveMessage,
+    onPresenceUpdated: handlePresenceUpdated,
   });
 
   useEffect(() => {
