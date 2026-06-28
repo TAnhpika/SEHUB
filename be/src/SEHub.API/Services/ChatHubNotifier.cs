@@ -33,6 +33,11 @@ public sealed class ChatHubNotifier : IChatNotifier, INotificationNotifier
             cancellationToken);
     }
 
+    public Task NotifyPresenceUpdatedAsync(
+        UserPresenceDto presence,
+        CancellationToken cancellationToken = default) =>
+        _hubContext.Clients.All.SendAsync("UserPresenceUpdated", presence, cancellationToken);
+
     public Task NotifyCreatedAsync(
         Guid userId,
         NotificationDto notification,

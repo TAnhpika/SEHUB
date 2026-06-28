@@ -3,6 +3,9 @@ import { faUser } from "@fortawesome/free-solid-svg-icons";
 import styles from "./ConversationAvatar.module.css";
 
 function ConversationAvatar({ conversation, size = "md" }) {
+  const showStatus = conversation?.online != null || conversation?.presenceTier != null;
+  const isOnline = conversation?.online === true;
+
   return (
     <span className={`${styles.wrap} ${styles[size]}`}>
       <span
@@ -16,12 +19,12 @@ function ConversationAvatar({ conversation, size = "md" }) {
           <FontAwesomeIcon icon={faUser} className={styles.icon} />
         )}
       </span>
-      {conversation.online != null && (
+      {showStatus ? (
         <span
-          className={`${styles.status} ${conversation.online ? styles.online : styles.offline}`}
+          className={`${styles.status} ${isOnline ? styles.online : styles.offline}`}
           aria-hidden="true"
         />
-      )}
+      ) : null}
     </span>
   );
 }

@@ -27,6 +27,7 @@ using SEHub.Application.Subjects;
 using SEHub.Application.Users;
 using SEHub.Application.Messaging;
 using SEHub.Application.Notifications;
+using SEHub.Application.Presence;
 using SEHub.Contracts.Auth;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Exams;
@@ -105,6 +106,8 @@ public static class DependencyInjection
         services.AddScoped<IUserSearchService, UserSearchService>();
         services.AddScoped<IFollowService, FollowService>();
         services.AddScoped<IMessagingService, MessagingService>();
+        services.AddSingleton<IUserPresenceTracker, UserPresenceTracker>();
+        services.AddScoped<IUserPresenceService, UserPresenceService>();
         services.AddScoped<IConversationReportService, ConversationReportService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IWorkflowNotificationService, WorkflowNotificationService>();

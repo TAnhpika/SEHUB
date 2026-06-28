@@ -10,4 +10,6 @@ public sealed class ConversationListItemDto
     public string? LastMessagePreview { get; init; }
     public DateTime? LastMessageAt { get; init; }
     public int UnreadCount { get; init; }
+    public bool OtherUserIsOnline { get; init; }
+    public DateTime? OtherUserLastSeenAt { get; init; }
 }

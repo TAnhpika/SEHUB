@@ -357,6 +357,26 @@ public class UserRepository : IUserRepository
         user.DisplayName = displayName;
     }
 
+    public async Task UpdateLastSeenAtAsync(
+        Guid userId,
+        DateTime lastSeenAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (user is null)
+        {
+            return;
+        }
+
+        user.LastSeenAt = lastSeenAtUtc;
+    }
+
+    public async Task<DateTime?> GetLastSeenAtAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        await _context.Users
+            .Where(u => u.Id == userId)
+            .Select(u => u.LastSeenAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
     private async Task<UserAccount?> MapUserAsync(ApplicationUser? user, CancellationToken cancellationToken)
     {
         if (user is null) return null;

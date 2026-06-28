@@ -2,12 +2,14 @@ import { useCallback, useEffect, useRef } from "react";
 import { getAccessToken } from "@/api/httpClient";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5006";
+const PRESENCE_PING_MS = 60_000;
 
 export function useChatHub({
   onReceiveMessage,
   onUnreadCountUpdated,
   onNotificationReceived,
   onNotificationUnreadUpdated,
+  onPresenceUpdated,
   enabled = true,
 } = {}) {
   const connectionRef = useRef(null);
@@ -16,6 +18,7 @@ export function useChatHub({
     onUnreadCountUpdated,
     onNotificationReceived,
     onNotificationUnreadUpdated,
+    onPresenceUpdated,
   });
 
   handlersRef.current = {
@@ -23,7 +26,24 @@ export function useChatHub({
     onUnreadCountUpdated,
     onNotificationReceived,
     onNotificationUnreadUpdated,
+    onPresenceUpdated,
   };
+
+  const pingPresence = useCallback(async () => {
+    const connection = connectionRef.current;
+    if (!connection) return;
+
+    const signalR = await import("@microsoft/signalr");
+    if (connection.state !== signalR.HubConnectionState.Connected) {
+      return;
+    }
+
+    try {
+      await connection.invoke("PingPresence");
+    } catch {
+      /* optional heartbeat */
+    }
+  }, []);
 
   useEffect(() => {
     if (!enabled) {
@@ -37,6 +57,7 @@ export function useChatHub({
 
     let cancelled = false;
     let connection;
+    let pingTimer;
 
     async function connect() {
       const signalR = await import("@microsoft/signalr");
@@ -65,21 +86,35 @@ export function useChatHub({
         handlersRef.current.onNotificationUnreadUpdated?.(payload?.totalUnread ?? 0);
       });
 
+      connection.on("UserPresenceUpdated", (payload) => {
+        handlersRef.current.onPresenceUpdated?.(payload);
+      });
+
       connectionRef.current = connection;
 
-      connection.start().catch(() => {
+      try {
+        await connection.start();
+        if (!cancelled) {
+          pingTimer = window.setInterval(() => {
+            pingPresence();
+          }, PRESENCE_PING_MS);
+        }
+      } catch {
         /* hub optional when offline */
-      });
+      }
     }
 
     connect();
 
     return () => {
       cancelled = true;
+      if (pingTimer) {
+        window.clearInterval(pingTimer);
+      }
       connection?.stop();
       connectionRef.current = null;
     };
-  }, [enabled]);
+  }, [enabled, pingPresence]);
 
   const joinConversation = useCallback(async (conversationId) => {
     const connection = connectionRef.current;
@@ -93,5 +128,5 @@ export function useChatHub({
     await connection.invoke("JoinConversation", conversationId);
   }, []);
 
-  return { joinConversation };
+  return { joinConversation, pingPresence };
 }

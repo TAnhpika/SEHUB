@@ -1,4 +1,5 @@
 import { resolveAssetUrl } from "@/api/assetUrl";
+import { mapPresenceFields } from "@/utils/presenceStatus";
 import { parseApiDate } from "@/utils/dateTime";
 
 function formatRelativeTime(isoDate) {
@@ -38,6 +39,7 @@ function buildInitials(name = "") {
 
 export function mapConversationListItem(dto) {
   const displayName = dto.otherFullName?.trim() || dto.otherUsername || "User";
+  const presence = mapPresenceFields(dto);
 
   return {
     id: dto.conversationId,
@@ -52,9 +54,9 @@ export function mapConversationListItem(dto) {
     preview: dto.lastMessagePreview ?? "Chưa có tin nhắn",
     time: formatRelativeTime(dto.lastMessageAt),
     unread: dto.unreadCount ?? 0,
-    online: false,
     typing: false,
     messages: [],
+    ...presence,
   };
 }
 

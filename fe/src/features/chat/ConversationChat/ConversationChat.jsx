@@ -20,6 +20,7 @@ import {
 import ConversationAvatar from "@/features/chat/ConversationAvatar/ConversationAvatar";
 import EmojiPicker from "@/features/chat/EmojiPicker/EmojiPicker";
 import ChatImageLightbox from "@/features/chat/ChatImageLightbox/ChatImageLightbox";
+import { formatPresenceLabel, presenceTier } from "@/utils/presenceStatus";
 import styles from "./ConversationChat.module.css";
 
 const IMAGE_ACCEPT = "image/jpeg,image/png,image/gif,image/webp";
@@ -163,6 +164,13 @@ function ConversationChat({
     navigate(`/profile/${conversation.username}`);
   }
 
+  const presence = {
+    isOnline: conversation?.online ?? false,
+    lastSeenAt: conversation?.lastSeenAt ?? null,
+  };
+  const statusLabel = conversation?.presenceLabel ?? formatPresenceLabel(presence);
+  const statusTier = conversation?.presenceTier ?? presenceTier(presence);
+
   return (
     <div className={`${styles.root} ${compact ? styles.compact : ""}`}>
       <header className={styles.header}>
@@ -177,7 +185,11 @@ function ConversationChat({
             <ConversationAvatar conversation={conversation} size={compact ? "sm" : "md"} />
             <div className={styles.meta}>
               <p className={styles.name}>{conversation.name}</p>
-              <p className={styles.status}>Ngoại tuyến</p>
+              <p
+                className={`${styles.status} ${statusTier === "online" ? styles.statusOnline : ""}`}
+              >
+                {statusLabel}
+              </p>
             </div>
           </div>
         </div>

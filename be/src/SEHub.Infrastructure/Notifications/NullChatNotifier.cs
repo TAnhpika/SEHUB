@@ -16,4 +16,9 @@ public sealed class NullChatNotifier : IChatNotifier
         int totalUnread,
         CancellationToken cancellationToken = default) =>
         Task.CompletedTask;
+
+    public Task NotifyPresenceUpdatedAsync(
+        UserPresenceDto presence,
+        CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
 }
