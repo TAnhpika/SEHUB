@@ -177,7 +177,20 @@
   position: absolute;
   top: 0;
   left: 0;
+  width: auto;
+  max-width: min(82%, 24rem);
+}
+
+.messageVirtualList .message-row.sent {
+  left: auto;
+  right: 0;
+}
+
+.messageVirtualList .message-row.date-row {
+  left: 0;
+  right: 0;
   width: 100%;
+  max-width: none;
 }
 
 .date-row {

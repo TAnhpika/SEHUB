@@ -16,22 +16,30 @@ export async function openConversationWithUser(userId) {
   return mapConversationListItem(dto);
 }
 
-export async function loadConversationMessages(conversationId, { page = 1, pageSize = 50 } = {}) {
+export async function loadConversationMessages(
+  conversationId,
+  { page = 1, pageSize = 50, currentUserId } = {},
+) {
   const data = await messagesApi.getMessages(conversationId, { page, pageSize });
   return {
-    items: mapMessages(data?.items ?? []),
+    items: mapMessages(data?.items ?? [], { currentUserId }),
     totalCount: data?.totalCount ?? 0,
   };
 }
 
-export async function sendConversationMessage(conversationId, content) {
+export async function sendConversationMessage(conversationId, content, { currentUserId } = {}) {
   const dto = await messagesApi.sendMessage(conversationId, content);
-  return mapMessages([dto])[0];
+  return mapMessages([dto], { currentUserId })[0];
 }
 
-export async function sendConversationAttachment(conversationId, file, content = "") {
+export async function sendConversationAttachment(
+  conversationId,
+  file,
+  content = "",
+  { currentUserId } = {},
+) {
   const dto = await messagesApi.sendMessageAttachment(conversationId, file, content);
-  return mapMessages([dto])[0];
+  return mapMessages([dto], { currentUserId })[0];
 }
 
 export async function markConversationAsRead(conversationId) {

@@ -58,12 +58,21 @@ export function mapConversationListItem(dto) {
   };
 }
 
-export function mapMessageItem(dto) {
+function resolveIsMine(dto, currentUserId) {
+  const senderId = dto.senderId ?? dto.SenderId;
+  if (currentUserId != null && senderId != null) {
+    return String(senderId) === String(currentUserId);
+  }
+
+  return dto.isMine ?? dto.IsMine ?? false;
+}
+
+export function mapMessageItem(dto, { currentUserId } = {}) {
   const id = dto.id ?? dto.Id;
   const sentAt = dto.sentAt ?? dto.SentAt;
   const content = dto.content ?? dto.Content ?? "";
-  const isMine = dto.isMine ?? dto.IsMine ?? false;
   const senderId = dto.senderId ?? dto.SenderId;
+  const isMine = resolveIsMine(dto, currentUserId);
   const messageType = String(dto.messageType ?? dto.MessageType ?? "Text").toLowerCase();
   const attachmentUrl = resolveAssetUrl(dto.attachmentUrl ?? dto.AttachmentUrl);
   const attachmentFileName = dto.attachmentFileName ?? dto.AttachmentFileName ?? null;
@@ -114,6 +123,6 @@ export function appendMessageIfNew(messages, message) {
   return [...messages, message];
 }
 
-export function mapMessages(items = []) {
-  return items.map(mapMessageItem);
+export function mapMessages(items = [], options = {}) {
+  return items.map((item) => mapMessageItem(item, options));
 }
