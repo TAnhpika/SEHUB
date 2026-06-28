@@ -1,5 +1,6 @@
 import FollowButton from "@/features/social/FollowButton/FollowButton";
 import MessageUserButton from "@/features/social/MessageUserButton/MessageUserButton";
+import UserReportButton from "@/features/reports/UserReportButton/UserReportButton";
 import styles from "./ProfileInteractionActions.module.css";
 
 function ProfileInteractionActions({ profile, onFollowChange }) {
@@ -16,6 +17,14 @@ function ProfileInteractionActions({ profile, onFollowChange }) {
         onChange={onFollowChange}
       />
       <MessageUserButton userId={profile.userId} className={styles.messageBtn} />
+      <UserReportButton
+        userId={profile.userId}
+        username={profile.username}
+        source="profile"
+        variant="button"
+        className={styles.reportBtn}
+        label="Báo cáo"
+      />
     </div>
   );
 }

@@ -4,7 +4,7 @@
   gap: 1rem;
   padding: 1rem 1.25rem;
   margin-bottom: 1.25rem;
-  background: var(--moderator-bg);
+  background: var(--moderator-surface);
   border: 1px solid var(--moderator-border);
   border-radius: 12px;
 }
@@ -23,7 +23,7 @@
   font-family: inherit;
   font-size: 0.875rem;
   color: var(--moderator-text);
-  background: var(--moderator-surface);
+  background: var(--moderator-input-bg);
   border: 1px solid var(--moderator-border);
   border-radius: 10px;
   outline: none;

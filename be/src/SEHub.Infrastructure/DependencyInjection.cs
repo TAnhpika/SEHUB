@@ -61,6 +61,8 @@ public static class DependencyInjection
         services.AddScoped<ICommentRepository, CommentRepository>();
         services.AddScoped<IPostLikeRepository, PostLikeRepository>();
         services.AddScoped<IPostReportRepository, PostReportRepository>();
+        services.AddScoped<ICommentReportRepository, CommentReportRepository>();
+        services.AddScoped<IUserReportRepository, UserReportRepository>();
         services.AddScoped<IQuestionReportRepository, QuestionReportRepository>();
         services.AddScoped<IQuestionCommentRepository, QuestionCommentRepository>();
         services.AddScoped<IUserFeedbackRepository, UserFeedbackRepository>();
@@ -93,6 +95,8 @@ public static class DependencyInjection
         services.AddScoped<IProfileActivityCache, ProfileActivityCache>();
         services.AddScoped<IProfileSnapshotCache, ProfileSnapshotCache>();
         services.AddScoped<IUserBanRepository, UserBanRepository>();
+        services.AddScoped<IViolationEscalationRepository, ViolationEscalationRepository>();
+        services.AddScoped<IViolationQueueRepository, ViolationQueueRepository>();
         services.AddScoped<IUserSearchRepository, UserSearchRepository>();
         services.AddScoped<IUserFollowRepository, UserFollowRepository>();
         services.AddScoped<IConversationRepository, ConversationRepository>();

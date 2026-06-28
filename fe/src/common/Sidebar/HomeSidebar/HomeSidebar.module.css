@@ -100,7 +100,7 @@
 
 .progress-bar {
   height: 5px;
-  background: var(--color-border-light);
+  background: color-mix(in srgb, var(--color-primary) 22%, var(--color-surface-muted));
   border-radius: var(--radius-full);
   overflow: hidden;
   margin-bottom: 0.375rem;

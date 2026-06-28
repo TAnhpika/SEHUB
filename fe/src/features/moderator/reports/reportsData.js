@@ -190,6 +190,8 @@ export function mapAdminReportToModeratorCommunityReport(adminReport) {
     apiId: adminReport.id,
     code: formatReportCode(adminReport.id),
     category: "community",
+    kind: adminReport.kind ?? "post",
+    commentId: adminReport.commentId ?? null,
     status: adminReport.status,
     reason: inferReasonId(adminReport.reason),
     reporterUsername: `@${reporter}`,
@@ -197,15 +199,21 @@ export function mapAdminReportToModeratorCommunityReport(adminReport) {
     timeLabel: formatTimeLabel(createdAtIso),
     reportedAt: formatReportedAt(createdAtIso),
     createdAtIso,
-    snippet: adminReport.post?.excerpt ?? adminReport.post?.title ?? adminReport.reason,
+    snippet:
+      adminReport.kind === "comment"
+        ? adminReport.post?.excerpt ?? adminReport.reason
+        : adminReport.post?.excerpt ?? adminReport.post?.title ?? adminReport.reason,
     reportedUser: {
       username: `@${reportedUser}`,
       initial: toReportInitials(reportedUser),
       joinedAt: "—",
       trustScore: 50,
     },
+    reportedUserId: adminReport.reportedUserId ?? null,
     violatingContent:
-      adminReport.post?.excerpt ?? adminReport.post?.title ?? adminReport.reason ?? "—",
+      adminReport.kind === "comment"
+        ? adminReport.post?.excerpt ?? adminReport.reason ?? "—"
+        : adminReport.post?.excerpt ?? adminReport.post?.title ?? adminReport.reason ?? "—",
     reporterReason: adminReport.reason,
     resolution: mapResolutionFromAdminReport(adminReport),
   };
@@ -248,21 +256,37 @@ export async function loadModeratorCommunityReports(options = {}) {
   };
 }
 
-export async function reloadModeratorCommunityReportsAfterResolve(id, action) {
-  if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
+async function resolveModeratorCommunityReportViaApi(id, action, kind = "post") {
+  if (USE_MOCK) {
     return null;
   }
 
-  const dto =
+  if (!isValidGuid(String(id ?? ""))) {
+    throw new Error("Không xác định được báo cáo.");
+  }
+
+  const body =
     action === "delete"
-      ? await resolveReportDeleteViaApi(id)
+      ? await resolveReportDeleteViaApi(id, { kind })
       : await resolveReportDismissViaApi(id);
 
-  if (!dto) {
+  try {
+    const dto = await adminApi.resolveReport(id, body);
+    return mapAdminReportToModeratorCommunityReport(mapAdminReportListItem(dto));
+  } catch (error) {
+    if (error?.status === 404) {
+      throw new Error("Báo cáo không còn tồn tại hoặc bài viết đã bị xóa trước đó.");
+    }
+    throw error;
+  }
+}
+
+export async function reloadModeratorCommunityReportsAfterResolve(id, action, kind = "post") {
+  const resolvedReport = await resolveModeratorCommunityReportViaApi(id, action, kind);
+  if (!resolvedReport) {
     return null;
   }
 
-  const resolvedReport = mapAdminReportToModeratorCommunityReport(mapAdminReportListItem(dto));
   const { items: list } = await loadModeratorCommunityReports();
   return mergeResolvedCommunityReport(list, resolvedReport);
 }

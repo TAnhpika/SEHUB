@@ -173,7 +173,7 @@
 }
 
 .bulkApprove {
-  color: var(--moderator-surface);
+  color: var(--moderator-on-primary);
   background: var(--moderator-primary);
   border: none;
 }
@@ -212,7 +212,7 @@
 }
 
 .table thead tr {
-  background: rgba(247, 249, 251, 0.8);
+  background: var(--moderator-bg);
   border-bottom: 1px solid var(--moderator-border-light);
 }
 
@@ -238,7 +238,7 @@
 }
 
 .table tbody tr:hover {
-  background: rgba(247, 249, 251, 0.9);
+  background: var(--moderator-primary-muted);
 }
 
 .table tbody tr:last-child td {
@@ -246,11 +246,11 @@
 }
 
 .rowSelected {
-  background: rgba(37, 99, 235, 0.04);
+  background: var(--moderator-primary-muted);
 }
 
 .rowFocused {
-  background: rgba(37, 99, 235, 0.08);
+  background: var(--moderator-nav-active-bg);
   box-shadow: inset 3px 0 0 var(--moderator-primary);
 }
 
@@ -720,7 +720,7 @@
 }
 
 .detailApprove {
-  color: var(--moderator-surface);
+  color: var(--moderator-on-primary);
   background: var(--moderator-primary);
   border: none;
 }

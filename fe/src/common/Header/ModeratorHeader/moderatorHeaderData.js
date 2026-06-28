@@ -59,7 +59,7 @@ export function buildModeratorNotifications() {
     items.push({
       id: "reports",
       title: `${badges.reports} báo cáo chờ xử lý`,
-      detail: "Bài viết, bình luận và câu hỏi đề",
+      detail: "Bài viết, bình luận, người dùng, chat và câu hỏi đề",
       time: "Cần xử lý",
       to: "/moderator/reports",
     });

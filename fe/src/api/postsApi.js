@@ -49,6 +49,13 @@ export function reportPost(postId, body) {
   return apiRequest(`/api/v1/posts/${postId}/report`, { method: "POST", body });
 }
 
+export function reportComment(postId, commentId, body) {
+  return apiRequest(`/api/v1/posts/${postId}/comments/${commentId}/report`, {
+    method: "POST",
+    body,
+  });
+}
+
 export function uploadPostImages(postId, files) {
   const formData = new FormData();
   files.forEach((file) => {

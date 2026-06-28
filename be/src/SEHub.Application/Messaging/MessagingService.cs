@@ -148,8 +148,16 @@ public sealed class MessagingService : IMessagingService
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
 
-        var total = await _messageRepository.CountAsync(conversationId, cancellationToken);
-        var messages = await _messageRepository.GetPagedAsync(conversationId, page, pageSize, cancellationToken);
+        var participant = await _conversationRepository.GetParticipantAsync(conversationId, userId, cancellationToken);
+        var visibleAfter = participant?.HistoryClearedAt;
+
+        var total = await _messageRepository.CountAsync(conversationId, visibleAfter, cancellationToken);
+        var messages = await _messageRepository.GetPagedAsync(
+            conversationId,
+            page,
+            pageSize,
+            visibleAfter,
+            cancellationToken);
 
         return new PagedResult<MessageDto>
         {
@@ -312,7 +320,7 @@ public sealed class MessagingService : IMessagingService
 
         foreach (var participantId in participantIds)
         {
-            var unread = await _conversationRepository.GetTotalUnreadCountAsync(participantId, cancellationToken);
+            var unread = await GetVisibleUnreadCountAsync(participantId, cancellationToken);
             await _chatNotifier.NotifyUnreadCountUpdatedAsync(participantId, unread, cancellationToken);
         }
 
@@ -328,7 +336,22 @@ public sealed class MessagingService : IMessagingService
         await _conversationRepository.UpdateParticipantLastReadAsync(conversationId, userId, now, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var unread = await _conversationRepository.GetTotalUnreadCountAsync(userId, cancellationToken);
+        var unread = await GetVisibleUnreadCountAsync(userId, cancellationToken);
+        await _chatNotifier.NotifyUnreadCountUpdatedAsync(userId, unread, cancellationToken);
+    }
+
+    public async Task ClearConversationHistoryAsync(
+        Guid conversationId,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+        await EnsureParticipantAsync(conversationId, userId, cancellationToken);
+
+        var now = DateTime.UtcNow;
+        await _conversationRepository.ClearParticipantHistoryAsync(conversationId, userId, now, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var unread = await GetVisibleUnreadCountAsync(userId, cancellationToken);
         await _chatNotifier.NotifyUnreadCountUpdatedAsync(userId, unread, cancellationToken);
     }
 
@@ -365,8 +388,14 @@ public sealed class MessagingService : IMessagingService
     public async Task<UnreadCountDto> GetUnreadCountAsync(CancellationToken cancellationToken = default)
     {
         var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
-        var total = await _conversationRepository.GetTotalUnreadCountAsync(userId, cancellationToken);
+        var total = await GetVisibleUnreadCountAsync(userId, cancellationToken);
         return new UnreadCountDto { TotalUnread = total };
+    }
+
+    private async Task<int> GetVisibleUnreadCountAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var blockedUserIds = await _blockRepository.GetBlockedRelatedUserIdsAsync(userId, cancellationToken);
+        return await _conversationRepository.GetTotalUnreadCountAsync(userId, blockedUserIds, cancellationToken);
     }
 
     private async Task<ConversationListItemDto> MapConversationAsync(

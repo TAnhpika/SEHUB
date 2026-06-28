@@ -66,6 +66,7 @@ public static class DependencyInjection
         services.AddScoped<ICommentService, CommentService>();
         services.AddScoped<IPostLikeService, PostLikeService>();
         services.AddScoped<IPostReportService, PostReportService>();
+        services.AddScoped<ICommentReportService, CommentReportService>();
         services.AddScoped<IGamificationService, GamificationService>();
         services.AddScoped<IBadgeCheckService, BadgeCheckService>();
         services.AddScoped<IGamificationCatalogService, GamificationCatalogService>();
@@ -112,6 +113,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IWorkflowNotificationService, WorkflowNotificationService>();
         services.AddScoped<IUserBlockService, UserBlockService>();
+        services.AddScoped<IUserReportService, UserReportService>();
 
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
         services.AddScoped<IAdminDashboardChartsService, AdminDashboardChartsService>();

@@ -1,7 +1,7 @@
 .layout {
   display: flex;
   min-height: 100vh;
-  background: var(--moderator-surface);
+  background: var(--moderator-bg);
 }
 
 .main {
@@ -11,7 +11,7 @@
   min-width: 0;
   min-height: 100vh;
   overflow: hidden;
-  background: var(--moderator-surface);
+  background: var(--moderator-bg);
 }
 
 .content {
@@ -19,7 +19,7 @@
   padding: 1.25rem 1.5rem 2rem;
   overflow-x: hidden;
   overflow-y: auto;
-  background: var(--moderator-surface);
+  background: var(--moderator-bg);
 }
 
 @media (max-width: 768px) {

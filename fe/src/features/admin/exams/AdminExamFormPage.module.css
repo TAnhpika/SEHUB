@@ -63,7 +63,7 @@
   font-size: 0.8125rem;
   line-height: 1.5;
   color: var(--moderator-text-muted);
-  background: var(--moderator-bg);
+  background: var(--moderator-input-bg);
   border-left: 3px solid #004ac6;
   border-radius: 0 8px 8px 0;
 }

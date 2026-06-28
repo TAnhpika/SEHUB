@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Notifications;
@@ -6,6 +7,7 @@ using SEHub.Contracts.Exams;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
+using SEHub.Shared.Constants;
 
 namespace SEHub.Application.Exams;
 
@@ -17,6 +19,7 @@ public sealed class QuestionReportService : IQuestionReportService
     private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMemoryCache _cache;
 
     public QuestionReportService(
         IQuestionReportRepository reportRepository,
@@ -24,7 +27,8 @@ public sealed class QuestionReportService : IQuestionReportService
         IUserRepository userRepository,
         IWorkflowNotificationService workflowNotifications,
         ICurrentUserService currentUser,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IMemoryCache cache)
     {
         _reportRepository = reportRepository;
         _examRepository = examRepository;
@@ -32,6 +36,7 @@ public sealed class QuestionReportService : IQuestionReportService
         _workflowNotifications = workflowNotifications;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _cache = cache;
     }
 
     public async Task<QuestionReportDto> ReportAsync(
@@ -83,6 +88,7 @@ public sealed class QuestionReportService : IQuestionReportService
 
         await _reportRepository.AddAsync(report, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _cache.Remove(ModerationCacheKeys.Stats);
 
         await _workflowNotifications.NotifyModeratorsQuestionReportedAsync(
             reportId,
@@ -157,6 +163,7 @@ public sealed class QuestionReportService : IQuestionReportService
 
         await _reportRepository.UpdateAsync(report, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _cache.Remove(ModerationCacheKeys.Stats);
 
         return await MapAsync(report, cancellationToken);
     }

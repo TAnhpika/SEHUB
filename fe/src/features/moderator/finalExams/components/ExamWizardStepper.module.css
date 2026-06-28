@@ -79,7 +79,7 @@
 
 .marker-done {
   font-size: 0.625rem;
-  color: var(--moderator-surface);
+  color: var(--moderator-on-primary);
   background: var(--moderator-primary);
   box-shadow: var(--shadow-sm);
 }
@@ -100,7 +100,7 @@
 
 .marker-pending {
   color: var(--moderator-text-subtle);
-  background: var(--color-surface-muted);
+  background: var(--moderator-input-bg);
   border: 1px solid var(--moderator-border);
 }
 

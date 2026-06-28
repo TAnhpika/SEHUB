@@ -124,7 +124,7 @@
   font-size: 0.6875rem;
   font-weight: 700;
   color: inherit;
-  background: rgba(255, 255, 255, 0.75);
+  background: var(--moderator-surface);
   border-radius: 9999px;
 }
 
@@ -187,7 +187,7 @@
 .table td {
   padding: 0.875rem 1rem;
   vertical-align: top;
-  border-bottom: 1px solid rgba(195, 198, 215, 0.12);
+  border-bottom: 1px solid var(--moderator-border-light);
 }
 
 .table tbody tr {
@@ -196,11 +196,11 @@
 }
 
 .table tbody tr:hover {
-  background: rgba(248, 250, 252, 0.85);
+  background: var(--moderator-primary-muted);
 }
 
 .rowFocused {
-  background: rgba(239, 246, 255, 0.75) !important;
+  background: var(--moderator-nav-active-bg) !important;
 }
 
 .contentCell {

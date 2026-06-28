@@ -25,6 +25,7 @@ function toModeratorReport(entry) {
     id: entry.id,
     code: entry.code,
     category: "user",
+    userReportType: entry.userReportType ?? "conversation",
     status: entry.status?.toLowerCase?.() ?? entry.status,
     reason: entry.reasonId ?? inferReasonId(entry.reason),
     reporterUsername,
@@ -52,10 +53,11 @@ function mapReportStatus(status) {
   return value === "pending" ? "pending" : "resolved";
 }
 
-function mapApiReport(dto) {
+function mapConversationApiReport(dto) {
   return toModeratorReport({
     id: dto.id,
     code: dto.code,
+    userReportType: "conversation",
     status: mapReportStatus(dto.status),
     reason: dto.reason,
     reasonId: inferReasonId(dto.reason),
@@ -70,13 +72,41 @@ function mapApiReport(dto) {
   });
 }
 
+function mapUserApiReport(dto) {
+  const detail = dto.detail ?? "";
+  return toModeratorReport({
+    id: dto.id,
+    code: dto.code,
+    userReportType: "account",
+    status: mapReportStatus(dto.status),
+    reason: dto.reason,
+    reasonId: inferReasonId(dto.reason),
+    detail,
+    reportedUserId: dto.reportedUserId,
+    reportedUsername: dto.reportedUsername,
+    reporterUsername: dto.reporterUsername,
+    createdAt: dto.createdAt,
+    resolutionNote: dto.resolutionNote,
+    snippet: detail.length > 72 ? `${detail.slice(0, 72)}…` : detail,
+  });
+}
+
 export async function getConversationReports({ pageSize = ADMIN_API_PAGE_SIZE } = {}) {
   if (USE_MOCK) {
     return [];
   }
 
-  const page = await adminApi.listConversationReports({ page: 1, pageSize });
-  return (page.items ?? []).map(mapApiReport);
+  const [conversationPage, userPage] = await Promise.all([
+    adminApi.listConversationReports({ page: 1, pageSize }),
+    adminApi.listUserReports({ page: 1, pageSize }),
+  ]);
+
+  const items = [
+    ...(conversationPage.items ?? []).map(mapConversationApiReport),
+    ...(userPage.items ?? []).map(mapUserApiReport),
+  ].sort((a, b) => new Date(b.createdAtIso).getTime() - new Date(a.createdAtIso).getTime());
+
+  return items;
 }
 
 export async function findConversationReportById(id) {
@@ -84,17 +114,39 @@ export async function findConversationReportById(id) {
   return items.find((item) => item.id === id) ?? null;
 }
 
-export async function resolveConversationReport(id, resolution) {
+export async function resolveConversationReport(id, resolution, userReportType = "conversation") {
   if (USE_MOCK) {
     return null;
   }
 
-  const dto = await adminApi.resolveConversationReport(id, {
+  const body = {
     status: "Resolved",
     resolutionNote: resolution,
-  });
+  };
+
+  const dto =
+    userReportType === "account"
+      ? await adminApi.resolveUserReport(id, body)
+      : await adminApi.resolveConversationReport(id, body);
+
   window.dispatchEvent(new CustomEvent("sehubs-conversation-reports-changed"));
-  return mapApiReport(dto);
+  window.dispatchEvent(new CustomEvent("sehubs-user-reports-changed"));
+
+  return userReportType === "account" ? mapUserApiReport(dto) : mapConversationApiReport(dto);
+}
+
+export async function escalateUserReportToViolations(id, userReportType = "conversation") {
+  if (USE_MOCK) {
+    return null;
+  }
+
+  const source = userReportType === "account" ? "account" : "conversation";
+  const result = await adminApi.escalateUserReportToViolations(id, { source });
+
+  window.dispatchEvent(new CustomEvent("sehubs-conversation-reports-changed"));
+  window.dispatchEvent(new CustomEvent("sehubs-user-reports-changed"));
+
+  return result;
 }
 
 export { REASON_META };

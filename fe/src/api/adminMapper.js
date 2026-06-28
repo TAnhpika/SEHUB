@@ -644,7 +644,9 @@ export function mapAdminReportListItem(dto) {
   return {
     id: dto.id,
     apiId: dto.id,
+    kind: dto.kind ?? "post",
     postId: dto.postId,
+    commentId: dto.commentId ?? null,
     reasonId: "other",
     reason: dto.reason,
     reporter: dto.reporter?.username ?? "unknown",
@@ -659,7 +661,7 @@ export function mapAdminReportListItem(dto) {
       author: dto.reportedUser?.username ?? dto.reporter?.username ?? "unknown",
       postedAt: formatAdminDateTime(dto.createdAt),
       title: dto.postTitle,
-      excerpt: dto.postExcerpt ?? dto.postTitle,
+      excerpt: dto.commentExcerpt ?? dto.postExcerpt ?? dto.postTitle,
     },
     resolution: dto.resolvedAt
       ? {

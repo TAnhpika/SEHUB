@@ -17,12 +17,20 @@ public interface IConversationRepository
         Guid userId,
         DateTime readAt,
         CancellationToken cancellationToken = default);
+    Task ClearParticipantHistoryAsync(
+        Guid conversationId,
+        Guid userId,
+        DateTime clearedAt,
+        CancellationToken cancellationToken = default);
     Task UpdateConversationPreviewAsync(
         Guid conversationId,
         string preview,
         DateTime sentAt,
         CancellationToken cancellationToken = default);
-    Task<int> GetTotalUnreadCountAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<int> GetTotalUnreadCountAsync(
+        Guid userId,
+        IReadOnlyCollection<Guid>? excludeOtherUserIds = null,
+        CancellationToken cancellationToken = default);
     Task<int> GetUnreadCountAsync(Guid conversationId, Guid userId, CancellationToken cancellationToken = default);
     Task<bool> IsParticipantAsync(Guid conversationId, Guid userId, CancellationToken cancellationToken = default);
 }

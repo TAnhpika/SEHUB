@@ -104,7 +104,7 @@
   height: 1.625rem;
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--moderator-surface);
+  color: var(--moderator-on-primary);
   background: var(--moderator-primary);
   border-radius: 50%;
 }
@@ -236,6 +236,8 @@
   margin-bottom: 0.75rem;
   font-family: inherit;
   font-size: 0.8125rem;
+  color: var(--moderator-text);
+  background: var(--moderator-input-bg);
   border: 1px solid var(--moderator-border);
   border-radius: 8px;
   outline: none;

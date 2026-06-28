@@ -15,19 +15,22 @@ public sealed class PostsController : ControllerBase
     private readonly ICommentService _commentService;
     private readonly IPostLikeService _postLikeService;
     private readonly IPostReportService _postReportService;
+    private readonly ICommentReportService _commentReportService;
 
     public PostsController(
         IPostService postService,
         IPostImageService postImageService,
         ICommentService commentService,
         IPostLikeService postLikeService,
-        IPostReportService postReportService)
+        IPostReportService postReportService,
+        ICommentReportService commentReportService)
     {
         _postService = postService;
         _postImageService = postImageService;
         _commentService = commentService;
         _postLikeService = postLikeService;
         _postReportService = postReportService;
+        _commentReportService = commentReportService;
     }
 
     [HttpGet]
@@ -195,6 +198,18 @@ public sealed class PostsController : ControllerBase
     public async Task<IActionResult> Report(Guid id, [FromBody] ReportPostRequest request, CancellationToken cancellationToken)
     {
         await _postReportService.ReportAsync(id, request.Reason, cancellationToken);
+        return Ok(new { message = "Report submitted" });
+    }
+
+    [HttpPost("{id:guid}/comments/{commentId:guid}/report")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> ReportComment(
+        Guid id,
+        Guid commentId,
+        [FromBody] ReportCommentRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _commentReportService.ReportAsync(id, commentId, request.Reason, request.Detail, cancellationToken);
         return Ok(new { message = "Report submitted" });
     }
 

@@ -21,6 +21,8 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<PostLike> PostLikes => Set<PostLike>();
     public DbSet<PostReport> PostReports => Set<PostReport>();
+    public DbSet<CommentReport> CommentReports => Set<CommentReport>();
+    public DbSet<UserReport> UserReports => Set<UserReport>();
     public DbSet<QuestionReport> QuestionReports => Set<QuestionReport>();
     public DbSet<QuestionComment> QuestionComments => Set<QuestionComment>();
     public DbSet<Exam> Exams => Set<Exam>();
@@ -64,6 +66,7 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
     public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
     public DbSet<ConversationReport> ConversationReports => Set<ConversationReport>();
+    public DbSet<ViolationEscalation> ViolationEscalations => Set<ViolationEscalation>();
     public DbSet<UserFeedback> UserFeedbacks => Set<UserFeedback>();
 
     protected override void OnModelCreating(ModelBuilder builder)

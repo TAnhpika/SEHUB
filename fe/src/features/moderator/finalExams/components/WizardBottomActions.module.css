@@ -5,11 +5,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1rem 1.125rem;
-  background: rgba(255, 255, 255, 0.9);
-  border-top: 1px solid var(--moderator-border-light);
+  background: var(--moderator-surface);
+  border-top: 1px solid var(--moderator-border);
   border-radius: 16px 16px 0 0;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--moderator-card-shadow);
 }
 
 .draft {
@@ -19,9 +18,13 @@
   font-weight: 500;
   color: var(--moderator-primary);
   cursor: pointer;
-  background: rgba(210, 224, 254, 0.3);
-  border: none;
+  background: var(--moderator-primary-muted);
+  border: 1px solid color-mix(in srgb, var(--moderator-primary) 35%, transparent);
   border-radius: 8px;
+}
+
+.draft:hover {
+  background: var(--moderator-primary-soft);
 }
 
 .right {
@@ -51,7 +54,7 @@
   font-family: inherit;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--moderator-surface);
+  color: var(--moderator-on-primary);
   cursor: pointer;
   background: var(--moderator-primary);
   border: none;

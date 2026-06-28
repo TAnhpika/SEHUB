@@ -257,13 +257,16 @@ function ExamDetailPage({ page }) {
     }
   }, [orderedQuestions.length, currentIndex]);
 
+  const activeQuestionId = currentQuestion?.id ?? null;
+
   useEffect(() => {
-    if (!apiExamId || !showCorrectAnswer || !correctAnswerRevealed) {
+    const effectiveApiExamId = apiExamId ?? exam?.apiId ?? null;
+    if (!effectiveApiExamId || !showCorrectAnswer || !correctAnswerRevealed || !activeQuestionId) {
       return undefined;
     }
 
-    const question = orderedQuestions[currentIndex];
-    if (!question) {
+    const existing = questions.find((item) => String(item.id) === String(activeQuestionId));
+    if (existing?.correctAnswer || existing?.correctAnswers?.length > 0) {
       return undefined;
     }
 
@@ -271,14 +274,18 @@ function ExamDetailPage({ page }) {
 
     async function fetchCorrectAnswer() {
       try {
-        const answered = await loadQuestionWithAnswer(apiExamId, question.id);
+        const answered = await loadQuestionWithAnswer(effectiveApiExamId, activeQuestionId);
         if (cancelled || !answered) return;
 
         setQuestions((prev) =>
-          prev.map((item) => (item.id === answered.id ? answered : item)),
+          prev.map((item) =>
+            String(item.id) === String(answered.id) ? answered : item,
+          ),
         );
       } catch {
-        /* keep public question shape */
+        if (!cancelled) {
+          showToast("Không tải được đáp án đúng. Kiểm tra gói Premium hoặc thử lại.");
+        }
       }
     }
 
@@ -288,10 +295,12 @@ function ExamDetailPage({ page }) {
     };
   }, [
     apiExamId,
-    orderedQuestions,
-    currentIndex,
+    exam?.apiId,
+    activeQuestionId,
     correctAnswerRevealed,
     showCorrectAnswer,
+    questions,
+    showToast,
   ]);
 
   if (scope === "community" && !isAuthenticated) {
@@ -613,9 +622,9 @@ function ExamDetailPage({ page }) {
                   {isReviewExam ? (
                     <ExamQuestionReportButton
                       className={`${styles["tool-btn"]} ${styles["tool-btn-active"]}`}
-                      examId={exam.id}
+                      examId={apiExamId ?? exam.id}
                       courseCode={exam.courseCode}
-                      questionIndex={currentQuestion?.id ?? currentIndex + 1}
+                      questionIndex={currentIndex + 1}
                       question={currentQuestion}
                     />
                   ) : (
