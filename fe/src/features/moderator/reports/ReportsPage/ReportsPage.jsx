@@ -81,7 +81,19 @@ function ReportsPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [lastResolved, setLastResolved] = useState(null);
   const deepLinkSyncedRef = useRef(false);
+  const detailScrollRef = useRef(null);
   const urlReportId = searchParams.get("id");
+
+  useEffect(() => {
+    if (!selectedId) return;
+
+    const resetDetailScroll = () => {
+      detailScrollRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    };
+
+    resetDetailScroll();
+    requestAnimationFrame(resetDetailScroll);
+  }, [selectedId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -674,7 +686,7 @@ function ReportsPage() {
                 </p>
               </header>
 
-              <div className={styles.detailScroll}>
+              <div ref={detailScrollRef} className={styles.detailScroll}>
                 {selected.status === "resolved" ? (
                   <div className={styles.resolutionBox}>
                     <p className={styles.resolutionTitle}>Đã xử lý</p>

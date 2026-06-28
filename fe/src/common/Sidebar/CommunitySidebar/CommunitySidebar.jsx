@@ -32,9 +32,12 @@ function CommunitySidebar() {
         </p>
       </div>
 
-      <FeaturedPostsPanel className={`${styles.panel} ${styles.featured}`} />
+      <FeaturedPostsPanel
+        variant="community"
+        className={`${styles.panel} ${styles.featured}`}
+      />
 
-      <FtesPromoPanel />
+      <FtesPromoPanel className={styles.promo} />
     </aside>
   );
 }

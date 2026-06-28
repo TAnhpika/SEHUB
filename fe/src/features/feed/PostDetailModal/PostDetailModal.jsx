@@ -12,17 +12,21 @@ import {
 import { useAuth } from "@/context";
 import { Modal } from "@/common/Modal/Modal";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import * as postsApi from "@/api/postsApi";
 import RichTextContent from "@/common/RichTextEditor/RichTextContent";
 import {
   loadPostById,
   savePost,
+  toggleLike,
 } from "@/features/feed/feedData";
 import { usePostDetail } from "@/features/feed/hooks/usePostDetail";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
 import { copyPostLink, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
 import CommentMentionPicker from "@/features/feed/CommentMentionPicker/CommentMentionPicker";
+import PinnedBadge from "@/features/feed/shared/PinnedBadge/PinnedBadge";
+import { filterDisplayTags } from "@/features/feed/shared/postDisplayUtils";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./PostDetailModal.module.css";
 
@@ -50,6 +54,7 @@ function PostDetailModal({
   const navigate = useNavigate();
   const { user, isPremium } = useAuth();
   const { showCopyToast, showToast } = useToast();
+  const { needsLoginPrompt, requireAuth } = useRequireAuth();
   const [commentSeed, setCommentSeed] = useState(undefined);
   const [commentCount, setCommentCount] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
@@ -58,6 +63,8 @@ function PostDetailModal({
   const [displayTitle, setDisplayTitle] = useState("");
   const [displayBody, setDisplayBody] = useState("");
   const [likeCount, setLikeCount] = useState(0);
+  const [liked, setLiked] = useState(false);
+  const [liking, setLiking] = useState(false);
   const [viewCount, setViewCount] = useState(0);
   const [savingPost, setSavingPost] = useState(false);
   const onPostChangeRef = useRef(onPostChange);
@@ -136,6 +143,7 @@ function PostDetailModal({
       setEditTitle(post.title);
       setEditBody(post.body ?? post.excerpt);
       setLikeCount(post.likes ?? 0);
+      setLiked(Boolean(post.isLiked));
       setViewCount(post.views ?? 0);
       setCommentSeed(post.commentsList ?? []);
       setCommentCount(post.comments ?? 0);
@@ -151,6 +159,7 @@ function PostDetailModal({
         setEditTitle(detail.title);
         setEditBody(detail.body ?? detail.excerpt);
         setLikeCount(detail.likes ?? 0);
+        setLiked(Boolean(detail.isLiked));
         setViewCount(detail.views ?? 0);
         emitPostChange({
           id: post.id,
@@ -158,6 +167,7 @@ function PostDetailModal({
           commentsList: detail.commentsList ?? [],
           likes: detail.likes ?? 0,
           views: detail.views ?? 0,
+          isLiked: detail.isLiked,
         });
         onViewed?.(detail);
       } catch {
@@ -186,6 +196,7 @@ function PostDetailModal({
   if (!open || !post) return null;
 
   const isOwner = isOwnPost(post, user);
+  const displayTags = filterDisplayTags(post.tags);
 
   function openProfile(username) {
     if (!username) return;
@@ -255,6 +266,39 @@ function PostDetailModal({
     }
   }
 
+  function handleScrollToComments() {
+    commentsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function handleLike() {
+    if (needsLoginPrompt) {
+      requireAuth("Vui lòng đăng nhập để thích bài viết.");
+      return;
+    }
+    if (liking) return;
+
+    const nextLiked = !liked;
+    setLiked(nextLiked);
+    setLikeCount((count) => (liked ? Math.max(0, count - 1) : count + 1));
+    setLiking(true);
+
+    try {
+      const result = await toggleLike(post.id, liked);
+      setLiked(result.isLiked);
+      setLikeCount(result.likeCount);
+      emitPostChange({
+        id: post.id,
+        likes: result.likeCount,
+        isLiked: result.isLiked,
+      });
+    } catch {
+      setLiked(liked);
+      setLikeCount(post.likes ?? 0);
+    } finally {
+      setLiking(false);
+    }
+  }
+
   return (
     <Modal
       open={open}
@@ -316,7 +360,7 @@ function PostDetailModal({
                 </label>
                 <label className={styles.field}>
                   <span className={styles.label}>Nội dung</span>
-                  <RichTextEditorFieldField
+                  <RichTextEditorField
                     value={editBody}
                     onChange={setEditBody}
                     variant="full"
@@ -338,23 +382,45 @@ function PostDetailModal({
               </div>
             ) : (
               <>
-                <h3 className={styles.title}>
-                  <span className={styles.hash}>#</span> <strong>{displayTitle}</strong>
-                </h3>
+                <div className={styles.titleRow}>
+                  {post.isPinned ? <PinnedBadge /> : null}
+                  <h3 className={styles.title}>{displayTitle}</h3>
+                </div>
                 <RichTextContent value={displayBody} className={styles.content} />
+                {displayTags.length > 0 ? (
+                  <ul className={styles.tags} aria-label="Thẻ bài viết">
+                    {displayTags.map((tag) => (
+                      <li key={tag} className={styles.tag}>
+                        {tag}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </>
             )}
 
             <div className={styles.stats}>
-              <span className={styles.stat}>
-                <FontAwesomeIcon icon={faHeart} className={styles["stat-liked"]} />
+              <button
+                type="button"
+                className={`${styles.stat} ${liked ? styles.statActive : ""}`}
+                aria-label="Thích bài viết"
+                aria-pressed={liked}
+                disabled={liking}
+                onClick={handleLike}
+              >
+                <FontAwesomeIcon icon={faHeart} />
                 {likeCount}
-              </span>
-              <span className={styles.stat}>
+              </button>
+              <button
+                type="button"
+                className={styles.stat}
+                aria-label="Bình luận"
+                onClick={handleScrollToComments}
+              >
                 <FontAwesomeIcon icon={faComment} />
                 {commentCount}
-              </span>
-              <span className={styles.stat}>
+              </button>
+              <span className={styles.stat} aria-label="Lượt xem">
                 <FontAwesomeIcon icon={faEye} />
                 {viewCount}
               </span>
@@ -409,7 +475,7 @@ function PostDetailModal({
 
                 {isEditingComment ? (
                   <div className={styles["comment-edit"]}>
-                    <RichTextEditorFieldField
+                    <RichTextEditorField
                       value={editCommentDraft}
                       onChange={setEditCommentDraft}
                       variant="comment"

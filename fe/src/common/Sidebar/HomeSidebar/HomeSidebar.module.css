@@ -9,6 +9,13 @@
   overflow: hidden;
 }
 
+@media (min-width: 1025px) {
+  .sidebar {
+    /* Tránh ChatFab (fixed góc phải) đè lên nút Khám phá FTES */
+    padding-bottom: 5rem;
+  }
+}
+
 .panel {
   padding: 0.625rem;
   background: var(--color-surface);
@@ -120,74 +127,19 @@
 }
 
 .featured {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  border-color: var(--color-primary);
-}
-
-.ftes {
-  flex-shrink: 0;
-  padding: 0.875rem 0.75rem;
-  border-radius: var(--radius-xl);
-}
-
-.title {
-  flex-shrink: 0;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: 0.375rem;
-}
-
-.posts {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
-  margin: 0;
-  padding: 0;
   overflow: hidden;
-  list-style: none;
+  border-color: var(--color-primary);
+
+  --featured-max-visible: 3;
+  --featured-row-height: 3.5rem;
+  --featured-line-clamp: 2;
 }
 
-.post-item {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
-
-.item {
-  border-bottom: 1px solid var(--color-border);
-}
-
-.post-link {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  width: 100%;
-  padding: 0.375rem 0;
-  font-family: inherit;
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1.35;
-  text-align: left;
-  text-decoration: none;
-  color: var(--color-text-muted);
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.post-link:hover {
-  color: var(--color-primary);
-}
-
-.posts .post-item:first-child .post-link {
-  padding-top: 0;
-}
-
-.posts .post-item:last-child .post-link {
-  padding-bottom: 0;
+.promo {
+  flex-shrink: 0;
+  margin-top: auto;
 }

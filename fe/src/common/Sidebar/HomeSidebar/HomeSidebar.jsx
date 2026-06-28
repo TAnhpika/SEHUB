@@ -46,9 +46,12 @@ function HomeSidebar() {
         </div>
       </div>
 
-      <FeaturedPostsPanel className={`${styles.panel} ${styles.featured}`} />
+      <FeaturedPostsPanel
+        variant="home"
+        className={`${styles.panel} ${styles.featured}`}
+      />
 
-      <FtesPromoPanel />
+      <FtesPromoPanel className={styles.promo} />
     </aside>
   );
 }

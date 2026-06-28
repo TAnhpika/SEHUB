@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faComment,
@@ -12,10 +12,12 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
 import { copyPostLink, isOwnPost } from "@/features/feed/postUtils";
-import { toggleLike, loadCommentPreviewsForPost } from "@/features/feed/feedData";
+import { toggleLike } from "@/features/feed/feedData";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
-import RichTextContent from "@/common/RichTextEditor/RichTextContent";
+import { stripRichTextMarkup } from "@/common/RichTextEditor/richTextPreviewHtml";
 import { resolvePostPreviewImage } from "@/features/feed/postContentPreview";
+import PinnedBadge from "@/features/feed/shared/PinnedBadge/PinnedBadge";
+import { filterDisplayTags, getPostExcerptText } from "@/features/feed/shared/postDisplayUtils";
 import styles from "./PostCard.module.css";
 
 function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeChange }) {
@@ -27,55 +29,19 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
   const [liked, setLiked] = useState(Boolean(post.isLiked));
   const [likes, setLikes] = useState(post.likes ?? 0);
   const [commentCount, setCommentCount] = useState(post.comments ?? 0);
-  const [commentPreviews, setCommentPreviews] = useState(post.commentsList ?? []);
   const [liking, setLiking] = useState(false);
-  const cardRef = useRef(null);
-  const previewsLoadedRef = useRef(false);
   const previewImageUrl = resolvePostPreviewImage(post);
+  const displayTags = useMemo(() => filterDisplayTags(post.tags), [post.tags]);
+  const excerptText = useMemo(
+    () => stripRichTextMarkup(getPostExcerptText(post)),
+    [post.contentPreview, post.body, post.excerpt],
+  );
 
   useEffect(() => {
     setLiked(Boolean(post.isLiked));
     setLikes(post.likes ?? 0);
     setCommentCount(post.comments ?? 0);
-    setCommentPreviews(post.commentsList ?? []);
-    previewsLoadedRef.current = Boolean(post.commentsList?.length);
-  }, [post.id, post.isLiked, post.likes, post.comments, post.commentsList]);
-
-  useEffect(() => {
-    const hasComments = (post.comments ?? 0) > 0;
-    const hasPreviews = (post.commentsList?.length ?? 0) > 0 || commentPreviews.length > 0;
-    if (!hasComments || hasPreviews || previewsLoadedRef.current) {
-      return undefined;
-    }
-
-    const element = cardRef.current;
-    if (!element) {
-      return undefined;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries[0]?.isIntersecting || previewsLoadedRef.current) {
-          return;
-        }
-
-        previewsLoadedRef.current = true;
-        loadCommentPreviewsForPost(post.id)
-          .then((previews) => {
-            if (previews.length > 0) {
-              setCommentPreviews(previews);
-            }
-          })
-          .catch(() => {});
-
-        observer.disconnect();
-      },
-      { rootMargin: "120px" },
-    );
-
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [post.id, post.comments, post.commentsList, commentPreviews.length]);
+  }, [post.id, post.isLiked, post.likes, post.comments]);
 
   function handleOpenPost() {
     if (!canInteract) {
@@ -138,7 +104,9 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
   }
 
   return (
-    <article ref={cardRef} className={styles.card}>
+    <article
+      className={`${styles.card} ${post.isPinned ? styles.cardPinned : ""}`.trim()}
+    >
       {isOwner ? (
         <div className={styles.ownerMenu}>
           <PostOwnerMenu onEdit={handleEditPost} onDelete={handleDeletePost} />
@@ -168,35 +136,22 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
           </div>
         </header>
 
-        <h2 className={styles.title}>
-          {post.isPinned ? <span className={styles.pinnedBadge}>Ghim</span> : null}
-          {post.title}
-        </h2>
+        <div className={styles.titleRow}>
+          {post.isPinned ? <PinnedBadge className={styles.pinnedBadge} /> : null}
+          <h2 className={styles.title}>{post.title}</h2>
+        </div>
         {previewImageUrl ? (
           <div className={styles.coverWrap}>
             <img src={previewImageUrl} alt="" className={styles.cover} loading="lazy" />
           </div>
         ) : null}
-        <RichTextContent
-          value={post.contentPreview ?? post.body ?? post.excerpt}
-          className={styles.excerpt}
-          emptyFallback={null}
-        />
+        {excerptText ? <p className={styles.excerpt}>{excerptText}</p> : null}
 
-        <ul className={styles.tags} aria-label="Thẻ bài viết">
-          {post.tags.map((tag) => (
-            <li key={tag} className={styles.tag}>
-              {tag}
-            </li>
-          ))}
-        </ul>
-
-        {commentPreviews.length > 0 ? (
-          <ul className={styles.commentPreviews} aria-label="Bình luận gần đây">
-            {commentPreviews.map((comment) => (
-              <li key={comment.id} className={styles.commentPreview}>
-                <span className={styles.commentAuthor}>{comment.author.name}</span>
-                <span className={styles.commentText}>{comment.content}</span>
+        {displayTags.length > 0 ? (
+          <ul className={styles.tags} aria-label="Thẻ bài viết">
+            {displayTags.map((tag) => (
+              <li key={tag} className={styles.tag}>
+                {tag}
               </li>
             ))}
           </ul>

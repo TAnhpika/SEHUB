@@ -64,7 +64,7 @@ function PracticeExamSubmitPanel({ courseCode, examId, examTitle }) {
       <section className={styles.panel}>
         <h2 className={styles.title}>Nộp bài thực hành</h2>
         <p className={styles.hint}>
-          Tính năng nộp bài qua GitHub dành cho tài khoản <strong>Premium</strong> (§3.4).
+          Tính năng nộp bài qua GitHub dành cho tài khoản <strong>Premium</strong>.
         </p>
         <Button to="/home/premium">Nâng cấp Premium</Button>
       </section>
