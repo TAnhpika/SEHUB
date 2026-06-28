@@ -108,19 +108,19 @@
 }
 
 .l0 {
-  background: var(--color-border-light);
+  background: var(--heatmap-empty);
 }
 
 .l1 {
-  background: #bbf7d0;
+  background: var(--heatmap-scale-1);
 }
 
 .l2 {
-  background: #4ade80;
+  background: var(--heatmap-scale-2);
 }
 
 .l3 {
-  background: #16a34a;
+  background: var(--heatmap-scale-3);
   box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.35);
 }
 

@@ -118,7 +118,7 @@
 }
 
 .required {
-  color: #d93025;
+  color: var(--color-danger);
 }
 
 .input,

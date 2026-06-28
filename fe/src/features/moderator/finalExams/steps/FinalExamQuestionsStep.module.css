@@ -7,10 +7,10 @@
 
 .summary {
   padding: 2rem;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.2);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border-light);
   border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--moderator-card-shadow);
 }
 
 .summaryHead {
@@ -26,7 +26,7 @@
   font-size: 2rem;
   font-weight: 600;
   line-height: 1.25;
-  color: #191c1e;
+  color: var(--moderator-text);
   letter-spacing: -0.01em;
 }
 
@@ -34,7 +34,7 @@
   margin: 0.25rem 0 0;
   font-size: 1rem;
   line-height: 1.5;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
 }
 
 .count {
@@ -42,8 +42,8 @@
   padding: 0.25rem 0.75rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--moderator-primary, #004ac6);
-  background: rgba(0, 74, 198, 0.1);
+  color: var(--moderator-primary);
+  background: var(--moderator-primary-muted);
   border-radius: 9999px;
 }
 
@@ -51,23 +51,23 @@
   height: 8px;
   margin-top: 1rem;
   overflow: hidden;
-  background: #e6e8ea;
+  background: var(--color-surface-muted);
   border-radius: 9999px;
 }
 
 .progressFill {
   height: 100%;
-  background: var(--moderator-primary, #004ac6);
+  background: var(--moderator-primary);
   border-radius: 9999px;
   transition: width 0.2s ease;
 }
 
 .markdownPanel {
   padding: 1.5rem;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.2);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border-light);
   border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--moderator-card-shadow);
 }
 
 .modeSwitch {
@@ -75,7 +75,7 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   padding: 0.25rem;
-  background: #f1f5f9;
+  background: var(--color-surface-muted);
   border-radius: 10px;
 }
 
@@ -85,7 +85,7 @@
   font-family: inherit;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
   cursor: pointer;
   background: transparent;
   border: none;
@@ -94,12 +94,12 @@
 }
 
 .modeBtn:hover {
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .modeBtnActive {
-  color: var(--moderator-primary, #004ac6);
-  background: #fff;
+  color: var(--moderator-primary);
+  background: var(--moderator-surface);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
@@ -107,20 +107,20 @@
   margin: 0;
   font-size: 1.125rem;
   font-weight: 600;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .markdownDesc {
   margin: 0.5rem 0 1rem;
   font-size: 0.875rem;
   line-height: 1.5;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
 }
 
 .markdownDesc code {
   padding: 0.1rem 0.35rem;
   font-size: 0.8125rem;
-  background: #f1f5f9;
+  background: var(--color-surface-muted);
   border-radius: 4px;
 }
 
@@ -130,23 +130,23 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.8125rem;
   line-height: 1.6;
-  color: #191c1e;
+  color: var(--moderator-text);
   resize: vertical;
-  background: #f8fafc;
-  border: 1px solid rgba(195, 198, 215, 0.5);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--moderator-border);
   border-radius: 10px;
 }
 
 .markdownInput:focus {
-  outline: 2px solid rgba(0, 74, 198, 0.25);
-  border-color: var(--moderator-primary, #004ac6);
+  outline: 2px solid color-mix(in srgb, var(--moderator-primary) 25%, transparent);
+  border-color: var(--moderator-primary);
 }
 
 .markdownHint {
   margin: 0.75rem 0 0;
   font-size: 0.8125rem;
   line-height: 1.5;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
 }
 
 .markdownActions {
@@ -166,17 +166,17 @@
   min-height: 88px;
   font-size: 1.5rem;
   font-weight: 500;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
   cursor: pointer;
-  background: #f7f9fb;
-  border: 2px dashed rgba(195, 198, 215, 0.6);
+  background: var(--moderator-bg);
+  border: 2px dashed var(--moderator-border);
   border-radius: 12px;
   transition: border-color 0.15s ease, color 0.15s ease;
 }
 
 .addQuestion:hover {
-  color: var(--moderator-primary, #004ac6);
-  border-color: var(--moderator-primary, #004ac6);
+  color: var(--moderator-primary);
+  border-color: var(--moderator-primary);
 }
 
 .picker {
@@ -188,7 +188,7 @@
 
 .pickerLabel {
   font-size: 0.8125rem;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
 }
 
 .pickerList {
@@ -202,27 +202,27 @@
   padding: 0.25rem 0.5rem;
   font-family: inherit;
   font-size: 0.75rem;
-  color: #434655;
+  color: var(--moderator-text-muted);
   cursor: pointer;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.4);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 6px;
 }
 
 .pickerBtn-active {
-  color: #fff;
-  background: var(--moderator-primary, #004ac6);
-  border-color: var(--moderator-primary, #004ac6);
+  color: var(--moderator-surface);
+  background: var(--moderator-primary);
+  border-color: var(--moderator-primary);
 }
 
 .pickerBtn-complete:not(.pickerBtn-active) {
-  color: #166534;
-  background: #f0fdf4;
-  border-color: #86efac;
+  color: var(--color-success);
+  background: var(--color-success-bg);
+  border-color: color-mix(in srgb, var(--color-success) 55%, transparent);
 }
 
 .pickerBtn-warning:not(.pickerBtn-active) {
-  color: #92400e;
-  background: #fffbeb;
-  border-color: #fbbf24;
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning);
 }

@@ -105,14 +105,14 @@
 .editorFloating {
   min-height: 140px;
   padding-bottom: 3rem;
-  background: #f7f9fb;
-  border: 1px solid rgba(195, 198, 215, 0.5);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
   box-shadow: inset 0 2px 4px 1px rgba(0, 0, 0, 0.02);
 }
 
 .editorFloating:focus {
-  border-color: var(--moderator-primary, #004ac6);
+  border-color: var(--moderator-primary);
 }
 
 .bordered .editor {
@@ -194,7 +194,7 @@
 .previewContent mark,
 .richTextContent mark {
   padding: 0 0.125rem;
-  background: #fef08a;
+  background: var(--color-warning-bg);
   border-radius: 0.125rem;
 }
 .previewContent ul,

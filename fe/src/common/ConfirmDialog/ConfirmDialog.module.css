@@ -88,7 +88,7 @@
 }
 
 .confirmBtn {
-  color: #fff;
+  color: var(--color-auth-on-brand);
   border-color: transparent;
 }
 
@@ -97,7 +97,7 @@
 }
 
 .confirm-primary:hover {
-  background: var(--color-primary-hover, #1d4ed8);
+  background: var(--color-primary-hover);
 }
 
 .confirm-danger {

@@ -13,7 +13,7 @@
   margin: 0;
   font-size: 2rem;
   font-weight: 600;
-  color: #191c1e;
+  color: var(--moderator-text);
   letter-spacing: -0.01em;
 }
 
@@ -21,7 +21,7 @@
   margin: 0.5rem 0 0;
   font-size: 1rem;
   line-height: 1.5;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
 }
 
 .card {
@@ -29,10 +29,10 @@
   flex-direction: column;
   gap: 1.25rem;
   padding: 2rem;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.2);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border-light);
   border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--moderator-card-shadow);
 }
 
 .row {
@@ -50,11 +50,11 @@
 .label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .required {
-  color: #ba1a1a;
+  color: var(--moderator-badge-bg);
 }
 
 .input {
@@ -62,14 +62,14 @@
   padding: 0.75rem 1rem;
   font-family: inherit;
   font-size: 0.875rem;
-  color: #191c1e;
-  background: #f7f9fb;
-  border: 1px solid rgba(195, 198, 215, 0.4);
+  color: var(--moderator-text);
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
   outline: none;
 }
 
 .input:focus {
-  border-color: var(--moderator-primary, #004ac6);
-  box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.12);
+  border-color: var(--moderator-primary);
+  box-shadow: 0 0 0 3px var(--moderator-primary-muted);
 }

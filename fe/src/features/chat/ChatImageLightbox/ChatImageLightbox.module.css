@@ -21,7 +21,7 @@
   width: 2.5rem;
   height: 2.5rem;
   font-size: 1.125rem;
-  color: #fff;
+  color: var(--color-auth-on-brand);
   background: rgb(255 255 255 / 12%);
   border: none;
   border-radius: var(--radius-full);

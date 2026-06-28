@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(15, 23, 42, 0.45);
+  background: color-mix(in srgb, var(--color-bg) 45%, transparent);
 }
 
 .dialog {
@@ -88,7 +88,7 @@
 }
 
 .confirmBtn {
-  color: #fff;
+  color: var(--moderator-surface);
   border-color: transparent;
 }
 
@@ -105,5 +105,5 @@
 }
 
 .confirm-danger:hover {
-  background: #dc2626;
+  background: var(--color-danger);
 }

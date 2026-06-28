@@ -13,29 +13,29 @@
   margin: 0;
   font-size: 2rem;
   font-weight: 600;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .subtitle {
   margin: 0.5rem 0 0;
   font-size: 1rem;
   line-height: 1.5;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
 }
 
 .card {
   padding: 1.5rem 2rem;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.2);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border-light);
   border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--moderator-card-shadow);
 }
 
 .cardTitle {
   margin: 0 0 1rem;
   font-size: 1.125rem;
   font-weight: 600;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .meta {
@@ -48,14 +48,14 @@
 .meta dt {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
   text-transform: uppercase;
 }
 
 .meta dd {
   margin: 0.25rem 0 0;
   font-size: 0.9375rem;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .previewList {
@@ -66,15 +66,15 @@
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.5;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .correct {
-  color: var(--moderator-primary, #004ac6);
+  color: var(--moderator-primary);
 }
 
 .more {
   margin: 0.75rem 0 0;
   font-size: 0.8125rem;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
 }

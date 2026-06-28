@@ -30,8 +30,8 @@
   min-width: 0;
   padding: 1rem 1.125rem;
   text-align: left;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.45);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 12px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
@@ -51,8 +51,8 @@
 }
 
 .kpiCardActive {
-  border-color: #004ac6;
-  box-shadow: 0 0 0 2px rgba(0, 74, 198, 0.12);
+  border-color: var(--moderator-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--moderator-primary) 12%, transparent);
 }
 
 .kpiIcon {
@@ -77,8 +77,8 @@
 }
 
 .kpiNeutral .kpiIcon {
-  color: #434655;
-  background: #f3f4f6;
+  color: var(--moderator-text-muted);
+  background: var(--moderator-bg);
 }
 
 .kpiRefund .kpiIcon {
@@ -107,14 +107,14 @@
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1.35;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .kpiValue {
   font-size: 1.5rem;
   font-weight: 700;
   line-height: 1.2;
-  color: #191c1e;
+  color: var(--moderator-text);
   letter-spacing: -0.02em;
 }
 
@@ -122,16 +122,16 @@
   font-size: 0.6875rem;
   font-weight: 500;
   line-height: 1.35;
-  color: #6b7280;
+  color: var(--moderator-text-subtle);
 }
 
 .kpiFootnote {
   margin: 0;
   padding: 0.5rem 0.75rem;
   font-size: 0.8125rem;
-  color: #434655;
-  background: #f7f9fc;
-  border: 1px solid rgba(195, 198, 215, 0.35);
+  color: var(--moderator-text-muted);
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
 }
 
@@ -167,7 +167,7 @@
   height: 2.25rem;
   font-size: 1rem;
   color: #6d28d9;
-  background: #fff;
+  background: var(--moderator-surface);
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(109, 40, 217, 0.12);
 }
@@ -176,14 +176,14 @@
   margin: 0 0 0.25rem;
   font-size: 1.0625rem;
   font-weight: 700;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .refundPanelDesc {
   margin: 0;
   font-size: 0.8125rem;
   line-height: 1.45;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .refundPanelActions {
@@ -215,7 +215,7 @@
   font-weight: 600;
   color: #6d28d9;
   cursor: pointer;
-  background: #fff;
+  background: var(--moderator-surface);
   border: 1px solid rgba(139, 92, 246, 0.35);
   border-radius: 8px;
 }
@@ -240,8 +240,8 @@
   align-items: flex-start;
   justify-content: space-between;
   padding: 1rem 1.125rem;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.45);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-left: 3px solid #8b5cf6;
   border-radius: 10px;
 }
@@ -261,13 +261,13 @@
 
 .refundPayos {
   font-size: 0.9375rem;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .refundMeta {
   margin: 0 0 0.35rem;
   font-size: 0.8125rem;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .refundReason {
@@ -293,7 +293,7 @@
 .refundDates dt {
   font-size: 0.6875rem;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--moderator-text-subtle);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -302,7 +302,7 @@
   margin: 0;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .flowBanner {
@@ -330,7 +330,7 @@
   font-size: 0.75rem;
   font-weight: 600;
   color: #1d4ed8;
-  background: #fff;
+  background: var(--moderator-surface);
   border: 1px solid rgba(37, 99, 235, 0.2);
   border-radius: 9999px;
 }
@@ -349,8 +349,8 @@
 
 .tokenRuleCard {
   padding: 0.75rem 1rem;
-  background: #f7f9fc;
-  border: 1px solid rgba(195, 198, 215, 0.4);
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
 }
 
@@ -358,26 +358,26 @@
   display: block;
   margin-bottom: 0.25rem;
   font-size: 0.8125rem;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .tokenRuleCard span {
   font-size: 0.75rem;
   line-height: 1.45;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .payId {
   display: block;
   font-size: 0.6875rem;
   font-weight: 500;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .transferCode {
   font-family: ui-monospace, monospace;
   font-size: 0.75rem;
-  color: #004ac6;
+  color: var(--moderator-primary);
 }
 
 .actionCol {
@@ -385,7 +385,7 @@
   right: 0;
   z-index: 1;
   min-width: 8.5rem;
-  background: #fff;
+  background: var(--moderator-surface);
   box-shadow: -6px 0 10px rgba(15, 23, 42, 0.04);
 }
 
@@ -439,7 +439,7 @@ thead .actionCol {
   font-weight: 600;
   color: #fff;
   cursor: pointer;
-  background: #004ac6;
+  background: var(--moderator-primary);
   border: none;
   border-radius: 6px;
 }
@@ -478,7 +478,7 @@ thead .actionCol {
   padding: 0.75rem 1rem;
   font-size: 0.8125rem;
   line-height: 1.5;
-  color: #434655;
+  color: var(--moderator-text-muted);
   background: #faf5ff;
   border: 1px solid #e9d5ff;
   border-radius: 10px;
@@ -525,14 +525,14 @@ thead .actionCol {
 .hintOk {
   margin: 0.35rem 0 0;
   font-size: 0.75rem;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .formNote {
   margin: 0 0 1rem;
   font-size: 0.8125rem;
   line-height: 1.5;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 /* Modal cộng token thủ công */
@@ -555,7 +555,7 @@ thead .actionCol {
   max-width: 560px;
   max-height: min(90vh, 720px);
   overflow: hidden;
-  background: #fff;
+  background: var(--moderator-surface);
   border-radius: 16px;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
 }
@@ -567,7 +567,7 @@ thead .actionCol {
   justify-content: space-between;
   padding: 1.25rem 1.5rem;
   background: linear-gradient(135deg, #eff6ff 0%, #f7f9fc 100%);
-  border-bottom: 1px solid rgba(195, 198, 215, 0.4);
+  border-bottom: 1px solid var(--moderator-border);
 }
 
 .tokenModalHeadMain {
@@ -583,8 +583,8 @@ thead .actionCol {
   width: 2.5rem;
   height: 2.5rem;
   font-size: 1.125rem;
-  color: #004ac6;
-  background: #fff;
+  color: var(--moderator-primary);
+  background: var(--moderator-surface);
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 74, 198, 0.12);
 }
@@ -593,14 +593,14 @@ thead .actionCol {
   margin: 0 0 0.25rem;
   font-size: 1.125rem;
   font-weight: 700;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .tokenModalSubtitle {
   margin: 0;
   font-size: 0.8125rem;
   line-height: 1.45;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .modalClose {
@@ -610,16 +610,16 @@ thead .actionCol {
   width: 2rem;
   height: 2rem;
   font-size: 1rem;
-  color: #434655;
+  color: var(--moderator-text-muted);
   cursor: pointer;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.5);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
 }
 
 .modalClose:hover {
-  color: #191c1e;
-  background: #f7f9fc;
+  color: var(--moderator-text);
+  background: var(--moderator-bg);
 }
 
 .tokenModalBody {
@@ -644,7 +644,7 @@ thead .actionCol {
   position: absolute;
   left: 0.75rem;
   font-size: 0.875rem;
-  color: #9ca3af;
+  color: var(--moderator-text-subtle);
   pointer-events: none;
 }
 
@@ -654,14 +654,14 @@ thead .actionCol {
   padding: 0.6rem 0.75rem 0.6rem 2.25rem;
   font-family: inherit;
   font-size: 0.875rem;
-  border: 1px solid #c3c6d7;
+  border: 1px solid var(--moderator-border);
   border-radius: 10px;
   outline: none;
 }
 
 .studentSearchInput:focus {
-  border-color: #004ac6;
-  box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.1);
+  border-color: var(--moderator-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--moderator-primary) 12%, transparent);
 }
 
 .studentCount {
@@ -693,8 +693,8 @@ thead .actionCol {
   padding: 0.75rem 1rem;
   text-align: left;
   cursor: pointer;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.5);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 10px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -705,9 +705,9 @@ thead .actionCol {
 }
 
 .studentCardSelected {
-  border-color: #004ac6;
+  border-color: var(--moderator-primary);
   background: #f0f6ff;
-  box-shadow: 0 0 0 2px rgba(0, 74, 198, 0.12);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--moderator-primary) 12%, transparent);
 }
 
 .studentCardDisabled {
@@ -739,18 +739,18 @@ thead .actionCol {
 .studentCardName {
   font-size: 0.9375rem;
   font-weight: 700;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .studentCardMeta {
   font-size: 0.75rem;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .studentCardStatus {
   font-size: 0.6875rem;
   font-weight: 600;
-  color: #004ac6;
+  color: var(--moderator-primary);
 }
 
 .studentCardTokens {
@@ -760,12 +760,12 @@ thead .actionCol {
   gap: 0.1rem;
   align-items: flex-end;
   font-size: 0.6875rem;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .studentCardTokens strong {
   font-size: 0.875rem;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .studentEmpty {
@@ -773,8 +773,8 @@ thead .actionCol {
   padding: 1.5rem 1rem;
   font-size: 0.875rem;
   text-align: center;
-  color: #434655;
-  background: #f7f9fc;
+  color: var(--moderator-text-muted);
+  background: var(--moderator-bg);
   border: 1px dashed #c3c6d7;
   border-radius: 10px;
 }
@@ -784,7 +784,7 @@ thead .actionCol {
   flex-direction: column;
   gap: 0.75rem;
   padding-top: 0.25rem;
-  border-top: 1px solid rgba(195, 198, 215, 0.35);
+  border-top: 1px solid var(--moderator-border);
 }
 
 .grantRow {
@@ -808,7 +808,7 @@ thead .actionCol {
 .grantLabel {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .grantInput,
@@ -816,15 +816,15 @@ thead .actionCol {
   padding: 0.625rem 0.75rem;
   font-family: inherit;
   font-size: 0.875rem;
-  border: 1px solid #c3c6d7;
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
   outline: none;
 }
 
 .grantInput:focus,
 .grantTextarea:focus {
-  border-color: #004ac6;
-  box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.1);
+  border-color: var(--moderator-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--moderator-primary) 12%, transparent);
 }
 
 .grantTextarea {
@@ -837,14 +837,14 @@ thead .actionCol {
   gap: 0.15rem;
   padding: 0.65rem 0.85rem;
   font-size: 0.75rem;
-  color: #434655;
-  background: #f7f9fc;
+  color: var(--moderator-text-muted);
+  background: var(--moderator-bg);
   border-radius: 8px;
 }
 
 .grantSummary strong {
   font-size: 1.0625rem;
-  color: #004ac6;
+  color: var(--moderator-primary);
 }
 
 .tokenModalFooter {

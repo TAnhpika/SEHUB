@@ -19,15 +19,15 @@
 
 .statCard {
   padding: 0.9rem 1rem;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.4);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 12px;
 }
 
 .statLabel {
   font-size: 0.6875rem;
   font-weight: 600;
-  color: #737686;
+  color: var(--moderator-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -36,13 +36,13 @@
   margin-top: 0.2rem;
   font-size: 1.375rem;
   font-weight: 700;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .statHint {
   margin-top: 0.15rem;
   font-size: 0.75rem;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .rankDot {
@@ -61,8 +61,8 @@
   width: 2rem;
   height: 2rem;
   font-size: 1.125rem;
-  background: #f7f9fc;
-  border: 1px solid rgba(195, 198, 215, 0.45);
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
 }
 
@@ -105,13 +105,13 @@
   max-width: 20rem;
   font-size: 0.8125rem;
   line-height: 1.45;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .slugCode {
   font-family: ui-monospace, monospace;
   font-size: 0.75rem;
-  color: #004ac6;
+  color: var(--moderator-primary);
 }
 
 .toggleBtn {
@@ -130,8 +130,8 @@
 }
 
 .toggleOff {
-  color: #737686;
-  background: #f3f4f6;
+  color: var(--moderator-text-muted);
+  background: var(--moderator-bg);
 }
 
 .modalBackdrop {
@@ -153,7 +153,7 @@
   max-width: 520px;
   max-height: min(90vh, 720px);
   overflow: hidden;
-  background: #fff;
+  background: var(--moderator-surface);
   border-radius: 16px;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
 }
@@ -165,21 +165,21 @@
   justify-content: space-between;
   padding: 1.25rem 1.5rem;
   background: linear-gradient(135deg, #eff6ff 0%, #f7f9fc 100%);
-  border-bottom: 1px solid rgba(195, 198, 215, 0.4);
+  border-bottom: 1px solid var(--moderator-border);
 }
 
 .modalTitle {
   margin: 0 0 0.25rem;
   font-size: 1.125rem;
   font-weight: 700;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .modalSubtitle {
   margin: 0;
   font-size: 0.8125rem;
   line-height: 1.45;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .modalClose {
@@ -189,10 +189,10 @@
   width: 2rem;
   height: 2rem;
   font-size: 1rem;
-  color: #434655;
+  color: var(--moderator-text-muted);
   cursor: pointer;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.5);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
 }
 
@@ -236,7 +236,7 @@
   gap: 0.5rem;
   align-items: center;
   font-size: 0.8125rem;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .checkRow input {

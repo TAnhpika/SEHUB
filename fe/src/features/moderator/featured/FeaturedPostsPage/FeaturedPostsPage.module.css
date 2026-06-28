@@ -26,15 +26,15 @@
   flex-direction: column;
   min-height: 560px;
   overflow: hidden;
-  background: #fafbfc;
-  border: 1px solid rgba(195, 198, 215, 0.2);
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border-light);
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--moderator-card-shadow);
 }
 
 .cardSelected {
-  border-color: rgba(0, 74, 198, 0.35) !important;
-  box-shadow: 0 0 0 2px rgba(0, 74, 198, 0.12);
+  border-color: color-mix(in srgb, var(--moderator-primary) 35%, transparent) !important;
+  box-shadow: 0 0 0 2px var(--moderator-primary-muted);
 }
 
 .pinnedCard {
@@ -43,7 +43,7 @@
 
 .pinnedCard:focus-visible,
 .resultCard:focus-visible {
-  outline: 2px solid rgba(0, 74, 198, 0.45);
+  outline: 2px solid color-mix(in srgb, var(--moderator-primary) 45%, transparent);
   outline-offset: 2px;
 }
 
@@ -88,15 +88,15 @@
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .countBadge {
   padding: 0.25rem 0.75rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #434655;
-  background: #eceef0;
+  color: var(--moderator-text-muted);
+  background: var(--color-surface-muted);
   border-radius: 9999px;
 }
 
@@ -110,9 +110,9 @@
   position: relative;
   padding: 1.5rem 1.5rem 1.5rem 1.75rem;
   overflow: hidden;
-  background: #fff;
+  background: var(--moderator-surface);
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--moderator-card-shadow);
 }
 
 .pinnedAccent {
@@ -121,7 +121,7 @@
   bottom: 0;
   left: 0;
   width: 4px;
-  background: var(--moderator-primary, #004ac6);
+  background: var(--moderator-primary);
 }
 
 .pinnedTop {
@@ -147,8 +147,8 @@
   height: 40px;
   font-size: 0.8125rem;
   font-weight: 700;
-  color: var(--moderator-primary, #004ac6);
-  background: #d2e0fe;
+  color: var(--moderator-primary);
+  background: var(--moderator-primary-soft);
   border-radius: 50%;
 }
 
@@ -156,19 +156,19 @@
   margin: 0;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .pinnedMeta {
   margin: 0.125rem 0 0;
   font-size: 0.875rem;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .pinIcon {
   flex-shrink: 0;
   font-size: 1rem;
-  color: var(--moderator-primary, #004ac6);
+  color: var(--moderator-primary);
 }
 
 .pinnedTitle {
@@ -176,14 +176,14 @@
   font-size: 1.125rem;
   font-weight: 600;
   line-height: 1.4;
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .pinnedExcerpt {
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.45;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .pinnedFooter {
@@ -194,7 +194,7 @@
   justify-content: space-between;
   padding-top: 1rem;
   margin-top: 1.25rem;
-  border-top: 1px solid rgba(195, 198, 215, 0.1);
+  border-top: 1px solid var(--moderator-border-light);
 }
 
 .stats {
@@ -207,7 +207,7 @@
   gap: 0.25rem;
   align-items: center;
   font-size: 0.875rem;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .stat svg {
@@ -220,7 +220,7 @@
   font-family: inherit;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #ba1a1a;
+  color: var(--moderator-badge-bg);
   cursor: pointer;
   background: none;
   border: none;
@@ -238,10 +238,10 @@
   min-height: 420px;
   padding: 0;
   overflow: hidden;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.2);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border-light);
   border-radius: 12px;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .searchPanelHead {
@@ -250,8 +250,8 @@
   flex-direction: column;
   gap: 0.875rem;
   padding: 1.25rem 1.5625rem 0.875rem;
-  background: #fff;
-  border-bottom: 1px solid rgba(195, 198, 215, 0.2);
+  background: var(--moderator-surface);
+  border-bottom: 1px solid var(--moderator-border-light);
 }
 
 .searchPanelHead .sectionTitle {
@@ -263,7 +263,7 @@
   flex-wrap: wrap;
   gap: 0.25rem;
   margin: 0 -0.25rem;
-  border-bottom: 1px solid rgba(195, 198, 215, 0.25);
+  border-bottom: 1px solid var(--moderator-border);
 }
 
 .searchTab {
@@ -274,7 +274,7 @@
   font-family: inherit;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
   cursor: pointer;
   background: transparent;
   border: none;
@@ -283,13 +283,13 @@
 }
 
 .searchTab:hover {
-  color: #191c1e;
+  color: var(--moderator-text);
 }
 
 .searchTabActive {
   font-weight: 600;
-  color: var(--moderator-primary, #004ac6);
-  border-bottom-color: var(--moderator-primary, #004ac6);
+  color: var(--moderator-primary);
+  border-bottom-color: var(--moderator-primary);
 }
 
 .searchToolbar {
@@ -304,7 +304,7 @@
   margin: 0;
   font-size: 0.75rem;
   font-weight: 500;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
 }
 
 .search {
@@ -317,7 +317,7 @@
   top: 50%;
   left: 1rem;
   font-size: 1.125rem;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
   transform: translateY(-50%);
   pointer-events: none;
 }
@@ -328,9 +328,9 @@
   padding: 0 1rem 0 3rem;
   font-family: inherit;
   font-size: 1rem;
-  color: #191c1e;
-  background: #fff;
-  border: 1px solid #6b7280;
+  color: var(--moderator-text);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-text-subtle);
   border-radius: 8px;
 }
 
@@ -339,7 +339,7 @@
 }
 
 .searchInput:focus {
-  outline: 2px solid rgba(0, 74, 198, 0.35);
+  outline: 2px solid color-mix(in srgb, var(--moderator-primary) 35%, transparent);
   outline-offset: 1px;
 }
 
@@ -355,15 +355,15 @@
 
 .resultCard {
   padding: 1.0625rem;
-  background: #f7f9fb;
-  border: 1px solid rgba(195, 198, 215, 0.2);
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border-light);
   border-radius: 12px;
   cursor: pointer;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .resultCard:hover {
-  border-color: rgba(0, 74, 198, 0.25);
+  border-color: color-mix(in srgb, var(--moderator-primary) 25%, transparent);
 }
 
 .resultCard:hover .pinBtn {
@@ -386,7 +386,7 @@
   font-size: 1rem;
   font-weight: 600;
   line-height: 1.4;
-  color: #191c1e;
+  color: var(--moderator-text);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -400,7 +400,7 @@
   font-family: inherit;
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--moderator-primary, #004ac6);
+  color: var(--moderator-primary);
   cursor: pointer;
   background: rgba(37, 99, 235, 0.1);
   border: none;
@@ -415,7 +415,7 @@
 }
 
 .pinBtn:hover:not(:disabled) {
-  background: rgba(0, 74, 198, 0.15);
+  background: var(--moderator-primary-muted);
 }
 
 .resultCard:focus-within .pinBtn {
@@ -428,7 +428,7 @@
   gap: 0.5rem;
   align-items: center;
   font-size: 0.875rem;
-  color: #434655;
+  color: var(--moderator-text-muted);
 }
 
 .resultAvatar {
@@ -439,8 +439,8 @@
   height: 20px;
   font-size: 0.625rem;
   font-weight: 700;
-  color: var(--moderator-primary, #004ac6);
-  background: #d2e0fe;
+  color: var(--moderator-primary);
+  background: var(--moderator-primary-soft);
   border-radius: 50%;
 }
 
@@ -459,9 +459,9 @@
   margin: 0;
   padding: 1.5rem;
   font-size: 0.9375rem;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
   text-align: center;
-  background: #fff;
-  border: 1px dashed rgba(195, 198, 215, 0.5);
+  background: var(--moderator-surface);
+  border: 1px dashed var(--moderator-border);
   border-radius: 12px;
 }

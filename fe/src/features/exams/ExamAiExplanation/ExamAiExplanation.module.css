@@ -4,12 +4,12 @@
   padding: 1.5rem;
   background: linear-gradient(
     135deg,
-    rgba(0, 74, 198, 0.05) 0%,
-    rgba(255, 255, 255, 1) 55%
+    var(--color-primary-light) 0%,
+    var(--color-surface) 55%
   );
-  border: 1px solid rgba(0, 74, 198, 0.2);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
   border-radius: var(--radius-lg);
-  box-shadow: 0 0 20px rgba(0, 83, 219, 0.08);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--color-primary) 8%, transparent);
 }
 
 .header {
@@ -34,7 +34,7 @@
   height: 2rem;
   font-size: 0.9375rem;
   color: #fff;
-  background: #004ac6;
+  background: var(--color-primary);
   border-radius: var(--radius-sm);
 }
 
@@ -43,7 +43,7 @@
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: #004ac6;
+  color: var(--color-primary);
 }
 
 .refresh {
@@ -51,9 +51,9 @@
   font-family: inherit;
   font-size: 0.6875rem;
   font-weight: 700;
-  color: #004ac6;
-  background: #fff;
-  border: 1px solid rgba(0, 74, 198, 0.2);
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
   border-radius: var(--radius-lg);
   cursor: pointer;
   transition: background 0.15s ease;
@@ -92,15 +92,15 @@
   font-size: 0.8125rem;
   line-height: 1.6;
   color: var(--color-text-muted);
-  background: #f2f4f6;
-  border-left: 4px solid #004ac6;
+  background: var(--color-surface-muted);
+  border-left: 4px solid var(--color-primary);
   border-radius: var(--radius-sm);
 }
 
 .prompt {
   padding: 1.25rem 1.5rem;
   background: var(--color-surface-elevated);
-  border: 1px solid rgba(0, 74, 198, 0.15);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 15%, transparent);
   border-radius: var(--radius-lg);
 }
 
@@ -113,7 +113,7 @@
 
 .prompt-icon {
   font-size: 1.5rem;
-  color: #004ac6;
+  color: var(--color-primary);
 }
 
 .prompt-title {
@@ -136,7 +136,7 @@
   font-size: 0.8125rem;
   font-weight: 700;
   color: #fff;
-  background: #004ac6;
+  background: var(--color-primary);
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -157,7 +157,7 @@
   font-weight: 600;
   color: #fff;
   text-decoration: none;
-  background: #004ac6;
+  background: var(--color-primary);
   border-radius: var(--radius-sm);
 }
 
@@ -200,7 +200,7 @@
   gap: 0;
   padding: 1.25rem 1.5rem;
   background: var(--color-surface-elevated);
-  border: 1px solid rgba(0, 74, 198, 0.15);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 15%, transparent);
   border-radius: var(--radius-lg);
 }
 

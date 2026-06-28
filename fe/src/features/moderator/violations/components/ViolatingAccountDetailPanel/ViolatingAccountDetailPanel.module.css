@@ -5,8 +5,8 @@
   width: 100%;
   max-height: min(60vh, 640px);
   padding: 1.25rem;
-  background: #fff;
-  border: 1px solid rgba(195, 198, 215, 0.35);
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
@@ -22,13 +22,13 @@
   margin: 0;
   font-size: 1.0625rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--moderator-text);
 }
 
 .subtitle {
   margin: 0.25rem 0 0;
   font-size: 0.8125rem;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
 }
 
 .closeBtn {
@@ -38,22 +38,22 @@
   width: 2rem;
   height: 2rem;
   padding: 0;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
   cursor: pointer;
-  background: #f8fafc;
-  border: 1px solid rgba(195, 198, 215, 0.4);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
 }
 
 .closeBtn:hover {
-  color: #0f172a;
+  color: var(--moderator-text);
 }
 
 .loading,
 .emptyHistory {
   margin: 0;
   font-size: 0.875rem;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
 }
 
 .body {
@@ -75,13 +75,13 @@
   margin: 0 0 0.125rem;
   font-size: 0.75rem;
   font-weight: 500;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
 }
 
 .summary dd {
   margin: 0;
   font-size: 0.875rem;
-  color: #0f172a;
+  color: var(--moderator-text);
 }
 
 .reason {
@@ -89,8 +89,8 @@
   padding: 0.75rem 0.875rem;
   font-size: 0.8125rem;
   line-height: 1.5;
-  color: #334155;
-  background: #f8fafc;
+  color: var(--moderator-text-muted);
+  background: var(--color-surface-elevated);
   border-radius: 8px;
 }
 
@@ -104,7 +104,7 @@
   margin: 0;
   font-size: 0.9375rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--moderator-text);
 }
 
 .historyList {
@@ -118,8 +118,8 @@
 
 .historyItem {
   padding: 0.75rem 0.875rem;
-  background: #f8fafc;
-  border: 1px solid rgba(195, 198, 215, 0.25);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--moderator-border);
   border-radius: 8px;
 }
 
@@ -134,12 +134,12 @@
 .historyAction {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--moderator-text);
 }
 
 .historyHead time {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
 }
 
 .historyReason,
@@ -150,12 +150,12 @@
 }
 
 .historyReason {
-  color: #334155;
+  color: var(--moderator-text-muted);
 }
 
 .historyMeta {
   margin-top: 0.25rem;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
 }
 
 .unbanBtn {
@@ -167,9 +167,9 @@
   font-family: inherit;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #fff;
+  color: var(--moderator-surface);
   cursor: pointer;
-  background: #059669;
+  background: var(--color-success);
   border: none;
   border-radius: 8px;
 }
@@ -183,5 +183,5 @@
   margin: 0;
   font-size: 0.75rem;
   line-height: 1.45;
-  color: #64748b;
+  color: var(--moderator-text-subtle);
 }

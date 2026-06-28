@@ -63,14 +63,14 @@
 
 .pillActive {
   font-weight: 600;
-  color: #ffffff;
+  color: var(--color-auth-on-brand);
   background: var(--color-filter-active, #7c3aed);
   border-color: var(--color-filter-active, #7c3aed);
   box-shadow: 0 1px 3px color-mix(in srgb, var(--color-filter-active, #7c3aed) 32%, transparent);
 }
 
 .pillActive:hover:not(:disabled) {
-  color: #ffffff;
+  color: var(--color-auth-on-brand);
   background: var(--color-filter-active, #7c3aed);
 }
 
