@@ -1,6 +1,6 @@
 .panel {
-  --featured-max-visible: 6;
-  --featured-row-height: 3rem;
+  --featured-max-visible: 3;
+  --featured-row-height: 3.75rem;
   display: flex;
   flex-direction: column;
   min-height: 0;

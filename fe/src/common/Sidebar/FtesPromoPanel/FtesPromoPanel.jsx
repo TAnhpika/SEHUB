@@ -5,11 +5,11 @@ import styles from "./FtesPromoPanel.module.css";
 
 const FTES_URL = "https://ftes.vn/vi";
 
-function FtesPromoPanel() {
+function FtesPromoPanel({ className = "" }) {
   return (
     <a
       href={FTES_URL}
-      className={styles.card}
+      className={`${styles.card} ${className}`.trim()}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Khám phá khóa học tại FTES"

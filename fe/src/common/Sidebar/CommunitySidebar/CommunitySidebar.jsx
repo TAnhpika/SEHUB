@@ -34,7 +34,7 @@ function CommunitySidebar() {
 
       <FeaturedPostsPanel className={`${styles.panel} ${styles.featured}`} />
 
-      <FtesPromoPanel />
+      <FtesPromoPanel className={styles.promo} />
     </aside>
   );
 }

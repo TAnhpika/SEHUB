@@ -7,7 +7,7 @@ import {
 import styles from "./FeaturedPostsPanel.module.css";
 
 /** Matches --featured-max-visible in FeaturedPostsPanel.module.css */
-const MAX_VISIBLE_FEATURED = 6;
+const MAX_VISIBLE_FEATURED = 3;
 
 function FeaturedPostsPanel({ className = "" }) {
   const [posts, setPosts] = useState([]);
