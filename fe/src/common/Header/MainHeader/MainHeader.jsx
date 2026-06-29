@@ -4,7 +4,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBars, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import HeaderUserActions from "@/common/Header/HeaderUserActions/HeaderUserActions";
 import { useMainShellOptional } from "@/common/context/MainShellContext";
-import { useAuth } from "@/context";
 import logoSrc from "@/img/logo.png";
 import styles from "./MainHeader.module.css";
 
@@ -12,9 +11,8 @@ function MainHeader() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { isAdmin } = useAuth();
   const mainShell = useMainShellOptional();
-  const brandTo = isAdmin ? "/admin" : "/home";
+  const brandTo = "/home";
   const isSearchPage = location.pathname === "/home/search";
   const [searchQuery, setSearchQuery] = useState(() =>
     isSearchPage ? (searchParams.get("q") ?? "") : "",

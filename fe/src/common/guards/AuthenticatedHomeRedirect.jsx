@@ -12,9 +12,8 @@ function AuthenticatedHomeRedirect() {
     return <AuthBootstrapFallback />;
   }
 
-  if (isAuthenticated) {
-    const homePath =
-      location.pathname === "/" ? "/home" : mapCommunityPathToHome(location.pathname);
+  if (isAuthenticated && location.pathname !== "/") {
+    const homePath = mapCommunityPathToHome(location.pathname);
 
     if (homePath) {
       const destination = resolveAuthenticatedLandingPath(user, homePath);

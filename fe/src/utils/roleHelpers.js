@@ -6,8 +6,8 @@ export function isStaffUser(user) {
 }
 
 /**
- * Đường dẫn mặc định sau đăng nhập theo vai trò.
- * Staff (admin/moderator) luôn về panel riêng — không quay lại trang guest trong state.from.
+ * Đường dẫn sau đăng nhập / verify email / mở /login khi đã auth.
+ * Chỉ dùng cho luồng đăng nhập — không dùng khi duyệt landing (/).
  * @param {{ role?: string } | null | undefined} user
  * @param {string} [fallback="/home"]
  */
@@ -24,13 +24,9 @@ export function getRoleHomePath(user, fallback = "/home") {
 }
 
 /**
- * Đích landing khi user đã đăng nhập mở trang guest (/ hoặc /community).
- * Staff chỉ bị chuyển về panel khi đích là feed sinh viên (/home); URL sâu hơn giữ nguyên.
+ * Đích sau khi map /community → /home cho user đã đăng nhập.
+ * Trang chủ (/) luôn hiển thị landing — không redirect theo role.
  */
-export function resolveAuthenticatedLandingPath(user, path = "/home") {
-  if (isStaffUser(user) && path === "/home") {
-    return getRoleHomePath(user);
-  }
-
+export function resolveAuthenticatedLandingPath(_user, path = "/home") {
   return path;
 }
