@@ -44,6 +44,10 @@ function SearchAllPage() {
     users: 0,
   });
 
+  const isSearching =
+    Boolean(query) &&
+    (query !== debouncedQuery || localLoading || blogsLoading || usersLoading);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -375,7 +379,13 @@ function SearchAllPage() {
           </h1>
           {query ? (
             <p className={styles.subtitle}>
-              Tìm thấy <strong>{counts.all}</strong> kết quả
+              {isSearching ? (
+                "Đang tìm kiếm..."
+              ) : (
+                <>
+                  Tìm thấy <strong>{counts.all}</strong> kết quả
+                </>
+              )}
             </p>
           ) : (
             <p className={styles.subtitle}>

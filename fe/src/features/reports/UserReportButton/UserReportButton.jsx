@@ -18,6 +18,7 @@ function UserReportButton({
   questionCommentId,
   label = "Báo cáo người dùng",
   variant = "icon",
+  icon = faFlag,
 }) {
   const { requireAuth } = useRequireAuth();
   const { showToast } = useToast();
@@ -50,7 +51,7 @@ function UserReportButton({
     <>
       {variant === "button" ? (
         <button type="button" className={className} onClick={handleClick}>
-          <FontAwesomeIcon icon={faFlag} />
+          <FontAwesomeIcon icon={icon} />
           {label}
         </button>
       ) : (
@@ -61,7 +62,7 @@ function UserReportButton({
           title={label}
           onClick={handleClick}
         >
-          <FontAwesomeIcon icon={faFlag} />
+          <FontAwesomeIcon icon={icon} />
         </button>
       )}
 

@@ -7,6 +7,7 @@ import {
   faHeart,
   faReply,
   faShareNodes,
+  faUserSlash,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
@@ -430,6 +431,7 @@ function PostDetailModal({
                         postId={post.id}
                         className={`${styles.share} ${styles.report}`}
                         label="Báo cáo tác giả"
+                        icon={faUserSlash}
                       />
                     ) : null}
                   </>
