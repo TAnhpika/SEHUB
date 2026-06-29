@@ -87,7 +87,8 @@
   flex-wrap: wrap;
   gap: 0.5rem 0;
   align-items: center;
-  padding: 1rem 1.25rem;
+  margin-inline: -1.5rem;
+  padding: 1rem calc(1.25rem + 1.5rem);
   background: var(--pending-surface);
   border: 1px solid var(--pending-border);
   border-radius: var(--pending-radius);

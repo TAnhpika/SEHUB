@@ -55,8 +55,13 @@
 }
 
 .metricTotal {
-  color: var(--color-primary-dark);
-  background: var(--moderator-primary-soft);
+  color: var(--moderator-primary);
+  background: color-mix(in srgb, var(--moderator-primary) 12%, var(--moderator-surface));
+}
+
+[data-theme="dark"] .metricTotal {
+  color: #93c5fd;
+  background: color-mix(in srgb, var(--moderator-primary) 22%, var(--moderator-surface-elevated));
 }
 
 .metricValue {

@@ -82,9 +82,14 @@
   padding: 0.125rem 0.45rem;
   font-size: 0.6875rem;
   font-weight: 600;
-  color: var(--color-primary-dark);
-  background: var(--moderator-primary-soft);
+  color: var(--moderator-primary);
+  background: color-mix(in srgb, var(--moderator-primary) 12%, var(--moderator-surface));
   border-radius: 4px;
+}
+
+[data-theme="dark"] .contentHintResubmit {
+  color: #93c5fd;
+  background: color-mix(in srgb, var(--moderator-primary) 22%, var(--moderator-surface-elevated));
 }
 
 .card {
@@ -108,20 +113,38 @@
   justify-content: space-between;
   margin: 1rem 1.25rem 0;
   padding: 0.875rem 1rem;
-  background: var(--moderator-primary-soft);
-  border: 1px solid rgba(37, 99, 235, 0.18);
+  background: color-mix(in srgb, var(--moderator-primary) 12%, var(--moderator-surface));
+  border: 1px solid color-mix(in srgb, var(--moderator-primary) 28%, var(--moderator-border));
   border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.06);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--moderator-primary) 8%, transparent);
 }
 
 .bulkText {
   margin: 0;
   font-size: 0.875rem;
-  color: var(--color-primary-dark);
+  font-weight: 500;
+  color: var(--moderator-text);
 }
 
 .bulkText strong {
   font-weight: 700;
+  color: var(--moderator-primary);
+}
+
+[data-theme="dark"] .bulkBar {
+  background: color-mix(in srgb, var(--moderator-primary) 24%, var(--moderator-surface-elevated));
+  border-color: color-mix(in srgb, var(--moderator-primary) 52%, var(--moderator-border));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--moderator-primary) 18%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .bulkText {
+  color: var(--moderator-text);
+}
+
+[data-theme="dark"] .bulkText strong {
+  color: #93c5fd;
 }
 
 .bulkActions {
