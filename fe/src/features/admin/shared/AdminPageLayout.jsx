@@ -41,22 +41,22 @@ function AdminPageLayout({
 
   return (
     <div className={styles.page}>
-      {!hidePageHeader && back ? <AdminBackLink to={back.to} label={back.label} /> : null}
-
-      {!hidePageHeader && breadcrumbs?.length ? (
-        <AdminBreadcrumb items={breadcrumbs} />
-      ) : null}
-
       {!hidePageHeader ? (
-        <header className={styles.pageHeader}>
-          <div className={styles.headerCopy}>
-            <h1 className={styles.pageTitle}>{resolvedTitle}</h1>
-            {resolvedSubtitle ? (
-              <p className={styles.pageSubtitle}>{resolvedSubtitle}</p>
-            ) : null}
-          </div>
-          {actions ? <div className={styles.headerActions}>{actions}</div> : null}
-        </header>
+        <div className={styles.pageChrome}>
+          {back ? <AdminBackLink to={back.to} label={back.label} /> : null}
+
+          {breadcrumbs?.length ? <AdminBreadcrumb items={breadcrumbs} /> : null}
+
+          <header className={styles.pageHeader}>
+            <div className={styles.headerCopy}>
+              <h1 className={styles.pageTitle}>{resolvedTitle}</h1>
+              {resolvedSubtitle ? (
+                <p className={styles.pageSubtitle}>{resolvedSubtitle}</p>
+              ) : null}
+            </div>
+            {actions ? <div className={styles.headerActions}>{actions}</div> : null}
+          </header>
+        </div>
       ) : null}
 
       <div className={styles.pageBody}>{children}</div>
