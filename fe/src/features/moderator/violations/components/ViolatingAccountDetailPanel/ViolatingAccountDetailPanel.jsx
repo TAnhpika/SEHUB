@@ -1,31 +1,44 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLockOpen, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faLockOpen, faTriangleExclamation, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { Modal } from "@/common/Modal/Modal";
 import ModeratorBadge from "@/features/moderator/components/ModeratorBadge/ModeratorBadge";
 import { STATUS_META } from "@/features/moderator/violations/violationsData";
 import styles from "./ViolatingAccountDetailPanel.module.css";
 
-function ViolatingAccountDetailPanel({ detail, loading, onClose, onUnban, unbanLoading }) {
-  if (!detail && !loading) {
-    return null;
-  }
-
+function ViolatingAccountDetailPanel({ open, detail, loading, onClose, onUnban, unbanLoading }) {
   const statusMeta = STATUS_META[detail?.status] ?? STATUS_META.normal;
   const canUnban = detail?.status === "locked";
 
   return (
-    <aside className={styles.panel} aria-label="Chi tiết tài khoản vi phạm">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Chi tiết vi phạm"
+      titleId="violating-account-detail-title"
+      className={styles.overlay}
+      panelClassName={styles.dialog}
+      closeOnOverlay
+    >
+      <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Đóng">
+        <FontAwesomeIcon icon={faXmark} />
+      </button>
+
       <header className={styles.header}>
+        <span className={styles.icon} aria-hidden="true">
+          <FontAwesomeIcon icon={faTriangleExclamation} />
+        </span>
         <div>
-          <h2 className={styles.title}>Chi tiết vi phạm</h2>
+          <h2 id="violating-account-detail-title" className={styles.title}>
+            Chi tiết vi phạm
+          </h2>
           {detail ? (
             <p className={styles.subtitle}>
               {detail.displayName} · @{detail.username}
             </p>
-          ) : null}
+          ) : (
+            <p className={styles.subtitle}>Đang tải thông tin tài khoản...</p>
+          )}
         </div>
-        <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Đóng">
-          <FontAwesomeIcon icon={faXmark} />
-        </button>
       </header>
 
       {loading ? (
@@ -111,7 +124,7 @@ function ViolatingAccountDetailPanel({ detail, loading, onClose, onUnban, unbanL
           </p>
         </div>
       ) : null}
-    </aside>
+    </Modal>
   );
 }
 
