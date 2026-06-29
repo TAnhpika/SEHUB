@@ -10,6 +10,11 @@ public interface IUserBanRepository
     Task<int> CountByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<int> CountByUserIdAndTypeAsync(Guid userId, BanType banType, CancellationToken cancellationToken = default);
     Task<UserBan?> GetLatestByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<UserBan?> GetByIdForUserAsync(Guid id, Guid userId, CancellationToken cancellationToken = default);
+    Task<UserBan?> GetLatestByUserIdAndTypeAsync(
+        Guid userId,
+        BanType? banType,
+        CancellationToken cancellationToken = default);
     Task<IReadOnlyList<UserBan>> GetHistoryByUserIdAsync(
         Guid userId, int page, int pageSize, CancellationToken cancellationToken = default);
     Task<int> CountHistoryByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);

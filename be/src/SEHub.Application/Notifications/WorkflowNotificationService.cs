@@ -121,6 +121,7 @@ public interface IWorkflowNotificationService
     Task NotifyUserWarnedAsync(
         Guid userId,
         string reason,
+        Guid penaltyId,
         Guid? actorUserId,
         CancellationToken cancellationToken = default);
 
@@ -129,6 +130,7 @@ public interface IWorkflowNotificationService
         int durationDays,
         DateTime banUntil,
         string reason,
+        Guid penaltyId,
         Guid? actorUserId,
         CancellationToken cancellationToken = default);
 
@@ -565,6 +567,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
     public async Task NotifyUserWarnedAsync(
         Guid userId,
         string reason,
+        Guid penaltyId,
         Guid? actorUserId,
         CancellationToken cancellationToken = default)
     {
@@ -581,7 +584,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             body,
             "/home",
             actorUserId,
-            userId,
+            penaltyId,
             cancellationToken);
     }
 
@@ -590,6 +593,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         int durationDays,
         DateTime banUntil,
         string reason,
+        Guid penaltyId,
         Guid? actorUserId,
         CancellationToken cancellationToken = default)
     {
@@ -606,7 +610,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             body,
             "/support",
             actorUserId,
-            userId,
+            penaltyId,
             cancellationToken);
     }
 

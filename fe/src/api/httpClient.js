@@ -97,11 +97,12 @@ function resolveApiErrorMessage(payload, status) {
 }
 
 export class ApiError extends Error {
-  constructor(message, { status, errors } = {}) {
+  constructor(message, { status, errors, data } = {}) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.errors = errors ?? [];
+    this.data = data ?? null;
   }
 }
 
@@ -193,6 +194,7 @@ async function parseResponse(response) {
     throw new ApiError(resolveApiErrorMessage(payload, response.status), {
       status: response.status,
       errors: payload?.errors ?? [],
+      data: payload?.data ?? null,
     });
   }
 
