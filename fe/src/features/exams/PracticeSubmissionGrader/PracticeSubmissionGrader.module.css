@@ -83,6 +83,29 @@
   border-color: var(--color-primary);
 }
 
+.select:disabled,
+.input:disabled,
+.textarea:disabled,
+.input[readonly],
+.textarea[readonly] {
+  color: var(--color-text);
+  background: var(--color-surface-muted);
+  cursor: default;
+}
+
+.pendingHint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-primary);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
 @media (max-width: 640px) {
   .fields {
     grid-template-columns: 1fr;

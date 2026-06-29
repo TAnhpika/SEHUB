@@ -25,24 +25,47 @@ function resolveFormStatus(submissionStatus) {
   return submissionStatus === "pending" ? "reviewed" : submissionStatus;
 }
 
+function isSubmissionGraded(submission) {
+  return submission.status !== "pending" || Boolean(submission.gradedAt);
+}
+
 function PracticeSubmissionGrader({ submission, gradedBy, onGraded, compact = false }) {
   const { showToast } = useToast();
   const [status, setStatus] = useState(() => resolveFormStatus(submission.status));
   const [grade, setGrade] = useState(submission.grade ?? "");
   const [feedback, setFeedback] = useState(submission.feedback ?? "");
   const [saving, setSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(() => !isSubmissionGraded(submission));
 
   useEffect(() => {
     setStatus(resolveFormStatus(submission.status));
     setGrade(submission.grade ?? "");
     setFeedback(submission.feedback ?? "");
+    setIsEditing(!isSubmissionGraded(submission));
   }, [submission.id, submission.status, submission.grade, submission.feedback, submission.gradedAt]);
 
   const savedStatus = resolveFormStatus(submission.status);
+  const isGraded = isSubmissionGraded(submission);
+  const fieldsLocked = isGraded && !isEditing;
   const hasUnsavedChanges =
     status !== savedStatus ||
     grade !== (submission.grade ?? "") ||
     feedback !== (submission.feedback ?? "");
+
+  function resetFormFromSubmission() {
+    setStatus(resolveFormStatus(submission.status));
+    setGrade(submission.grade ?? "");
+    setFeedback(submission.feedback ?? "");
+  }
+
+  function handleStartEdit() {
+    setIsEditing(true);
+  }
+
+  function handleCancelEdit() {
+    resetFormFromSubmission();
+    setIsEditing(false);
+  }
 
   async function handleSave() {
     if ((status === "pass" || status === "fail") && !grade.trim()) {
@@ -62,6 +85,7 @@ function PracticeSubmissionGrader({ submission, gradedBy, onGraded, compact = fa
 
       if (updated) {
         showToast("Đã cập nhật kết quả chấm.");
+        setIsEditing(false);
         onGraded?.(updated);
       }
     } catch (error) {
@@ -82,6 +106,10 @@ function PracticeSubmissionGrader({ submission, gradedBy, onGraded, compact = fa
         </div>
       ) : null}
 
+      {!isGraded ? (
+        <p className={styles.pendingHint}>Bài nộp mới — nhập điểm và nhận xét rồi lưu kết quả.</p>
+      ) : null}
+
       <div className={styles.fields}>
         <label className={styles.field}>
           <span className={styles.label}>Trạng thái</span>
@@ -89,7 +117,7 @@ function PracticeSubmissionGrader({ submission, gradedBy, onGraded, compact = fa
             className={styles.select}
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            disabled={saving}
+            disabled={saving || fieldsLocked}
           >
             {STATUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -108,6 +136,7 @@ function PracticeSubmissionGrader({ submission, gradedBy, onGraded, compact = fa
             value={grade}
             onChange={(e) => setGrade(e.target.value)}
             disabled={saving}
+            readOnly={fieldsLocked}
           />
         </label>
       </div>
@@ -121,12 +150,28 @@ function PracticeSubmissionGrader({ submission, gradedBy, onGraded, compact = fa
           value={feedback}
           onChange={(e) => setFeedback(e.target.value)}
           disabled={saving}
+          readOnly={fieldsLocked}
         />
       </label>
 
-      <Button type="button" onClick={handleSave} disabled={saving || !hasUnsavedChanges}>
-        Lưu kết quả chấm
-      </Button>
+      <div className={styles.actions}>
+        {fieldsLocked ? (
+          <Button type="button" look="outline" onClick={handleStartEdit} disabled={saving}>
+            Chỉnh sửa
+          </Button>
+        ) : (
+          <>
+            {isGraded ? (
+              <Button type="button" look="outline" onClick={handleCancelEdit} disabled={saving}>
+                Hủy
+              </Button>
+            ) : null}
+            <Button type="button" onClick={handleSave} disabled={saving || !hasUnsavedChanges}>
+              Lưu kết quả chấm
+            </Button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
