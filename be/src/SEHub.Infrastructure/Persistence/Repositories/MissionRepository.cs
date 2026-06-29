@@ -21,27 +21,27 @@ public class MissionRepository : IMissionRepository
         return items.Select(m => (m.Id, m.Code, m.Name, m.EventType, m.TargetCount, m.RewardPoints)).ToList();
     }
 
-    public async Task<IReadOnlyList<(Guid Id, string Code, string EventType, int RewardPoints)>> GetActiveDailyByEventTypeAsync(
+    public async Task<IReadOnlyList<(Guid Id, string Code, string EventType, int TargetCount, int RewardPoints)>> GetActiveDailyByEventTypeAsync(
         string eventType,
         CancellationToken cancellationToken = default)
     {
         var items = await _context.DailyMissions
             .Where(m => m.IsActive && m.EventType == eventType)
-            .Select(m => new { m.Id, m.Code, m.EventType, m.RewardPoints })
+            .Select(m => new { m.Id, m.Code, m.EventType, m.TargetCount, m.RewardPoints })
             .ToListAsync(cancellationToken);
 
-        return items.Select(m => (m.Id, m.Code, m.EventType, m.RewardPoints)).ToList();
+        return items.Select(m => (m.Id, m.Code, m.EventType, m.TargetCount, m.RewardPoints)).ToList();
     }
 
-    public async Task<IReadOnlyList<(Guid Id, string Code, string EventType, int RewardPoints)>> GetActiveWeeklyByEventTypeAsync(
+    public async Task<IReadOnlyList<(Guid Id, string Code, string EventType, int TargetCount, int RewardPoints)>> GetActiveWeeklyByEventTypeAsync(
         string eventType,
         CancellationToken cancellationToken = default)
     {
         var items = await _context.WeeklyMissions
             .Where(m => m.IsActive && m.EventType == eventType)
-            .Select(m => new { m.Id, m.Code, m.EventType, m.RewardPoints })
+            .Select(m => new { m.Id, m.Code, m.EventType, m.TargetCount, m.RewardPoints })
             .ToListAsync(cancellationToken);
 
-        return items.Select(m => (m.Id, m.Code, m.EventType, m.RewardPoints)).ToList();
+        return items.Select(m => (m.Id, m.Code, m.EventType, m.TargetCount, m.RewardPoints)).ToList();
     }
 }

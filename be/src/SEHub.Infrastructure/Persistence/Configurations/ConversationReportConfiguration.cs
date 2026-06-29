@@ -14,7 +14,7 @@ public class ConversationReportConfiguration : IEntityTypeConfiguration<Conversa
 
         builder.Property(r => r.Reason).HasMaxLength(200).IsRequired();
         builder.Property(r => r.Detail).HasMaxLength(2000).IsRequired();
-        builder.Property(r => r.Status).HasConversion<string>().HasMaxLength(32);
+        builder.Property(r => r.Status).HasConversion<int>();
         builder.Property(r => r.ResolutionNote).HasMaxLength(500);
 
         builder.HasIndex(r => new { r.ConversationId, r.ReporterId, r.Status });
@@ -28,5 +28,10 @@ public class ConversationReportConfiguration : IEntityTypeConfiguration<Conversa
             .WithMany()
             .HasForeignKey(r => r.ReporterId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(r => r.ResolvedById)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

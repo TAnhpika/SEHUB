@@ -35,6 +35,7 @@ public sealed class PostService : IPostService
     private readonly ICdnFolderSettings _cdnFolders;
     private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly IFileStorageService _fileStorage;
+    private readonly IPostTagRepository _postTagRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
@@ -52,6 +53,7 @@ public sealed class PostService : IPostService
         ICdnFolderSettings cdnFolders,
         IWorkflowNotificationService workflowNotifications,
         IFileStorageService fileStorage,
+        IPostTagRepository postTagRepository,
         IUnitOfWork unitOfWork,
         IMapper mapper)
     {
@@ -68,6 +70,7 @@ public sealed class PostService : IPostService
         _cdnFolders = cdnFolders;
         _workflowNotifications = workflowNotifications;
         _fileStorage = fileStorage;
+        _postTagRepository = postTagRepository;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
@@ -215,13 +218,13 @@ public sealed class PostService : IPostService
             AuthorId = userId,
             Title = request.Title,
             Content = request.Content,
-            Tags = string.Join(',', request.Tags ?? []),
             CoverImageUrl = NormalizeCoverImageUrl(request.CoverImageUrl),
             Status = PostStatus.Pending,
             CreatedAt = DateTime.UtcNow
         };
 
         await _postRepository.AddAsync(post, cancellationToken);
+        await _postTagRepository.SyncPostTagsAsync(post.Id, request.Tags ?? [], cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         if (!_currentUser.IsModeratorOrAdmin)
@@ -241,7 +244,6 @@ public sealed class PostService : IPostService
 
         post.Title = request.Title;
         post.Content = request.Content;
-        post.Tags = string.Join(',', request.Tags ?? []);
         if (request.CoverImageUrl is not null)
         {
             post.CoverImageUrl = NormalizeCoverImageUrl(request.CoverImageUrl);
@@ -255,6 +257,7 @@ public sealed class PostService : IPostService
         post.UpdatedAt = DateTime.UtcNow;
 
         await _postRepository.UpdateAsync(post, cancellationToken);
+        await _postTagRepository.SyncPostTagsAsync(post.Id, request.Tags ?? [], cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         if (resubmittedForReview && !_currentUser.IsModeratorOrAdmin)
@@ -423,6 +426,7 @@ public sealed class PostService : IPostService
         var likedPostIds = _currentUser.UserId is Guid userId
             ? await _likeRepository.GetLikedPostIdsAsync(userId, postIds, cancellationToken)
             : (IReadOnlySet<Guid>)new HashSet<Guid>();
+        var tagsByPostId = await _postTagRepository.GetTagNamesForPostsAsync(postIds, cancellationToken);
 
         var imagesByPostId = postImages.GroupBy(i => i.PostId).ToDictionary(g => g.Key, g => g.ToList());
         var authorsById = authors.ToDictionary(a => a.Id);
@@ -444,7 +448,7 @@ public sealed class PostService : IPostService
                 ContentPreview = PostContentPreview.BuildContentPreview(post.Content),
                 PreviewImageUrl = PostContentPreview.ExtractFirstImageUrl(post.Content),
                 Author = BuildAuthorSummary(post.AuthorId, authorUser, profile),
-                Tags = ParseTags(post.Tags),
+                Tags = tagsByPostId.GetValueOrDefault(post.Id) ?? [],
                 LikeCount = likeCounts.GetValueOrDefault(post.Id),
                 CommentCount = commentCounts.GetValueOrDefault(post.Id),
                 ViewCount = post.ViewCount,
@@ -491,7 +495,7 @@ public sealed class PostService : IPostService
             Id = post.Id,
             Title = post.Title,
             Content = post.Content,
-            Tags = ParseTags(post.Tags),
+            Tags = await _postTagRepository.GetTagNamesForPostAsync(post.Id, cancellationToken),
             Status = post.Status.ToString(),
             Author = await BuildAuthorAsync(post.AuthorId, cancellationToken),
             LikeCount = await _likeRepository.CountByPostIdAsync(post.Id, cancellationToken),
@@ -525,9 +529,6 @@ public sealed class PostService : IPostService
 
     private static string BuildExcerpt(string content) =>
         PostContentPreview.BuildTextExcerpt(content);
-
-    private static IReadOnlyList<string> ParseTags(string tags) =>
-        string.IsNullOrWhiteSpace(tags) ? [] : tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     private static string? NormalizeCoverImageUrl(string? coverImageUrl)
     {

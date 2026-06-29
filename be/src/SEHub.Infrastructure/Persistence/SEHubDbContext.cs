@@ -68,6 +68,10 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<ConversationReport> ConversationReports => Set<ConversationReport>();
     public DbSet<ViolationEscalation> ViolationEscalations => Set<ViolationEscalation>();
     public DbSet<UserFeedback> UserFeedbacks => Set<UserFeedback>();
+    public DbSet<Tag> Tags => Set<Tag>();
+    public DbSet<PostTag> PostTags => Set<PostTag>();
+    public DbSet<QuestionAttachment> QuestionAttachments => Set<QuestionAttachment>();
+    public DbSet<UserMissionProgress> UserMissionProgress => Set<UserMissionProgress>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

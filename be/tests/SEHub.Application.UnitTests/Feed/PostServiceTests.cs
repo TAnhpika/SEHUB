@@ -26,6 +26,7 @@ public sealed class PostServiceTests
     private readonly Mock<ICdnFolderSettings> _cdnFolders = new();
     private readonly Mock<IWorkflowNotificationService> _workflowNotifications = new();
     private readonly Mock<IFileStorageService> _fileStorage = new();
+    private readonly Mock<IPostTagRepository> _postTagRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
     private static readonly Guid PostId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
@@ -34,6 +35,12 @@ public sealed class PostServiceTests
     private PostService CreateSut()
     {
         _cdnFolders.SetupGet(f => f.Posts).Returns(CdnFolders.Posts);
+        _postTagRepository
+            .Setup(r => r.GetTagNamesForPostAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _postTagRepository
+            .Setup(r => r.GetTagNamesForPostsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, IReadOnlyList<string>>());
         return new(
             _postRepository.Object,
             _imageRepository.Object,
@@ -48,6 +55,7 @@ public sealed class PostServiceTests
             _cdnFolders.Object,
             _workflowNotifications.Object,
             _fileStorage.Object,
+            _postTagRepository.Object,
             _unitOfWork.Object,
             AutoMapperFactory.Create());
     }

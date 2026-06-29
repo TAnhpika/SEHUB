@@ -52,6 +52,10 @@ export function updateExam(id, body) {
   });
 }
 
+export function deleteExam(id) {
+  return apiRequest(`/api/v1/admin/exams/${id}`, { method: "DELETE" });
+}
+
 export function approveExam(id) {
   return apiRequest(`/api/v1/admin/exams/${id}/approve`, { method: "POST" });
 }
@@ -362,6 +366,17 @@ export function updateGamificationPointRule(id, body) {
 
 export function deleteGamificationPointRule(id) {
   return apiRequest(`/api/v1/admin/gamification/point-rules/${id}`, { method: "DELETE" });
+}
+
+export function reconcilePoints({ userId, applyFix = false } = {}) {
+  const params = new URLSearchParams();
+  if (userId) params.set("userId", userId);
+  if (applyFix) params.set("applyFix", "true");
+  const query = params.toString();
+  return apiRequest(
+    `/api/v1/admin/gamification/points/reconcile${query ? `?${query}` : ""}`,
+    { method: "POST" },
+  );
 }
 
 export function listModerationPracticeSubmissions(params = {}) {

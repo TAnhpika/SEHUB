@@ -10,6 +10,7 @@ using SEHub.Infrastructure.Auth;
 using SEHub.Infrastructure.Email;
 using SEHub.Infrastructure.Identity;
 using SEHub.Infrastructure.Notifications;
+using SEHub.Infrastructure.Gamification;
 using SEHub.Infrastructure.Payments;
 using SEHub.Infrastructure.Persistence;
 using SEHub.Infrastructure.Persistence.Interceptors;
@@ -92,6 +93,9 @@ public static class DependencyInjection
         services.AddScoped<IUserLevelHistoryRepository, UserLevelHistoryRepository>();
         services.AddScoped<ILeaderboardRepository, LeaderboardRepository>();
         services.AddScoped<IMissionRepository, MissionRepository>();
+        services.AddScoped<IPostTagRepository, PostTagRepository>();
+        services.AddScoped<IUserMissionProgressRepository, UserMissionProgressRepository>();
+        services.AddScoped<IQuestionAttachmentRepository, QuestionAttachmentRepository>();
         services.AddScoped<IProfileActivityCache, ProfileActivityCache>();
         services.AddScoped<IProfileSnapshotCache, ProfileSnapshotCache>();
         services.AddScoped<IUserBanRepository, UserBanRepository>();
@@ -160,6 +164,7 @@ public static class DependencyInjection
         if (!string.Equals(environmentName, "Testing", StringComparison.OrdinalIgnoreCase))
         {
             services.AddHostedService<PaymentOrderExpiryBackgroundService>();
+            services.AddHostedService<PointsReconciliationBackgroundService>();
         }
 
         if (AiInfrastructureRegistration.ShouldUseOpenRouter(configuration))

@@ -8,7 +8,6 @@ public class Post : BaseEntity, ISoftDeletable
     public Guid AuthorId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
-    public string Tags { get; set; } = string.Empty;
     public PostStatus Status { get; set; }
     public int ViewCount { get; set; }
     public string? CoverImageUrl { get; set; }
@@ -25,4 +24,5 @@ public class Post : BaseEntity, ISoftDeletable
     public ICollection<PostLike> Likes { get; set; } = [];
     public ICollection<PostReport> Reports { get; set; } = [];
     public ICollection<PostImage> Images { get; set; } = [];
+    public ICollection<PostTag> PostTags { get; set; } = [];
 }

@@ -5,6 +5,7 @@ using SEHub.Application.Feed;
 using SEHub.Application.Gamification;
 using SEHub.Application.Notifications;
 using SEHub.Application.Profiles;
+using SEHub.Application.Users;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Exams;
@@ -26,9 +27,11 @@ public sealed class ModerationService : IModerationService
     private readonly ICommentReportRepository _commentReportRepository;
     private readonly ICommentRepository _commentRepository;
     private readonly IPostRepository _postRepository;
+    private readonly IPostTagRepository _postTagRepository;
     private readonly IUserRepository _userRepository;
     private readonly IUserProfileRepository _profileRepository;
     private readonly IUserBanRepository _banRepository;
+    private readonly IBanStatusService _banStatusService;
     private readonly IViolationEscalationRepository _escalationRepository;
     private readonly IViolationQueueRepository _violationQueueRepository;
     private readonly IConversationReportRepository _conversationReportRepository;
@@ -49,9 +52,11 @@ public sealed class ModerationService : IModerationService
         ICommentReportRepository commentReportRepository,
         ICommentRepository commentRepository,
         IPostRepository postRepository,
+        IPostTagRepository postTagRepository,
         IUserRepository userRepository,
         IUserProfileRepository profileRepository,
         IUserBanRepository banRepository,
+        IBanStatusService banStatusService,
         IViolationEscalationRepository escalationRepository,
         IViolationQueueRepository violationQueueRepository,
         IConversationReportRepository conversationReportRepository,
@@ -71,9 +76,11 @@ public sealed class ModerationService : IModerationService
         _commentReportRepository = commentReportRepository;
         _commentRepository = commentRepository;
         _postRepository = postRepository;
+        _postTagRepository = postTagRepository;
         _userRepository = userRepository;
         _profileRepository = profileRepository;
         _banRepository = banRepository;
+        _banStatusService = banStatusService;
         _escalationRepository = escalationRepository;
         _violationQueueRepository = violationQueueRepository;
         _conversationReportRepository = conversationReportRepository;
@@ -417,7 +424,7 @@ public sealed class ModerationService : IModerationService
         var profile = await _profileRepository.GetByUserIdAsync(userId, cancellationToken);
         var warningCount = await _banRepository.CountByUserIdAndTypeAsync(userId, BanType.Warning, cancellationToken);
         var tempBanCount = await _banRepository.CountByUserIdAndTypeAsync(userId, BanType.Temp, cancellationToken);
-        var latestBan = await _banRepository.GetLatestByUserIdAsync(userId, cancellationToken);
+        var latestBan = await _banStatusService.GetActiveBanAsync(userId, cancellationToken);
         var historyRecords = await _banRepository.GetHistoryByUserIdAsync(userId, 1, 20, cancellationToken);
         var history = new List<ViolationHistoryItemDto>();
 
@@ -671,8 +678,8 @@ public sealed class ModerationService : IModerationService
 
         if (_currentUser.Role == RoleNames.Moderator)
         {
-            var latestBan = await _banRepository.GetLatestByUserIdAsync(userId, cancellationToken);
-            if (latestBan?.BanType == BanType.Permanent)
+            var activeBan = await _banStatusService.GetActiveBanAsync(userId, cancellationToken);
+            if (activeBan?.BanType == BanType.Permanent)
             {
                 throw new ForbiddenException("Moderators cannot lift permanent bans.");
             }
@@ -915,6 +922,8 @@ public sealed class ModerationService : IModerationService
 
         var usersById = (users ?? []).ToDictionary(u => u.Id);
         var profilesByUserId = (profiles ?? []).ToDictionary(p => p.UserId);
+        var postIds = posts.Select(p => p.Id).ToList();
+        var tagsByPostId = await _postTagRepository.GetTagNamesForPostsAsync(postIds, cancellationToken);
 
         var dtos = new List<ModerationPostListItemDto>(posts.Count);
         foreach (var post in posts)
@@ -935,7 +944,7 @@ public sealed class ModerationService : IModerationService
                 Excerpt = BuildExcerpt(post.Content),
                 Status = post.Status.ToString(),
                 Author = BuildModerationAuthor(post.AuthorId, authorUser),
-                Tags = ParseTags(post.Tags),
+                Tags = tagsByPostId.GetValueOrDefault(post.Id) ?? [],
                 Major = profile?.Major,
                 Semester = profile?.Semester,
                 CreatedAt = post.CreatedAt,
@@ -983,7 +992,7 @@ public sealed class ModerationService : IModerationService
 
         var profile = await _profileRepository.GetByUserIdAsync(userId, cancellationToken);
         var warningCount = await _banRepository.CountByUserIdAndTypeAsync(userId, BanType.Warning, cancellationToken);
-        var latestBan = await _banRepository.GetLatestByUserIdAsync(userId, cancellationToken);
+        var latestBan = await _banStatusService.GetActiveBanAsync(userId, cancellationToken);
 
         return BuildViolatingUserDto(
             user,
@@ -1094,9 +1103,4 @@ public sealed class ModerationService : IModerationService
 
     private static string BuildExcerpt(string content) =>
         content.Length <= 200 ? content : content[..200] + "...";
-
-    private static IReadOnlyList<string> ParseTags(string tags) =>
-        string.IsNullOrWhiteSpace(tags)
-            ? []
-            : tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }

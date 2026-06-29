@@ -24,6 +24,21 @@
   border-radius: 12px;
 }
 
+.reconcilePanel {
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
+  border-radius: 12px;
+}
+
+.sectionTitle {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--moderator-text);
+}
+
 .statLabel {
   font-size: 0.6875rem;
   font-weight: 600;

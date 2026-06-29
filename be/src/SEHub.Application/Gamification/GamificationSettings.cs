@@ -5,4 +5,6 @@ public sealed class GamificationSettings
     public const string SectionName = "Gamification";
     public bool UseEngine { get; set; } = true;
     public bool UseRedisCache { get; set; } = false;
+    public bool ReconcilePointsSchedule { get; set; } = false;
+    public bool ApplyFixOnSchedule { get; set; } = false;
 }

@@ -5,14 +5,6 @@ import {
   faPlus,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
-import Button from "@/common/Button/Button";
-import { useToast } from "@/common/Toast/ToastProvider";
-import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
-import StatusBadge from "@/features/admin/shared/StatusBadge";
-import BadgeFormModal from "@/features/admin/gamification/BadgeFormModal";
-import GamificationDeleteModal from "@/features/admin/gamification/GamificationDeleteModal";
-import PointRuleFormModal from "@/features/admin/gamification/PointRuleFormModal";
-import RankFormModal from "@/features/admin/gamification/RankFormModal";
 import {
   createBadge,
   createPointRule,
@@ -44,6 +36,15 @@ import AdminTableFooter from "@/features/admin/shared/AdminTableFooter";
 import { ADMIN_PAGE_SIZES } from "@/features/admin/shared/adminPaginationConstants";
 import { useAdminPagination } from "@/features/admin/shared/useAdminPagination";
 import styles from "@/features/admin/shared/adminPage.module.css";
+import { reconcilePoints } from "@/api/adminApi";
+import Button from "@/common/Button/Button";
+import { useToast } from "@/common/Toast/ToastProvider";
+import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
+import StatusBadge from "@/features/admin/shared/StatusBadge";
+import BadgeFormModal from "@/features/admin/gamification/BadgeFormModal";
+import GamificationDeleteModal from "@/features/admin/gamification/GamificationDeleteModal";
+import PointRuleFormModal from "@/features/admin/gamification/PointRuleFormModal";
+import RankFormModal from "@/features/admin/gamification/RankFormModal";
 
 const TABS = [
   { id: "ranks", label: "Cấp độ hạng" },
@@ -76,6 +77,10 @@ function AdminGamificationConfigPage() {
     id: null,
     label: "",
   });
+  const [reconcileUserId, setReconcileUserId] = useState("");
+  const [reconcileRows, setReconcileRows] = useState([]);
+  const [reconcileLoading, setReconcileLoading] = useState(false);
+  const [reconcileConfirmOpen, setReconcileConfirmOpen] = useState(false);
 
   useEffect(() => {
     hydrateGamificationFromApi().then((result) => {
@@ -224,6 +229,33 @@ function AdminGamificationConfigPage() {
       });
   }
 
+  async function runReconcile(applyFix) {
+    setReconcileLoading(true);
+    try {
+      const trimmedUserId = reconcileUserId.trim();
+      const result = await reconcilePoints({
+        userId: trimmedUserId || undefined,
+        applyFix,
+      });
+      const rows = Array.isArray(result) ? result : [result];
+      setReconcileRows(rows);
+      if (applyFix) {
+        showToast(rows.some((r) => r.fixed) ? "Đã áp dụng sửa điểm." : "Không có drift cần sửa.");
+      } else {
+        showToast(
+          rows.length === 0
+            ? "Không phát hiện drift điểm."
+            : `Phát hiện ${rows.length} user có drift (dry-run).`,
+        );
+      }
+    } catch (err) {
+      showToast(err.message ?? "Đối soát điểm thất bại.");
+    } finally {
+      setReconcileLoading(false);
+      setReconcileConfirmOpen(false);
+    }
+  }
+
   const createLabel =
     tab === "ranks" ? "Thêm cấp hạng" : tab === "badges" ? "Thêm danh hiệu" : "Thêm quy tắc";
 
@@ -269,6 +301,61 @@ function AdminGamificationConfigPage() {
           </p>
         </div>
       </div>
+
+      <section className={gStyles.reconcilePanel}>
+        <h2 className={gStyles.sectionTitle}>Đối soát điểm</h2>
+        <p className={gStyles.statHint}>
+          So sánh điểm cache trên user với ledger PointTransactions. Mặc định dry-run, không sửa dữ liệu.
+        </p>
+        <div className={styles.toolbar}>
+          <input
+            type="text"
+            className={styles.search}
+            placeholder="User ID (để trống = quét tất cả drift)"
+            value={reconcileUserId}
+            onChange={(e) => setReconcileUserId(e.target.value)}
+          />
+          <Button
+            look="outline"
+            disabled={reconcileLoading}
+            onClick={() => runReconcile(false)}
+          >
+            Dry-run
+          </Button>
+          <Button
+            disabled={reconcileLoading}
+            onClick={() => setReconcileConfirmOpen(true)}
+          >
+            Apply fix
+          </Button>
+        </div>
+        {reconcileRows.length > 0 ? (
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>User ID</th>
+                  <th>Cache</th>
+                  <th>Ledger</th>
+                  <th>Drift</th>
+                  <th>Fixed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reconcileRows.map((row) => (
+                  <tr key={row.userId}>
+                    <td>{row.userId}</td>
+                    <td>{row.cachedPoints}</td>
+                    <td>{row.ledgerPoints}</td>
+                    <td>{row.drift}</td>
+                    <td>{row.fixed ? "Có" : "Không"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </section>
 
       <div className={styles.tabs} role="tablist">
         {TABS.map((t) => (
@@ -729,6 +816,13 @@ function AdminGamificationConfigPage() {
         error={ruleModal.error}
         onClose={() => setRuleModal({ open: false, editing: null, error: "" })}
         onSubmit={handleRuleSubmit}
+      />
+      <GamificationDeleteModal
+        open={reconcileConfirmOpen}
+        title="Áp dụng sửa điểm"
+        targetLabel="toàn bộ drift phát hiện"
+        onClose={() => setReconcileConfirmOpen(false)}
+        onConfirm={() => runReconcile(true)}
       />
       <GamificationDeleteModal
         open={deleteModal.open}

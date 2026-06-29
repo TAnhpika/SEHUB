@@ -24,7 +24,7 @@ import {
   getTrackLabel,
   loadAdminExams,
   loadAdminPendingExams,
-  removeAdminExam,
+  removeAdminExamViaApi,
 } from "@/features/admin/exams/adminExamData";
 import { getSubmissionCountByCourseCode } from "@/features/exams/practiceExamSubmissions";
 import examStyles from "@/features/admin/exams/AdminExam.module.css";
@@ -101,6 +101,7 @@ function AdminExamListPage() {
   const [sortDir, setSortDir] = useState("desc");
   const [page, setPage] = useState(1);
   const [deleteId, setDeleteId] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [pendingCount, setPendingCount] = useState(() => getAdminPendingExams().length);
 
   useEffect(() => {
@@ -203,13 +204,24 @@ function AdminExamListPage() {
     setSortDir("desc");
   }
 
-  function confirmDelete() {
-    if (!deleteId) return;
+  async function confirmDelete() {
+    if (!deleteId || deleteLoading) return;
     const target = exams.find((e) => e.id === deleteId);
-    removeAdminExam(deleteId);
-    setExams(getAdminExams());
-    setDeleteId(null);
-    showToast(`Đã xóa đề ${target?.code ?? ""}.`);
+    setDeleteLoading(true);
+    try {
+      const removed = await removeAdminExamViaApi(deleteId);
+      if (!removed) {
+        showToast("Không xóa được đề thi.");
+        return;
+      }
+      setExams((prev) => prev.filter((e) => e.id !== deleteId));
+      setDeleteId(null);
+      showToast(`Đã xóa đề ${getExamListPaperLabel(target)}.`);
+    } catch (error) {
+      showToast(error?.message ?? "Không thể xóa đề thi.");
+    } finally {
+      setDeleteLoading(false);
+    }
   }
 
   const deleteTarget = deleteId ? exams.find((e) => e.id === deleteId) : null;
@@ -466,15 +478,18 @@ function AdminExamListPage() {
           Xóa đề thi?
         </h2>
         <p className={examStyles.modalDesc}>
-          Đề <strong>[{deleteTarget?.code}] {deleteTarget?.title}</strong> sẽ bị gỡ khỏi hệ
-          thống. Hành động không hoàn tác.
+          Đề{" "}
+          <strong>
+            [{getExamSubjectCode(deleteTarget)}] {getExamListPaperLabel(deleteTarget)}
+          </strong>{" "}
+          sẽ bị gỡ khỏi hệ thống. Hành động không hoàn tác.
         </p>
         <div className={examStyles.modalActions}>
-          <Button look="outline" type="button" onClick={() => setDeleteId(null)}>
+          <Button look="outline" type="button" onClick={() => setDeleteId(null)} disabled={deleteLoading}>
             Hủy
           </Button>
-          <Button type="button" onClick={confirmDelete}>
-            Xóa đề
+          <Button type="button" onClick={confirmDelete} disabled={deleteLoading}>
+            {deleteLoading ? "Đang xóa…" : "Xóa đề"}
           </Button>
         </div>
       </Modal>

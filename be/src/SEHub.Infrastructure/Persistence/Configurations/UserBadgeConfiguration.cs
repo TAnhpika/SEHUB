@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SEHub.Domain.Entities;
+using SEHub.Infrastructure.Identity;
 
 namespace SEHub.Infrastructure.Persistence.Configurations;
 
@@ -14,5 +15,10 @@ public class UserBadgeConfiguration : IEntityTypeConfiguration<UserBadge>
             .WithMany(b => b.UserBadges)
             .HasForeignKey(ub => ub.BadgeId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(ub => ub.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

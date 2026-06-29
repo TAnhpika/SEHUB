@@ -9,7 +9,9 @@ using SEHub.Application.Premium;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Infrastructure.Identity;
+using SEHub.Infrastructure.Persistence.Repositories;
 using SEHub.Shared.Constants;
+using SEHub.Shared.Feed;
 
 namespace SEHub.Infrastructure.Persistence;
 
@@ -295,16 +297,26 @@ public static class DemoDataSeeder
             legacyDocument.FilePath = DocumentRelativePath;
         }
 
+        var demoTagSlug = TagSlug.ToSlug(DemoPostTag);
+        var showcaseTagSlug = TagSlug.ToSlug(ShowcasePostsSeeder.ShowcasePostTag);
+        var se301TagSlug = TagSlug.ToSlug("SE301");
         var legacyDemoPosts = await context.Posts
             .Where(p =>
-                (p.Tags.Contains(DemoPostTag) || p.Tags.Contains(ShowcasePostsSeeder.ShowcasePostTag))
-                && (p.Title.Contains("SE301") || p.Content.Contains("SE301") || p.Tags.Contains("SE301")))
+                p.PostTags.Any(pt => pt.Tag.Slug == demoTagSlug || pt.Tag.Slug == showcaseTagSlug)
+                && (p.Title.Contains("SE301") || p.Content.Contains("SE301")
+                    || p.PostTags.Any(pt => pt.Tag.Slug == se301TagSlug)))
             .ToListAsync();
+        var tagRepository = new PostTagRepository(context);
         foreach (var post in legacyDemoPosts)
         {
             post.Title = ReplaceLegacySe301Text(post.Title);
             post.Content = ReplaceLegacySe301Text(post.Content);
-            post.Tags = ReplaceLegacySe301Text(post.Tags);
+            var tagNames = await context.PostTags
+                .Where(pt => pt.PostId == post.Id)
+                .Select(pt => pt.Tag.Name)
+                .ToListAsync();
+            var updatedTags = tagNames.Select(ReplaceLegacySe301Text).ToList();
+            await tagRepository.SyncPostTagsAsync(post.Id, updatedTags);
         }
 
         if (legacyCategory is not null
@@ -685,7 +697,6 @@ public static class DemoDataSeeder
                 AuthorId = authorId,
                 Title = "Tài liệu ôn thi bí mật — click ngay!",
                 Content = "Click ngay vào link này để nhận tài liệu ôn thi bí mật. Đăng ký gấp tại bit.ly/fake-sehub-docs.",
-                Tags = $"{DemoPostTag},{DemoReportTag},spam",
                 Status = PostStatus.Published,
                 ViewCount = 12,
                 IsFeatured = false,
@@ -702,7 +713,6 @@ public static class DemoDataSeeder
                 AuthorId = authorId,
                 Title = "Bài viết vi phạm nội dung cộng đồng",
                 Content = "Nội dung chứa quảng cáo trái phép và ngôn từ không phù hợp với quy tắc cộng đồng SEHub.",
-                Tags = $"{DemoPostTag},{DemoReportTag},violation",
                 Status = PostStatus.Published,
                 ViewCount = 5,
                 IsFeatured = false,
@@ -718,6 +728,14 @@ public static class DemoDataSeeder
 
         context.Posts.AddRange(posts);
         await context.SaveChangesAsync();
+        var tagRepository = new PostTagRepository(context);
+        foreach (var post in posts)
+        {
+            var tagsCsv = post.Id == DemoSpamPostId
+                ? $"{DemoPostTag},{DemoReportTag},spam"
+                : $"{DemoPostTag},{DemoReportTag},violation";
+            await tagRepository.SyncPostTagsAsync(post.Id, ParseTagCsv(tagsCsv));
+        }
         logger.LogInformation("Seeded {Count} reportable demo posts for author {AuthorId}", posts.Count, authorId);
     }
 
@@ -1123,8 +1141,10 @@ public static class DemoDataSeeder
 
     private static async Task SeedDemoPostsAsync(SEHubDbContext context, Guid authorId, ILogger logger)
     {
+        var demoTagSlug = TagSlug.ToSlug(DemoPostTag);
         var existingCount = await context.Posts
-            .CountAsync(p => p.AuthorId == authorId && p.Tags.Contains(DemoPostTag) && !p.IsDeleted);
+            .CountAsync(p => p.AuthorId == authorId && !p.IsDeleted
+                && p.PostTags.Any(pt => pt.Tag.Slug == demoTagSlug));
 
         if (existingCount >= 5)
         {
@@ -1139,6 +1159,11 @@ public static class DemoDataSeeder
 
         context.Posts.AddRange(postsToCreate);
         await context.SaveChangesAsync();
+        var tagRepository = new PostTagRepository(context);
+        foreach (var post in postsToCreate)
+        {
+            await tagRepository.SyncPostTagsAsync(post.Id, ParseTagCsv($"{DemoPostTag},demo,sehub"));
+        }
         logger.LogInformation("Seeded {Count} demo posts for author {AuthorId}", postsToCreate.Count, authorId);
     }
 
@@ -1150,14 +1175,14 @@ public static class DemoDataSeeder
         }
 
         var now = DateTime.UtcNow;
-        context.Posts.AddRange(
+        var pendingPosts = new[]
+        {
             new Post
             {
                 Id = DemoPendingPostId,
                 AuthorId = authorId,
                 Title = "Hỏi về kinh nghiệm thi môn Cấu trúc dữ liệu",
                 Content = "Mọi người cho mình hỏi môn CSD thi FE có khó không? Mình đang ôn theo slide tuần 1–8.",
-                Tags = $"{DemoPostTag},CSD,FE",
                 Status = PostStatus.Pending,
                 ViewCount = 0,
                 IsFeatured = false,
@@ -1170,15 +1195,21 @@ public static class DemoDataSeeder
                 AuthorId = authorId,
                 Title = "Tuyển thành viên tham gia Hackathon FPT 2026",
                 Content = "Team mình đang tìm thêm 2 bạn backend và 1 bạn UI/UX cho Hackathon FPT 2026.",
-                Tags = $"{DemoPostTag},Hackathon,Team",
                 Status = PostStatus.Pending,
                 ViewCount = 0,
                 IsFeatured = false,
                 IsDeleted = false,
                 CreatedAt = now.AddHours(-2)
-            });
+            }
+        };
+        context.Posts.AddRange(pendingPosts);
 
         await context.SaveChangesAsync();
+        var tagRepository = new PostTagRepository(context);
+        await tagRepository.SyncPostTagsAsync(DemoPendingPostId, ParseTagCsv($"{DemoPostTag},CSD,FE"));
+        await tagRepository.SyncPostTagsAsync(
+            Guid.Parse("f6666666-6666-6666-6666-666666666602"),
+            ParseTagCsv($"{DemoPostTag},Hackathon,Team"));
         logger.LogInformation("Seeded pending moderation posts for author {AuthorId}", authorId);
     }
 
@@ -1541,7 +1572,6 @@ public static class DemoDataSeeder
                 AuthorId = authorId,
                 Title = template.Title,
                 Content = template.Content,
-                Tags = $"{DemoPostTag},demo,sehub",
                 Status = PostStatus.Published,
                 ViewCount = i * 3,
                 IsFeatured = template.Featured,
@@ -1562,10 +1592,12 @@ public static class DemoDataSeeder
         UserManager<ApplicationUser> userManager)
     {
         var demoStudent = await userManager.FindByEmailAsync(DemoStudentEmail);
+        var demoTagSlug = TagSlug.ToSlug(DemoPostTag);
         var demoPostCount = demoStudent is null
             ? 0
             : await context.Posts.CountAsync(p =>
-                p.AuthorId == demoStudent.Id && p.Tags.Contains(DemoPostTag) && !p.IsDeleted);
+                p.AuthorId == demoStudent.Id && !p.IsDeleted
+                && p.PostTags.Any(pt => pt.Tag.Slug == demoTagSlug));
 
         var demoSubscriptionCount = demoStudent is null
             ? 0
@@ -1600,4 +1632,7 @@ public static class DemoDataSeeder
         public int Documents { get; init; }
         public int Subscriptions { get; init; }
     }
+
+    private static IReadOnlyList<string> ParseTagCsv(string tags) =>
+        tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }

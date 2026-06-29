@@ -452,6 +452,22 @@ export function removeAdminExam(id) {
   examsStore = examsStore.filter((e) => e.id !== id);
 }
 
+export async function removeAdminExamViaApi(id) {
+  if (USE_MOCK) {
+    const before = examsStore.length;
+    removeAdminExam(id);
+    return examsStore.length < before;
+  }
+
+  if (isValidGuid(String(id ?? ""))) {
+    await adminApi.deleteExam(id);
+  }
+
+  const before = examsStore.length;
+  removeAdminExam(id);
+  return examsStore.length < before;
+}
+
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }

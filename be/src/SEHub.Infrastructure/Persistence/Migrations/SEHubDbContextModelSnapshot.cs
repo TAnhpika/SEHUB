@@ -207,6 +207,10 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ExamId");
+
+                    b.HasIndex("QuestionId");
+
                     b.HasIndex("UserId", "ExamId", "QuestionId")
                         .IsUnique();
 
@@ -475,6 +479,10 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("DeletedById");
+
                     b.HasIndex("ParentCommentId");
 
                     b.HasIndex("PostId");
@@ -526,6 +534,10 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PostId");
+
+                    b.HasIndex("ReporterId");
+
+                    b.HasIndex("ResolvedById");
 
                     b.HasIndex("Status");
 
@@ -618,10 +630,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("ResolvedById")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -629,6 +639,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ReporterId");
+
+                    b.HasIndex("ResolvedById");
 
                     b.HasIndex("ConversationId", "ReporterId", "Status");
 
@@ -735,6 +747,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("DeletedById");
 
                     b.ToTable("Documents");
                 });
@@ -884,14 +898,18 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Code")
-                        .IsUnique();
+                    b.HasIndex("ContentHash");
+
+                    b.HasIndex("RejectedById");
 
                     b.HasIndex("RevisionOfExamId");
 
                     b.HasIndex("SubmittedById");
 
-                    b.HasIndex("Semester", "Major", "ExamType");
+                    b.HasIndex("Major", "Code")
+                        .IsUnique();
+
+                    b.HasIndex("Major", "Status", "ExamType");
 
                     b.ToTable("Exams");
                 });
@@ -944,8 +962,7 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("AnswersJson")
                         .IsRequired()
-                        .HasMaxLength(8000)
-                        .HasColumnType("character varying(8000)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1260,6 +1277,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UserId");
 
+                    b.HasIndex("UserId", "Status");
+
                     b.ToTable("PaymentOrders");
                 });
 
@@ -1357,6 +1376,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UserId", "CreatedAt");
 
+                    b.HasIndex("UserId", "Status", "CreatedAt");
+
                     b.ToTable("PointTransactions");
                 });
 
@@ -1409,11 +1430,6 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Tags")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -1427,7 +1443,13 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AuthorId");
+
                     b.HasIndex("CreatedAt");
+
+                    b.HasIndex("DeletedById");
+
+                    b.HasIndex("ModeratedById");
 
                     b.HasIndex("Status", "IsFeatured");
 
@@ -1528,11 +1550,30 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("PostId");
 
+                    b.HasIndex("ReporterId");
+
+                    b.HasIndex("ResolvedById");
+
                     b.HasIndex("Status");
 
                     b.HasIndex("Status", "CreatedAt");
 
                     b.ToTable("PostReports");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.PostTag", b =>
+                {
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TagId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("PostId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("PostTags", (string)null);
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.PracticeSubmission", b =>
@@ -1578,6 +1619,10 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ReviewedById");
+
+                    b.HasIndex("UserId");
 
                     b.HasIndex("ExamId", "UserId", "IsLatest");
 
@@ -1631,6 +1676,41 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.ToTable("Questions");
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.QuestionAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PublicId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuestionId", "SortOrder");
+
+                    b.ToTable("QuestionAttachments");
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.QuestionComment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1670,6 +1750,10 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("DeletedById");
 
                     b.HasIndex("ParentCommentId");
 
@@ -1755,6 +1839,10 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ExamId");
+
+                    b.HasIndex("ReporterId");
+
+                    b.HasIndex("ResolvedById");
 
                     b.HasIndex("Status");
 
@@ -1945,6 +2033,39 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.ToTable("SubscriptionPlans");
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.Tag", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("Tags");
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.UserBadge", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -1994,7 +2115,11 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ActorId");
+
                     b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "CreatedAt");
 
                     b.ToTable("UserBans");
                 });
@@ -2074,6 +2199,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Status");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("UserFeedbacks", (string)null);
                 });
 
@@ -2128,6 +2255,38 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId", "PromotedAt");
 
                     b.ToTable("UserLevelHistories");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.UserMissionProgress", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MissionCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("PeriodKey")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime?>("ClaimedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ProgressCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId", "MissionCode", "PeriodKey");
+
+                    b.HasIndex("UserId", "PeriodKey");
+
+                    b.ToTable("UserMissionProgress", (string)null);
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.UserNotification", b =>
@@ -2298,13 +2457,28 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ExamId");
+
+                    b.HasIndex("PostId");
+
+                    b.HasIndex("QuestionCommentId");
+
+                    b.HasIndex("QuestionId");
+
+                    b.HasIndex("ReporterId");
+
+                    b.HasIndex("ResolvedById");
+
                     b.HasIndex("Status");
 
                     b.HasIndex("Status", "CreatedAt");
 
                     b.HasIndex("ReportedUserId", "ReporterId", "Source", "Status");
 
-                    b.ToTable("UserReports");
+                    b.ToTable("UserReports", t =>
+                        {
+                            t.HasCheckConstraint("CK_UserReports_Source_Context", "(\"Source\" = 0 AND \"PostId\" IS NOT NULL AND \"ExamId\" IS NULL AND \"QuestionId\" IS NULL AND \"QuestionCommentId\" IS NULL)\r\nOR (\"Source\" = 1 AND \"PostId\" IS NULL AND \"ExamId\" IS NOT NULL AND \"QuestionId\" IS NOT NULL AND \"QuestionCommentId\" IS NOT NULL)\r\nOR (\"Source\" = 2 AND \"PostId\" IS NULL AND \"ExamId\" IS NULL AND \"QuestionId\" IS NULL AND \"QuestionCommentId\" IS NULL)");
+                        });
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.ViolationEscalation", b =>
@@ -2340,8 +2514,9 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
+                    b.HasIndex("EscalatedById");
+
+                    b.HasIndex("UserId", "CreatedAt");
 
                     b.ToTable("ViolationEscalations");
                 });
@@ -2493,6 +2668,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
+                    b.HasIndex("Points");
+
                     b.HasIndex("UserName")
                         .IsUnique();
 
@@ -2561,6 +2738,36 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Navigation("Thread");
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.AiExamChatThread", b =>
+                {
+                    b.HasOne("SEHub.Domain.Entities.Exam", null)
+                        .WithMany()
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Domain.Entities.Question", null)
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.ChatbotConversation", b =>
+                {
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.ChatbotMessage", b =>
                 {
                     b.HasOne("SEHub.Domain.Entities.ChatbotConversation", "Conversation")
@@ -2574,6 +2781,17 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("SEHub.Domain.Entities.Comment", b =>
                 {
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("DeletedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("SEHub.Domain.Entities.Comment", "ParentComment")
                         .WithMany("Replies")
                         .HasForeignKey("ParentCommentId")
@@ -2603,6 +2821,17 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .HasForeignKey("PostId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ResolvedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Comment");
 
@@ -2640,6 +2869,11 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ResolvedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Conversation");
                 });
 
@@ -2650,6 +2884,11 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("DeletedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Category");
                 });
@@ -2662,15 +2901,31 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Document");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.Exam", b =>
                 {
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("RejectedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("SEHub.Domain.Entities.Exam", "RevisionOfExam")
                         .WithMany()
                         .HasForeignKey("RevisionOfExamId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("SubmittedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("RevisionOfExam");
                 });
@@ -2692,6 +2947,12 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .WithMany("Attempts")
                         .HasForeignKey("ExamId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Exam");
@@ -2733,7 +2994,41 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.PointTransaction", b =>
+                {
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.Post", b =>
+                {
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("DeletedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ModeratedById")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.PostImage", b =>
@@ -2755,6 +3050,12 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Post");
                 });
 
@@ -2766,7 +3067,37 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ResolvedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Post");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.PostTag", b =>
+                {
+                    b.HasOne("SEHub.Domain.Entities.Post", "Post")
+                        .WithMany("PostTags")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Domain.Entities.Tag", "Tag")
+                        .WithMany("PostTags")
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+
+                    b.Navigation("Tag");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.PracticeSubmission", b =>
@@ -2775,6 +3106,17 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .WithMany("PracticeSubmissions")
                         .HasForeignKey("ExamId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Exam");
@@ -2791,8 +3133,36 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Navigation("Exam");
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.QuestionAttachment", b =>
+                {
+                    b.HasOne("SEHub.Domain.Entities.Question", "Question")
+                        .WithMany("Attachments")
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Question");
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.QuestionComment", b =>
                 {
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("DeletedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SEHub.Domain.Entities.Exam", null)
+                        .WithMany()
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("SEHub.Domain.Entities.QuestionComment", "ParentComment")
                         .WithMany("Replies")
                         .HasForeignKey("ParentCommentId")
@@ -2834,6 +3204,17 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ResolvedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Exam");
 
                     b.Navigation("Question");
@@ -2847,7 +3228,22 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Level");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.RewardRule", b =>
@@ -2869,6 +3265,12 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Plan");
                 });
 
@@ -2880,7 +3282,28 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Badge");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.UserBan", b =>
+                {
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ActorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.UserBlock", b =>
@@ -2896,6 +3319,23 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .HasForeignKey("BlockerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.UserDailyActivity", b =>
+                {
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.UserFeedback", b =>
+                {
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.UserFollow", b =>
@@ -2921,7 +3361,22 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Level");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.UserMissionProgress", b =>
+                {
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.UserNotification", b =>
@@ -2939,6 +3394,61 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .WithOne("Profile")
                         .HasForeignKey("SEHub.Domain.Entities.UserProfile", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.UserReport", b =>
+                {
+                    b.HasOne("SEHub.Domain.Entities.Exam", null)
+                        .WithMany()
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SEHub.Domain.Entities.Post", null)
+                        .WithMany()
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SEHub.Domain.Entities.QuestionComment", null)
+                        .WithMany()
+                        .HasForeignKey("QuestionCommentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SEHub.Domain.Entities.Question", null)
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ReportedUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ResolvedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.ViolationEscalation", b =>
+                {
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("EscalatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -3008,11 +3518,15 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.Navigation("Likes");
 
+                    b.Navigation("PostTags");
+
                     b.Navigation("Reports");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.Question", b =>
                 {
+                    b.Navigation("Attachments");
+
                     b.Navigation("Options");
                 });
 
@@ -3026,6 +3540,11 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Navigation("PaymentOrders");
 
                     b.Navigation("Subscriptions");
+                });
+
+            modelBuilder.Entity("SEHub.Domain.Entities.Tag", b =>
+                {
+                    b.Navigation("PostTags");
                 });
 
             modelBuilder.Entity("SEHub.Infrastructure.Identity.ApplicationUser", b =>

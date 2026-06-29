@@ -19,5 +19,6 @@ public interface IPointTransactionRepository
         IReadOnlyList<string> sourceTypes,
         DateTime sinceUtc,
         CancellationToken cancellationToken = default);
+    Task<int> SumPostedPointsAsync(Guid userId, CancellationToken cancellationToken = default);
     Task VoidByIdempotencyKeyAsync(string idempotencyKey, CancellationToken cancellationToken = default);
 }

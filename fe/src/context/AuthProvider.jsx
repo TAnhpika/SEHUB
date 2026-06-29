@@ -201,6 +201,15 @@ export function AuthProvider({ children }) {
 
     let cancelled = false;
 
+    function handleForcedLogout() {
+      if (!cancelled) {
+        clearAuthSession(setUser);
+        setIsBootstrapping(false);
+      }
+    }
+
+    window.addEventListener("auth:forced-logout", handleForcedLogout);
+
     async function restoreSession() {
       const tokenAtStart = getAccessToken();
       const refreshAtStart = getRefreshToken();
@@ -244,6 +253,7 @@ export function AuthProvider({ children }) {
     restoreSession();
     return () => {
       cancelled = true;
+      window.removeEventListener("auth:forced-logout", handleForcedLogout);
     };
   }, []);
 

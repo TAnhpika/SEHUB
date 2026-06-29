@@ -57,6 +57,11 @@ public class PointTransactionRepository : IPointTransactionRepository
             cancellationToken);
     }
 
+    public Task<int> SumPostedPointsAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        _context.PointTransactions
+            .Where(t => t.UserId == userId && t.Status == PointTransactionStatus.Posted)
+            .SumAsync(t => t.Amount, cancellationToken);
+
     public async Task VoidByIdempotencyKeyAsync(string idempotencyKey, CancellationToken cancellationToken = default)
     {
         var tx = await _context.PointTransactions

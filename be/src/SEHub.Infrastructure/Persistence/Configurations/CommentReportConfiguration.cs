@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SEHub.Domain.Entities;
+using SEHub.Infrastructure.Identity;
 
 namespace SEHub.Infrastructure.Persistence.Configurations;
 
@@ -25,5 +26,15 @@ public class CommentReportConfiguration : IEntityTypeConfiguration<CommentReport
             .WithMany()
             .HasForeignKey(r => r.CommentId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(r => r.ReporterId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(r => r.ResolvedById)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

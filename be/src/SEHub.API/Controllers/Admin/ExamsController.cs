@@ -88,6 +88,14 @@ public sealed class ExamsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpDelete("{id:guid}")]
+    [Authorize(Policy = PolicyNames.RequireAdmin)]
+    public async Task<IActionResult> DeleteExam(Guid id, CancellationToken cancellationToken)
+    {
+        await _adminExamService.DeleteExamAsync(id, cancellationToken);
+        return Ok(new { message = "Exam deleted" });
+    }
+
     [HttpPost("{id:guid}/revision")]
     [Authorize(Policy = PolicyNames.RequireModerator)]
     public async Task<IActionResult> CreateRevision(Guid id, CancellationToken cancellationToken)
@@ -120,7 +128,10 @@ public sealed class ExamsController : ControllerBase
     [HttpPost("upload-question-image")]
     [Authorize(Policy = PolicyNames.RequireModerator)]
     [RequestSizeLimit(5_242_880)]
-    public async Task<IActionResult> UploadQuestionImage(IFormFile file, CancellationToken cancellationToken)
+    public async Task<IActionResult> UploadQuestionImage(
+        IFormFile file,
+        [FromQuery] Guid? questionId,
+        CancellationToken cancellationToken)
     {
         if (file is null || file.Length == 0)
         {
@@ -133,6 +144,7 @@ public sealed class ExamsController : ControllerBase
             file.FileName,
             file.ContentType,
             file.Length,
+            questionId,
             cancellationToken);
 
         return Ok(result);

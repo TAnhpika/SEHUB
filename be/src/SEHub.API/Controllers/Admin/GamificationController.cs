@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SEHub.Application.Admin;
+using SEHub.Application.Gamification;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Gamification;
 using SEHub.Shared.Constants;
@@ -13,10 +14,14 @@ namespace SEHub.API.Controllers.Admin;
 public sealed class GamificationController : ControllerBase
 {
     private readonly IAdminGamificationService _gamificationService;
+    private readonly IPointsReconciliationService _pointsReconciliation;
 
-    public GamificationController(IAdminGamificationService gamificationService)
+    public GamificationController(
+        IAdminGamificationService gamificationService,
+        IPointsReconciliationService pointsReconciliation)
     {
         _gamificationService = gamificationService;
+        _pointsReconciliation = pointsReconciliation;
     }
 
     [HttpGet("levels")]
@@ -87,5 +92,21 @@ public sealed class GamificationController : ControllerBase
     {
         await _gamificationService.DeletePointRuleAsync(id, cancellationToken);
         return Ok(new { message = "Point rule deleted" });
+    }
+
+    [HttpPost("points/reconcile")]
+    public async Task<IActionResult> ReconcilePoints(
+        [FromQuery] Guid? userId,
+        [FromQuery] bool applyFix = false,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId is Guid id)
+        {
+            var single = await _pointsReconciliation.ReconcileUserAsync(id, applyFix, cancellationToken);
+            return Ok(single);
+        }
+
+        var drift = await _pointsReconciliation.ReconcileAllDriftAsync(applyFix, cancellationToken);
+        return Ok(drift);
     }
 }
