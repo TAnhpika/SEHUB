@@ -794,7 +794,7 @@ public static class DemoDataSeeder
 
     private static async Task SeedFinalExamAsync(SEHubDbContext context, ILogger logger)
     {
-        if (await context.Exams.AnyAsync(e => e.Code == FinalExamCode || e.Id == DemoFinalExamId))
+        if (await context.Exams.AnyAsync(e => e.Id == DemoFinalExamId || e.Code == FinalExamCode))
         {
             return;
         }
@@ -915,7 +915,7 @@ public static class DemoDataSeeder
 
     private static async Task SeedPracticeExamAsync(SEHubDbContext context, ILogger logger)
     {
-        if (await context.Exams.AnyAsync(e => e.Code == PracticeExamCode || e.Id == DemoPracticeExamId))
+        if (await context.Exams.AnyAsync(e => e.Id == DemoPracticeExamId || e.Code == PracticeExamCode))
         {
             return;
         }
