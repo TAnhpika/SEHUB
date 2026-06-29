@@ -14,7 +14,7 @@ public sealed class ExamMarkdownImportService : IExamMarkdownImportService
     private const string OptionLabels = "ABCDEFGH";
 
     private static readonly Regex QuestionHeaderRegex = new(
-        @"^\s*#{1,3}\s*(?:C(?:âu|au)\s*)?(\d+)(?:\s*\[MULTI(?::(\d+))?\])?\s*$",
+        @"^\s*#{0,3}\s*(?:C(?:âu|au)\s*)?(\d+)(?:\s*\[MULTI(?::(\d+))?\])?\s*$",
         RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.Compiled);
 
     private static readonly Regex DocumentTitleRegex = new(
@@ -26,7 +26,7 @@ public sealed class ExamMarkdownImportService : IExamMarkdownImportService
         RegexOptions.Compiled);
 
     private static readonly Regex AnswerRegex = new(
-        @"(?:\*\*)?(?:Đáp án|Dap an|Answer)\s*:\s*([A-Ha-h,\s;]+?)(?:\*\*)?\s*$",
+        @"^\s*(?:\*\*)?(?:Đáp án|Dap an|Answer)\s*:\s*([A-Ha-h,\s;]+?)(?:\*\*)?\s*\.?\s*$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Multiline);
 
     private static readonly Regex HorizontalRuleRegex = new(
@@ -59,7 +59,8 @@ public sealed class ExamMarkdownImportService : IExamMarkdownImportService
             }
             catch (Exception ex)
             {
-                warnings.Add($"Câu {index + 1}: {ex.Message}");
+                var warningOrder = ResolveBlockQuestionNumber(block, index + 1);
+                warnings.Add($"Câu {warningOrder}: {ex.Message}");
             }
         }
 
@@ -133,6 +134,25 @@ public sealed class ExamMarkdownImportService : IExamMarkdownImportService
             .Select(block => block.Trim())
             .Where(b => b.Length > 0)
             .ToList();
+    }
+
+    private static int ResolveBlockQuestionNumber(string block, int fallbackOrder)
+    {
+        var firstLine = block
+            .Replace("\r\n", "\n")
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault();
+
+        if (firstLine is not null)
+        {
+            var headerMatch = QuestionHeaderRegex.Match(firstLine);
+            if (headerMatch.Success && int.TryParse(headerMatch.Groups[1].Value, out var parsedOrder))
+            {
+                return parsedOrder;
+            }
+        }
+
+        return fallbackOrder;
     }
 
     private static CreateExamQuestionItem ParseQuestionBlock(string block, int fallbackOrder, List<string> warnings)
@@ -211,7 +231,8 @@ public sealed class ExamMarkdownImportService : IExamMarkdownImportService
             });
         }
 
-        var answerMatch = AnswerRegex.Match(block);
+        var answerMatches = AnswerRegex.Matches(block);
+        var answerMatch = answerMatches.Count > 0 ? answerMatches[^1] : Match.Empty;
         if (!answerMatch.Success)
         {
             throw new InvalidOperationException("Thiếu dòng **Đáp án: X** hoặc Answer: X.");
@@ -278,7 +299,7 @@ public sealed class ExamMarkdownImportService : IExamMarkdownImportService
         return raw
             .Replace(";", ",")
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(token => token.Trim().Trim('*').ToUpperInvariant())
+            .Select(token => token.Trim().Trim('*').TrimEnd('.').ToUpperInvariant())
             .Where(token => token.Length == 1 && OptionLabels.Contains(token))
             .Distinct()
             .ToList();
@@ -288,10 +309,15 @@ public sealed class ExamMarkdownImportService : IExamMarkdownImportService
         @"^\s*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\s*$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    private static readonly Regex OcrMarkedAnswerRegex = new(
+        @"^\s*O\s+[A-Ha-h]\s*$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     private static bool ShouldSkipContentLine(string line) =>
         QuestionHeaderRegex.IsMatch(line)
         || DocumentTitleRegex.IsMatch(line)
         || HorizontalRuleRegex.IsMatch(line)
         || AnswerRegex.IsMatch(line)
-        || GuidLineRegex.IsMatch(line);
+        || GuidLineRegex.IsMatch(line)
+        || OcrMarkedAnswerRegex.IsMatch(line);
 }

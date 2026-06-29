@@ -35,6 +35,7 @@ function RichTextEditor({
   onImageUpload,
   onImageUploadError,
   "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
 }) {
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -187,7 +188,8 @@ function RichTextEditor({
         suppressContentEditableWarning
         role="textbox"
         aria-multiline="true"
-        aria-label={ariaLabel ?? placeholder}
+        aria-label={ariaLabelledBy ? undefined : (ariaLabel ?? placeholder)}
+        aria-labelledby={ariaLabelledBy}
         aria-busy={uploadingImage}
         data-placeholder={placeholder}
         onInput={syncFromEditor}

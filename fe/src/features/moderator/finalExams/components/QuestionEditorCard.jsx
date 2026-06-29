@@ -129,8 +129,8 @@ function QuestionEditorCard({
         </label>
       ) : null}
 
-      <label className={styles.field}>
-        <span className={styles.label}>
+      <div className={styles.field}>
+        <span id={`question-${questionNumber}-content-label`} className={styles.label}>
           Nội dung câu hỏi <span className={styles.required}>*</span>
         </span>
         <RichTextEditor
@@ -142,11 +142,11 @@ function QuestionEditorCard({
           rows={5}
           bordered={false}
           className={styles.textareaWrap}
-          textareaClassName={styles.textarea}
+          textareaClassName={styles.questionEditor}
           toolbarAriaLabel="Công cụ soạn câu hỏi"
-          aria-label="Nội dung câu hỏi"
+          aria-labelledby={`question-${questionNumber}-content-label`}
         />
-      </label>
+      </div>
 
       <div className={styles.answers}>
         {optionLabels.map((key) => (
@@ -217,8 +217,10 @@ function QuestionEditorCard({
       </button>
 
       {question.showExplanation && (
-        <label className={styles.field}>
-          <span className={styles.label}>Giải thích đáp án</span>
+        <div className={styles.field}>
+          <span id={`question-${questionNumber}-explanation-label`} className={styles.label}>
+            Giải thích đáp án
+          </span>
           <RichTextEditor
             value={question.explanation}
             onChange={(explanation) => onChange({ explanation })}
@@ -228,9 +230,9 @@ function QuestionEditorCard({
             bordered={false}
             textareaClassName={styles.textareaPlain}
             toolbarAriaLabel="Định dạng giải thích"
-            aria-label="Giải thích đáp án"
+            aria-labelledby={`question-${questionNumber}-explanation-label`}
           />
-        </label>
+        </div>
       )}
     </article>
   );

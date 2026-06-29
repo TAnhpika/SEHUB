@@ -169,9 +169,13 @@ export function applyWysiwygAction(action, editor, onSync) {
         '<table><thead><tr><th>Cột 1</th><th>Cột 2</th><th>Cột 3</th></tr></thead><tbody><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></tbody></table><p><br></p>',
       );
       break;
-    case "formula":
-      insertHtmlAtSelection("<span>x²</span>");
+    case "formula": {
+      const latex = window.prompt("Nhập công thức LaTeX (ví dụ: x^2):", "");
+      if (latex?.trim()) {
+        insertHtmlAtSelection(`$${latex.trim()}$`);
+      }
       break;
+    }
     default:
       break;
   }

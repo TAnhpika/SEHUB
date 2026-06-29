@@ -45,7 +45,8 @@ function FinalExamInfoStep() {
         if (!cancelled) setReviewCourses(courses);
       })
       .catch(() => {
-        if (!cancelled) setReviewCourses([]);
+        // Giữ catalog tĩnh khi API/DB không phản hồi — tránh dropdown trống.
+        if (!cancelled) setReviewCourses(REVIEW_COURSES);
       });
     return () => {
       cancelled = true;

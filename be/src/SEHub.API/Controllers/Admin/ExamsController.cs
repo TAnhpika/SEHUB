@@ -106,8 +106,13 @@ public sealed class ExamsController : ControllerBase
 
     [HttpPost("import-markdown")]
     [Authorize(Policy = PolicyNames.RequireModerator)]
-    public IActionResult ImportMarkdown([FromBody] ImportExamMarkdownRequest request)
+    public IActionResult ImportMarkdown([FromBody] ImportExamMarkdownRequest? request)
     {
+        if (request is null || string.IsNullOrWhiteSpace(request.Markdown))
+        {
+            throw new Domain.Exceptions.DomainException("Markdown content is required.");
+        }
+
         var result = _markdownImportService.Parse(request.Markdown);
         return Ok(result);
     }

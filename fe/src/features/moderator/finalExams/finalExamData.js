@@ -135,7 +135,30 @@ D. ...
 E. ...
 F. ...
 
-**Đáp án: A, C, E**`;
+**Đáp án: A, C, E**
+
+---
+
+## Câu 3
+「あしたも 7時に学校へ行きます。」は正しい文です。
+
+A. Đúng
+B. Sai
+
+**Đáp án: A**
+
+---
+
+## Câu 4
+Chọn đáp án thích hợp trong A. B. C. D để điền vào ngoặc:
+あしたも 7時に学校へ( ).
+
+A. きます
+B. ききます
+C. はたらきます
+D. おきます
+
+**Đáp án: A**`;
 
 function mapQuestionOptionsToWizardAnswers(options = []) {
   const answers = createEmptyAnswers(OPTION_LABELS);
