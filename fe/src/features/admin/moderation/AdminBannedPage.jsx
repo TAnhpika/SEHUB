@@ -132,7 +132,7 @@ function AdminBannedPage() {
         </Button>
       }
     >
-      <div className={modStyles.page}>
+      <div className={`${modStyles.page} ${modStyles.pageBanned}`}>
         <div className={modStyles.metrics}>
           <div className={modStyles.metric}>
             <span className={`${modStyles.metricIcon} ${modStyles.metricIconPending}`}>

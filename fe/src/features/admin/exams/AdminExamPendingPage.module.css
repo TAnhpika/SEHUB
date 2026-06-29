@@ -270,7 +270,9 @@
 }
 
 .filterTrack {
-  display: flex;
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
   gap: 0.125rem;
   padding: 0.1875rem;
   background: var(--moderator-bg);
