@@ -56,8 +56,19 @@
 .icon {
   width: 1rem;
   font-size: 0.875rem;
-  opacity: 0.75;
+  opacity: 0.88;
   flex-shrink: 0;
+}
+
+[data-theme="dark"] .icon {
+  color: var(--color-icon-blue);
+  opacity: 0.92;
+}
+
+[data-theme="dark"] .link.active .icon,
+[data-theme="dark"] .subject-link.active .icon {
+  color: inherit;
+  opacity: 1;
 }
 
 .divider {

@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
+using SEHub.Contracts.Notifications;
 
 namespace SEHub.API.IntegrationTests.Moderation;
 
@@ -62,6 +63,31 @@ public sealed class ViolationsIntegrationTests : IClassFixture<CustomWebApplicat
         unbanResponse.EnsureSuccessStatusCode();
         var unbanned = await unbanResponse.Content.ReadFromJsonAsync<ApiResponse<ViolatingUserDto>>();
         unbanned!.Data!.Status.Should().NotBe("locked");
+    }
+
+    [Fact]
+    public async Task WarnUser_CreatesModerationNotificationForTarget()
+    {
+        var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
+
+        var targetUserId = CustomWebApplicationFactory.FreeUserId;
+        var warnResponse = await _client.PostAsJsonAsync(
+            $"/api/v1/admin/moderation/users/{targetUserId}/warn",
+            new ModeratorWarnUserRequest { Reason = "Spam trong bình luận." });
+        warnResponse.EnsureSuccessStatusCode();
+
+        var targetToken = await _factory.LoginAndGetTokenAsync(_client);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", targetToken);
+
+        var notificationsResponse = await _client.GetAsync("/api/v1/notifications?page=1&pageSize=10");
+        notificationsResponse.EnsureSuccessStatusCode();
+        var notificationsBody =
+            await notificationsResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResult<NotificationDto>>>();
+
+        notificationsBody!.Data!.Items.Should().Contain(item =>
+            item.Type == "moderation"
+            && item.Title.Contains("cảnh cáo", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

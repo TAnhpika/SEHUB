@@ -19,6 +19,7 @@ import ConfirmDialog from "@/common/ConfirmDialog/ConfirmDialog";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import ModeratorToolbar from "@/features/moderator/components/ModeratorToolbar/ModeratorToolbar";
 import ViolatingAccountDetailPanel from "@/features/moderator/violations/components/ViolatingAccountDetailPanel/ViolatingAccountDetailPanel";
+import EscalatedReportDetailModal from "@/features/moderator/violations/components/EscalatedReportDetailModal/EscalatedReportDetailModal";
 import {
   DEFAULT_BAN_REASON,
   getAccountLockInfo,
@@ -88,10 +89,12 @@ function RankBadge({ rank }) {
 
 function ViolatingAccountsPage() {
   const { showToast } = useToast();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const focusUserId = searchParams.get("userId");
   const focusUsername = searchParams.get("username");
   const focusReason = searchParams.get("reason") ?? "";
+  const focusReportCode = searchParams.get("code") ?? "";
+  const focusReporter = searchParams.get("reporter") ?? "";
   const focusHandledRef = useRef(false);
   const [accounts, setAccounts] = useState([]);
   const [query, setQuery] = useState(() => focusUsername?.replace(/^@/, "") ?? "");
@@ -112,6 +115,7 @@ function ViolatingAccountsPage() {
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [unbanLoading, setUnbanLoading] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -156,16 +160,43 @@ function ViolatingAccountsPage() {
   }, [refreshList]);
 
   useEffect(() => {
-    if (!focusUserId || focusHandledRef.current) {
+    if (!focusUserId || !focusUsername || focusHandledRef.current) {
       return;
     }
 
     focusHandledRef.current = true;
-    setDetailId(focusUserId);
     if (focusReason) {
       setLockReason(focusReason);
     }
-  }, [focusUserId, focusReason]);
+    setReportModalOpen(true);
+  }, [focusUserId, focusUsername, focusReason]);
+
+  function clearReportFocusParams() {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("userId");
+        next.delete("username");
+        next.delete("reason");
+        next.delete("code");
+        next.delete("reporter");
+        return next;
+      },
+      { replace: true },
+    );
+  }
+
+  function closeReportModal() {
+    setReportModalOpen(false);
+    clearReportFocusParams();
+  }
+
+  function handleViewAccountFromReport() {
+    if (focusUserId) {
+      setDetailId(focusUserId);
+    }
+    closeReportModal();
+  }
 
   useEffect(() => {
     if (!detailId) {
@@ -333,13 +364,6 @@ function ViolatingAccountsPage() {
       actions={headerActions}
     >
       <div className={styles.layout}>
-        {focusUserId && focusUsername ? (
-          <p className={styles.focusBanner} role="status">
-            Đang xử lý báo cáo cho{" "}
-            <strong>@{focusUsername.replace(/^@/, "")}</strong>
-            {focusReason ? ` — ${focusReason}` : ""}
-          </p>
-        ) : null}
         <section className={styles.card}>
           <ModeratorToolbar
             searchValue={query}
@@ -390,7 +414,7 @@ function ViolatingAccountsPage() {
                   <tr>
                     <td colSpan={7} className={styles.empty}>
                       {focusUserId
-                        ? "Tài khoản chưa có lịch sử vi phạm — xem panel Chi tiết bên phải để cảnh báo hoặc khóa."
+                        ? "Tài khoản chưa có lịch sử vi phạm — bấm Chi tiết để xem và xử lý."
                         : "Không có tài khoản vi phạm nào. Hiển thị user đã bị cảnh báo, khóa tạm hoặc được chuyển từ báo cáo."}
                     </td>
                   </tr>
@@ -489,17 +513,16 @@ function ViolatingAccountsPage() {
             </p>
           </footer>
         </section>
-
-        {detailId ? (
-          <ViolatingAccountDetailPanel
-            detail={detail}
-            loading={detailLoading}
-            onClose={closeDetail}
-            onUnban={handleUnban}
-            unbanLoading={unbanLoading}
-          />
-        ) : null}
       </div>
+
+      <ViolatingAccountDetailPanel
+        open={Boolean(detailId)}
+        detail={detail}
+        loading={detailLoading}
+        onClose={closeDetail}
+        onUnban={handleUnban}
+        unbanLoading={unbanLoading}
+      />
 
       <ConfirmDialog
         open={Boolean(lockTarget)}
@@ -570,6 +593,16 @@ function ViolatingAccountsPage() {
         variant="primary"
         onConfirm={confirmWarn}
         onCancel={closeWarnModal}
+      />
+
+      <EscalatedReportDetailModal
+        open={reportModalOpen}
+        onClose={closeReportModal}
+        reportCode={focusReportCode}
+        username={focusUsername}
+        reporterUsername={focusReporter}
+        detail={focusReason}
+        onViewAccount={handleViewAccountFromReport}
       />
     </ModeratorPageShell>
   );

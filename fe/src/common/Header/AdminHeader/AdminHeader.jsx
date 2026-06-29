@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import WorkspaceSwitcher from "@/common/WorkspaceSwitcher/WorkspaceSwitcher";
 import AdminNotificationDropdown from "./AdminNotificationDropdown";
@@ -27,20 +25,6 @@ function AdminHeader() {
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
-        <div className={styles.searchWrap}>
-          <label className={styles.search} htmlFor="admin-global-search">
-            <span className={styles.searchIconWrap} aria-hidden>
-              <FontAwesomeIcon icon={faMagnifyingGlass} />
-            </span>
-            <input
-              id="admin-global-search"
-              type="search"
-              className={styles.searchInput}
-              placeholder="Tìm kiếm user, đề thi, báo cáo..."
-            />
-          </label>
-        </div>
-
         <div className={styles.actions}>
           <div className={styles.toolGroup} role="group" aria-label="Hành động nhanh">
             <AdminSettingsMenu />

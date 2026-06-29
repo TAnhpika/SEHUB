@@ -36,7 +36,13 @@ import {
   escalateUserReportToViolations,
   resolveConversationReport,
 } from "@/features/moderator/reports/conversationReportStore";
+import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import styles from "./ReportsPage.module.css";
+
+const REPORTS_CRUMBS = [
+  { label: "Trang chủ", to: "/home" },
+  { label: "Xử lý báo cáo" },
+];
 
 const TAB_OPTIONS = REPORT_TAB_OPTIONS;
 const CATEGORY_OPTIONS = REPORT_CATEGORY_OPTIONS;
@@ -513,13 +519,14 @@ function ReportsPage() {
   }
 
   return (
-    <div className={styles.page}>
-      <p className={styles.intro}>
-        Xử lý báo cáo cộng đồng, người dùng (tin nhắn) và câu hỏi đề thi ôn tập. Báo cáo đề được
-        Moderator rà soát, Admin duyệt trước khi cập nhật ngân hàng câu hỏi.
-      </p>
-
-      <div className={styles.metrics}>
+    <ModeratorPageShell
+      title="Xử lý báo cáo"
+      description="Xử lý báo cáo cộng đồng, người dùng (tin nhắn) và câu hỏi đề thi ôn tập. Báo cáo đề được Moderator rà soát, Admin duyệt trước khi cập nhật ngân hàng câu hỏi."
+      crumbs={REPORTS_CRUMBS}
+      variant="wide"
+    >
+      <div className={styles.page}>
+        <div className={styles.metrics}>
         <div className={styles.metric}>
           <span className={`${styles.metricIcon} ${styles.metricIconPending}`}>
             <FontAwesomeIcon icon={faFlag} />
@@ -901,7 +908,8 @@ function ReportsPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </ModeratorPageShell>
   );
 }
 

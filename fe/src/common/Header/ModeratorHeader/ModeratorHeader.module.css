@@ -85,79 +85,12 @@
   white-space: nowrap;
 }
 
-.pageTitle {
-  margin: 0;
-  overflow: hidden;
-  font-size: 1.375rem;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--moderator-text);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  letter-spacing: -0.03em;
-}
-
-.searchWrap {
-  display: flex;
-  flex: 1;
-  justify-content: center;
-  min-width: 0;
-}
-
-.search {
-  display: flex;
-  align-items: center;
-  width: min(520px, 100%);
-  height: 44px;
-  padding: 0 0.5rem 0 0;
-  background: var(--color-surface-muted);
-  border: 1px solid transparent;
-  border-radius: var(--radius-full, 9999px);
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.search:focus-within {
-  background: var(--moderator-surface);
-  border-color: var(--moderator-border);
-  box-shadow:
-    0 0 0 3px var(--color-primary-ring, rgba(37, 99, 235, 0.12)),
-    var(--shadow-sm, 0 1px 2px rgba(30, 41, 59, 0.05));
-}
-
-.searchIconWrap {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 2.75rem;
-  font-size: 0.875rem;
-  color: var(--moderator-text-subtle);
-}
-
-.searchInput {
-  flex: 1;
-  min-width: 0;
-  padding: 0 0.5rem 0 0;
-  font-family: inherit;
-  font-size: 0.875rem;
-  color: var(--moderator-text);
-  background: transparent;
-  border: none;
-  outline: none;
-}
-
-.searchInput::placeholder {
-  color: var(--moderator-text-subtle);
-}
-
 .actions {
   display: flex;
   flex-shrink: 0;
   gap: 0.75rem;
   align-items: center;
+  margin-left: auto;
 }
 
 .toolGroup {
@@ -413,15 +346,6 @@
     max-width: none;
   }
 
-  .searchWrap {
-    order: 3;
-    flex: 1 1 100%;
-  }
-
-  .search {
-    width: 100%;
-  }
-
   .actions {
     margin-left: auto;
   }
@@ -429,9 +353,8 @@
 
 @media (min-width: 1025px) {
   .lead {
-    flex-direction: column;
-    align-items: flex-start;
-    max-width: 220px;
+    align-items: center;
+    max-width: none;
   }
 
   .menuBtn {
@@ -440,14 +363,11 @@
 
   .breadcrumb {
     display: flex;
+    margin: 0;
   }
 }
 
 @media (max-width: 520px) {
-  .pageTitle {
-    font-size: 1.125rem;
-  }
-
   .breadcrumb {
     display: none;
   }

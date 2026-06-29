@@ -84,11 +84,17 @@ public class ExamRepository : IExamRepository
         if (!string.IsNullOrWhiteSpace(query.Code))
         {
             var code = query.Code.Trim();
+            var subjectCode = SubjectCodeResolver.Resolve(code) ?? code;
+            var paperCodePrefixFe = $"FE-{subjectCode}-";
+            var paperCodePrefixPe = $"PE-{subjectCode}-";
+
             dbQuery = dbQuery.Where(e =>
                 e.Code == code
                 || e.Code.StartsWith(code + "-")
                 || e.Code.StartsWith(code + "_")
-                || e.Major == code);
+                || e.Major == code
+                || e.Code.StartsWith(paperCodePrefixFe)
+                || e.Code.StartsWith(paperCodePrefixPe));
         }
 
         if (!string.IsNullOrWhiteSpace(query.Major))
@@ -171,7 +177,7 @@ public class ExamRepository : IExamRepository
                 continue;
             }
 
-            var major = exam.Major.Trim();
+            var major = ExamMajorResolver.Normalize(exam.Major, exam.Code, exam.Title);
             var key = (exam.Semester, subjectCode, major);
             entries.TryAdd(
                 key,

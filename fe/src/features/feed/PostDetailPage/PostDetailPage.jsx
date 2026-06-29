@@ -8,6 +8,7 @@ import {
   faHeart,
   faReply,
   faShareNodes,
+  faUserSlash,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
@@ -101,7 +102,15 @@ function PostDetailPage() {
   if (loading) {
     return (
       <div className={styles.page}>
-        <p>Đang tải bài viết...</p>
+        <div
+          className={styles.loading}
+          role="status"
+          aria-live="polite"
+          aria-label="Đang tải bài viết"
+        >
+          <div className={styles.spinner} aria-hidden="true" />
+          <p className={styles.loadingText}>Đang tải bài viết...</p>
+        </div>
       </div>
     );
   }
@@ -205,6 +214,7 @@ function PostDetailPage() {
                     postId={post.id}
                     className={`${styles.share} ${styles.report}`}
                     label="Báo cáo tác giả"
+                    icon={faUserSlash}
                   />
                 ) : null}
               </>

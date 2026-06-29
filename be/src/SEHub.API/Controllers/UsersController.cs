@@ -14,17 +14,20 @@ public sealed class UsersController : ControllerBase
     private readonly IFollowService _followService;
     private readonly IUserBlockService _blockService;
     private readonly IUserReportService _userReportService;
+    private readonly IAccountPenaltyService _accountPenaltyService;
 
     public UsersController(
         IUserSearchService userSearchService,
         IFollowService followService,
         IUserBlockService blockService,
-        IUserReportService userReportService)
+        IUserReportService userReportService,
+        IAccountPenaltyService accountPenaltyService)
     {
         _userSearchService = userSearchService;
         _followService = followService;
         _blockService = blockService;
         _userReportService = userReportService;
+        _accountPenaltyService = accountPenaltyService;
     }
 
     [HttpGet("search")]
@@ -95,6 +98,24 @@ public sealed class UsersController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var result = await _followService.GetMentionFriendsAsync(search, limit, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("me/penalties/{penaltyId:guid}")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> GetMyPenalty(Guid penaltyId, CancellationToken cancellationToken)
+    {
+        var result = await _accountPenaltyService.GetForCurrentUserAsync(penaltyId, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("me/penalties/latest")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> GetMyLatestPenalty(
+        [FromQuery] string? type,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _accountPenaltyService.GetLatestForCurrentUserAsync(type, cancellationToken);
         return Ok(result);
     }
 

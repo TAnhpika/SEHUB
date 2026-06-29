@@ -87,7 +87,8 @@
   flex-wrap: wrap;
   gap: 0.5rem 0;
   align-items: center;
-  padding: 1rem 1.25rem;
+  margin-inline: -1.5rem;
+  padding: 1rem calc(1.25rem + 1.5rem);
   background: var(--pending-surface);
   border: 1px solid var(--pending-border);
   border-radius: var(--pending-radius);
@@ -269,7 +270,9 @@
 }
 
 .filterTrack {
-  display: flex;
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
   gap: 0.125rem;
   padding: 0.1875rem;
   background: var(--moderator-bg);
@@ -900,4 +903,156 @@
 .ocrCorrect {
   font-weight: 600;
   color: #15803d;
+}
+
+/* —— Dark mode —— */
+[data-theme="dark"] .metricIconPending,
+[data-theme="dark"] .fileIcon {
+  color: #e0f2fe;
+  background: rgba(147, 197, 253, 0.22);
+  border: 1px solid rgba(147, 197, 253, 0.4);
+}
+
+[data-theme="dark"] .queueCount {
+  color: #e0f2fe;
+  background: rgba(147, 197, 253, 0.2);
+  border: 1px solid rgba(147, 197, 253, 0.35);
+}
+
+[data-theme="dark"] .queueCardActive .queueCardInner {
+  background: rgba(147, 197, 253, 0.14);
+  border-color: rgba(147, 197, 253, 0.4);
+  box-shadow: 0 0 0 1px rgba(147, 197, 253, 0.18);
+}
+
+[data-theme="dark"] .fileDownload {
+  color: #93c5fd;
+  border-color: rgba(147, 197, 253, 0.38);
+}
+
+[data-theme="dark"] .fileDownload:hover {
+  color: #e0f2fe;
+  background: rgba(147, 197, 253, 0.16);
+}
+
+[data-theme="dark"] .hintBox {
+  color: #cbd5e1;
+  background: rgba(147, 197, 253, 0.12);
+  border: 1px solid rgba(147, 197, 253, 0.25);
+}
+
+[data-theme="dark"] .metricIconUrgent {
+  color: #fcd34d;
+  background: rgba(251, 191, 36, 0.16);
+}
+
+[data-theme="dark"] .metricIconRejected {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.16);
+}
+
+[data-theme="dark"] .metricIconApproved {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.16);
+}
+
+[data-theme="dark"] .bannerSuccess {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+[data-theme="dark"] .bannerSuccess .bannerIcon {
+  color: #86efac;
+}
+
+[data-theme="dark"] .bannerInfo {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+[data-theme="dark"] .bannerInfo .bannerIcon {
+  color: #bfdbfe;
+}
+
+[data-theme="dark"] .bannerReason {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+[data-theme="dark"] .bannerClose:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .queueCardUrgent .queueCardInner {
+  background: color-mix(in srgb, #fca581 12%, var(--pending-surface));
+}
+
+[data-theme="dark"] .queueCardUrgent.queueCardActive .queueCardInner {
+  background: color-mix(in srgb, #fca581 20%, var(--pending-primary-soft));
+}
+
+[data-theme="dark"] .radio {
+  border-color: var(--moderator-border);
+}
+
+[data-theme="dark"] .queueCardActive .radio {
+  box-shadow: inset 0 0 0 3px var(--pending-surface);
+}
+
+[data-theme="dark"] .tagFinal {
+  color: #e0f2fe;
+  background: rgba(147, 197, 253, 0.2);
+  border: 1px solid rgba(147, 197, 253, 0.4);
+}
+
+[data-theme="dark"] .tagPractice {
+  color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.16);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+}
+
+[data-theme="dark"] .tagUrgent {
+  color: #fca581;
+  background: color-mix(in srgb, #fca581 18%, var(--pending-surface));
+  border: 1px solid color-mix(in srgb, #fca581 35%, var(--pending-border));
+}
+
+[data-theme="dark"] .emptyIcon {
+  color: var(--pending-muted);
+}
+
+[data-theme="dark"] .detailStatus {
+  color: #fcd34d;
+  background: rgba(251, 191, 36, 0.16);
+}
+
+[data-theme="dark"] .previewQuestionsBox::-webkit-scrollbar-thumb {
+  background: var(--moderator-border);
+}
+
+[data-theme="dark"] .historyRow {
+  border-bottom-color: var(--pending-border);
+}
+
+[data-theme="dark"] .historyReason {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+[data-theme="dark"] .historyOutcomeApproved {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.16);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+[data-theme="dark"] .historyOutcomeRejected {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.16);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="dark"] .ocrCorrect {
+  color: #86efac;
 }

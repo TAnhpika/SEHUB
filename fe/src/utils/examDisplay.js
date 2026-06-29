@@ -13,6 +13,58 @@ export function stripRevisionLabel(value) {
     .trim();
 }
 
+const VALID_MAJORS = new Set(["SE", "AI"]);
+
+export function inferMajorFromSubjectCode(subjectCode) {
+  const upper = String(subjectCode ?? "").trim().toUpperCase();
+  if (/^(CSI|CSD|AIG)/.test(upper)) {
+    return "AI";
+  }
+  return "SE";
+}
+
+export function findCourseMajor(subjectCode, semester, courses = []) {
+  const normalized =
+    normalizeCourseSubjectCode(subjectCode) ?? String(subjectCode ?? "").trim().toUpperCase();
+  if (!normalized) {
+    return null;
+  }
+
+  const semesterNumber = Number(semester);
+  const groups = Number.isFinite(semesterNumber)
+    ? courses.filter((group) => group.semester === semesterNumber)
+    : courses;
+
+  for (const group of groups) {
+    for (const course of group.courses ?? []) {
+      const code = normalizeCourseSubjectCode(course.code) ?? String(course.code ?? "").trim().toUpperCase();
+      if (code === normalized) {
+        return course.major ?? inferMajorFromSubjectCode(normalized);
+      }
+    }
+  }
+
+  return inferMajorFromSubjectCode(normalized);
+}
+
+export function resolveExamMajor({ major, subjectCode, semester, courses = [] } = {}) {
+  const trimmedMajor = String(major ?? "").trim().toUpperCase();
+  if (VALID_MAJORS.has(trimmedMajor)) {
+    return trimmedMajor;
+  }
+
+  const normalizedSubject =
+    normalizeCourseSubjectCode(subjectCode) ?? String(subjectCode ?? "").trim().toUpperCase();
+  if (!normalizedSubject) {
+    return "SE";
+  }
+
+  return (
+    findCourseMajor(normalizedSubject, semester, courses) ??
+    inferMajorFromSubjectCode(normalizedSubject)
+  );
+}
+
 export function normalizeCourseSubjectCode(value) {
   if (!value) return null;
   const match = String(value).match(COURSE_CODE_PATTERN);

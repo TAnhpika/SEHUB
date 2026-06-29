@@ -118,6 +118,27 @@ public interface IWorkflowNotificationService
         Guid? actorUserId,
         CancellationToken cancellationToken = default);
 
+    Task NotifyUserWarnedAsync(
+        Guid userId,
+        string reason,
+        Guid penaltyId,
+        Guid? actorUserId,
+        CancellationToken cancellationToken = default);
+
+    Task NotifyUserBannedAsync(
+        Guid userId,
+        int durationDays,
+        DateTime banUntil,
+        string reason,
+        Guid penaltyId,
+        Guid? actorUserId,
+        CancellationToken cancellationToken = default);
+
+    Task NotifyUserUnbannedAsync(
+        Guid userId,
+        Guid? actorUserId,
+        CancellationToken cancellationToken = default);
+
     Task NotifyAdminsPaymentWaitingConfirmationAsync(
         PaymentOrder order,
         Guid studentUserId,
@@ -540,6 +561,72 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             $"/home/posts/{post.Id}",
             actorUserId,
             post.Id,
+            cancellationToken);
+    }
+
+    public async Task NotifyUserWarnedAsync(
+        Guid userId,
+        string reason,
+        Guid penaltyId,
+        Guid? actorUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var body = Truncate(reason, 160);
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            body = "Vui lòng tuân thủ quy định cộng đồng SEHub.";
+        }
+
+        await _notificationService.CreateAsync(
+            userId,
+            NotificationType.Moderation,
+            "Bạn nhận cảnh cáo từ kiểm duyệt viên",
+            body,
+            "/home",
+            actorUserId,
+            penaltyId,
+            cancellationToken);
+    }
+
+    public async Task NotifyUserBannedAsync(
+        Guid userId,
+        int durationDays,
+        DateTime banUntil,
+        string reason,
+        Guid penaltyId,
+        Guid? actorUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var untilLabel = banUntil.ToString("dd/MM/yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+        var reasonLabel = Truncate(reason, 120);
+        var body = string.IsNullOrWhiteSpace(reasonLabel)
+            ? $"Khóa {durationDays} ngày, đến {untilLabel} (UTC)."
+            : $"Khóa {durationDays} ngày, đến {untilLabel} (UTC). Lý do: {reasonLabel}";
+
+        await _notificationService.CreateAsync(
+            userId,
+            NotificationType.Moderation,
+            "Tài khoản của bạn bị khóa tạm thời",
+            body,
+            "/support",
+            actorUserId,
+            penaltyId,
+            cancellationToken);
+    }
+
+    public async Task NotifyUserUnbannedAsync(
+        Guid userId,
+        Guid? actorUserId,
+        CancellationToken cancellationToken = default)
+    {
+        await _notificationService.CreateAsync(
+            userId,
+            NotificationType.Moderation,
+            "Tài khoản của bạn đã được mở khóa",
+            "Bạn có thể tiếp tục sử dụng SEHub. Hãy tuân thủ quy định cộng đồng.",
+            "/home",
+            actorUserId,
+            userId,
             cancellationToken);
     }
 

@@ -17,6 +17,8 @@ using SEHub.Application.Profiles;
 
 using SEHub.Application.Models;
 
+using SEHub.Application.Users;
+
 using SEHub.Contracts.Auth;
 
 using SEHub.Domain.Entities;
@@ -67,6 +69,8 @@ public sealed class AuthService : IAuthService
     private readonly IAiTokenService _aiTokenService;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<AuthService> _logger;
+    private readonly IBanStatusService _banStatusService;
+    private readonly IAccountPenaltyService _accountPenaltyService;
 
 
 
@@ -106,7 +110,11 @@ public sealed class AuthService : IAuthService
 
         IServiceScopeFactory scopeFactory,
 
-        ILogger<AuthService> logger)
+        ILogger<AuthService> logger,
+
+        IBanStatusService banStatusService,
+
+        IAccountPenaltyService accountPenaltyService)
 
     {
 
@@ -145,6 +153,10 @@ public sealed class AuthService : IAuthService
         _scopeFactory = scopeFactory;
 
         _logger = logger;
+
+        _banStatusService = banStatusService;
+
+        _accountPenaltyService = accountPenaltyService;
 
     }
 
@@ -786,13 +798,25 @@ public sealed class AuthService : IAuthService
 
     {
 
-        if (await _userRepository.IsCurrentlyBannedAsync(userId, cancellationToken))
+        if (!await _userRepository.IsCurrentlyBannedAsync(userId, cancellationToken))
 
         {
 
-            throw new ForbiddenException(ErrorCodes.AccountBanned);
+            return;
 
         }
+
+
+
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken)
+
+            ?? throw new NotFoundException("User", userId);
+
+        var banRecord = await _banStatusService.GetActiveBanAsync(userId, cancellationToken);
+
+        var penalty = _accountPenaltyService.MapFromActiveBan(user, banRecord);
+
+        throw new AccountBannedException(penalty);
 
     }
 

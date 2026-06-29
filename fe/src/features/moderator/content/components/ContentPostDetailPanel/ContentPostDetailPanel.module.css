@@ -74,8 +74,13 @@
 }
 
 .detailFlagResubmit {
-  color: var(--color-primary-dark);
-  background: var(--moderator-primary-soft);
+  color: var(--moderator-primary);
+  background: color-mix(in srgb, var(--moderator-primary) 12%, var(--moderator-surface));
+}
+
+[data-theme="dark"] .detailFlagResubmit {
+  color: #93c5fd;
+  background: color-mix(in srgb, var(--moderator-primary) 22%, var(--moderator-surface-elevated));
 }
 
 .detailBody {
@@ -102,8 +107,13 @@
 }
 
 .moderationResubmit {
-  background: var(--moderator-primary-soft);
-  border-color: rgba(37, 99, 235, 0.25);
+  background: color-mix(in srgb, var(--moderator-primary) 12%, var(--moderator-surface));
+  border-color: color-mix(in srgb, var(--moderator-primary) 28%, var(--moderator-border));
+}
+
+[data-theme="dark"] .moderationResubmit {
+  background: color-mix(in srgb, var(--moderator-primary) 22%, var(--moderator-surface-elevated));
+  border-color: color-mix(in srgb, var(--moderator-primary) 45%, var(--moderator-border));
 }
 
 .moderationTitle {

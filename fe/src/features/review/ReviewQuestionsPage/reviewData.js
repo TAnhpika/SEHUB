@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import * as subjectsApi from "@/api/subjectsApi";
+import {
+  inferMajorFromSubjectCode,
+  normalizeCourseSubjectCode,
+} from "@/utils/examDisplay";
 
 export const SEMESTER_OPTIONS = [
   { value: "all", label: "Tất cả học kỳ" },
@@ -115,6 +119,20 @@ export const REVIEW_COURSES = [
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
+function normalizeCatalogMajor(code, major) {
+  const trimmed = String(major ?? "").trim().toUpperCase();
+  if (trimmed === "SE" || trimmed === "AI") {
+    return trimmed;
+  }
+
+  const normalizedCode = normalizeCourseSubjectCode(code) ?? String(code ?? "").trim().toUpperCase();
+  if (normalizeCourseSubjectCode(major) === normalizedCode) {
+    return inferMajorFromSubjectCode(normalizedCode);
+  }
+
+  return inferMajorFromSubjectCode(normalizedCode);
+}
+
 function mergeCourseCatalog(apiCourses = []) {
   const staticCodes = new Set(
     REVIEW_COURSES.flatMap((group) =>
@@ -146,7 +164,7 @@ function mergeCourseCatalog(apiCourses = []) {
 
       codeMap.set(code, {
         code,
-        major: course.major ?? "SE",
+        major: normalizeCatalogMajor(code, course.major ?? "SE"),
       });
     }
   };
@@ -175,7 +193,14 @@ export async function loadReviewCourses({ apiOnly = false } = {}) {
 
   const data = await subjectsApi.listSubjects();
   const apiCourses = Array.isArray(data) ? data : [];
-  return apiOnly ? apiCourses : mergeCourseCatalog(apiCourses);
+  const normalizedApiCourses = apiCourses.map((group) => ({
+    ...group,
+    courses: (group.courses ?? []).map((course) => ({
+      ...course,
+      major: normalizeCatalogMajor(course.code, course.major ?? "SE"),
+    })),
+  }));
+  return apiOnly ? normalizedApiCourses : mergeCourseCatalog(normalizedApiCourses);
 }
 
 export function useReviewCourses({ apiOnly = false } = {}) {

@@ -507,9 +507,10 @@ public sealed class ModerationService : IModerationService
             BanType.Temp.ToString(),
             cancellationToken);
 
+        var banRecordId = Guid.NewGuid();
         await _banRepository.AddAsync(new UserBan
         {
-            Id = Guid.NewGuid(),
+            Id = banRecordId,
             UserId = userId,
             ActorId = actorId,
             BanType = BanType.Temp,
@@ -519,6 +520,15 @@ public sealed class ModerationService : IModerationService
         }, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _workflowNotifications.NotifyUserBannedAsync(
+            userId,
+            request.DurationDays,
+            banUntil,
+            request.Reason.Trim(),
+            banRecordId,
+            actorId,
+            cancellationToken);
 
         return await MapViolatingUserAsync(userId, cancellationToken);
     }
@@ -649,9 +659,10 @@ public sealed class ModerationService : IModerationService
             throw new ForbiddenException("Moderators cannot warn staff accounts.");
         }
 
+        var banRecordId = Guid.NewGuid();
         await _banRepository.AddAsync(new UserBan
         {
-            Id = Guid.NewGuid(),
+            Id = banRecordId,
             UserId = userId,
             ActorId = actorId,
             BanType = BanType.Warning,
@@ -661,6 +672,13 @@ public sealed class ModerationService : IModerationService
         }, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _workflowNotifications.NotifyUserWarnedAsync(
+            userId,
+            reason,
+            banRecordId,
+            actorId,
+            cancellationToken);
 
         return await MapViolatingUserAsync(userId, cancellationToken);
     }
@@ -687,6 +705,9 @@ public sealed class ModerationService : IModerationService
 
         await _userRepository.UpdateBanAsync(userId, false, null, null, null, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var actorId = _currentUser.UserId;
+        await _workflowNotifications.NotifyUserUnbannedAsync(userId, actorId, cancellationToken);
 
         return await MapViolatingUserAsync(userId, cancellationToken);
     }

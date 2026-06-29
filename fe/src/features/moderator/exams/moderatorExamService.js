@@ -9,6 +9,7 @@ import {
   buildExamDisplayFields,
   enrichRevisionExamEntries,
   normalizeCourseSubjectCode,
+  resolveExamMajor,
 } from "@/utils/examDisplay";
 import { invalidateExamPaperCodeCache } from "@/utils/examPaperCode";
 import {
@@ -86,13 +87,18 @@ export function buildFinalExamCreateBody(examInfo, questions) {
   const subjectCode =
     normalizeCourseSubjectCode(examInfo.subjectCode) ?? examInfo.subjectCode.trim();
   const paperCode = examInfo.examCode?.trim();
+  const major = resolveExamMajor({
+    major: examInfo.major,
+    subjectCode,
+    semester: parseSemesterId(examInfo.semesterLabel),
+  });
 
   return {
     code: paperCode,
     title: paperCode || examInfo.subjectName || subjectCode,
     examType: "Final",
     semester: parseSemesterId(examInfo.semesterLabel),
-    major: subjectCode,
+    major,
     description: `${examInfo.subjectName ?? subjectCode} · ${examInfo.durationMinutes} phút`,
     questions: apiQuestions,
   };
@@ -102,13 +108,18 @@ export function buildPracticeExamCreateBody(payload) {
   const subjectCode =
     normalizeCourseSubjectCode(payload.subjectCode) ?? payload.subjectCode.trim();
   const paperCode = payload.title.trim();
+  const major = resolveExamMajor({
+    major: payload.major,
+    subjectCode,
+    semester: parseSemesterId(payload.semester),
+  });
 
   return {
     code: paperCode,
     title: paperCode,
     examType: "Practice",
     semester: parseSemesterId(payload.semester),
-    major: subjectCode,
+    major,
     description: payload.description?.trim() ?? "",
     questions: [],
   };

@@ -11,7 +11,9 @@ using SEHub.Application.Gamification.Events;
 using SEHub.Application.Premium;
 using SEHub.Application.Profiles;
 using SEHub.Application.Models;
+using SEHub.Application.Users;
 using SEHub.Contracts.Auth;
+using SEHub.Contracts.Users;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
@@ -36,6 +38,8 @@ public sealed class AuthServiceTests
     private readonly Mock<IAiTokenService> _aiTokenService = new();
     private readonly Mock<IServiceScopeFactory> _scopeFactory = new();
     private readonly Mock<ILogger<AuthService>> _logger = new();
+    private readonly Mock<IBanStatusService> _banStatusService = new();
+    private readonly Mock<IAccountPenaltyService> _accountPenaltyService = new();
     private readonly IMapper _mapper;
 
     private static readonly Guid UserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -63,7 +67,9 @@ public sealed class AuthServiceTests
         _premiumService.Object,
         _aiTokenService.Object,
         _scopeFactory.Object,
-        _logger.Object);
+        _logger.Object,
+        _banStatusService.Object,
+        _accountPenaltyService.Object);
 
     private void SetupSuccessfulLoginMocks(UserAccount user)
     {
@@ -119,9 +125,19 @@ public sealed class AuthServiceTests
     }
 
     [Fact]
-    public async Task LoginAsync_WhenUserIsBanned_ThrowsForbiddenException()
+    public async Task LoginAsync_WhenUserIsBanned_ThrowsAccountBannedException()
     {
         var user = CreateUser();
+        var penalty = new AccountPenaltyDto
+        {
+            Id = Guid.NewGuid(),
+            PenaltyType = BanType.Temp.ToString(),
+            PenaltyTypeLabel = "Khóa tạm thời",
+            Reason = "Spam",
+            IssuedAt = DateTime.UtcNow,
+            Until = DateTime.UtcNow.AddDays(7),
+            UntilLabel = "07/07/2026",
+        };
         _userRepository
             .Setup(r => r.GetByEmailOrUsernameAsync("student@test.local", It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
@@ -131,6 +147,15 @@ public sealed class AuthServiceTests
         _userRepository
             .Setup(r => r.IsCurrentlyBannedAsync(user.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
+        _userRepository
+            .Setup(r => r.GetByIdAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _banStatusService
+            .Setup(s => s.GetActiveBanAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserBan { BanType = BanType.Temp, Reason = "Spam" });
+        _accountPenaltyService
+            .Setup(s => s.MapFromActiveBan(user, It.IsAny<UserBan>()))
+            .Returns(penalty);
 
         var sut = CreateSut();
         var act = () => sut.LoginAsync(new LoginRequest
@@ -139,8 +164,8 @@ public sealed class AuthServiceTests
             Password = "ValidPass1!"
         });
 
-        var exception = await act.Should().ThrowAsync<ForbiddenException>();
-        exception.Which.Message.Should().Be(ErrorCodes.AccountBanned);
+        var exception = await act.Should().ThrowAsync<AccountBannedException>();
+        exception.Which.Penalty.Reason.Should().Be("Spam");
     }
 
     [Fact]
@@ -415,9 +440,18 @@ public sealed class AuthServiceTests
     }
 
     [Fact]
-    public async Task GoogleAuthAsync_WhenUserIsBanned_ThrowsForbiddenException()
+    public async Task GoogleAuthAsync_WhenUserIsBanned_ThrowsAccountBannedException()
     {
         var user = CreateUser();
+        var penalty = new AccountPenaltyDto
+        {
+            Id = Guid.NewGuid(),
+            PenaltyType = BanType.Temp.ToString(),
+            PenaltyTypeLabel = "Khóa tạm thời",
+            Reason = "Spam",
+            IssuedAt = DateTime.UtcNow,
+            UntilLabel = "07/07/2026",
+        };
         _googleTokenValidator
             .Setup(v => v.ValidateAsync("valid-google-token", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new GoogleTokenPayload
@@ -433,12 +467,21 @@ public sealed class AuthServiceTests
         _userRepository
             .Setup(r => r.IsCurrentlyBannedAsync(user.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
+        _userRepository
+            .Setup(r => r.GetByIdAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _banStatusService
+            .Setup(s => s.GetActiveBanAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserBan { BanType = BanType.Temp, Reason = "Spam" });
+        _accountPenaltyService
+            .Setup(s => s.MapFromActiveBan(user, It.IsAny<UserBan>()))
+            .Returns(penalty);
 
         var sut = CreateSut();
         var act = () => sut.GoogleAuthAsync(new GoogleAuthRequest { IdToken = "valid-google-token" });
 
-        var exception = await act.Should().ThrowAsync<ForbiddenException>();
-        exception.Which.Message.Should().Be(ErrorCodes.AccountBanned);
+        var exception = await act.Should().ThrowAsync<AccountBannedException>();
+        exception.Which.Penalty.Reason.Should().Be("Spam");
     }
 
     private static UserAccount CreateUser() => new()
