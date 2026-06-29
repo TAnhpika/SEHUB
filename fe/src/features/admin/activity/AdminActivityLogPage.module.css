@@ -1,7 +1,7 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 2rem;
 }
 
 /* Stats strip */
@@ -63,6 +63,26 @@
   --stat-bg: #ede9fe;
 }
 
+[data-theme="dark"] .statCard-all {
+  --stat-bg: color-mix(in srgb, #004ac6 18%, var(--moderator-surface));
+}
+
+[data-theme="dark"] .statCard-exam {
+  --stat-bg: color-mix(in srgb, #2563eb 18%, var(--moderator-surface));
+}
+
+[data-theme="dark"] .statCard-report {
+  --stat-bg: color-mix(in srgb, #dc2626 18%, var(--moderator-surface));
+}
+
+[data-theme="dark"] .statCard-payment {
+  --stat-bg: color-mix(in srgb, #059669 18%, var(--moderator-surface));
+}
+
+[data-theme="dark"] .statCard-user {
+  --stat-bg: color-mix(in srgb, #7c3aed 18%, var(--moderator-surface));
+}
+
 .statIcon {
   display: flex;
   flex-shrink: 0;
@@ -103,7 +123,7 @@
   gap: 0.5rem;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.25rem;
+  padding: 1rem 0;
   border-bottom: 1px solid var(--moderator-border);
 }
 
@@ -122,7 +142,7 @@
 
 .timeline {
   margin: 0;
-  padding: 1.25rem 1.25rem 0.5rem;
+  padding: 1.25rem 0 0.5rem;
   list-style: none;
 }
 
@@ -198,7 +218,7 @@
   font-size: 0.8rem;
   color: var(--node-accent);
   background: var(--node-bg);
-  border: 2px solid #fff;
+  border: 2px solid var(--moderator-surface);
   border-radius: 50%;
   box-shadow: 0 1px 4px color-mix(in srgb, var(--node-accent) 18%, transparent);
 }
