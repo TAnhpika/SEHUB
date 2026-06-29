@@ -47,7 +47,8 @@ function ContentModerationPage() {
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [focusedId, setFocusedId] = useState(null);
-  const [acting, setActing] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
+  const acting = pendingAction !== null;
   const { item: focusedItem, loading: detailLoading } = useContentModerationDetail(focusedId);
 
   const filtered = useMemo(() => filterContentQueue(items, { sort }), [items, sort]);
@@ -121,7 +122,7 @@ function ContentModerationPage() {
 
   async function handleApprove(ids) {
     if (acting || ids.length === 0) return;
-    setActing(true);
+    setPendingAction({ type: "approve", ids });
     try {
       await approveItems(ids);
       clearSelection(ids);
@@ -129,13 +130,13 @@ function ContentModerationPage() {
     } catch (err) {
       showToast(err.message ?? "Không duyệt được bài viết.");
     } finally {
-      setActing(false);
+      setPendingAction(null);
     }
   }
 
   async function handleReject(ids) {
     if (acting || ids.length === 0) return;
-    setActing(true);
+    setPendingAction({ type: "reject", ids });
     try {
       await rejectItems(ids);
       clearSelection(ids);
@@ -143,7 +144,7 @@ function ContentModerationPage() {
     } catch (err) {
       showToast(err.message ?? "Không từ chối được bài viết.");
     } finally {
-      setActing(false);
+      setPendingAction(null);
     }
   }
 
@@ -223,7 +224,7 @@ function ContentModerationPage() {
                 onClick={() => handleApprove([...selectedIds])}
               >
                 <FontAwesomeIcon icon={faCheck} />
-                Duyệt tất cả
+                {pendingAction?.type === "approve" ? "Đang duyệt..." : "Duyệt tất cả"}
               </button>
             </div>
           </div>
@@ -371,6 +372,11 @@ function ContentModerationPage() {
               <ContentPostDetailPanel
                 item={focusedItem}
                 mode="queue"
+                isApproving={
+                  pendingAction?.type === "approve" &&
+                  focusedItem != null &&
+                  pendingAction.ids.includes(focusedItem.id)
+                }
                 onApprove={(id) => handleApprove([id])}
                 onReject={(id) => handleReject([id])}
               />
