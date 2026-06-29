@@ -1,5 +1,7 @@
 export const TOKEN_KEY = "sehubs_token";
 export const REFRESH_TOKEN_KEY = "sehubs_refresh_token";
+const REFRESH_LOCK_KEY = "sehubs_refresh_lock";
+const REFRESH_LOCK_MAX_MS = 15000;
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5006";
 
@@ -13,7 +15,34 @@ const API_ERROR_MESSAGES = {
   AUTH_RATE_LIMIT_EXCEEDED: "Đăng nhập quá nhiều lần. Vui lòng thử lại sau vài phút.",
   OTP_INVALID: "Mã OTP không hợp lệ hoặc đã hết hạn.",
   STORAGE_UPLOAD_FAILED: "Không upload được file lên storage. Kiểm tra cấu hình Google Drive hoặc thử lại.",
+  REFRESH_TOKEN_REUSE_DETECTED:
+    "Phiên đăng nhập đã hết hạn (có thể do mở nhiều tab). Vui lòng đăng nhập lại.",
+  REFRESH_TOKEN_INVALID: "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.",
+  REFRESH_TOKEN_EXPIRED: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
 };
+
+const AUTH_SESSION_ERROR_CODES = new Set([
+  "REFRESH_TOKEN_REUSE_DETECTED",
+  "REFRESH_TOKEN_INVALID",
+  "REFRESH_TOKEN_EXPIRED",
+]);
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getErrorCode(payload, error) {
+  return payload?.errors?.[0]?.code ?? payload?.message ?? error?.errors?.[0]?.code ?? error?.message;
+}
+
+export function isAuthSessionError(error) {
+  if (!(error instanceof ApiError)) {
+    return false;
+  }
+
+  const code = error.errors?.[0]?.code;
+  return error.status === 401 || (code && AUTH_SESSION_ERROR_CODES.has(code));
+}
 
 function resolveApiErrorMessage(payload, status) {
   const firstError = payload?.errors?.[0];
@@ -74,6 +103,47 @@ export function setRefreshToken(token) {
 export function clearAuthTokens() {
   setAccessToken(null);
   setRefreshToken(null);
+}
+
+function notifyForcedLogout() {
+  clearAuthTokens();
+  window.dispatchEvent(new CustomEvent("auth:forced-logout"));
+}
+
+function readRefreshedSessionFromStorage(refreshTokenAtStart) {
+  const currentRefresh = getRefreshToken();
+  const currentAccess = getAccessToken();
+  if (
+    currentRefresh
+    && currentRefresh !== refreshTokenAtStart
+    && currentAccess
+  ) {
+    return { accessToken: currentAccess, refreshToken: currentRefresh };
+  }
+  return null;
+}
+
+async function waitForCrossTabRefresh(refreshTokenAtStart) {
+  const deadline = Date.now() + REFRESH_LOCK_MAX_MS;
+  while (Date.now() < deadline) {
+    const recovered = readRefreshedSessionFromStorage(refreshTokenAtStart);
+    if (recovered) {
+      return recovered;
+    }
+
+    if (!localStorage.getItem(REFRESH_LOCK_KEY)) {
+      await sleep(50);
+      const afterWait = readRefreshedSessionFromStorage(refreshTokenAtStart);
+      if (afterWait) {
+        return afterWait;
+      }
+      break;
+    }
+
+    await sleep(50);
+  }
+
+  return null;
 }
 
 async function parseResponse(response) {
@@ -154,24 +224,52 @@ export async function apiFormRequest(path, { method = "POST", formData, auth = t
 }
 
 async function performRefresh() {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) {
+  const refreshTokenAtStart = getRefreshToken();
+  if (!refreshTokenAtStart) {
     throw new ApiError("Phiên đăng nhập đã hết hạn.", { status: 401 });
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ refreshToken }),
-  });
+  if (localStorage.getItem(REFRESH_LOCK_KEY)) {
+    const recovered = await waitForCrossTabRefresh(refreshTokenAtStart);
+    if (recovered) {
+      return recovered;
+    }
+  }
 
-  const data = await parseResponse(response);
-  setAccessToken(data.accessToken);
-  setRefreshToken(data.refreshToken);
-  return data;
+  localStorage.setItem(REFRESH_LOCK_KEY, String(Date.now()));
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ refreshToken: refreshTokenAtStart }),
+    });
+
+    try {
+      const data = await parseResponse(response);
+      setAccessToken(data.accessToken);
+      setRefreshToken(data.refreshToken);
+      return data;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const code = getErrorCode(null, error);
+        if (code === "REFRESH_TOKEN_REUSE_DETECTED") {
+          const recovered = await waitForCrossTabRefresh(refreshTokenAtStart);
+          if (recovered) {
+            return recovered;
+          }
+          notifyForcedLogout();
+        } else if (AUTH_SESSION_ERROR_CODES.has(code)) {
+          notifyForcedLogout();
+        }
+      }
+      throw error;
+    }
+  } finally {
+    localStorage.removeItem(REFRESH_LOCK_KEY);
+  }
 }
 
 export async function refreshSession() {

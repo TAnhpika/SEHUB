@@ -88,6 +88,14 @@ public sealed class ExamsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpDelete("{id:guid}")]
+    [Authorize(Policy = PolicyNames.RequireAdmin)]
+    public async Task<IActionResult> DeleteExam(Guid id, CancellationToken cancellationToken)
+    {
+        await _adminExamService.DeleteExamAsync(id, cancellationToken);
+        return Ok(new { message = "Exam deleted" });
+    }
+
     [HttpPost("{id:guid}/revision")]
     [Authorize(Policy = PolicyNames.RequireModerator)]
     public async Task<IActionResult> CreateRevision(Guid id, CancellationToken cancellationToken)

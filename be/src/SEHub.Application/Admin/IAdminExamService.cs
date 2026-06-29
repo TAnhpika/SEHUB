@@ -14,4 +14,5 @@ public interface IAdminExamService
     Task<AdminExamDto> RejectExamAsync(Guid id, RejectExamRequest request, CancellationToken cancellationToken = default);
     Task<AdminExamDto> ResubmitExamAsync(Guid id, ResubmitExamRequest request, CancellationToken cancellationToken = default);
     Task<AdminExamDto> CreateRevisionAsync(Guid publishedExamId, CancellationToken cancellationToken = default);
+    Task DeleteExamAsync(Guid id, CancellationToken cancellationToken = default);
 }

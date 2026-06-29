@@ -52,6 +52,10 @@ export function updateExam(id, body) {
   });
 }
 
+export function deleteExam(id) {
+  return apiRequest(`/api/v1/admin/exams/${id}`, { method: "DELETE" });
+}
+
 export function approveExam(id) {
   return apiRequest(`/api/v1/admin/exams/${id}/approve`, { method: "POST" });
 }

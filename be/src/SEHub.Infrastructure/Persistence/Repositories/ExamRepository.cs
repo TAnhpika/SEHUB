@@ -56,6 +56,10 @@ public class ExamRepository : IExamRepository
             {
                 dbQuery = dbQuery.Where(e => e.Status == statusFilter);
             }
+            else
+            {
+                dbQuery = dbQuery.Where(e => e.Status != ExamStatus.Archived);
+            }
         }
         else
         {

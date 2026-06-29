@@ -272,6 +272,30 @@ public sealed class AdminExamService : IAdminExamService
         return await MapAdminExamAsync(revision, cancellationToken);
     }
 
+    public async Task DeleteExamAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var exam = await _examRepository.GetByIdAsync(id, cancellationToken: cancellationToken)
+            ?? throw new NotFoundException("Exam", id);
+
+        if (exam.Status == ExamStatus.Archived)
+        {
+            throw new DomainException("Đề đã được xóa trước đó.");
+        }
+
+        if (await _examRepository.GetPendingRevisionOfAsync(id, cancellationToken) is not null)
+        {
+            throw new DomainException("Không thể xóa đề đang có bản revision chờ duyệt. Hãy xử lý hàng chờ trước.");
+        }
+
+        var liveCode = exam.Code;
+        exam.Code = $"{liveCode}-DEL-{DateTime.UtcNow:yyyyMMddHHmmss}";
+        exam.Status = ExamStatus.Archived;
+        exam.UpdatedAt = DateTime.UtcNow;
+
+        await _examRepository.UpdateAsync(exam, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
     private async Task NotifyAdminsIfModeratorSubmittedAsync(Exam exam, CancellationToken cancellationToken)
     {
         if (exam.Status != ExamStatus.PendingApproval)

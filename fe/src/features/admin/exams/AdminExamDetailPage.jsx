@@ -15,7 +15,7 @@ import {
   getSemesterLabel,
   getTrackLabel,
   loadAdminExamById,
-  removeAdminExam,
+  removeAdminExamViaApi,
 } from "@/features/admin/exams/adminExamData";
 import examStyles from "@/features/admin/exams/AdminExam.module.css";
 import styles from "@/features/admin/shared/adminPage.module.css";
@@ -28,6 +28,7 @@ function AdminExamDetailPage() {
   const { showToast } = useToast();
   const { user } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [exam, setExam] = useState(() => getAdminExamById(id));
   const [loading, setLoading] = useState(true);
 
@@ -84,10 +85,22 @@ function AdminExamDetailPage() {
   const subjectCode = getExamSubjectCode(exam);
   const paperLabel = getExamListPaperLabel(exam);
 
-  function handleDelete() {
-    removeAdminExam(exam.id);
-    showToast(`Đã xóa ${paperLabel}.`);
-    navigate("/admin/exams");
+  async function handleDelete() {
+    if (deleteLoading) return;
+    setDeleteLoading(true);
+    try {
+      const removed = await removeAdminExamViaApi(exam.id);
+      if (!removed) {
+        showToast("Không xóa được đề thi.");
+        return;
+      }
+      showToast(`Đã xóa ${paperLabel}.`);
+      navigate("/admin/exams");
+    } catch (error) {
+      showToast(error?.message ?? "Không thể xóa đề thi.");
+    } finally {
+      setDeleteLoading(false);
+    }
   }
 
   function handleGraded() {
@@ -110,8 +123,8 @@ function AdminExamDetailPage() {
           <Button look="outline" to={`/admin/exams/${exam.id}/edit`}>
             Sửa
           </Button>
-          <Button look="outline" type="button" onClick={handleDelete}>
-            Xóa đề
+          <Button look="outline" type="button" onClick={handleDelete} disabled={deleteLoading}>
+            {deleteLoading ? "Đang xóa…" : "Xóa đề"}
           </Button>
         </>
       }
