@@ -123,12 +123,25 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   cursor: pointer;
+  user-select: none;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
+.reason span {
+  -webkit-text-fill-color: currentColor;
+  background: none;
+}
+
 .reason:hover {
-  border-color: var(--color-primary-soft);
-  background: var(--color-primary-light);
+  border-color: var(--color-tint-border);
+  background: var(--color-tint-bg);
+  color: var(--color-text);
+}
+
+.reason:has(input:checked) {
+  border-color: color-mix(in srgb, var(--color-icon-blue) 55%, var(--color-border));
+  background: var(--color-tint-bg);
+  color: var(--color-text);
 }
 
 .reason input {

@@ -68,3 +68,22 @@
   font-size: 0.875rem;
   color: var(--color-text-subtle);
 }
+
+[data-theme="dark"] .page-num {
+  color: var(--color-text-muted);
+  background: var(--color-surface-elevated);
+  border-color: var(--color-tint-border);
+}
+
+[data-theme="dark"] .page-num:hover {
+  color: var(--color-icon-blue);
+  border-color: color-mix(in srgb, var(--color-icon-blue) 55%, var(--color-border));
+  background: var(--color-tint-bg);
+}
+
+[data-theme="dark"] .page-num.active {
+  color: #fff;
+  background: #3b82f6;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #93c5fd 35%, transparent);
+}

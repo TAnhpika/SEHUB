@@ -38,6 +38,11 @@
   --color-icon-amber-bg: #fffbeb;
   --color-icon-amber: #d97706;
 
+  /* Avatar / icon chip — nền + chữ trên surface */
+  --color-tint-fg: var(--color-icon-blue);
+  --color-tint-bg: var(--color-icon-blue-bg);
+  --color-tint-border: color-mix(in srgb, var(--color-icon-blue) 28%, var(--color-border));
+
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 12px;
@@ -148,6 +153,9 @@
   --moderator-text-subtle: #64748b;
   --moderator-nav-active-bg: var(--moderator-primary-soft);
   --moderator-nav-hover-bg: var(--moderator-primary-muted);
+  --moderator-accent: var(--moderator-primary);
+  --moderator-accent-bg: var(--color-tint-bg);
+  --moderator-accent-border: var(--color-tint-border);
   --moderator-badge-bg: #ba1a1a;
   --moderator-badge-text: #ffffff;
   --moderator-header-height: 64px;
@@ -172,12 +180,13 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --color-primary-light: rgba(37, 99, 235, 0.15);
-  --color-primary-soft: rgba(37, 99, 235, 0.22);
-  --color-primary-ring: rgba(96, 165, 250, 0.3);
+  --color-primary-dark: #93c5fd;
+  --color-primary-light: #2b4568;
+  --color-primary-soft: #3d5f88;
+  --color-primary-ring: rgba(147, 197, 253, 0.35);
 
-  --color-badge-bg: rgba(37, 99, 235, 0.2);
-  --color-badge-text: #93c5fd;
+  --color-badge-bg: #2b4568;
+  --color-badge-text: #bfdbfe;
 
   --color-bg: #0f172a;
   --color-surface: #1e293b;
@@ -195,9 +204,16 @@
   --color-success-bg: rgba(34, 197, 94, 0.15);
   --color-warning-bg: rgba(245, 158, 11, 0.15);
 
-  --color-icon-blue-bg: rgba(37, 99, 235, 0.15);
-  --color-icon-purple-bg: rgba(37, 99, 235, 0.15);
-  --color-icon-amber-bg: rgba(217, 119, 6, 0.15);
+  --color-icon-blue-bg: #2b4568;
+  --color-icon-blue: #bfdbfe;
+  --color-icon-purple-bg: #2b4568;
+  --color-icon-purple: #bfdbfe;
+  --color-icon-amber-bg: rgba(251, 191, 36, 0.18);
+  --color-icon-amber: #fcd34d;
+
+  --color-tint-fg: var(--color-icon-blue);
+  --color-tint-bg: var(--color-icon-blue-bg);
+  --color-tint-border: #4d6f99;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.35);
@@ -242,6 +258,9 @@
 
   --moderator-primary-soft: rgba(37, 99, 235, 0.18);
   --moderator-primary-muted: rgba(37, 99, 235, 0.2);
+  --moderator-accent: #93c5fd;
+  --moderator-accent-bg: #2b4568;
+  --moderator-accent-border: #4d6f99;
   --moderator-bg: #0f172a;
   --moderator-surface: #1e293b;
   --moderator-surface-elevated: #273449;

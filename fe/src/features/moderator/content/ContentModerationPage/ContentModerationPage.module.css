@@ -28,9 +28,16 @@
 }
 
 .tabActive {
-    color: var(--moderator-primary);
+    color: var(--moderator-accent);
     background: var(--moderator-surface);
     box-shadow: var(--shadow-sm);
+}
+
+[data-theme="dark"] .tabActive {
+    color: #e0f2fe;
+    background: var(--moderator-accent-bg);
+    border: 1px solid var(--moderator-accent-border);
+    box-shadow: none;
 }
 
 .divider {
@@ -70,15 +77,28 @@
     padding: 0.5625rem 1rem;
     font-size: 0.875rem;
     font-weight: 500;
-    color: var(--moderator-primary);
+    color: var(--moderator-accent);
     text-decoration: none;
     background: var(--moderator-surface);
-    border: 1px solid color-mix(in srgb, var(--moderator-primary) 25%, transparent);
+    border: 1px solid var(--moderator-accent-border);
     border-radius: 8px;
 }
 
 .historyLink:hover {
-    background: var(--moderator-primary-soft);
+    color: var(--moderator-text);
+    background: color-mix(in srgb, var(--moderator-accent) 12%, var(--moderator-surface));
+    border-color: color-mix(in srgb, var(--moderator-accent) 45%, var(--moderator-accent-border));
+}
+
+[data-theme="dark"] .historyLink {
+    color: #e0f2fe;
+    border-color: var(--moderator-accent-border);
+}
+
+[data-theme="dark"] .historyLink:hover {
+    color: #f8fafc;
+    background: color-mix(in srgb, #60a5fa 18%, var(--moderator-surface-elevated));
+    border-color: #60a5fa;
 }
 
 .contentHintResubmit {
@@ -116,7 +136,7 @@
     gap: 0.75rem 1rem;
     align-items: center;
     justify-content: space-between;
-    margin: 1rem 1.25rem 1rem;
+    margin: 1rem 1.25rem calc(1rem + 10px);
     padding: 0.875rem 1rem;
     background: color-mix(in srgb, var(--moderator-primary) 12%, var(--moderator-surface));
     border: 1px solid color-mix(in srgb, var(--moderator-primary) 28%, var(--moderator-border));
@@ -351,17 +371,18 @@
 }
 
 .avatar {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    color: var(--moderator-primary);
-    background: linear-gradient(145deg, var(--moderator-primary-soft), var(--moderator-primary-soft));
-    border-radius: 50%;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--color-tint-fg);
+  background: var(--color-tint-bg);
+  border: 1px solid var(--color-tint-border);
+  border-radius: 50%;
 }
 
 .authorName {
