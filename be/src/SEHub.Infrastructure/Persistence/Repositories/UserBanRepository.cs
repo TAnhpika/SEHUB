@@ -34,6 +34,25 @@ public class UserBanRepository : IUserBanRepository
             .OrderByDescending(b => b.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
+    public Task<UserBan?> GetByIdForUserAsync(Guid id, Guid userId, CancellationToken cancellationToken = default) =>
+        _context.UserBans.FirstOrDefaultAsync(b => b.Id == id && b.UserId == userId, cancellationToken);
+
+    public async Task<UserBan?> GetLatestByUserIdAndTypeAsync(
+        Guid userId,
+        BanType? banType,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.UserBans.Where(b => b.UserId == userId);
+        if (banType.HasValue)
+        {
+            query = query.Where(b => b.BanType == banType.Value);
+        }
+
+        return await query
+            .OrderByDescending(b => b.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<UserBan>> GetHistoryByUserIdAsync(
         Guid userId, int page, int pageSize, CancellationToken cancellationToken = default) =>
         await _context.UserBans

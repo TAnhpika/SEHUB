@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context";
+import { mapAccountPenaltyDto } from "@/features/account/accountPenaltyUtils";
 import { getGoogleClientId, requestGoogleIdToken } from "@/utils/googleAuth";
 import { getRoleHomePath } from "@/utils/roleHelpers";
 
@@ -123,6 +124,7 @@ export function useLoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [submitError, setSubmitError] = useState("");
+  const [banPenalty, setBanPenalty] = useState(null);
 
   const formValues = { email, password };
 
@@ -185,6 +187,13 @@ export function useLoginForm() {
           replace: true,
           state: { email: identifier, from: redirectTo },
         });
+        return;
+      }
+
+      if (errorCode === "ACCOUNT_BANNED" && error?.data) {
+        setBanPenalty(mapAccountPenaltyDto(error.data));
+        setSubmitError("");
+        setIsSubmitting(false);
         return;
       }
 
@@ -290,5 +299,7 @@ export function useLoginForm() {
     handleSubmit,
     fillTestAccount,
     handleGoogleLogin,
+    banPenalty,
+    clearBanPenalty: () => setBanPenalty(null),
   };
 }

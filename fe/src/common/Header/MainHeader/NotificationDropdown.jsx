@@ -23,6 +23,11 @@ import {
 import { mapNotificationItem, mapNotificationPage } from "@/api/notificationsMapper";
 import { useChatHub } from "@/hooks/useChatHub";
 import { useHoverDropdown } from "@/hooks/useHoverDropdown";
+import AccountPenaltyModal from "@/features/account/AccountPenaltyModal/AccountPenaltyModal";
+import {
+  isAccountPenaltyNotification,
+  resolvePenaltyForNotification,
+} from "@/features/account/accountPenaltyUtils";
 import { NOTIFICATION_META } from "./notificationData";
 import styles from "./NotificationDropdown.module.css";
 
@@ -52,6 +57,9 @@ function NotificationDropdown() {
   const { open, setOpen, rootProps, handleTriggerClick } = useHoverDropdown();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [penaltyModalOpen, setPenaltyModalOpen] = useState(false);
+  const [penaltyDetails, setPenaltyDetails] = useState(null);
+  const [penaltyLoading, setPenaltyLoading] = useState(false);
   const rootRef = useRef(null);
   const panelId = useId();
 
@@ -144,14 +152,40 @@ function NotificationDropdown() {
       );
     }
 
+    if (isAccountPenaltyNotification(item)) {
+      setOpen(false);
+      setPenaltyModalOpen(true);
+      setPenaltyLoading(true);
+      setPenaltyDetails(null);
+      try {
+        const penalty = await resolvePenaltyForNotification(item);
+        setPenaltyDetails(penalty);
+      } finally {
+        setPenaltyLoading(false);
+      }
+      return;
+    }
+
     if (item.linkUrl) {
       setOpen(false);
       navigate(item.linkUrl);
     }
   }
 
+  function closePenaltyModal() {
+    setPenaltyModalOpen(false);
+    setPenaltyDetails(null);
+  }
+
   return (
     <div className={styles.root} ref={rootRef} {...rootProps}>
+      <AccountPenaltyModal
+        open={penaltyModalOpen}
+        penalty={penaltyDetails}
+        loading={penaltyLoading}
+        onClose={closePenaltyModal}
+        variant={penaltyDetails?.penaltyType === "Temp" || penaltyDetails?.penaltyType === "Permanent" ? "ban" : "info"}
+      />
       <button
         type="button"
         className={`${styles.trigger} ${open ? styles["trigger-open"] : ""}`}

@@ -507,9 +507,10 @@ public sealed class ModerationService : IModerationService
             BanType.Temp.ToString(),
             cancellationToken);
 
+        var banRecordId = Guid.NewGuid();
         await _banRepository.AddAsync(new UserBan
         {
-            Id = Guid.NewGuid(),
+            Id = banRecordId,
             UserId = userId,
             ActorId = actorId,
             BanType = BanType.Temp,
@@ -525,6 +526,7 @@ public sealed class ModerationService : IModerationService
             request.DurationDays,
             banUntil,
             request.Reason.Trim(),
+            banRecordId,
             actorId,
             cancellationToken);
 
@@ -657,9 +659,10 @@ public sealed class ModerationService : IModerationService
             throw new ForbiddenException("Moderators cannot warn staff accounts.");
         }
 
+        var banRecordId = Guid.NewGuid();
         await _banRepository.AddAsync(new UserBan
         {
-            Id = Guid.NewGuid(),
+            Id = banRecordId,
             UserId = userId,
             ActorId = actorId,
             BanType = BanType.Warning,
@@ -673,6 +676,7 @@ public sealed class ModerationService : IModerationService
         await _workflowNotifications.NotifyUserWarnedAsync(
             userId,
             reason,
+            banRecordId,
             actorId,
             cancellationToken);
 

@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faEye, faEyeSlash, faLock } from "@fortawesome/free-solid-svg-icons";
 import googleGSrc from "@/img/google-g.png";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
+import AccountPenaltyModal from "@/features/account/AccountPenaltyModal/AccountPenaltyModal";
 import { DEMO_ACCOUNTS, useLoginForm } from "./useLoginForm";
 import styles from "./LoginPage.module.css";
 
@@ -37,10 +38,18 @@ function LoginPage() {
     handleSubmit,
     fillTestAccount,
     handleGoogleLogin,
+    banPenalty,
+    clearBanPenalty,
   } = useLoginForm();
 
   return (
     <div className={styles.page}>
+      <AccountPenaltyModal
+        open={Boolean(banPenalty)}
+        penalty={banPenalty}
+        onClose={clearBanPenalty}
+        variant="ban"
+      />
       <AuthBrandPanel variant="login" />
 
       <section className={styles.formSection} aria-labelledby="login-title">
