@@ -1,7 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import {
   faComment,
   faEye,
@@ -120,8 +119,6 @@ function PostDetailModal({
     const result = await postsApi.uploadPostContentImage(file);
     return result?.url ?? result?.Url ?? null;
   }, []);
-
-  useLockBodyScroll(open);
 
   useEffect(() => {
     if (!post || !open) return undefined;
