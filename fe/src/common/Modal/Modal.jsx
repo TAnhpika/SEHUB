@@ -1,4 +1,13 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import styles from "./Modal.module.css";
 
@@ -73,7 +82,7 @@ export function Modal({
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       className={[styles.overlay, className].filter(Boolean).join(" ")}
       role="presentation"
@@ -95,7 +104,8 @@ export function Modal({
         ) : null}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
