@@ -304,13 +304,13 @@ function AdminGamificationConfigPage() {
 
       <section className={gStyles.reconcilePanel}>
         <h2 className={gStyles.sectionTitle}>Đối soát điểm</h2>
-        <p className={gStyles.statHint}>
+        <p className={gStyles.reconcileDesc}>
           So sánh điểm cache trên user với ledger PointTransactions. Mặc định dry-run, không sửa dữ liệu.
         </p>
-        <div className={styles.toolbar}>
+        <div className={gStyles.reconcileToolbar}>
           <input
             type="text"
-            className={styles.search}
+            className={gStyles.reconcileSearch}
             placeholder="User ID (để trống = quét tất cả drift)"
             value={reconcileUserId}
             onChange={(e) => setReconcileUserId(e.target.value)}
@@ -330,7 +330,7 @@ function AdminGamificationConfigPage() {
           </Button>
         </div>
         {reconcileRows.length > 0 ? (
-          <div className={styles.tableWrap}>
+          <div className={`${styles.tableWrap} ${gStyles.reconcileTableWrap}`}>
             <table className={styles.table}>
               <thead>
                 <tr>

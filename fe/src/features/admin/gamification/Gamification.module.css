@@ -26,17 +26,57 @@
 
 .reconcilePanel {
   margin-bottom: 1.25rem;
-  padding: 1rem;
+  padding: 1.25rem 1.5rem;
   background: var(--moderator-surface);
   border: 1px solid var(--moderator-border);
   border-radius: 12px;
 }
 
 .sectionTitle {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.75rem;
   font-size: 1rem;
   font-weight: 600;
   color: var(--moderator-text);
+}
+
+.reconcileDesc {
+  margin: 0 0 1.25rem;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--moderator-text-muted);
+}
+
+.reconcileToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+
+.reconcileSearch {
+  flex: 1 1 280px;
+  max-width: none;
+  padding: 0.625rem 1rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--moderator-text);
+  background: var(--moderator-input-bg, var(--color-auth-input-bg));
+  border: 1px solid var(--moderator-border);
+  border-radius: 10px;
+  outline: none;
+}
+
+.reconcileSearch::placeholder {
+  color: var(--moderator-text-subtle);
+}
+
+.reconcileSearch:focus {
+  border-color: var(--moderator-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--moderator-primary) 12%, transparent);
+}
+
+.reconcileTableWrap {
+  margin-top: 1.25rem;
 }
 
 .statLabel {

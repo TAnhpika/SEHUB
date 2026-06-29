@@ -310,10 +310,18 @@
   margin-bottom: 1.25rem;
   font-size: 0.8125rem;
   line-height: 1.55;
-  color: #1e3a8a;
-  background: #eff6ff;
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  color: var(--moderator-text);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--moderator-primary) 10%, var(--moderator-surface)) 0%,
+    var(--moderator-bg) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--moderator-primary) 18%, var(--moderator-border));
   border-radius: 10px;
+}
+
+.flowBanner strong {
+  color: var(--moderator-text);
 }
 
 .flowSteps {
@@ -329,9 +337,9 @@
   padding: 0.2rem 0.55rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #1d4ed8;
-  background: var(--moderator-surface);
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  color: var(--moderator-primary);
+  background: color-mix(in srgb, var(--moderator-primary) 12%, var(--moderator-surface));
+  border: 1px solid color-mix(in srgb, var(--moderator-primary) 22%, var(--moderator-border));
   border-radius: 9999px;
 }
 
@@ -566,7 +574,11 @@ thead .actionCol {
   align-items: flex-start;
   justify-content: space-between;
   padding: 1.25rem 1.5rem;
-  background: linear-gradient(135deg, #eff6ff 0%, #f7f9fc 100%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--moderator-primary) 10%, var(--moderator-surface)) 0%,
+    var(--moderator-bg) 100%
+  );
   border-bottom: 1px solid var(--moderator-border);
 }
 
