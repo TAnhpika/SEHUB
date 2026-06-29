@@ -65,7 +65,6 @@ function ModeratorHeader() {
             </span>
             <span className={styles.breadcrumbCurrent}>{pageTitle}</span>
           </nav>
-          <h1 className={styles.pageTitle}>{pageTitle}</h1>
         </div>
 
         <div className={styles.searchWrap}>

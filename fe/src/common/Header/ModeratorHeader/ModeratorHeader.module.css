@@ -85,18 +85,6 @@
   white-space: nowrap;
 }
 
-.pageTitle {
-  margin: 0;
-  overflow: hidden;
-  font-size: 1.375rem;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--moderator-text);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  letter-spacing: -0.03em;
-}
-
 .searchWrap {
   display: flex;
   flex: 1;
@@ -429,9 +417,8 @@
 
 @media (min-width: 1025px) {
   .lead {
-    flex-direction: column;
-    align-items: flex-start;
-    max-width: 220px;
+    align-items: center;
+    max-width: none;
   }
 
   .menuBtn {
@@ -440,14 +427,11 @@
 
   .breadcrumb {
     display: flex;
+    margin: 0;
   }
 }
 
 @media (max-width: 520px) {
-  .pageTitle {
-    font-size: 1.125rem;
-  }
-
   .breadcrumb {
     display: none;
   }
