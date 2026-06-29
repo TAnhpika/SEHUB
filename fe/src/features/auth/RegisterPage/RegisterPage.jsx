@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faEnvelope,
@@ -9,81 +8,42 @@ import {
   faLock,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
-import { useToast } from "@/common/Toast/ToastProvider";
 import googleGSrc from "@/img/google-g.png";
-import { useAuth } from "@/context";
-import { getGoogleClientId, requestGoogleIdToken } from "@/utils/googleAuth";
-import { getRoleHomePath } from "@/utils/roleHelpers";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
+import { useRegisterForm } from "./useRegisterForm";
 import styles from "./RegisterPage.module.css";
 
+function RegisterFieldError({ id, message }) {
+  if (!message) {
+    return null;
+  }
+
+  return (
+    <span id={id} className={styles.fieldError} role="alert">
+      {message}
+    </span>
+  );
+}
+
 function RegisterPage() {
-  const navigate = useNavigate();
-  const { googleLogin, register } = useAuth();
-  const { showToast } = useToast();
-
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-
-    if (password !== confirmPassword) {
-      showToast("Mật khẩu xác nhận không khớp.");
-      return;
-    }
-
-    if (password.length < 8) {
-      showToast("Mật khẩu phải có ít nhất 8 ký tự.");
-      return;
-    }
-
-    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
-      showToast("Mật khẩu cần có chữ hoa, chữ thường, số và ký tự đặc biệt.");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    const trimmedEmail = email.trim();
-    const trimmedName = fullName.trim();
-
-    try {
-      await register({
-        fullName: trimmedName,
-        email: trimmedEmail,
-        password,
-      });
-      showToast("Đăng ký thành công. Kiểm tra email để lấy mã xác minh.");
-      navigate("/verify-email", {
-        replace: true,
-        state: { email: trimmedEmail, from: "/home" },
-      });
-    } catch (error) {
-      showToast(error?.message ?? "Đăng ký thất bại.");
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleGoogleSignup() {
-    if (!getGoogleClientId()) {
-      showToast("Chưa cấu hình Google Client ID (VITE_GOOGLE_CLIENT_ID).");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const nextUser = await googleLogin(await requestGoogleIdToken());
-      navigate(getRoleHomePath(nextUser), { replace: true });
-    } catch (error) {
-      showToast(error?.message ?? "Đăng ký Google thất bại.");
-      setIsSubmitting(false);
-    }
-  }
+  const {
+    fullName,
+    setFullName,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    confirmPassword,
+    setConfirmPassword,
+    showPassword,
+    setShowPassword,
+    isSubmitting,
+    fieldErrors,
+    clearFieldError,
+    handleFieldBlur,
+    handleSubmit,
+    handleGoogleSignup,
+  } = useRegisterForm();
 
   return (
     <div className={styles.page}>
@@ -103,54 +63,99 @@ function RegisterPage() {
             </p>
           </header>
 
-          <form className={styles.form} onSubmit={handleSubmit}>
+          <form className={styles.form} onSubmit={handleSubmit} noValidate autoComplete="off">
             <div className={styles.fields}>
               <label className={styles.field}>
                 <span className={styles.label}>Họ và tên</span>
-                <span className={styles["input-wrap"]}>
+                <span
+                  className={`${styles["input-wrap"]} ${
+                    fieldErrors.fullName ? styles.inputInvalid : ""
+                  }`}
+                >
                   <FontAwesomeIcon icon={faUser} className={styles["input-icon"]} />
                   <input
                     type="text"
                     className={styles.input}
                     value={fullName}
-                    onChange={(event) => setFullName(event.target.value)}
+                    onChange={(event) => {
+                      setFullName(event.target.value);
+                      clearFieldError("fullName");
+                    }}
+                    onBlur={() => handleFieldBlur("fullName")}
                     placeholder="Nhập họ và tên của bạn"
                     autoComplete="name"
                     required
+                    maxLength={100}
+                    aria-invalid={Boolean(fieldErrors.fullName)}
+                    aria-describedby={fieldErrors.fullName ? "register-fullName-error" : undefined}
                   />
                 </span>
+                <RegisterFieldError id="register-fullName-error" message={fieldErrors.fullName} />
               </label>
 
               <label className={styles.field}>
                 <span className={styles.label}>Email</span>
-                <span className={styles["input-wrap"]}>
+                <span
+                  className={`${styles["input-wrap"]} ${
+                    fieldErrors.email ? styles.inputInvalid : ""
+                  }`}
+                >
                   <FontAwesomeIcon icon={faEnvelope} className={styles["input-icon"]} />
                   <input
                     type="email"
                     className={styles.input}
                     value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    onChange={(event) => {
+                      setEmail(event.target.value);
+                      clearFieldError("email");
+                    }}
+                    onBlur={() => handleFieldBlur("email")}
                     placeholder="example@sehub.ai"
                     autoComplete="email"
                     required
+                    maxLength={256}
+                    aria-invalid={Boolean(fieldErrors.email)}
+                    aria-describedby={fieldErrors.email ? "register-email-error" : undefined}
                   />
                 </span>
+                <RegisterFieldError id="register-email-error" message={fieldErrors.email} />
               </label>
 
               <div className={styles.fieldRow}>
                 <label className={styles.field}>
                   <span className={styles.label}>Mật khẩu</span>
-                  <span className={styles["input-wrap"]}>
+                  <span
+                    className={`${styles["input-wrap"]} ${
+                      fieldErrors.password ? styles.inputInvalid : ""
+                    }`}
+                  >
                     <FontAwesomeIcon icon={faLock} className={styles["input-icon"]} />
                     <input
                       type={showPassword ? "text" : "password"}
                       className={styles.input}
+                      name="sehubs-register-secret"
                       value={password}
-                      onChange={(event) => setPassword(event.target.value)}
+                      onChange={(event) => {
+                        setPassword(event.target.value);
+                        clearFieldError("password");
+                        if (fieldErrors.confirmPassword) {
+                          clearFieldError("confirmPassword");
+                        }
+                      }}
+                      onBlur={() => handleFieldBlur("password")}
+                      onFocus={(event) => {
+                        event.currentTarget.readOnly = false;
+                      }}
+                      readOnly
                       placeholder="••••••••"
-                      autoComplete="new-password"
+                      autoComplete="off"
+                      data-1p-ignore
+                      data-lpignore="true"
                       required
                       minLength={8}
+                      maxLength={128}
+                      aria-invalid={Boolean(fieldErrors.password)}
+                      aria-describedby={fieldErrors.password ? "register-password-error" : undefined}
                     />
                     <button
                       type="button"
@@ -161,23 +166,48 @@ function RegisterPage() {
                       <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
                     </button>
                   </span>
+                  <RegisterFieldError id="register-password-error" message={fieldErrors.password} />
                 </label>
 
                 <label className={styles.field}>
                   <span className={styles.label}>Xác nhận mật khẩu</span>
-                  <span className={styles["input-wrap"]}>
+                  <span
+                    className={`${styles["input-wrap"]} ${
+                      fieldErrors.confirmPassword ? styles.inputInvalid : ""
+                    }`}
+                  >
                     <FontAwesomeIcon icon={faKey} className={styles["input-icon"]} />
                     <input
                       type={showPassword ? "text" : "password"}
                       className={styles.input}
+                      name="sehubs-register-secret-confirm"
                       value={confirmPassword}
-                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      onChange={(event) => {
+                        setConfirmPassword(event.target.value);
+                        clearFieldError("confirmPassword");
+                      }}
+                      onBlur={() => handleFieldBlur("confirmPassword")}
+                      onFocus={(event) => {
+                        event.currentTarget.readOnly = false;
+                      }}
+                      readOnly
                       placeholder="••••••••"
-                      autoComplete="new-password"
+                      autoComplete="off"
+                      data-1p-ignore
+                      data-lpignore="true"
                       required
                       minLength={8}
+                      maxLength={128}
+                      aria-invalid={Boolean(fieldErrors.confirmPassword)}
+                      aria-describedby={
+                        fieldErrors.confirmPassword ? "register-confirmPassword-error" : undefined
+                      }
                     />
                   </span>
+                  <RegisterFieldError
+                    id="register-confirmPassword-error"
+                    message={fieldErrors.confirmPassword}
+                  />
                 </label>
               </div>
             </div>
