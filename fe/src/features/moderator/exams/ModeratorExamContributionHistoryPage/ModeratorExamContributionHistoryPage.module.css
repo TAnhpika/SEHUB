@@ -53,7 +53,7 @@
 .filterLabel {
   font-size: 0.6875rem;
   font-weight: 700;
-  color: var(--moderator-text-subtle);
+  color: var(--moderator-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -63,8 +63,26 @@
   padding: 0.5rem 0.75rem;
   font-family: inherit;
   font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--moderator-text);
+  cursor: pointer;
+  background: var(--moderator-input-bg);
   border: 1px solid var(--moderator-border);
   border-radius: 8px;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.select:hover {
+  border-color: color-mix(in srgb, var(--moderator-primary) 35%, var(--moderator-border));
+}
+
+.select:focus {
+  border-color: var(--moderator-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--moderator-primary) 22%, transparent);
 }
 
 .panel {
@@ -118,6 +136,24 @@
 
 .quickLinks a:hover {
   text-decoration: underline;
+}
+
+[data-theme="dark"] .filterLabel {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .select {
+  background: var(--moderator-surface-elevated);
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+[data-theme="dark"] .select:hover {
+  border-color: rgba(147, 197, 253, 0.45);
+}
+
+[data-theme="dark"] .select:focus {
+  border-color: var(--moderator-primary);
+  box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.22);
 }
 
 @media (max-width: 768px) {
