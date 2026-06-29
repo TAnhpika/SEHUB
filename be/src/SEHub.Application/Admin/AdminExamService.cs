@@ -10,6 +10,7 @@ using SEHub.Contracts.Exams;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Exceptions;
 using SEHub.Shared.Constants;
+using SEHub.Shared.Subjects;
 
 namespace SEHub.Application.Admin;
 
@@ -107,7 +108,10 @@ public sealed class AdminExamService : IAdminExamService
 
         if (request.Code is not null) exam.Code = request.Code;
         if (request.Title is not null) exam.Title = request.Title;
-        if (request.Major is not null) exam.Major = request.Major;
+        if (request.Major is not null)
+        {
+            exam.Major = ExamMajorResolver.Normalize(request.Major, exam.Code, exam.Title);
+        }
         if (request.Description is not null) exam.Description = request.Description;
         if (request.Semester is not null && int.TryParse(request.Semester, out var semester)) exam.Semester = semester;
         if (request.ExamType is not null && Enum.TryParse<ExamType>(request.ExamType, true, out var examType)) exam.ExamType = examType;
@@ -155,6 +159,7 @@ public sealed class AdminExamService : IAdminExamService
         }
 
         exam.Status = ExamStatus.Published;
+        exam.Major = ExamMajorResolver.Normalize(exam.Major, exam.Code, exam.Title);
         exam.UpdatedAt = DateTime.UtcNow;
         await _examRepository.UpdateAsync(exam, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -337,7 +342,7 @@ public sealed class AdminExamService : IAdminExamService
             Title = request.Title,
             ExamType = examType,
             Semester = semester,
-            Major = request.Major ?? string.Empty,
+            Major = ExamMajorResolver.Normalize(request.Major, request.Code, request.Title),
             Description = request.Description ?? string.Empty,
             AssetUrl = request.AssetUrl,
             SubmittedById = submittedById,

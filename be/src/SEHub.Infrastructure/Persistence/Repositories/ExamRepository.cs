@@ -171,7 +171,7 @@ public class ExamRepository : IExamRepository
                 continue;
             }
 
-            var major = exam.Major.Trim();
+            var major = ExamMajorResolver.Normalize(exam.Major, exam.Code, exam.Title);
             var key = (exam.Semester, subjectCode, major);
             entries.TryAdd(
                 key,

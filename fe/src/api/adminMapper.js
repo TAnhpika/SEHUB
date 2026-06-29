@@ -4,6 +4,7 @@ import {
   buildExamDisplayFields,
   extractCourseSubjectCode,
   normalizeCourseSubjectCode,
+  resolveExamMajor,
   resolvePublicExamName,
 } from "@/utils/examDisplay";
 import { mapModerationPostImages } from "@/utils/mapModerationPostImages";
@@ -322,13 +323,18 @@ export function mapFinalExamWizardToCreateRequest(examInfo, questions) {
   const subjectCode =
     normalizeCourseSubjectCode(examInfo.subjectCode) ?? examInfo.subjectCode.trim();
   const paperCode = examInfo.examCode?.trim();
+  const major = resolveExamMajor({
+    major: examInfo.major,
+    subjectCode,
+    semester: parseSemesterNumber(examInfo.semesterLabel),
+  });
 
   return {
     code: paperCode,
     title: paperCode || `${subjectCode} — Cuối kỳ`,
     examType: "Final",
     semester: parseSemesterNumber(examInfo.semesterLabel),
-    major: subjectCode,
+    major,
     description: `${examInfo.subjectName ?? subjectCode} · ${examInfo.durationMinutes} phút`,
     questions: mapWizardQuestionsToCreateItems(questions),
   };
@@ -363,11 +369,17 @@ export function mapExamDetailToWizard(dto) {
     extractCourseSubjectCode(dto.major, dto.revisionSourceCode, dto.code, dto.title) ??
     dto.major ??
     "";
+  const major = resolveExamMajor({
+    major: dto.major,
+    subjectCode,
+    semester: dto.semester,
+  });
 
   return {
     examInfo: {
       subjectCode,
       subjectName: String(dto.description ?? "").split(" · ")[0]?.trim() || publicName,
+      major,
       semesterLabel: dto.semester ? `Học kỳ ${dto.semester}` : "",
       examCode: publicName,
       revisionSourceCode: dto.revisionSourceCode ?? null,
@@ -506,13 +518,18 @@ export function mapPracticeExamFormToCreateRequest(form) {
   const subjectCode =
     normalizeCourseSubjectCode(form.subjectCode) ?? form.subjectCode.trim();
   const paperCode = form.title.trim();
+  const major = resolveExamMajor({
+    major: form.major,
+    subjectCode,
+    semester: parseSemesterNumber(form.semester),
+  });
 
   return {
     code: paperCode,
     title: paperCode,
     examType: "Practice",
     semester: parseSemesterNumber(form.semester),
-    major: subjectCode,
+    major,
     description: [form.description, githubGuide].filter(Boolean).join("\n\n"),
     assetUrl: form.assetUrl ?? null,
     questions: [],
