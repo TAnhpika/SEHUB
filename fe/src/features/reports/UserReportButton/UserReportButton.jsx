@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFlag } from "@fortawesome/free-solid-svg-icons";
+import { faUserSlash } from "@fortawesome/free-solid-svg-icons";
+import reportModalStyles from "@/features/feed/ReportPostModal/ReportPostModal.module.css";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useToast } from "@/common/Toast/ToastProvider";
 import * as usersApi from "@/api/usersApi";
@@ -18,7 +19,7 @@ function UserReportButton({
   questionCommentId,
   label = "Báo cáo người dùng",
   variant = "icon",
-  icon = faFlag,
+  icon = faUserSlash,
 }) {
   const { requireAuth } = useRequireAuth();
   const { showToast } = useToast();
@@ -70,6 +71,8 @@ function UserReportButton({
         open={open}
         onClose={() => setOpen(false)}
         title="Báo cáo người dùng"
+        icon={icon}
+        iconClassName={reportModalStyles.iconUser}
         subtitle={
           <>
             Bạn đang báo cáo tài khoản <strong>{displayName}</strong>
