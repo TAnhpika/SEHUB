@@ -2,9 +2,10 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/context";
 import AuthBootstrapFallback from "@/common/loading/AuthBootstrapFallback";
 import { mapCommunityPathToHome } from "@/utils/subjectPaths";
+import { resolveAuthenticatedLandingPath } from "@/utils/roleHelpers";
 
 function AuthenticatedHomeRedirect() {
-  const { isAuthenticated, isBootstrapping } = useAuth();
+  const { isAuthenticated, isBootstrapping, user } = useAuth();
   const location = useLocation();
 
   if (isBootstrapping) {
@@ -16,7 +17,8 @@ function AuthenticatedHomeRedirect() {
       location.pathname === "/" ? "/home" : mapCommunityPathToHome(location.pathname);
 
     if (homePath) {
-      return <Navigate to={`${homePath}${location.search}`} replace />;
+      const destination = resolveAuthenticatedLandingPath(user, homePath);
+      return <Navigate to={`${destination}${location.search}`} replace />;
     }
   }
 

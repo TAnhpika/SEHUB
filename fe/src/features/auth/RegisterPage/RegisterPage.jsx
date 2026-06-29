@@ -13,6 +13,7 @@ import { useToast } from "@/common/Toast/ToastProvider";
 import googleGSrc from "@/img/google-g.png";
 import { useAuth } from "@/context";
 import { getGoogleClientId, requestGoogleIdToken } from "@/utils/googleAuth";
+import { getRoleHomePath } from "@/utils/roleHelpers";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import styles from "./RegisterPage.module.css";
 
@@ -76,8 +77,8 @@ function RegisterPage() {
 
     setIsSubmitting(true);
     try {
-      await googleLogin(await requestGoogleIdToken());
-      navigate("/home", { replace: true });
+      const nextUser = await googleLogin(await requestGoogleIdToken());
+      navigate(getRoleHomePath(nextUser), { replace: true });
     } catch (error) {
       showToast(error?.message ?? "Đăng ký Google thất bại.");
       setIsSubmitting(false);
