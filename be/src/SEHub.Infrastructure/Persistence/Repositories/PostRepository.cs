@@ -4,6 +4,7 @@ using SEHub.Contracts.Admin;
 using SEHub.Contracts.Feed;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
+using SEHub.Shared.Feed;
 
 namespace SEHub.Infrastructure.Persistence.Repositories;
 
@@ -46,8 +47,9 @@ public class PostRepository : IPostRepository
 
         if (!string.IsNullOrWhiteSpace(query.Tag))
         {
-            var tag = query.Tag.Trim();
-            dbQuery = dbQuery.Where(p => p.Tags.Contains(tag));
+            var slug = TagSlug.ToSlug(query.Tag);
+            dbQuery = dbQuery.Where(p =>
+                _context.PostTags.Any(pt => pt.PostId == p.Id && pt.Tag.Slug == slug));
         }
 
         if (!string.IsNullOrWhiteSpace(query.Major))

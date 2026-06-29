@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SEHub.Domain.Entities;
+using SEHub.Infrastructure.Identity;
 
 namespace SEHub.Infrastructure.Persistence.Configurations;
 
@@ -10,6 +11,21 @@ public class AiExamChatThreadConfiguration : IEntityTypeConfiguration<AiExamChat
     {
         builder.HasIndex(thread => new { thread.UserId, thread.ExamId, thread.QuestionId }).IsUnique();
         builder.Property(thread => thread.CreatedAt).IsRequired();
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(thread => thread.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Exam>()
+            .WithMany()
+            .HasForeignKey(thread => thread.ExamId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Question>()
+            .WithMany()
+            .HasForeignKey(thread => thread.QuestionId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

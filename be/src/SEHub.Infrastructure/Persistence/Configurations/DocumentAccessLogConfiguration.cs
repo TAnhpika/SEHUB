@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SEHub.Domain.Entities;
+using SEHub.Infrastructure.Identity;
 
 namespace SEHub.Infrastructure.Persistence.Configurations;
 
@@ -19,5 +20,10 @@ public class DocumentAccessLogConfiguration : IEntityTypeConfiguration<DocumentA
             .WithMany()
             .HasForeignKey(l => l.DocumentId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(l => l.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

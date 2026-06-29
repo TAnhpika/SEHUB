@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SEHub.Domain.Entities;
+using SEHub.Infrastructure.Identity;
 
 namespace SEHub.Infrastructure.Persistence.Configurations;
 
@@ -9,8 +10,9 @@ public class ExamConfiguration : IEntityTypeConfiguration<Exam>
     public void Configure(EntityTypeBuilder<Exam> builder)
     {
         builder.HasKey(e => e.Id);
-        builder.HasIndex(e => e.Code).IsUnique();
-        builder.HasIndex(e => new { e.Semester, e.Major, e.ExamType });
+        builder.HasIndex(e => new { e.Major, e.Code }).IsUnique();
+        builder.HasIndex(e => new { e.Major, e.Status, e.ExamType });
+        builder.HasIndex(e => e.ContentHash);
         builder.Property(e => e.Code).HasMaxLength(50).IsRequired();
         builder.Property(e => e.Title).HasMaxLength(200).IsRequired();
         builder.Property(e => e.Major).HasMaxLength(100).IsRequired();
@@ -26,6 +28,16 @@ public class ExamConfiguration : IEntityTypeConfiguration<Exam>
             .WithMany()
             .HasForeignKey(e => e.RevisionOfExamId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(e => e.SubmittedById)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(e => e.RejectedById)
+            .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasMany(e => e.Questions)
             .WithOne(q => q.Exam)

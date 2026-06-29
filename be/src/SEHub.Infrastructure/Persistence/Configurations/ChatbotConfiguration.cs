@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SEHub.Domain.Entities;
+using SEHub.Infrastructure.Identity;
 
 namespace SEHub.Infrastructure.Persistence.Configurations;
 
@@ -30,6 +31,11 @@ public class ChatbotConversationConfiguration : IEntityTypeConfiguration<Chatbot
     {
         builder.Property(conversation => conversation.Title).HasMaxLength(200).IsRequired();
         builder.HasIndex(conversation => conversation.UserId);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(conversation => conversation.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

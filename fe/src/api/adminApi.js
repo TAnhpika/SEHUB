@@ -364,6 +364,17 @@ export function deleteGamificationPointRule(id) {
   return apiRequest(`/api/v1/admin/gamification/point-rules/${id}`, { method: "DELETE" });
 }
 
+export function reconcilePoints({ userId, applyFix = false } = {}) {
+  const params = new URLSearchParams();
+  if (userId) params.set("userId", userId);
+  if (applyFix) params.set("applyFix", "true");
+  const query = params.toString();
+  return apiRequest(
+    `/api/v1/admin/gamification/points/reconcile${query ? `?${query}` : ""}`,
+    { method: "POST" },
+  );
+}
+
 export function listModerationPracticeSubmissions(params = {}) {
   return apiRequest(`/api/v1/admin/moderation/practice-submissions${buildQuery(params)}`);
 }

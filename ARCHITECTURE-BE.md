@@ -394,6 +394,48 @@ dotnet ef database update \
 - Cấu hình quan hệ/index trong `Configurations/*.cs` (`IEntityTypeConfiguration<T>`).
 - Seed: `SubscriptionPlans`, `LevelConfigs`, tài khoản Admin (environment-specific).
 
+### 3.1.1 Database hardening runbook (Supabase production)
+
+**Trước mỗi phase:** backup Supabase Dashboard → Database → Backups (hoặc `pg_dump`).
+
+**Phase 0 — Audit (không đổi schema):** chạy SQL trong `be/scripts/db-audit/` trên Supabase SQL Editor:
+
+| Script | Mục đích |
+| ------ | -------- |
+| `01_audit_orphans.sql` | User/report/exam orphan refs trước khi thêm FK |
+| `02_audit_exam_duplicates.sql` | Trùng `(Major, Code)` trước unique mới |
+| `03_audit_user_reports.sql` | Vi phạm `UserReportSource` context |
+| `04_cleanup_optional.sql` | Cleanup có comment (chỉ khi audit > 0) |
+| `05_verify_indexes.sql` | So khớp index sau deploy |
+
+**Gate:** audit orphan = 0 trên các bảng sẽ thêm FK → mới `dotnet ef database update`.
+
+**Apply migration:**
+
+```bash
+cd be
+dotnet ef database update \
+  --project src/SEHub.Infrastructure \
+  --startup-project src/SEHub.API
+```
+
+Migration `DatabaseHardening` gồm: FK user refs, `CK_UserReports_Source_Context`, unique `Exams(Major, Code)`, indexes leaderboard/catalog, `AnswersJson` → `text`, `ConversationReports.Status` → `int`, `Tags`/`PostTags` + backfill, `QuestionAttachments`, `UserMissionProgress`.
+
+**Follow-up migrations (Post-Hardening P1+P2):**
+
+| Migration | Nội dung |
+| --------- | -------- |
+| `PostHardeningFollowUp` | Index `PointTransactions(UserId, Status, CreatedAt)`; FK + index `Documents.DeletedById` |
+| `DropPostsTagsColumn` | Drop cột legacy `Posts.Tags`; đọc/ghi tag qua `PostTags` junction |
+
+Trước `PostHardeningFollowUp`: chạy `01_audit_orphans.sql` (mục `Documents.DeletedById`). Enforcement ban vẫn dùng cache `AspNetUsers.IsBanned`/`BanUntil`; `UserBans` + `BanStatusService` phục vụ admin/audit. Đối soát điểm: `POST /api/v1/admin/gamification/points/reconcile` (dry-run mặc định); job `PointsReconciliationBackgroundService` bật qua `Gamification:ReconcilePointsSchedule` (default `false`).
+
+**Sau deploy:** chạy `05_verify_indexes.sql`; smoke test exam create, report, ban, payment, gamification award.
+
+**Rollback:** restore Supabase backup — **không** `dotnet ef migrations remove` trên prod.
+
+**Admin ops:** `POST /api/v1/admin/gamification/points/reconcile?applyFix=false` — kiểm tra drift; `applyFix=true` đồng bộ `AspNetUsers.Points` từ `PointTransactions` ledger.
+
 ### 3.2 Base entity & Soft Delete (bắt buộc)
 
 ```csharp

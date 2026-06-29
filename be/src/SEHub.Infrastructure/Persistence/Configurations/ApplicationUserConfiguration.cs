@@ -13,6 +13,7 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
         builder.Property(u => u.BanReason).HasMaxLength(500);
         builder.HasIndex(u => u.Email).IsUnique();
         builder.HasIndex(u => u.UserName).IsUnique();
+        builder.HasIndex(u => u.Points);
 
         builder.HasOne(u => u.Level)
             .WithMany()

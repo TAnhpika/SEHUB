@@ -120,7 +120,10 @@ public sealed class ExamsController : ControllerBase
     [HttpPost("upload-question-image")]
     [Authorize(Policy = PolicyNames.RequireModerator)]
     [RequestSizeLimit(5_242_880)]
-    public async Task<IActionResult> UploadQuestionImage(IFormFile file, CancellationToken cancellationToken)
+    public async Task<IActionResult> UploadQuestionImage(
+        IFormFile file,
+        [FromQuery] Guid? questionId,
+        CancellationToken cancellationToken)
     {
         if (file is null || file.Length == 0)
         {
@@ -133,6 +136,7 @@ public sealed class ExamsController : ControllerBase
             file.FileName,
             file.ContentType,
             file.Length,
+            questionId,
             cancellationToken);
 
         return Ok(result);

@@ -13,11 +13,11 @@ public interface IMissionRepository
     Task<IReadOnlyList<(Guid Id, string Code, string Name, string EventType, int TargetCount, int RewardPoints)>> GetActiveDailyMissionsAsync(
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<(Guid Id, string Code, string EventType, int RewardPoints)>> GetActiveDailyByEventTypeAsync(
+    Task<IReadOnlyList<(Guid Id, string Code, string EventType, int TargetCount, int RewardPoints)>> GetActiveDailyByEventTypeAsync(
         string eventType,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<(Guid Id, string Code, string EventType, int RewardPoints)>> GetActiveWeeklyByEventTypeAsync(
+    Task<IReadOnlyList<(Guid Id, string Code, string EventType, int TargetCount, int RewardPoints)>> GetActiveWeeklyByEventTypeAsync(
         string eventType,
         CancellationToken cancellationToken = default);
 }

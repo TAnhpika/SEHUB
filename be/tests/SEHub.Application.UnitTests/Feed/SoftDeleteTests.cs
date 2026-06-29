@@ -26,6 +26,7 @@ public sealed class SoftDeleteTests
     private readonly Mock<ICdnFolderSettings> _cdnFolders = new();
     private readonly Mock<IWorkflowNotificationService> _workflowNotifications = new();
     private readonly Mock<IFileStorageService> _fileStorage = new();
+    private readonly Mock<IPostTagRepository> _postTagRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
     private static readonly Guid PostId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
@@ -49,6 +50,7 @@ public sealed class SoftDeleteTests
             _cdnFolders.Object,
             _workflowNotifications.Object,
             _fileStorage.Object,
+            _postTagRepository.Object,
             _unitOfWork.Object,
             AutoMapperFactory.Create());
     }

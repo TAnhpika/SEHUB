@@ -56,6 +56,8 @@ public static class DependencyInjection
         services.AddScoped<LeaderboardService>();
         services.AddScoped<ILeaderboardService, CachedLeaderboardService>();
         services.AddScoped<IMissionProgressService, MissionProgressService>();
+        services.AddScoped<IBanStatusService, BanStatusService>();
+        services.AddScoped<IPointsReconciliationService, PointsReconciliationService>();
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();

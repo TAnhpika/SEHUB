@@ -15,6 +15,7 @@ using SEHub.API.IntegrationTests.Auth;
 using SEHub.Application.Abstractions;
 using IGoogleTokenValidator = SEHub.Application.Abstractions.IGoogleTokenValidator;
 using SEHub.Infrastructure.Persistence;
+using SEHub.Infrastructure.Persistence.Repositories;
 using SEHub.Shared.Constants;
 using SEHub.API.IntegrationTests.Storage;
 
@@ -241,7 +242,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 AuthorId = FreeUserId,
                 Title = "Integration Test Post",
                 Content = "Published post for integration tests.",
-                Tags = "test",
                 Status = PostStatus.Published,
                 CreatedAt = DateTime.UtcNow
             });
@@ -255,7 +255,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 AuthorId = FreeUserId,
                 Title = TaggedPostTitle,
                 Content = "Post used for tag filter integration tests.",
-                Tags = "csharp,integration",
                 Status = PostStatus.Published,
                 CreatedAt = DateTime.UtcNow
             });
@@ -269,7 +268,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 AuthorId = FreeUserId,
                 Title = RejectedPostTitle,
                 Content = "Rejected post awaiting author resubmit.",
-                Tags = "rejected",
                 Status = PostStatus.Rejected,
                 CreatedAt = DateTime.UtcNow
             });
@@ -283,7 +281,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 AuthorId = FreeUserId,
                 Title = "Pending Post For Moderation",
                 Content = "This post awaits moderator approval before appearing on the public feed.",
-                Tags = "pending,moderation",
                 Status = PostStatus.Pending,
                 CreatedAt = DateTime.UtcNow
             });
@@ -302,7 +299,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 AuthorId = FreeUserId,
                 Title = "Reject Moderation Candidate",
                 Content = "Used by integration tests for legacy post rejection API.",
-                Tags = "reject,moderation",
                 Status = PostStatus.Pending,
                 CreatedAt = DateTime.UtcNow
             });
@@ -321,7 +317,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 AuthorId = FreeUserId,
                 Title = "Report Seed Post",
                 Content = "Published post with a comment for report integration tests.",
-                Tags = "report,integration",
                 Status = PostStatus.Published,
                 CreatedAt = DateTime.UtcNow
             });
@@ -363,7 +358,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 AuthorId = FreeUserId,
                 Title = SoftDeletedPostTitle,
                 Content = "This post is soft-deleted and must not appear in public listings.",
-                Tags = "test",
                 Status = PostStatus.Published,
                 IsDeleted = true,
                 DeletedAt = DateTime.UtcNow,
@@ -452,6 +446,54 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         }
 
         await context.SaveChangesAsync();
+        await SeedIntegrationPostTagsAsync(context);
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedIntegrationPostTagsAsync(SEHubDbContext context)
+    {
+        var tagRepository = new PostTagRepository(context);
+        var syncTargets = new (Guid? PostId, string? Title, string[] Tags)[]
+        {
+            (RejectedPostId, null, ["rejected"]),
+            (PendingPostId, null, ["pending", "moderation"]),
+            (RejectModerationPostId, null, ["reject", "moderation"]),
+            (ReportSeedPostId, null, ["report", "integration"]),
+            (SoftDeletedPostId, null, ["test"]),
+            (null, TaggedPostTitle, ["csharp", "integration"]),
+            (null, "Integration Test Post", ["test"]),
+        };
+
+        foreach (var (postId, title, tags) in syncTargets)
+        {
+            Guid resolvedId;
+            if (postId is Guid id)
+            {
+                if (!await context.Posts.AnyAsync(p => p.Id == id))
+                {
+                    continue;
+                }
+
+                resolvedId = id;
+            }
+            else
+            {
+                var post = await context.Posts.FirstOrDefaultAsync(p => p.Title == title);
+                if (post is null)
+                {
+                    continue;
+                }
+
+                resolvedId = post.Id;
+            }
+
+            if (await context.PostTags.AnyAsync(pt => pt.PostId == resolvedId))
+            {
+                continue;
+            }
+
+            await tagRepository.SyncPostTagsAsync(resolvedId, tags);
+        }
     }
 
     public async Task<string> LoginAndGetTokenAsync(HttpClient client)

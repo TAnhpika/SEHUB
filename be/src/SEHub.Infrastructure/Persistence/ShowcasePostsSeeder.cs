@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
+using SEHub.Infrastructure.Persistence.Repositories;
+using SEHub.Shared.Feed;
 
 namespace SEHub.Infrastructure.Persistence;
 
@@ -41,6 +43,7 @@ public static class ShowcasePostsSeeder
         var now = DateTime.UtcNow;
         var templates = BuildTemplates(demoAuthor.Id, freeAuthor?.Id ?? demoAuthor.Id);
         var added = 0;
+        var tagRepository = new PostTagRepository(context);
 
         foreach (var template in templates)
         {
@@ -55,7 +58,6 @@ public static class ShowcasePostsSeeder
                 AuthorId = template.AuthorId,
                 Title = template.Title,
                 Content = template.Content,
-                Tags = template.TagList,
                 Status = PostStatus.Published,
                 ViewCount = template.ViewCount,
                 IsPinned = template.IsPinned,
@@ -63,6 +65,7 @@ public static class ShowcasePostsSeeder
                 IsDeleted = false,
                 CreatedAt = now.AddMinutes(template.MinutesAgo),
             });
+            await tagRepository.SyncPostTagsAsync(template.Id, ParseTags(template.TagList));
             added++;
         }
 
@@ -81,16 +84,18 @@ public static class ShowcasePostsSeeder
         var post1Template = templates[0];
         var post2Template = templates[1];
         var updated = false;
+        var tagRepository = new PostTagRepository(context);
+        var se301Slug = TagSlug.ToSlug("SE301");
 
         var post1 = await context.Posts.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == Post1Id);
         if (post1 is not null
             && (post1.Title.Contains("SE301", StringComparison.OrdinalIgnoreCase)
                 || post1.Content.Contains("SE301", StringComparison.OrdinalIgnoreCase)
-                || post1.Tags.Contains("SE301", StringComparison.OrdinalIgnoreCase)))
+                || await context.PostTags.AnyAsync(pt => pt.PostId == post1.Id && pt.Tag.Slug == se301Slug)))
         {
             post1.Title = post1Template.Title;
             post1.Content = post1Template.Content;
-            post1.Tags = post1Template.TagList;
+            await tagRepository.SyncPostTagsAsync(post1.Id, ParseTags(post1Template.TagList));
             updated = true;
         }
 
@@ -99,11 +104,11 @@ public static class ShowcasePostsSeeder
             && (post2.Title.Contains("SE301", StringComparison.OrdinalIgnoreCase)
                 || post2.Content.Contains("SE301", StringComparison.OrdinalIgnoreCase)
                 || post2.Content.Contains("Software Engineering", StringComparison.OrdinalIgnoreCase)
-                || post2.Tags.Contains("SE301", StringComparison.OrdinalIgnoreCase)))
+                || await context.PostTags.AnyAsync(pt => pt.PostId == post2.Id && pt.Tag.Slug == se301Slug)))
         {
             post2.Title = post2Template.Title;
             post2.Content = post2Template.Content;
-            post2.Tags = post2Template.TagList;
+            await tagRepository.SyncPostTagsAsync(post2.Id, ParseTags(post2Template.TagList));
             updated = true;
         }
 
@@ -261,4 +266,7 @@ public static class ShowcasePostsSeeder
     {
         public string TagList => $"{ShowcasePostTag},{ExtraTags}";
     }
+
+    private static IReadOnlyList<string> ParseTags(string tags) =>
+        tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }

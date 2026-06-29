@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SEHub.Domain.Entities;
+using SEHub.Infrastructure.Identity;
 
 namespace SEHub.Infrastructure.Persistence.Configurations;
 
@@ -15,7 +16,6 @@ public class PostConfiguration : IEntityTypeConfiguration<Post>
         builder.HasIndex(p => new { p.Status, p.AuthorId, p.CreatedAt });
         builder.Property(p => p.Title).HasMaxLength(200).IsRequired();
         builder.Property(p => p.Content).HasMaxLength(10000).IsRequired();
-        builder.Property(p => p.Tags).HasMaxLength(2000);
         builder.Property(p => p.CoverImageUrl).HasMaxLength(500);
         builder.Property(p => p.ModerationNote).HasMaxLength(1000);
 
@@ -33,5 +33,20 @@ public class PostConfiguration : IEntityTypeConfiguration<Post>
             .WithOne(r => r.Post)
             .HasForeignKey(r => r.PostId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(p => p.AuthorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(p => p.ModeratedById)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(p => p.DeletedById)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

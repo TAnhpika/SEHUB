@@ -7,15 +7,18 @@ namespace SEHub.Application.Gamification.Engines;
 public sealed class MissionProgressService : IMissionProgressService
 {
     private readonly IMissionRepository _missionRepository;
+    private readonly IUserMissionProgressRepository _missionProgressRepository;
     private readonly IPointEngine _pointEngine;
     private readonly IUnitOfWork _unitOfWork;
 
     public MissionProgressService(
         IMissionRepository missionRepository,
+        IUserMissionProgressRepository missionProgressRepository,
         IPointEngine pointEngine,
         IUnitOfWork unitOfWork)
     {
         _missionRepository = missionRepository;
+        _missionProgressRepository = missionProgressRepository;
         _pointEngine = pointEngine;
         _unitOfWork = unitOfWork;
     }
@@ -28,9 +31,17 @@ public sealed class MissionProgressService : IMissionProgressService
         var dailyMissions = await _missionRepository.GetActiveDailyByEventTypeAsync(eventType, cancellationToken);
         foreach (var mission in dailyMissions)
         {
-            var key = $"daily-mission:{mission.Code}:{userId}:{today:yyyy-MM-dd}";
-            if (mission.RewardPoints > 0)
+            var periodKey = today.ToString("yyyy-MM-dd");
+            var progress = await _missionProgressRepository.IncrementAsync(
+                userId,
+                mission.Code,
+                periodKey,
+                mission.TargetCount,
+                cancellationToken);
+
+            if (progress.ProgressCount >= mission.TargetCount && mission.RewardPoints > 0)
             {
+                var key = $"daily-mission:{mission.Code}:{userId}:{periodKey}";
                 await _pointEngine.AwardByEventTypeAsync(
                     userId,
                     $"mission.daily.{mission.Code}",
@@ -44,9 +55,17 @@ public sealed class MissionProgressService : IMissionProgressService
         var weeklyMissions = await _missionRepository.GetActiveWeeklyByEventTypeAsync(eventType, cancellationToken);
         foreach (var mission in weeklyMissions)
         {
-            var key = $"weekly-mission:{mission.Code}:{userId}:{weekStart:yyyy-MM-dd}";
-            if (mission.RewardPoints > 0)
+            var periodKey = weekStart.ToString("yyyy-MM-dd");
+            var progress = await _missionProgressRepository.IncrementAsync(
+                userId,
+                mission.Code,
+                periodKey,
+                mission.TargetCount,
+                cancellationToken);
+
+            if (progress.ProgressCount >= mission.TargetCount && mission.RewardPoints > 0)
             {
+                var key = $"weekly-mission:{mission.Code}:{userId}:{periodKey}";
                 await _pointEngine.AwardByEventTypeAsync(
                     userId,
                     $"mission.weekly.{mission.Code}",

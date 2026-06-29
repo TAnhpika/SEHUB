@@ -15,4 +15,5 @@ public class Question : BaseEntity
 
     public Exam Exam { get; set; } = null!;
     public ICollection<QuestionOption> Options { get; set; } = [];
+    public ICollection<QuestionAttachment> Attachments { get; set; } = [];
 }

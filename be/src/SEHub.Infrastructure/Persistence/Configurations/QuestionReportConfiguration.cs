@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SEHub.Domain.Entities;
+using SEHub.Infrastructure.Identity;
 
 namespace SEHub.Infrastructure.Persistence.Configurations;
 
@@ -24,5 +25,15 @@ public class QuestionReportConfiguration : IEntityTypeConfiguration<QuestionRepo
             .WithMany()
             .HasForeignKey(r => r.ExamId)
             .OnDelete(DeleteBehavior.NoAction);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(r => r.ReporterId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(r => r.ResolvedById)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
