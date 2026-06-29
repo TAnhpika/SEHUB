@@ -15,7 +15,7 @@
   gap: 1.5rem;
   align-items: center;
   min-height: var(--header-height, 72px);
-  padding: 0 1.75rem;
+  padding: 0 1.5rem;
 }
 
 /* Lead */
@@ -216,7 +216,7 @@
 
 .toolPanelBody {
   max-height: 18rem;
-  padding: 0 0.5rem;
+  padding: 0 0.75rem;
   overflow-y: auto;
 }
 
@@ -281,11 +281,15 @@
 }
 
 .notifItemUrgent {
-  background: #fef2f2;
+  background: var(--color-danger-bg, #fee2e2);
 }
 
 .notifItemUrgent:hover {
-  background: #fee2e2;
+  background: color-mix(in srgb, var(--color-danger, #ef4444) 18%, var(--moderator-surface));
+}
+
+[data-theme="dark"] .notifItemUrgent:hover {
+  background: rgba(239, 68, 68, 0.22);
 }
 
 .notifItemTitle,
@@ -550,13 +554,7 @@
     padding: 0.875rem 1.25rem;
   }
 
-  .lead {
-    flex: 1;
-    max-width: none;
-  }
-
   .searchWrap {
-    order: 3;
     flex: 1 1 100%;
   }
 
@@ -570,14 +568,6 @@
 }
 
 @media (max-width: 520px) {
-  .pageTitle {
-    font-size: 1.125rem;
-  }
-
-  .breadcrumb {
-    display: none;
-  }
-
   .profileMeta {
     display: none;
   }
