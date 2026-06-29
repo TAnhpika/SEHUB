@@ -1,7 +1,9 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell } from "@fortawesome/free-solid-svg-icons";
+import { mapNotificationItem } from "@/api/notificationsMapper";
+import { useChatHub } from "@/hooks/useChatHub";
 import {
   buildModeratorNotifications,
   loadModeratorNotifications,
@@ -10,24 +12,67 @@ import {
 import headerStyles from "./ModeratorHeader.module.css";
 import styles from "./ModeratorHeaderDropdown.module.css";
 
+const STATS_EVENT = "sehub-moderator-stats-updated";
+
+function mapIncomingModeratorNotification(payload) {
+  const mapped = mapNotificationItem(payload);
+  if (mapped.type !== "moderation" && mapped.type !== "examreview") {
+    return null;
+  }
+
+  return {
+    id: `notif-${mapped.id}`,
+    title: mapped.title,
+    detail: mapped.body || "Cần xử lý",
+    time: mapped.time,
+    to: mapped.linkUrl || "/moderator/reports",
+  };
+}
+
 function ModeratorNotificationDropdown({ open, onToggle, onClose }) {
   const rootRef = useRef(null);
   const panelId = useId();
   const [notifications, setNotifications] = useState(() => buildModeratorNotifications());
   const [unreadCount, setUnreadCount] = useState(() => buildModeratorNotifications().length);
 
-  useEffect(() => {
-    let cancelled = false;
+  const refreshNotifications = useCallback(() => {
     Promise.all([loadModeratorNotifications(), loadModeratorUnreadCount()]).then(([items, count]) => {
-      if (!cancelled) {
-        setNotifications(items);
-        setUnreadCount(count);
-      }
+      setNotifications(items);
+      setUnreadCount(count);
     });
-    return () => {
-      cancelled = true;
-    };
-  }, [open]);
+  }, []);
+
+  useChatHub({
+    onNotificationReceived: (payload) => {
+      const item = mapIncomingModeratorNotification(payload);
+      if (!item) {
+        return;
+      }
+
+      setNotifications((current) => {
+        if (current.some((entry) => entry.id === item.id)) {
+          return current;
+        }
+        return [item, ...current];
+      });
+      setUnreadCount((current) => current + 1);
+      window.dispatchEvent(new CustomEvent(STATS_EVENT));
+    },
+    onNotificationUnreadUpdated: () => {
+      refreshNotifications();
+      window.dispatchEvent(new CustomEvent(STATS_EVENT));
+    },
+  });
+
+  useEffect(() => {
+    refreshNotifications();
+  }, [refreshNotifications]);
+
+  useEffect(() => {
+    if (open) {
+      refreshNotifications();
+    }
+  }, [open, refreshNotifications]);
 
   useEffect(() => {
     if (!open) return undefined;
