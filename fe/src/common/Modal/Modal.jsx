@@ -25,7 +25,10 @@ export function Modal({
 }) {
   const panelRef = useRef(null);
   const previousFocusRef = useRef(null);
+  const onCloseRef = useRef(onClose);
   const resolvedTitleId = titleId ?? "app-modal-title";
+
+  onCloseRef.current = onClose;
 
   useLockBodyScroll(open);
 
@@ -37,9 +40,19 @@ export function Modal({
     const focusables = panel ? getFocusableElements(panel) : [];
     (focusables[0] ?? panel)?.focus?.();
 
+    return () => {
+      previousFocusRef.current?.focus?.();
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const panel = panelRef.current;
+
     function handleKeyDown(event) {
       if (event.key === "Escape") {
-        onClose?.();
+        onCloseRef.current?.();
         return;
       }
 
@@ -67,9 +80,8 @@ export function Modal({
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
-      previousFocusRef.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

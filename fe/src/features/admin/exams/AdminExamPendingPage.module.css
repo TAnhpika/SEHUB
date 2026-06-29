@@ -904,6 +904,41 @@
 }
 
 /* —— Dark mode —— */
+[data-theme="dark"] .metricIconPending,
+[data-theme="dark"] .fileIcon {
+  color: #e0f2fe;
+  background: rgba(147, 197, 253, 0.22);
+  border: 1px solid rgba(147, 197, 253, 0.4);
+}
+
+[data-theme="dark"] .queueCount {
+  color: #e0f2fe;
+  background: rgba(147, 197, 253, 0.2);
+  border: 1px solid rgba(147, 197, 253, 0.35);
+}
+
+[data-theme="dark"] .queueCardActive .queueCardInner {
+  background: rgba(147, 197, 253, 0.14);
+  border-color: rgba(147, 197, 253, 0.4);
+  box-shadow: 0 0 0 1px rgba(147, 197, 253, 0.18);
+}
+
+[data-theme="dark"] .fileDownload {
+  color: #93c5fd;
+  border-color: rgba(147, 197, 253, 0.38);
+}
+
+[data-theme="dark"] .fileDownload:hover {
+  color: #e0f2fe;
+  background: rgba(147, 197, 253, 0.16);
+}
+
+[data-theme="dark"] .hintBox {
+  color: #cbd5e1;
+  background: rgba(147, 197, 253, 0.12);
+  border: 1px solid rgba(147, 197, 253, 0.25);
+}
+
 [data-theme="dark"] .metricIconUrgent {
   color: #fcd34d;
   background: rgba(251, 191, 36, 0.16);
@@ -934,7 +969,7 @@
 }
 
 [data-theme="dark"] .bannerInfo .bannerIcon {
-  color: #93c5fd;
+  color: #bfdbfe;
 }
 
 [data-theme="dark"] .bannerReason {
@@ -964,9 +999,9 @@
 }
 
 [data-theme="dark"] .tagFinal {
-  color: #93c5fd;
-  background: var(--moderator-accent-bg);
-  border: 1px solid var(--moderator-accent-border);
+  color: #e0f2fe;
+  background: rgba(147, 197, 253, 0.2);
+  border: 1px solid rgba(147, 197, 253, 0.4);
 }
 
 [data-theme="dark"] .tagPractice {
