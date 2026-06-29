@@ -5,6 +5,7 @@ import { faArrowLeft, faArrowRight, faClock } from "@fortawesome/free-solid-svg-
 import * as authApi from "@/api/authApi";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
+import { getRoleHomePath } from "@/utils/roleHelpers";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
 import OtpInput from "@/features/auth/ForgotPasswordPage/OtpInput";
 import styles from "@/features/auth/ForgotPasswordPage/ForgotPasswordPage.module.css";
@@ -19,6 +20,7 @@ function VerifyEmailPage() {
 
   const email = (location.state?.email ?? user?.email ?? "").trim();
   const redirectTo = location.state?.from || "/home";
+  const postVerifyPath = getRoleHomePath(user, redirectTo);
 
   const [otp, setOtp] = useState("");
   const [resendSeconds, setResendSeconds] = useState(RESEND_SECONDS);
@@ -30,9 +32,9 @@ function VerifyEmailPage() {
     }
 
     if (isAuthenticated && user?.emailConfirmed !== false) {
-      navigate(redirectTo, { replace: true });
+      navigate(postVerifyPath, { replace: true });
     }
-  }, [isBootstrapping, isAuthenticated, user?.emailConfirmed, navigate, redirectTo]);
+  }, [isBootstrapping, isAuthenticated, user?.emailConfirmed, navigate, postVerifyPath]);
 
   useEffect(() => {
     if (resendSeconds <= 0) {
@@ -67,7 +69,7 @@ function VerifyEmailPage() {
         markEmailVerified();
       }
       showToast("Xác minh email thành công.");
-      navigate(isAuthenticated ? redirectTo : "/login", {
+      navigate(isAuthenticated ? postVerifyPath : "/login", {
         replace: true,
         state: isAuthenticated ? undefined : { email },
       });

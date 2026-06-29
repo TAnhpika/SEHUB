@@ -63,13 +63,8 @@ function LoginPage() {
   }
 
   function navigateAfterLogin(loggedInUser) {
-    const isStaff =
-      loggedInUser?.role === "moderator" || loggedInUser?.role === "admin";
     const studentFallback = isGuestOnlyPath(redirectTo) ? "/home" : redirectTo;
-    const destination = isStaff
-      ? getRoleHomePath(loggedInUser)
-      : getRoleHomePath(loggedInUser, studentFallback);
-    navigate(destination, { replace: true });
+    navigate(getRoleHomePath(loggedInUser, studentFallback), { replace: true });
   }
 
   function persistRememberMe() {
