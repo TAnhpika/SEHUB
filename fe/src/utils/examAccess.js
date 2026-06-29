@@ -58,8 +58,3 @@ export function canUseExamAiChat(user) {
   if (isStaffRole(user.role)) return true;
   return resolveIsPremium(user);
 }
-
-/** Chỉ Admin không giới hạn token — §6 */
-export function shouldAutoRevealAiExplanation(user) {
-  return user?.role === "admin";
-}

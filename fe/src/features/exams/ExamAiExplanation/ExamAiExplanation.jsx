@@ -10,7 +10,6 @@ import { isValidGuid } from "@/features/feed/postUtils";
 import {
   canUseExamAiChat,
   getExamAiAccess,
-  shouldAutoRevealAiExplanation,
 } from "@/utils/examAccess";
 import styles from "./ExamAiExplanation.module.css";
 
@@ -28,11 +27,11 @@ function ExamAiExplanation({ examId, question }) {
   const canCallApi = !USE_MOCK && isValidGuid(String(question?.id ?? ""));
 
   useEffect(() => {
-    setRevealed(shouldAutoRevealAiExplanation(user));
+    setRevealed(false);
     setRefreshKey(0);
     setApiExplanation(null);
     setLoadError(null);
-  }, [question?.id, user?.username, user?.plan, user?.role]);
+  }, [question?.id]);
 
   useEffect(() => {
     if (!revealed || !question?.id) {
@@ -244,4 +243,4 @@ function ExamAiExplanation({ examId, question }) {
 }
 
 export default ExamAiExplanation;
-
+

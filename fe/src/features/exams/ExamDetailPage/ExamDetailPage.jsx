@@ -688,6 +688,7 @@ function ExamDetailPage({ page }) {
 
             {isReviewExam && currentQuestion && (
               <ExamAiExplanation
+                key={currentQuestion.id}
                 examId={apiExamId ?? exam.id}
                 question={currentQuestion}
               />
