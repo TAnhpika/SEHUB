@@ -128,6 +128,19 @@
   border-radius: 0.6875rem;
 }
 
+.inputInvalid .input {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 14%, transparent);
+}
+
+.fieldError {
+  margin: 0;
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: var(--color-danger);
+  text-decoration: none;
+}
+
 .field:has(.toggle-password) .input {
   padding-right: 2.375rem;
 }

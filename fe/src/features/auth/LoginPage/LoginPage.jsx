@@ -1,153 +1,43 @@
-import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faEye, faEyeSlash, faLock } from "@fortawesome/free-solid-svg-icons";
-import { useToast } from "@/common/Toast/ToastProvider";
-import { useAuth } from "@/context";
-import { getGoogleClientId, requestGoogleIdToken } from "@/utils/googleAuth";
 import googleGSrc from "@/img/google-g.png";
-import { getRoleHomePath } from "@/utils/roleHelpers";
 import AuthBrandPanel from "@/features/auth/AuthBrandPanel/AuthBrandPanel";
+import { DEMO_ACCOUNTS, useLoginForm } from "./useLoginForm";
 import styles from "./LoginPage.module.css";
 
-const DEMO_ACCOUNTS = [
-  {
-    label: "Demo Student",
-    username: "demo.student@sehub.local",
-    password: "Demo@12345",
-  },
-  {
-    label: "Moderator",
-    username: "moderator@sehub.local",
-    password: "Mod@12345",
-  },
-  {
-    label: "Admin",
-    username: "admin@sehub.local",
-    password: "Admin@123",
-  },
-];
+function LoginFieldError({ id, message }) {
+  if (!message) {
+    return null;
+  }
 
-const REMEMBER_KEY = "sehubs_remember_login";
+  return (
+    <span id={id} className={styles.fieldError} role="alert">
+      {message}
+    </span>
+  );
+}
 
 function LoginPage() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { login, googleLogin } = useAuth();
-  const { showToast } = useToast();
-  const [email, setEmail] = useState(() => {
-    if (location.state?.email) {
-      return location.state.email;
-    }
-    try {
-      return localStorage.getItem(REMEMBER_KEY) ?? "";
-    } catch {
-      return "";
-    }
-  });
-  const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(Boolean(email));
-  const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const redirectTo = location.state?.from || "/home";
-
-  function isGuestOnlyPath(path) {
-    if (!path || path === "/") return true;
-    if (path === "/login" || path === "/register" || path.startsWith("/forgot-password")) {
-      return true;
-    }
-    if (path === "/support") return true;
-    if (path === "/community" || path.startsWith("/community/")) return true;
-    return false;
-  }
-
-  function navigateAfterLogin(loggedInUser) {
-    const studentFallback = isGuestOnlyPath(redirectTo) ? "/home" : redirectTo;
-    navigate(getRoleHomePath(loggedInUser, studentFallback), { replace: true });
-  }
-
-  function persistRememberMe() {
-    try {
-      if (rememberMe) {
-        localStorage.setItem(REMEMBER_KEY, email.trim());
-      } else {
-        localStorage.removeItem(REMEMBER_KEY);
-      }
-    } catch {
-      /* ignore storage errors */
-    }
-  }
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    setIsSubmitting(true);
-    persistRememberMe();
-
-    try {
-      const nextUser = await login({ username: email.trim(), password });
-      navigateAfterLogin(nextUser);
-    } catch (error) {
-      const errorCode = error?.errors?.[0]?.code;
-      if (errorCode === "EMAIL_NOT_CONFIRMED") {
-        navigate("/verify-email", {
-          replace: true,
-          state: { email: email.trim(), from: redirectTo },
-        });
-        return;
-      }
-      showToast(error?.message ?? "Đăng nhập thất bại.");
-      setIsSubmitting(false);
-    }
-  }
-
-  async function fillTestAccount(account) {
-    setEmail(account.username);
-    setPassword(account.password);
-    setRememberMe(true);
-    setIsSubmitting(true);
-
-    try {
-      const nextUser = await login({
-        username: account.username,
-        password: account.password,
-      });
-      try {
-        localStorage.setItem(REMEMBER_KEY, account.username);
-      } catch {
-        /* ignore storage errors */
-      }
-      navigateAfterLogin(nextUser);
-    } catch (error) {
-      const errorCode = error?.errors?.[0]?.code;
-      if (errorCode === "EMAIL_NOT_CONFIRMED") {
-        navigate("/verify-email", {
-          replace: true,
-          state: { email: account.username, from: redirectTo },
-        });
-        return;
-      }
-      showToast(error?.message ?? "Đăng nhập thất bại.");
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleGoogleLogin() {
-    if (!getGoogleClientId()) {
-      showToast("Chưa cấu hình Google Client ID (VITE_GOOGLE_CLIENT_ID).");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const idToken = await requestGoogleIdToken();
-      const nextUser = await googleLogin(idToken);
-      navigateAfterLogin(nextUser);
-    } catch (error) {
-      showToast(error?.message ?? "Đăng nhập Google thất bại.");
-      setIsSubmitting(false);
-    }
-  }
+  const {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    rememberMe,
+    setRememberMe,
+    showPassword,
+    setShowPassword,
+    isSubmitting,
+    fieldErrors,
+    submitError,
+    clearFieldError,
+    clearSubmitError,
+    handleFieldBlur,
+    handleSubmit,
+    fillTestAccount,
+    handleGoogleLogin,
+  } = useLoginForm();
 
   return (
     <div className={styles.page}>
@@ -167,36 +57,67 @@ function LoginPage() {
             </p>
           </header>
 
-          <form className={styles.form} onSubmit={handleSubmit}>
+          <form className={styles.form} onSubmit={handleSubmit} noValidate>
             <div className={styles.fields}>
-              <label className={styles.field}>
-                <span className={styles.label}>Email</span>
-                <span className={styles["input-wrap"]}>
+              <div className={styles.field}>
+                <label htmlFor="login-email" className={styles.label}>
+                  Email
+                </label>
+                <span
+                  className={`${styles["input-wrap"]} ${
+                    fieldErrors.email ? styles.inputInvalid : ""
+                  }`}
+                >
                   <FontAwesomeIcon icon={faEnvelope} className={styles["input-icon"]} />
                   <input
-                    type="text"
+                    id="login-email"
+                    type="email"
                     className={styles.input}
                     value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    onChange={(event) => {
+                      setEmail(event.target.value);
+                      clearFieldError("email");
+                      clearSubmitError();
+                    }}
+                    onBlur={() => handleFieldBlur("email")}
                     placeholder="example@gmail.com"
-                    autoComplete="username"
+                    autoComplete="email"
                     required
+                    maxLength={256}
+                    aria-invalid={Boolean(fieldErrors.email)}
+                    aria-describedby={fieldErrors.email ? "login-email-error" : undefined}
                   />
                 </span>
-              </label>
+                <LoginFieldError id="login-email-error" message={fieldErrors.email} />
+              </div>
 
-              <label className={styles.field}>
-                <span className={styles.label}>Mật khẩu</span>
-                <span className={styles["input-wrap"]}>
+              <div className={styles.field}>
+                <label htmlFor="login-password" className={styles.label}>
+                  Mật khẩu
+                </label>
+                <span
+                  className={`${styles["input-wrap"]} ${
+                    fieldErrors.password ? styles.inputInvalid : ""
+                  }`}
+                >
                   <FontAwesomeIcon icon={faLock} className={styles["input-icon"]} />
                   <input
+                    id="login-password"
                     type={showPassword ? "text" : "password"}
                     className={styles.input}
                     value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+                    onChange={(event) => {
+                      setPassword(event.target.value);
+                      clearFieldError("password");
+                      clearSubmitError();
+                    }}
+                    onBlur={() => handleFieldBlur("password")}
                     placeholder="••••••••"
                     autoComplete="current-password"
                     required
+                    maxLength={128}
+                    aria-invalid={Boolean(fieldErrors.password)}
+                    aria-describedby={fieldErrors.password ? "login-password-error" : undefined}
                   />
                   <button
                     type="button"
@@ -207,7 +128,8 @@ function LoginPage() {
                     <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
                   </button>
                 </span>
-              </label>
+                <LoginFieldError id="login-password-error" message={fieldErrors.password} />
+              </div>
 
               <div className={styles["meta-row"]}>
                 <label className={styles.remember}>
@@ -225,6 +147,12 @@ function LoginPage() {
                 </Link>
               </div>
             </div>
+
+            {submitError ? (
+              <p className={styles.submitError} role="alert">
+                {submitError}
+              </p>
+            ) : null}
 
             <button type="submit" className={styles["submit-btn"]} disabled={isSubmitting}>
               Đăng nhập
