@@ -33,6 +33,7 @@ function FinalExamInfoStep() {
   );
   const [existingPaperCodes, setExistingPaperCodes] = useState([]);
   const [reviewCourses, setReviewCourses] = useState(REVIEW_COURSES);
+  const [examCodeManuallyEdited, setExamCodeManuallyEdited] = useState(false);
 
   const previewQuestionCount = parseTotalQuestions(questionCountInput);
   const subjectOptions = useMemo(
@@ -70,7 +71,7 @@ function FinalExamInfoStep() {
   }, []);
 
   useEffect(() => {
-    if (isEditMode) return;
+    if (isEditMode || examCodeManuallyEdited) return;
     if (!examInfo.subjectCode.trim()) {
       setExamInfo((prev) => (prev.examCode ? { ...prev, examCode: "" } : prev));
       return;
@@ -78,7 +79,13 @@ function FinalExamInfoStep() {
 
     const nextCode = generateExamPaperCode("final", examInfo.subjectCode, existingPaperCodes);
     setExamInfo((prev) => (prev.examCode === nextCode ? prev : { ...prev, examCode: nextCode }));
-  }, [examInfo.subjectCode, existingPaperCodes, isEditMode, setExamInfo]);
+  }, [
+    examInfo.subjectCode,
+    existingPaperCodes,
+    isEditMode,
+    examCodeManuallyEdited,
+    setExamInfo,
+  ]);
 
   function validateExamInfo() {
     if (!examInfo.semesterLabel.trim()) {
@@ -90,7 +97,7 @@ function FinalExamInfoStep() {
       return false;
     }
     if (!examInfo.examCode.trim()) {
-      showToast("Mã đề chưa được sinh tự động. Vui lòng chọn lại môn học.");
+      showToast("Vui lòng nhập mã đề thi.");
       return false;
     }
     if (examInfo.durationMinutes < 15 || examInfo.durationMinutes > 180) {
@@ -133,6 +140,7 @@ function FinalExamInfoStep() {
 
   function handleSemesterChange(event) {
     const semesterLabel = event.target.value;
+    setExamCodeManuallyEdited(false);
     setExamInfo((prev) => ({
       ...prev,
       semesterLabel,
@@ -145,6 +153,7 @@ function FinalExamInfoStep() {
 
   function handleSubjectChange(event) {
     const code = event.target.value;
+    setExamCodeManuallyEdited(false);
     const semesterNumber = parseSemesterNumberFromLabel(examInfo.semesterLabel);
     const major = code
       ? findCourseMajor(code, semesterNumber, reviewCourses) ?? "SE"
@@ -232,11 +241,11 @@ function FinalExamInfoStep() {
               type="text"
               className={styles.input}
               value={examInfo.examCode}
-              readOnly={!isEditMode}
-              placeholder="Tự động sinh khi chọn môn học"
-              onChange={(event) =>
-                setExamInfo((prev) => ({ ...prev, examCode: event.target.value }))
-              }
+              placeholder="Tự động sinh khi chọn môn — có thể chỉnh sửa"
+              onChange={(event) => {
+                setExamCodeManuallyEdited(true);
+                setExamInfo((prev) => ({ ...prev, examCode: event.target.value }));
+              }}
             />
           </label>
 
