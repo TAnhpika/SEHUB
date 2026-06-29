@@ -520,6 +520,14 @@ public sealed class ModerationService : IModerationService
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        await _workflowNotifications.NotifyUserBannedAsync(
+            userId,
+            request.DurationDays,
+            banUntil,
+            request.Reason.Trim(),
+            actorId,
+            cancellationToken);
+
         return await MapViolatingUserAsync(userId, cancellationToken);
     }
 
@@ -662,6 +670,12 @@ public sealed class ModerationService : IModerationService
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        await _workflowNotifications.NotifyUserWarnedAsync(
+            userId,
+            reason,
+            actorId,
+            cancellationToken);
+
         return await MapViolatingUserAsync(userId, cancellationToken);
     }
 
@@ -687,6 +701,9 @@ public sealed class ModerationService : IModerationService
 
         await _userRepository.UpdateBanAsync(userId, false, null, null, null, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var actorId = _currentUser.UserId;
+        await _workflowNotifications.NotifyUserUnbannedAsync(userId, actorId, cancellationToken);
 
         return await MapViolatingUserAsync(userId, cancellationToken);
     }
