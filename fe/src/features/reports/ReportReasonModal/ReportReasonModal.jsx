@@ -16,6 +16,8 @@ function ReportReasonModal({
   subtitle,
   detailPlaceholder,
   successMessage,
+  icon = faFlag,
+  iconClassName,
   onSubmit,
 }) {
   const [reason, setReason] = useState("");
@@ -72,8 +74,8 @@ function ReportReasonModal({
       </button>
 
       <header className={styles.header}>
-        <span className={styles.icon} aria-hidden="true">
-          <FontAwesomeIcon icon={faFlag} />
+        <span className={[styles.icon, iconClassName].filter(Boolean).join(" ")} aria-hidden="true">
+          <FontAwesomeIcon icon={icon} />
         </span>
         <div>
           <h2 className={styles.title}>{title}</h2>

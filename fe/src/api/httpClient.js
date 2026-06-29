@@ -43,7 +43,8 @@ function sleep(ms) {
 }
 
 function getErrorCode(payload, error) {
-  return payload?.errors?.[0]?.code ?? payload?.message ?? error?.errors?.[0]?.code ?? error?.message;
+  const firstError = payload?.errors?.[0] ?? error?.errors?.[0];
+  return firstError?.code ?? firstError?.message ?? payload?.message ?? error?.message;
 }
 
 function localizeApiMessage(message) {
@@ -74,7 +75,7 @@ export function isAuthSessionError(error) {
 
 function resolveApiErrorMessage(payload, status) {
   const firstError = payload?.errors?.[0];
-  const code = firstError?.code ?? payload?.message;
+  const code = firstError?.code ?? firstError?.message ?? payload?.message;
   if (code && API_ERROR_MESSAGES[code]) {
     return API_ERROR_MESSAGES[code];
   }
@@ -86,6 +87,10 @@ function resolveApiErrorMessage(payload, status) {
 
   if (status === 403) {
     return "Tính năng yêu cầu gói Premium.";
+  }
+
+  if (status === 404) {
+    return "Không tìm thấy API xử lý yêu cầu. Hãy restart backend (dotnet run) rồi thử lại.";
   }
 
   return "Yêu cầu thất bại.";

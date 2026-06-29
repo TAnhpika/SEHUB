@@ -19,6 +19,7 @@ function MainHeader() {
   const [searchQuery, setSearchQuery] = useState(() =>
     isSearchPage ? (searchParams.get("q") ?? "") : "",
   );
+  const searchInputRef = useRef(null);
   const skipSearchSyncRef = useRef(false);
 
   useEffect(() => {
@@ -36,6 +37,7 @@ function MainHeader() {
     const trimmed = searchQuery.trim();
     if (!trimmed) return;
 
+    searchInputRef.current?.blur();
     skipSearchSyncRef.current = true;
     navigate(`/home/search?q=${encodeURIComponent(trimmed)}`);
     setSearchQuery("");
@@ -74,6 +76,7 @@ function MainHeader() {
           <div className={styles.search}>
             <FontAwesomeIcon icon={faMagnifyingGlass} className={styles["search-icon"]} />
             <input
+              ref={searchInputRef}
               type="search"
               className={styles["search-input"]}
               placeholder="Tìm kiếm..."

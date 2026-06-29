@@ -4,7 +4,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBars,
   faHouse,
-  faMagnifyingGlass,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import WorkspaceSwitcher from "@/common/WorkspaceSwitcher/WorkspaceSwitcher";
@@ -65,21 +64,6 @@ function ModeratorHeader() {
             </span>
             <span className={styles.breadcrumbCurrent}>{pageTitle}</span>
           </nav>
-          <h1 className={styles.pageTitle}>{pageTitle}</h1>
-        </div>
-
-        <div className={styles.searchWrap}>
-          <label className={styles.search} htmlFor="moderator-global-search">
-            <span className={styles.searchIconWrap} aria-hidden>
-              <FontAwesomeIcon icon={faMagnifyingGlass} />
-            </span>
-            <input
-              id="moderator-global-search"
-              type="search"
-              className={styles.searchInput}
-              placeholder="Tìm báo cáo, bài viết, tài khoản..."
-            />
-          </label>
         </div>
 
         <div className={styles.actions}>
