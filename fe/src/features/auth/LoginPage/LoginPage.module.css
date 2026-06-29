@@ -94,6 +94,31 @@
 
 .field {
   composes: field from "../authForm.module.css";
+  gap: 0.3125rem;
+}
+
+.inputInvalid .input {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 14%, transparent);
+}
+
+.fieldError {
+  margin: 0;
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: var(--color-danger);
+  text-decoration: none;
+}
+
+.submitError {
+  margin: 0;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 22%, transparent);
+  border-radius: var(--radius-md);
 }
 
 .label {

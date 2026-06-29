@@ -11,9 +11,37 @@ const API_ERROR_MESSAGES = {
   EMAIL_NOT_CONFIRMED:
     "Vui lòng xác minh email trước khi đăng nhập. Kiểm tra hộp thư hoặc yêu cầu gửi lại mã.",
   AUTH_RATE_LIMIT_EXCEEDED: "Đăng nhập quá nhiều lần. Vui lòng thử lại sau vài phút.",
+  ACCOUNT_BANNED: "Tài khoản của bạn đã bị khóa.",
+  GOOGLE_TOKEN_INVALID: "Không xác thực được tài khoản Google.",
   OTP_INVALID: "Mã OTP không hợp lệ hoặc đã hết hạn.",
   STORAGE_UPLOAD_FAILED: "Không upload được file lên storage. Kiểm tra cấu hình Google Drive hoặc thử lại.",
 };
+
+/** Message thô từ BE (tiếng Anh) → tiếng Việt cho người dùng */
+const API_MESSAGE_ALIASES = {
+  "Invalid credentials.": "Email hoặc mật khẩu không đúng.",
+  "Invalid credentials": "Email hoặc mật khẩu không đúng.",
+  "Unable to authenticate with Google.": "Không thể đăng nhập bằng Google.",
+  "Email is already registered.": "Email đã được đăng ký.",
+  "Username is already taken.": "Tên đăng nhập đã được sử dụng.",
+};
+
+function localizeApiMessage(message) {
+  if (!message || typeof message !== "string") {
+    return message;
+  }
+
+  const trimmed = message.trim();
+  if (API_MESSAGE_ALIASES[trimmed]) {
+    return API_MESSAGE_ALIASES[trimmed];
+  }
+
+  if (trimmed.toLowerCase() === "invalid credentials.") {
+    return API_MESSAGE_ALIASES["Invalid credentials."];
+  }
+
+  return message;
+}
 
 function resolveApiErrorMessage(payload, status) {
   const firstError = payload?.errors?.[0];
@@ -24,7 +52,7 @@ function resolveApiErrorMessage(payload, status) {
 
   const message = payload?.message || firstError?.message || firstError?.code;
   if (message) {
-    return message;
+    return localizeApiMessage(message);
   }
 
   if (status === 403) {
