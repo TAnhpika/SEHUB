@@ -35,6 +35,13 @@ export const EXAM_SEMESTERS = [
   }),
 ];
 
+/** Kì thi theo mùa — dùng trong mã đề (VD: CEA201_SU25) */
+export const EXAM_SEASON_OPTIONS = [
+  { id: "SP", label: "Spring - SP" },
+  { id: "SU", label: "Summer - SU" },
+  { id: "FA", label: "Fall - FA" },
+];
+
 const TYPE_FINAL = "Cuối kỳ";
 const TYPE_PRACTICE = "Thực hành";
 

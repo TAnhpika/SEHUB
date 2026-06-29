@@ -43,11 +43,37 @@ export function getSeasonTerm(date = new Date()) {
   return `${season}${year}`;
 }
 
-export function buildExamPaperCodePrefix(examType, subjectCode, date = new Date()) {
+export function parseSeasonTerm(value) {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  const match = normalized.match(/^(SP|SU|FA)(\d{2,4})$/);
+  if (!match) return null;
+  const year = match[2].length === 2 ? `20${match[2]}` : match[2];
+  return { season: match[1], year };
+}
+
+export function buildSeasonTermString(season, year) {
+  const normalizedSeason = String(season ?? "").trim().toUpperCase();
+  if (!["SP", "SU", "FA"].includes(normalizedSeason)) return null;
+  const rawYear = String(year ?? "").trim();
+  const fullYear = rawYear.length === 2 ? `20${rawYear}` : rawYear;
+  if (!/^\d{4}$/.test(fullYear)) return null;
+  return `${normalizedSeason}${fullYear}`;
+}
+
+export function getDefaultExamSeasonYear(date = new Date()) {
+  const parsed = parseSeasonTerm(getSeasonTerm(date));
+  return parsed ?? { season: "FA", year: String(date.getFullYear()) };
+}
+
+export function buildExamPaperCodePrefix(examType, subjectCode, dateOrTerm = new Date()) {
   const typePrefix = EXAM_TYPE_PREFIX[examType] ?? EXAM_TYPE_PREFIX.final;
   const subject = normalizeSubjectCode(subjectCode);
   if (!subject) return null;
-  return `${typePrefix}-${subject}-${getSeasonTerm(date)}`;
+  const term =
+    typeof dateOrTerm === "string"
+      ? dateOrTerm
+      : getSeasonTerm(dateOrTerm);
+  return `${typePrefix}-${subject}-${term}`;
 }
 
 export function parseExamPaperCode(value) {
@@ -144,9 +170,9 @@ export function generateExamPaperCode(
   examType,
   subjectCode,
   existingIdentifiers = [],
-  date = new Date(),
+  dateOrTerm = new Date(),
 ) {
-  const prefix = buildExamPaperCodePrefix(examType, subjectCode, date);
+  const prefix = buildExamPaperCodePrefix(examType, subjectCode, dateOrTerm);
   if (!prefix) return "";
   const sequence = nextExamPaperSequence(existingIdentifiers, prefix);
   return `${prefix}-${sequence}`;

@@ -84,10 +84,14 @@ public class ExamRepository : IExamRepository
         if (!string.IsNullOrWhiteSpace(query.Code))
         {
             var code = query.Code.Trim();
+            var fePrefix = $"FE-{code}-";
+            var pePrefix = $"PE-{code}-";
             dbQuery = dbQuery.Where(e =>
                 e.Code == code
                 || e.Code.StartsWith(code + "-")
                 || e.Code.StartsWith(code + "_")
+                || e.Code.StartsWith(fePrefix)
+                || e.Code.StartsWith(pePrefix)
                 || e.Major == code);
         }
 

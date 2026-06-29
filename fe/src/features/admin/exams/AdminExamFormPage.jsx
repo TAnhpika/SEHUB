@@ -4,7 +4,20 @@ import { mapAdminReviewQuestion } from "@/api/adminMapper";
 import * as adminApi from "@/api/adminApi";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
-import { extractCourseSubjectCode } from "@/utils/examDisplay";
+import {
+  getSubjectOptionsForSemester,
+  parseSemesterNumberFromLabel,
+  PRACTICE_SEMESTER_OPTIONS,
+} from "@/features/moderator/practiceExams/practiceExamData";
+import { loadReviewCourses, REVIEW_COURSES } from "@/features/review/ReviewQuestionsPage/reviewData";
+import { extractCourseSubjectCode, findCourseMajor } from "@/utils/examDisplay";
+import {
+  buildSeasonTermString,
+  generateExamPaperCode,
+  getDefaultExamSeasonYear,
+  loadExistingExamPaperIdentifiers,
+  parseExamPaperCode,
+} from "@/utils/examPaperCode";
 import { mergeQuestionImage } from "@/utils/examQuestionContent";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import AdminQuestionImageField from "@/features/admin/exams/AdminQuestionImageField";
@@ -13,6 +26,7 @@ import {
   EXAM_SEMESTERS,
   EXAM_TRACKS,
   EXAM_TYPE_OPTIONS,
+  EXAM_SEASON_OPTIONS,
   FINAL_EXAM_DEFAULTS,
   MOCK_OCR_QUESTIONS,
   PRACTICE_EXAM_DEFAULTS,
@@ -34,14 +48,29 @@ import styles from "@/features/admin/shared/adminPage.module.css";
 const STEPS_FINAL = ["Thông tin", "Upload & OCR", "Xác nhận"];
 const STEPS_PRACTICE = ["Thông tin", "Nội dung đề", "Xác nhận"];
 
+function semesterIdToLabel(id) {
+  const n = Number(id);
+  if (!Number.isFinite(n) || n < 1) return "";
+  return PRACTICE_SEMESTER_OPTIONS[n - 1] ?? `Học kỳ ${n}`;
+}
+
+function semesterLabelToId(label) {
+  const n = parseSemesterNumberFromLabel(label);
+  return n ? String(n) : "";
+}
+
 function buildInitialForm(exam) {
+  const defaultSeason = getDefaultExamSeasonYear();
   if (!exam) {
     return {
       typeKey: "final",
       code: "",
       title: "",
+      subjectName: "",
       track: "SE",
-      semester: "5",
+      semester: "",
+      examSeason: defaultSeason.season,
+      examYear: defaultSeason.year,
       description: "",
       githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
       deadline: "",
@@ -49,6 +78,8 @@ function buildInitialForm(exam) {
       attachments: [],
     };
   }
+
+  const parsedPaper = parseExamPaperCode(exam.code ?? exam.title ?? exam.displayExamCode);
   return {
     typeKey: exam.typeKey ?? "final",
     code:
@@ -59,8 +90,11 @@ function buildInitialForm(exam) {
       exam.typeKey === "final"
         ? exam.displayExamCode ?? exam.code ?? exam.title
         : exam.title,
+    subjectName: exam.subjectName ?? "",
     track: exam.track,
     semester: exam.semester,
+    examSeason: parsedPaper?.season ?? defaultSeason.season,
+    examYear: parsedPaper?.year ?? defaultSeason.year,
     description: exam.description ?? "",
     githubGuide: exam.githubGuide ?? PRACTICE_EXAM_DEFAULTS.githubGuide,
     deadline: exam.deadline ?? "",
@@ -91,6 +125,62 @@ function AdminExamFormPage() {
   const [uploadingQuestionIndex, setUploadingQuestionIndex] = useState(null);
   const [importingMarkdown, setImportingMarkdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reviewCourses, setReviewCourses] = useState(REVIEW_COURSES);
+  const [existingPaperCodes, setExistingPaperCodes] = useState([]);
+
+  const finalSemesterLabel = semesterIdToLabel(form.semester);
+  const finalSubjectOptions = useMemo(
+    () => getSubjectOptionsForSemester(finalSemesterLabel, reviewCourses),
+    [finalSemesterLabel, reviewCourses],
+  );
+
+  useEffect(() => {
+    if (form.typeKey !== "final") return;
+
+    let cancelled = false;
+    loadReviewCourses()
+      .then((courses) => {
+        if (!cancelled) setReviewCourses(courses);
+      })
+      .catch(() => {
+        if (!cancelled) setReviewCourses(REVIEW_COURSES);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [form.typeKey]);
+
+  useEffect(() => {
+    if (form.typeKey !== "final" || isEdit) return;
+
+    let cancelled = false;
+    loadExistingExamPaperIdentifiers()
+      .then((codes) => {
+        if (!cancelled) setExistingPaperCodes(codes);
+      })
+      .catch(() => {
+        if (!cancelled) setExistingPaperCodes([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [form.typeKey, isEdit]);
+
+  useEffect(() => {
+    if (form.typeKey !== "final" || isEdit) return;
+    if (!form.code.trim()) {
+      setForm((prev) => (prev.title ? { ...prev, title: "" } : prev));
+      return;
+    }
+
+    const seasonTerm = buildSeasonTermString(form.examSeason, form.examYear);
+    if (!seasonTerm) return;
+
+    const nextCode = generateExamPaperCode("final", form.code, existingPaperCodes, seasonTerm);
+    setForm((prev) => (prev.title === nextCode ? prev : { ...prev, title: nextCode }));
+  }, [form.typeKey, form.code, form.examSeason, form.examYear, existingPaperCodes, isEdit]);
 
   useEffect(() => {
     if (!isEdit) {
@@ -143,11 +233,72 @@ function AdminExamFormPage() {
     setForceUniqueSha(false);
   }
 
+  function handleFinalSemesterChange(event) {
+    const semesterLabel = event.target.value;
+    patchForm({
+      semester: semesterLabelToId(semesterLabel),
+      code: "",
+      subjectName: "",
+      title: "",
+      track: "SE",
+    });
+  }
+
+  function handleFinalSeasonChange(event) {
+    patchForm({
+      examSeason: event.target.value,
+      title: "",
+    });
+  }
+
+  function handleFinalYearChange(event) {
+    patchForm({
+      examYear: event.target.value,
+      title: "",
+    });
+  }
+
+  function handleFinalSubjectChange(event) {
+    const code = event.target.value;
+    const semesterNumber = parseSemesterNumberFromLabel(finalSemesterLabel);
+    const major = code ? findCourseMajor(code, semesterNumber, reviewCourses) ?? "SE" : "SE";
+    patchForm({
+      code,
+      subjectName: code ? form.subjectName || `Môn ${code}` : "",
+      track: major,
+    });
+  }
+
   function validateStep0() {
+    if (isFinal) {
+      if (!form.semester) {
+        showToast("Vui lòng chọn kỳ học.");
+        return false;
+      }
+      if (!form.examSeason) {
+        showToast("Vui lòng chọn kì (SP/SU/FA).");
+        return false;
+      }
+      if (!buildSeasonTermString(form.examSeason, form.examYear)) {
+        showToast("Nhập năm hợp lệ cho kì thi.");
+        return false;
+      }
+      if (!form.code.trim()) {
+        showToast("Vui lòng chọn mã môn học.");
+        return false;
+      }
+      if (!form.title.trim()) {
+        showToast("Mã đề chưa được sinh tự động. Vui lòng chọn lại môn học.");
+        return false;
+      }
+      if (form.durationMinutes < 15 || form.durationMinutes > 180) {
+        showToast("Thời gian làm bài phải từ 15 đến 180 phút.");
+        return false;
+      }
+      return true;
+    }
     if (!form.code.trim() || !form.title.trim()) {
-      showToast(
-        isFinal ? "Nhập mã môn học và mã đề thi." : "Nhập mã môn và tiêu đề đề thi.",
-      );
+      showToast("Nhập mã môn và tiêu đề đề thi.");
       return false;
     }
     return true;
@@ -340,7 +491,12 @@ function AdminExamFormPage() {
   }
 
   async function handleDraft() {
-    if (!form.code.trim() || !form.title.trim()) {
+    if (isFinal) {
+      if (!form.semester || !form.examSeason || !form.code.trim() || !form.title.trim()) {
+        showToast("Cần chọn kỳ học, kì thi, môn học và mã đề để lưu nháp.");
+        return;
+      }
+    } else if (!form.code.trim() || !form.title.trim()) {
       showToast("Cần ít nhất mã môn và tiêu đề để lưu nháp.");
       return;
     }
@@ -403,14 +559,20 @@ function AdminExamFormPage() {
       { label: "Mã môn", value: form.code || "—" },
       { label: isFinal ? "Mã đề thi" : "Tiêu đề", value: form.title || "—" },
       { label: "Ngành", value: getTrackLabel(form.track) },
-      { label: "Kỳ", value: getSemesterLabel(form.semester) },
+      { label: "Kỳ học", value: getSemesterLabel(form.semester) },
+      isFinal
+        ? {
+            label: "Kì thi",
+            value: buildSeasonTermString(form.examSeason, form.examYear) ?? "—",
+          }
+        : null,
       isFinal
         ? { label: "Thời gian làm bài", value: `${form.durationMinutes} phút` }
         : { label: "Deadline", value: form.deadline || "Chưa đặt" },
       isFinal
         ? { label: "Số câu OCR", value: ocrDone ? String(MOCK_OCR_QUESTIONS.length) : "—" }
         : { label: "File đính kèm", value: String(form.attachments.length) },
-    ],
+    ].filter(Boolean),
     [form, isFinal, ocrDone],
   );
 
@@ -538,91 +700,197 @@ function AdminExamFormPage() {
           <>
             <h2 className={styles.panelTitle}>Thông tin chung</h2>
             <p className={styles.panelDesc}>
-              Lọc theo kỳ học (Kì 1–9) và chuyên ngành AI/SE — đồng bộ danh sách đề công khai.
+              {isFinal
+                ? "Chọn kỳ học (Kì 1–9) và kì thi (SP/SU/FA) — mã đề sinh tự động theo môn và kì thi."
+                : "Lọc theo kỳ học (Kì 1–9) và chuyên ngành AI/SE — đồng bộ danh sách đề công khai."}
             </p>
             <div className={styles.divider} />
 
-            <div className={styles.formRow2}>
-              <label className={styles.field}>
-                <span className={styles.label}>Mã môn học *</span>
-                <input
-                  className={styles.input}
-                  value={form.code}
-                  onChange={(e) => patchForm({ code: e.target.value })}
-                  placeholder="VD: PRF192"
-                  required
-                />
-              </label>
-              <label className={styles.field}>
-                <span className={styles.label}>Kỳ học *</span>
-                <select
-                  className={styles.select}
-                  value={form.semester}
-                  onChange={(e) => patchForm({ semester: e.target.value })}
-                >
-                  {EXAM_SEMESTERS.filter((s) => s.id !== "all").map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
+            {isFinal ? (
+              <>
+                <div className={styles.formRow2}>
+                  <label className={styles.field}>
+                    <span className={styles.label}>Kỳ học *</span>
+                    <select
+                      className={styles.select}
+                      value={finalSemesterLabel}
+                      required
+                      disabled={isEdit}
+                      onChange={handleFinalSemesterChange}
+                    >
+                      <option value="">Chọn kỳ học</option>
+                      {PRACTICE_SEMESTER_OPTIONS.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.label}>Mã môn học *</span>
+                    <select
+                      className={styles.select}
+                      value={form.code}
+                      required
+                      disabled={!form.semester || isEdit}
+                      onChange={handleFinalSubjectChange}
+                    >
+                      <option value="">
+                        {form.semester ? "Chọn môn học" : "Chọn kỳ học trước"}
+                      </option>
+                      {finalSubjectOptions.map((code) => (
+                        <option key={code} value={code}>
+                          {code}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
 
-            <div className={styles.formRow2}>
-              <label className={styles.field}>
-                <span className={styles.label}>Chuyên ngành *</span>
-                <select
-                  className={styles.select}
-                  value={form.track}
-                  onChange={(e) => patchForm({ track: e.target.value })}
-                >
-                  {EXAM_TRACKS.filter((t) => t.id !== "all").map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {isFinal ? (
                 <label className={styles.field}>
-                  <span className={styles.label}>Thời gian làm bài (phút)</span>
+                  <span className={styles.label}>Tên môn học</span>
                   <input
-                    type="number"
                     className={styles.input}
-                    min={15}
-                    max={180}
-                    value={form.durationMinutes}
-                    onChange={(e) =>
-                      patchForm({ durationMinutes: Number(e.target.value) || 60 })
-                    }
+                    value={form.subjectName}
+                    onChange={(e) => patchForm({ subjectName: e.target.value })}
+                    placeholder="VD: Mạng máy tính"
                   />
                 </label>
-              ) : (
+
+                <div className={styles.formRow2}>
+                  <label className={styles.field}>
+                    <span className={styles.label}>Kì *</span>
+                    <select
+                      className={styles.select}
+                      value={form.examSeason}
+                      required
+                      disabled={isEdit}
+                      onChange={handleFinalSeasonChange}
+                    >
+                      <option value="">Chọn kì</option>
+                      {EXAM_SEASON_OPTIONS.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.label}>Năm *</span>
+                    <input
+                      type="number"
+                      className={styles.input}
+                      min={2020}
+                      max={2035}
+                      value={form.examYear}
+                      required
+                      disabled={isEdit}
+                      onChange={handleFinalYearChange}
+                    />
+                  </label>
+                </div>
+
+                <div className={styles.formRow2}>
+                  <label className={styles.field}>
+                    <span className={styles.label}>Mã đề thi *</span>
+                    <input
+                      className={styles.input}
+                      value={form.title}
+                      readOnly={!isEdit}
+                      placeholder="Tự động sinh khi chọn môn học và kì"
+                      onChange={(e) => patchForm({ title: e.target.value })}
+                      required
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.label}>Thời gian làm bài (phút)</span>
+                    <input
+                      type="number"
+                      className={styles.input}
+                      min={15}
+                      max={180}
+                      value={form.durationMinutes}
+                      onChange={(e) =>
+                        patchForm({ durationMinutes: Number(e.target.value) || 60 })
+                      }
+                    />
+                  </label>
+                </div>
+
+                {form.code ? (
+                  <p className={styles.hint}>
+                    Chuyên ngành: <strong>{getTrackLabel(form.track)}</strong> (tự nhận từ catalog)
+                  </p>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <div className={styles.formRow2}>
+                  <label className={styles.field}>
+                    <span className={styles.label}>Mã môn học *</span>
+                    <input
+                      className={styles.input}
+                      value={form.code}
+                      onChange={(e) => patchForm({ code: e.target.value })}
+                      placeholder="VD: PRF192"
+                      required
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.label}>Kỳ học *</span>
+                    <select
+                      className={styles.select}
+                      value={form.semester}
+                      onChange={(e) => patchForm({ semester: e.target.value })}
+                    >
+                      <option value="">Chọn kỳ học</option>
+                      {EXAM_SEMESTERS.filter((s) => s.id !== "all").map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <div className={styles.formRow2}>
+                  <label className={styles.field}>
+                    <span className={styles.label}>Chuyên ngành *</span>
+                    <select
+                      className={styles.select}
+                      value={form.track}
+                      onChange={(e) => patchForm({ track: e.target.value })}
+                    >
+                      {EXAM_TRACKS.filter((t) => t.id !== "all").map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.label}>Hạn nộp bài</span>
+                    <input
+                      type="date"
+                      className={styles.input}
+                      value={form.deadline}
+                      onChange={(e) => patchForm({ deadline: e.target.value })}
+                    />
+                  </label>
+                </div>
+
                 <label className={styles.field}>
-                  <span className={styles.label}>Hạn nộp bài</span>
+                  <span className={styles.label}>Tiêu đề đề thi *</span>
                   <input
-                    type="date"
                     className={styles.input}
-                    value={form.deadline}
-                    onChange={(e) => patchForm({ deadline: e.target.value })}
+                    value={form.title}
+                    onChange={(e) => patchForm({ title: e.target.value })}
+                    placeholder="VD: Thực hành PRF192 — Lab GitHub"
+                    required
                   />
                 </label>
-              )}
-            </div>
-
-            <label className={styles.field}>
-              <span className={styles.label}>{isFinal ? "Mã đề thi *" : "Tiêu đề đề thi *"}</span>
-              <input
-                className={styles.input}
-                value={form.title}
-                onChange={(e) => patchForm({ title: e.target.value })}
-                placeholder={
-                  isFinal ? "VD: CEA201_SU25" : "VD: Thực hành PRF192 — Lab GitHub"
-                }
-                required
-              />
-            </label>
+              </>
+            )}
 
             <div className={formStyles.formActions}>
               <Button type="button" onClick={goNext}>

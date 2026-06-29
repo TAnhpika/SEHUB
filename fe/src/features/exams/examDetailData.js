@@ -9,6 +9,8 @@ import {
   getExamById as getMockExamById,
   loadExamPapersForCourse,
 } from "@/features/subjects/SubjectDetailPage/subjectDetailData";
+import { extractCourseSubjectCode } from "@/utils/examDisplay";
+import { parseExamPaperCode } from "@/utils/examPaperCode";
 import { isValidGuid } from "@/features/feed/postUtils";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
@@ -184,11 +186,26 @@ export async function resolveExamApiId(examIdOrCode) {
   if (!value) return null;
   if (isValidGuid(value)) return value;
 
-  const list = await examsApi.listExams({ pageSize: 100 });
-  const match = (list.items ?? []).find(
-    (item) => item.code?.toLowerCase() === value.toLowerCase(),
-  );
+  const normalizedSubject = extractCourseSubjectCode(value)?.toLowerCase() ?? value.toLowerCase();
+  const list = await examsApi.listExams({ pageSize: 100, code: normalizedSubject });
+  const match = (list.items ?? []).find((item) => examLookupMatches(item, value, normalizedSubject));
   return match?.id ?? null;
+}
+
+function examLookupMatches(item, value, normalizedSubject) {
+  const needle = value.toLowerCase();
+  const itemCode = String(item.code ?? "").toLowerCase();
+  if (itemCode === needle) return true;
+  if (itemCode.startsWith(`fe-${needle}-`) || itemCode.startsWith(`pe-${needle}-`)) return true;
+  if (itemCode.startsWith(`${normalizedSubject}-`) || itemCode.startsWith(`${normalizedSubject}_`)) {
+    return true;
+  }
+
+  const subject = extractCourseSubjectCode(item.code, item.title)?.toLowerCase();
+  if (subject && subject === normalizedSubject) return true;
+
+  const parsed = parseExamPaperCode(item.code);
+  return parsed?.subjectCode?.toLowerCase() === normalizedSubject;
 }
 
 async function resolveExamApiIdFromPaperList(courseCode, examId, pageKey) {
