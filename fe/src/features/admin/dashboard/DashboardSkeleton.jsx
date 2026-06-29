@@ -1,8 +1,5 @@
+import Shimmer from "@/common/Skeleton/Shimmer";
 import dash from "./AdminDashboardPage.module.css";
-
-function Shimmer({ className }) {
-  return <span className={`${dash.skeleton} ${className ?? ""}`} aria-hidden />;
-}
 
 function DashboardSkeleton() {
   return (

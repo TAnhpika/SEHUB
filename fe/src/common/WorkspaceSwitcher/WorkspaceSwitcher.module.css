@@ -31,24 +31,28 @@
 }
 
 .itemActive {
-  background: var(--moderator-primary-soft);
-  border-color: color-mix(in srgb, var(--moderator-primary) 35%, transparent);
+  background: color-mix(in srgb, var(--moderator-primary) 16%, var(--moderator-surface));
+  border-color: color-mix(in srgb, var(--moderator-primary) 42%, var(--moderator-border));
 }
 
 .itemActive:hover,
 .itemActive:active {
-  background: var(--moderator-primary-soft);
-  border-color: color-mix(in srgb, var(--moderator-primary) 45%, transparent);
+  background: color-mix(in srgb, var(--moderator-primary) 22%, var(--moderator-surface));
+  border-color: color-mix(in srgb, var(--moderator-primary) 52%, var(--moderator-border));
 }
 
 .itemActive .label {
-  color: var(--moderator-primary);
+  color: var(--moderator-text);
   font-weight: 700;
 }
 
+.itemActive .desc {
+  color: var(--moderator-text-muted);
+}
+
 .itemActive .icon {
-  color: var(--moderator-primary);
-  background: var(--moderator-primary-soft);
+  color: var(--moderator-on-primary);
+  background: var(--moderator-primary);
 }
 
 .item:hover {
@@ -110,28 +114,28 @@
 }
 
 .sidebarDark .itemActive {
-  background: rgba(37, 99, 235, 0.18);
-  border-color: rgba(96, 165, 250, 0.35);
+  background: rgba(37, 99, 235, 0.24);
+  border-color: rgba(96, 165, 250, 0.55);
 }
 
 .sidebarDark .itemActive:hover {
-  background: rgba(37, 99, 235, 0.26);
-  border-color: rgba(96, 165, 250, 0.45);
+  background: rgba(37, 99, 235, 0.32);
+  border-color: rgba(96, 165, 250, 0.65);
 }
 
 .sidebarDark .itemActive .label {
-  color: var(--moderator-text);
+  color: #f8fafc;
   font-weight: 700;
 }
 
 .sidebarDark .itemActive .icon {
-  color: var(--color-badge-text);
-  background: rgba(37, 99, 235, 0.35);
+  color: var(--moderator-on-primary);
+  background: #2563eb;
 }
 
 .sidebarDark .icon {
-  color: var(--color-badge-text);
-  background: rgba(37, 99, 235, 0.2);
+  color: #bfdbfe;
+  background: rgba(37, 99, 235, 0.28);
 }
 
 .sidebarDark .label {
@@ -161,23 +165,23 @@
 }
 
 .sidebarMod .itemActive {
-  background: rgba(37, 99, 235, 0.2);
-  border-color: rgba(96, 165, 250, 0.38);
+  background: rgba(37, 99, 235, 0.24);
+  border-color: rgba(96, 165, 250, 0.55);
 }
 
 .sidebarMod .itemActive:hover {
-  background: rgba(37, 99, 235, 0.28);
-  border-color: rgba(96, 165, 250, 0.48);
+  background: rgba(37, 99, 235, 0.32);
+  border-color: rgba(96, 165, 250, 0.65);
 }
 
 .sidebarMod .itemActive .label {
-  color: var(--moderator-text);
+  color: #f8fafc;
   font-weight: 700;
 }
 
 .sidebarMod .itemActive .icon {
-  color: var(--color-badge-text);
-  background: rgba(37, 99, 235, 0.35);
+  color: var(--moderator-on-primary);
+  background: #2563eb;
 }
 
 /* Menu profile (MainHeader / dropdown nhỏ) */
@@ -196,12 +200,17 @@
 }
 
 .menuCompact .itemActive {
-  background: var(--moderator-primary-soft);
-  border-color: color-mix(in srgb, var(--moderator-primary) 35%, transparent);
+  background: color-mix(in srgb, var(--moderator-primary) 18%, var(--moderator-surface));
+  border-color: color-mix(in srgb, var(--moderator-primary) 45%, var(--moderator-border));
 }
 
 .menuCompact .itemActive .label {
-  color: var(--moderator-primary);
+  color: var(--moderator-text);
   font-weight: 700;
   white-space: nowrap;
+}
+
+.menuCompact .itemActive .icon {
+  color: var(--moderator-on-primary);
+  background: var(--moderator-primary);
 }

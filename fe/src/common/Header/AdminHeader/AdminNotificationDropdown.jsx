@@ -103,7 +103,7 @@ function AdminNotificationDropdown() {
             <div className={styles.toolPanelBody}>
               {actionItems.length > 0 ? (
                 <section>
-                  <p className={styles.toolPanelSection}>Cần xử lý</p>
+                  <p className={`${styles.toolPanelSection} ${styles.toolPanelSectionUrgent}`}>Cần xử lý</p>
                   <ul className={styles.notifList}>
                     {actionItems.map((item) => (
                       <li key={item.id}>

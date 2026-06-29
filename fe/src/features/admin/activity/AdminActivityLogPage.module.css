@@ -64,23 +64,38 @@
 }
 
 [data-theme="dark"] .statCard-all {
-  --stat-bg: color-mix(in srgb, #004ac6 18%, var(--moderator-surface));
+  --stat-accent: #e0f2fe;
+  --stat-bg: rgba(147, 197, 253, 0.22);
 }
 
 [data-theme="dark"] .statCard-exam {
-  --stat-bg: color-mix(in srgb, #2563eb 18%, var(--moderator-surface));
+  --stat-accent: #93c5fd;
+  --stat-bg: rgba(96, 165, 250, 0.2);
 }
 
 [data-theme="dark"] .statCard-report {
-  --stat-bg: color-mix(in srgb, #dc2626 18%, var(--moderator-surface));
+  --stat-accent: #fca5a5;
+  --stat-bg: rgba(239, 68, 68, 0.16);
 }
 
 [data-theme="dark"] .statCard-payment {
-  --stat-bg: color-mix(in srgb, #059669 18%, var(--moderator-surface));
+  --stat-accent: #6ee7b7;
+  --stat-bg: rgba(16, 185, 129, 0.16);
 }
 
 [data-theme="dark"] .statCard-user {
-  --stat-bg: color-mix(in srgb, #7c3aed 18%, var(--moderator-surface));
+  --stat-accent: #c4b5fd;
+  --stat-bg: rgba(139, 92, 246, 0.16);
+}
+
+[data-theme="dark"] .statCard-all .statIcon,
+[data-theme="dark"] .statCard-exam .statIcon {
+  border: 1px solid rgba(147, 197, 253, 0.38);
+}
+
+[data-theme="dark"] .statCardHighlight {
+  border-color: color-mix(in srgb, var(--stat-accent) 45%, var(--moderator-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--stat-accent) 18%, transparent);
 }
 
 .statIcon {
@@ -248,6 +263,39 @@
   --node-bg: #ede9fe;
 }
 
+[data-theme="dark"] .node-all {
+  --node-accent: #e0f2fe;
+  --node-bg: rgba(147, 197, 253, 0.22);
+}
+
+[data-theme="dark"] .node-exam {
+  --node-accent: #93c5fd;
+  --node-bg: rgba(96, 165, 250, 0.2);
+}
+
+[data-theme="dark"] .node-report {
+  --node-accent: #fca5a5;
+  --node-bg: rgba(239, 68, 68, 0.16);
+}
+
+[data-theme="dark"] .node-payment {
+  --node-accent: #6ee7b7;
+  --node-bg: rgba(16, 185, 129, 0.16);
+}
+
+[data-theme="dark"] .node-user {
+  --node-accent: #c4b5fd;
+  --node-bg: rgba(139, 92, 246, 0.16);
+}
+
+[data-theme="dark"] .timelineItem::before {
+  background: linear-gradient(
+    180deg,
+    rgba(148, 163, 184, 0.35) 0%,
+    rgba(148, 163, 184, 0.08) 100%
+  );
+}
+
 .card {
   display: flex;
   flex-wrap: wrap;
@@ -269,6 +317,11 @@
   background: var(--moderator-surface);
   border-color: color-mix(in srgb, var(--node-accent) 25%, #c3c6d7);
   box-shadow: 0 4px 14px rgba(17, 24, 39, 0.06);
+}
+
+[data-theme="dark"] .card:hover {
+  border-color: color-mix(in srgb, var(--node-accent) 35%, var(--moderator-border));
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
 }
 
 .cardMain {

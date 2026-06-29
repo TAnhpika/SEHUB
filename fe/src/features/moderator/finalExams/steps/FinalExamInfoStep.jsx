@@ -12,7 +12,9 @@ import {
   getSubjectOptionsForSemester,
   PRACTICE_SEMESTER_OPTIONS,
 } from "@/features/moderator/practiceExams/practiceExamData";
+import { parseSemesterNumberFromLabel } from "@/features/moderator/practiceExams/practiceExamData";
 import { loadReviewCourses, REVIEW_COURSES } from "@/features/review/ReviewQuestionsPage/reviewData";
+import { findCourseMajor } from "@/utils/examDisplay";
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
 import {
   generateExamPaperCode,
@@ -136,16 +138,22 @@ function FinalExamInfoStep() {
       semesterLabel,
       subjectCode: "",
       subjectName: "",
+      major: "",
       examCode: "",
     }));
   }
 
   function handleSubjectChange(event) {
     const code = event.target.value;
+    const semesterNumber = parseSemesterNumberFromLabel(examInfo.semesterLabel);
+    const major = code
+      ? findCourseMajor(code, semesterNumber, reviewCourses) ?? "SE"
+      : "";
     setExamInfo((prev) => ({
       ...prev,
       subjectCode: code,
       subjectName: code ? prev.subjectName || `Môn ${code}` : "",
+      major,
     }));
   }
 

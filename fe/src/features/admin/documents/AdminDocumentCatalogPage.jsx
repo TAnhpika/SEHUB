@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
+import AdminDocumentCatalogSkeleton from "@/features/admin/documents/AdminDocumentCatalogSkeleton";
 import { getAdminDocumentsSubjectUrl } from "@/features/admin/documents/adminDocumentPaths";
 import {
   MAJOR_OPTIONS,
@@ -54,7 +55,14 @@ function AdminDocumentCatalogPage() {
   }, [courses, semesterFilter, majorFilter]);
 
   if (loading) {
-    return null;
+    return (
+      <AdminPageLayout
+        title="Quản lý tài liệu"
+        breadcrumbs={[{ label: "Dashboard", to: "/admin" }, { label: "Quản lý tài liệu" }]}
+      >
+        <AdminDocumentCatalogSkeleton />
+      </AdminPageLayout>
+    );
   }
 
   return (

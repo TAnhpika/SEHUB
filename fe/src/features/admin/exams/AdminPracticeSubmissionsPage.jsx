@@ -130,7 +130,7 @@ function AdminPracticeSubmissionsPage() {
           </div>
         </div>
 
-        <p className={styles.hint} style={{ marginTop: 0 }}>
+        <p className={styles.hint}>
           Mặc định sắp xếp <strong>Nộp mới nhất</strong>. Cũng xem theo đề tại{" "}
           <Link to={resolveAdminExamLink("PRF192")} className={styles.link}>
             PRF192

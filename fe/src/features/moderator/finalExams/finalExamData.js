@@ -39,6 +39,7 @@ export function getWizardSteps(basePath = "/moderator/final-exams/add") {
 export const EMPTY_FINAL_EXAM_INFO = {
   subjectCode: "",
   subjectName: "",
+  major: "",
   semesterLabel: "",
   examCode: "",
   durationMinutes: 60,

@@ -229,6 +229,14 @@
   letter-spacing: 0.06em;
 }
 
+.toolPanelSectionUrgent {
+  color: #fca581;
+}
+
+[data-theme="dark"] .toolPanelSectionUrgent {
+  color: #fca581;
+}
+
 .toolPanelEmpty {
   margin: 0;
   padding: 1.25rem 1rem;
@@ -281,15 +289,45 @@
 }
 
 .notifItemUrgent {
-  background: var(--color-danger-bg, #fee2e2);
+  background: color-mix(in srgb, #fca581 18%, var(--moderator-surface));
+  border: 1px solid color-mix(in srgb, #fca581 35%, var(--moderator-border));
+  border-left: 3px solid #fca581;
+  box-shadow: 0 1px 3px color-mix(in srgb, #fca581 14%, transparent);
 }
 
 .notifItemUrgent:hover {
-  background: color-mix(in srgb, var(--color-danger, #ef4444) 18%, var(--moderator-surface));
+  background: color-mix(in srgb, #fca581 24%, var(--moderator-surface));
+  border-color: color-mix(in srgb, #fca581 48%, var(--moderator-border));
+}
+
+[data-theme="dark"] .notifItemUrgent {
+  background: color-mix(in srgb, #fca581 14%, var(--moderator-surface));
+  border-color: color-mix(in srgb, #fca581 38%, var(--moderator-border));
+  border-left-color: #fca581;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fca581 12%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.18);
 }
 
 [data-theme="dark"] .notifItemUrgent:hover {
-  background: rgba(239, 68, 68, 0.22);
+  background: color-mix(in srgb, #fca581 22%, var(--moderator-surface));
+  border-color: color-mix(in srgb, #fca581 52%, var(--moderator-border));
+}
+
+.notifItemUrgent .notifItemTitle {
+  color: #c45c2e;
+}
+
+[data-theme="dark"] .notifItemUrgent .notifItemTitle {
+  color: #ffd4c4;
+}
+
+.notifItemUrgent .notifItemDesc {
+  color: color-mix(in srgb, #fca581 55%, var(--moderator-text-muted));
+}
+
+[data-theme="dark"] .notifItemUrgent .notifItemDesc {
+  color: color-mix(in srgb, #fca581 72%, var(--moderator-text-muted));
 }
 
 .notifItemTitle,
