@@ -3,6 +3,7 @@ namespace SEHub.Contracts.Subjects;
 public sealed class SubjectCourseDto
 {
     public string Code { get; init; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
     public string Major { get; init; } = string.Empty;
 }
 

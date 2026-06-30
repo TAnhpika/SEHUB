@@ -29,13 +29,16 @@ export function mapExamDetailDtoToFeExam(dto, courseCode) {
   const primaryAttachment = attachments[0];
 
   return {
-    id: dto.code || dto.id,
+    id: dto.title || dto.code || dto.id,
     apiId: dto.id,
-    courseCode: courseCode?.toUpperCase() ?? dto.major ?? "",
+    courseCode: (courseCode?.toUpperCase() ?? dto.code ?? "").toUpperCase(),
+    subjectName: dto.subjectName ?? "",
     type: examTypeLabel,
     examType: dto.examType,
     questionCount: dto.questionCount ?? 0,
     title: dto.title,
+    paperCode: dto.title,
+    subjectCode: dto.code,
     description: dto.description,
     assetUrl: dto.assetUrl ?? primaryAttachment?.viewUrl ?? primaryAttachment?.viewPath ?? null,
     attachments,

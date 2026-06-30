@@ -31,11 +31,19 @@ export function getSubjectOptionsForSemester(semesterLabel, courses = REVIEW_COU
   const group = courses.find((item) => item.semester === semesterNumber);
   if (!group) return [];
 
-  const codes = new Set();
+  const options = new Map();
   for (const course of group.courses) {
-    codes.add(normalizeCourseSubjectCode(course.code) ?? course.code);
+    const code = normalizeCourseSubjectCode(course.code) ?? course.code;
+    if (!options.has(code)) {
+      options.set(code, {
+        code,
+        name: course.name ?? "",
+        major: course.major ?? "SE",
+      });
+    }
   }
-  return [...codes].sort();
+
+  return [...options.values()].sort((a, b) => a.code.localeCompare(b.code));
 }
 
 export async function loadPracticeSubjectOptions() {

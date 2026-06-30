@@ -8,7 +8,7 @@ import {
 } from "@/features/review/ReviewQuestionsPage/reviewData";
 import styles from "./CourseCatalogPage.module.css";
 
-function CourseCatalogPage({ title, subtitle, courses, detailBasePath }) {
+function CourseCatalogPage({ title, subtitle, courses, detailBasePath, showSubjectName = true }) {
   const [searchParams] = useSearchParams();
   const semesterFromUrl = searchParams.get("semester");
   const [semesterFilter, setSemesterFilter] = useState(() =>
@@ -91,7 +91,12 @@ function CourseCatalogPage({ title, subtitle, courses, detailBasePath }) {
                     }
                     className={styles.card}
                   >
-                    <span className={styles.code}>{course.code}</span>
+                    <div className={styles.cardMain}>
+                      <span className={styles.code}>{course.code}</span>
+                      {showSubjectName && course.name ? (
+                        <span className={styles.name}>{course.name}</span>
+                      ) : null}
+                    </div>
                     <span
                       className={`${styles.badge} ${course.major === "AI" ? styles["badge-ai"] : styles["badge-se"]}`}
                     >

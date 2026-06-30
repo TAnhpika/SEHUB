@@ -2,16 +2,20 @@ namespace SEHub.Shared.Subjects;
 
 public static class ExamFrontendPaths
 {
-    public static string BuildPracticeExamDetailPath(string examCode, string? title = null, string? major = null)
+    public static string BuildPracticeExamDetailPath(string subjectCode, string? paperCode = null)
     {
-        var courseCode = SubjectCodeResolver.Resolve(examCode, title, major)
-            ?? major?.Trim();
-
-        if (string.IsNullOrWhiteSpace(courseCode))
+        var normalizedSubject = subjectCode.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedSubject))
         {
-            courseCode = "SUBJECT";
+            return "/home/practical-exam";
         }
 
-        return $"/home/practical-exam/{Uri.EscapeDataString(courseCode)}/{Uri.EscapeDataString(examCode)}";
+        var subjectSegment = Uri.EscapeDataString(normalizedSubject);
+        if (string.IsNullOrWhiteSpace(paperCode))
+        {
+            return $"/home/practical-exam/{subjectSegment}";
+        }
+
+        return $"/home/practical-exam/{subjectSegment}/{Uri.EscapeDataString(paperCode.Trim())}";
     }
 }

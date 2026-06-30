@@ -1,6 +1,5 @@
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Contracts.Subjects;
-using SEHub.Shared.Subjects;
 
 namespace SEHub.Application.Subjects;
 
@@ -11,68 +10,37 @@ public interface ISubjectCatalogService
 
 public sealed class SubjectCatalogService : ISubjectCatalogService
 {
-    private readonly IExamRepository _examRepository;
-    private readonly IDocumentCategoryRepository _categoryRepository;
+    private readonly ISubjectRepository _subjectRepository;
 
-    public SubjectCatalogService(
-        IExamRepository examRepository,
-        IDocumentCategoryRepository categoryRepository)
-    {
-        _examRepository = examRepository;
-        _categoryRepository = categoryRepository;
-    }
+    public SubjectCatalogService(ISubjectRepository subjectRepository) =>
+        _subjectRepository = subjectRepository;
 
     public async Task<IReadOnlyList<SubjectSemesterGroupDto>> GetCatalogAsync(
         CancellationToken cancellationToken = default)
     {
-        var examSubjects = await _examRepository.GetDistinctPublishedSubjectsAsync(cancellationToken);
-        var categories = await _categoryRepository.GetAllAsync(cancellationToken);
+        var subjects = await _subjectRepository.GetAllAsync(cancellationToken);
 
-        var entries = new Dictionary<(int Semester, string Code, string Major), (int Semester, string Code, string Major)>();
-
-        foreach (var exam in examSubjects)
-        {
-            AddEntry(entries, exam.Semester, exam.Code, exam.Major);
-        }
-
-        foreach (var category in categories)
-        {
-            var subjectCode = SubjectCodeResolver.Resolve(category.Name) ?? category.Name.Trim();
-            AddEntry(entries, category.Semester, subjectCode, category.Major);
-        }
-
-        return entries.Values
-            .GroupBy(entry => entry.Semester)
+        return subjects
+            .GroupBy(subject => subject.Semester)
             .OrderBy(group => group.Key)
             .Select(group => new SubjectSemesterGroupDto
             {
                 Semester = group.Key,
                 Courses = group
-                    .Select(item => new SubjectCourseDto
+                    .OrderBy(subject => subject.DisplayOrder)
+                    .ThenBy(subject => subject.Code, StringComparer.OrdinalIgnoreCase)
+                    .Select(subject =>
                     {
-                        Code = item.Code,
-                        Major = item.Major,
+                        var mapped = SubjectLookupService.Map(subject);
+                        return new SubjectCourseDto
+                        {
+                            Code = mapped.Code,
+                            Name = mapped.Name,
+                            Major = mapped.Major,
+                        };
                     })
-                    .OrderBy(course => course.Code, StringComparer.OrdinalIgnoreCase)
                     .ToList(),
             })
             .ToList();
-    }
-
-    private static void AddEntry(
-        Dictionary<(int Semester, string Code, string Major), (int Semester, string Code, string Major)> entries,
-        int semester,
-        string code,
-        string major)
-    {
-        var normalizedCode = code.Trim();
-        var normalizedMajor = major.Trim();
-        if (semester <= 0 || string.IsNullOrWhiteSpace(normalizedCode) || string.IsNullOrWhiteSpace(normalizedMajor))
-        {
-            return;
-        }
-
-        var key = (semester, normalizedCode, normalizedMajor);
-        entries.TryAdd(key, key);
     }
 }

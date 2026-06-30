@@ -95,6 +95,8 @@ function isBareSubjectCode(value) {
   return /^[A-Za-z]{3}\d{3}[Cc]?$/.test(String(value ?? "").trim());
 }
 
+export { isBareSubjectCode };
+
 function extractSeasonTermFromCandidates(...candidates) {
   for (const value of candidates) {
     const match = String(value ?? "").match(/-(SP|SU|FA)(\d{4})/i);
@@ -124,8 +126,8 @@ function collectNameCandidates(dto) {
     dto.revisionSourceTitle,
     dto.title,
     dto.revisionSourceCode,
-    dto.code,
     dto.description,
+    dto.code,
   ]
     .map(stripRevisionLabel)
     .filter(Boolean);
@@ -167,21 +169,28 @@ export function resolvePublicExamName(dto) {
 
 export function buildExamDisplayFields(dto) {
   const isRevision = Boolean(dto.revisionOfExamId);
-  const publicName = resolvePublicExamName(dto);
+  const paperCode = isExamPaperCode(dto.title) ? stripRevisionLabel(dto.title) : null;
+  const publicName = paperCode
+    ? formatExamPaperDisplayCode(paperCode)
+    : resolvePublicExamName(dto);
   const subjectCode =
-    extractCourseSubjectCode(
-      dto.major,
-      dto.revisionSourceCode,
+    (isBareSubjectCode(dto.code) ? normalizeCourseSubjectCode(dto.code) : null)
+    ?? extractCourseSubjectCode(
       dto.code,
+      dto.revisionSourceCode,
       dto.title,
+      dto.revisionSourceTitle,
+      dto.major,
       dto.description,
-    ) ?? "—";
+    )
+    ?? "—";
 
   const primaryTitle =
     /^Môn\s/i.test(dto.title ?? "") && isExamPaperCode(publicName) ? publicName : dto.title ?? publicName;
 
   return {
     subjectCode,
+    subjectName: dto.subjectName ?? "",
     displayTitle: isRevision ? `${publicName} Rev` : primaryTitle,
     displayExamCode: isRevision ? `${publicName} Rev` : publicName,
   };
@@ -221,7 +230,13 @@ export function getExamDisplayTitle(item) {
 }
 
 export function getExamSubjectCode(item) {
-  return item?.subjectCode ?? extractCourseSubjectCode(item?.major, item?.code, item?.title) ?? "—";
+  if (item?.subjectCode && item.subjectCode !== "—") {
+    return item.subjectCode;
+  }
+  if (isBareSubjectCode(item?.code)) {
+    return normalizeCourseSubjectCode(item.code) ?? item.code;
+  }
+  return extractCourseSubjectCode(item?.code, item?.major, item?.title) ?? "—";
 }
 
 export function getExamDisplayCode(item) {

@@ -17,6 +17,7 @@ namespace SEHub.Application.Admin;
 public sealed class AdminExamService : IAdminExamService
 {
     private readonly IExamRepository _examRepository;
+    private readonly ISubjectRepository _subjectRepository;
     private readonly IExamAttachmentRepository _attachmentRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
@@ -25,6 +26,7 @@ public sealed class AdminExamService : IAdminExamService
 
     public AdminExamService(
         IExamRepository examRepository,
+        ISubjectRepository subjectRepository,
         IExamAttachmentRepository attachmentRepository,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
@@ -32,6 +34,7 @@ public sealed class AdminExamService : IAdminExamService
         IMapper mapper)
     {
         _examRepository = examRepository;
+        _subjectRepository = subjectRepository;
         _attachmentRepository = attachmentRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
@@ -73,8 +76,18 @@ public sealed class AdminExamService : IAdminExamService
 
     public async Task<AdminExamDto> CreateExamAsync(CreateExamRequest request, bool confirmDuplicate = false, CancellationToken cancellationToken = default)
     {
-        var code = request.Code.Trim();
-        if (await _examRepository.GetByCodeAsync(code, cancellationToken) is not null)
+        var subject = await ExamSubjectBinder.ResolveSubjectAsync(
+            request.Code,
+            _subjectRepository,
+            cancellationToken);
+
+        var paperCode = request.Title.Trim();
+        if (string.IsNullOrWhiteSpace(paperCode))
+        {
+            throw new DomainException("Mã đề thi không được để trống.");
+        }
+
+        if (await _examRepository.GetByTitleAsync(paperCode, cancellationToken) is not null)
         {
             throw new ConflictException("Mã đề đã tồn tại. Vui lòng dùng mã khác.");
         }
@@ -88,7 +101,7 @@ public sealed class AdminExamService : IAdminExamService
             throw new ConflictException(ErrorCodes.DuplicateExam);
         }
 
-        var exam = BuildExamFromRequest(request, contentHash, _currentUser.UserId);
+        var exam = BuildExamFromRequest(request, subject, contentHash, _currentUser.UserId);
         await _examRepository.AddAsync(exam, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         await NotifyAdminsIfModeratorSubmittedAsync(exam, cancellationToken);
@@ -106,8 +119,27 @@ public sealed class AdminExamService : IAdminExamService
             throw new DomainException("Đề đã xuất bản — không thể sửa câu hỏi trực tiếp. Tạo bản revision để gửi Admin duyệt.");
         }
 
-        if (request.Code is not null) exam.Code = request.Code;
-        if (request.Title is not null) exam.Title = request.Title;
+        if (request.Code is not null)
+        {
+            var subject = await ExamSubjectBinder.ResolveSubjectAsync(
+                request.Code,
+                _subjectRepository,
+                cancellationToken);
+            ExamSubjectBinder.ApplySubject(exam, subject);
+        }
+
+        if (request.Title is not null)
+        {
+            var paperCode = request.Title.Trim();
+            var existing = await _examRepository.GetByTitleAsync(paperCode, cancellationToken);
+            if (existing is not null && existing.Id != exam.Id)
+            {
+                throw new ConflictException("Mã đề đã tồn tại. Vui lòng dùng mã khác.");
+            }
+
+            exam.Title = paperCode;
+        }
+
         if (request.Major is not null)
         {
             exam.Major = ExamMajorResolver.Normalize(request.Major, exam.Code, exam.Title);
@@ -149,17 +181,21 @@ public sealed class AdminExamService : IAdminExamService
                 throw new DomainException("Bản gốc không còn ở trạng thái xuất bản.");
             }
 
-            var liveCode = parent.Code;
-            parent.Code = $"{liveCode}-ARCH-{DateTime.UtcNow:yyyyMMddHHmmss}";
+            var livePaperCode = parent.Title;
+            parent.Title = $"{livePaperCode}-ARCH-{DateTime.UtcNow:yyyyMMddHHmmss}";
             parent.Status = ExamStatus.Archived;
             parent.UpdatedAt = DateTime.UtcNow;
 
-            exam.Code = liveCode;
+            exam.Title = livePaperCode;
             await _examRepository.UpdateAsync(parent, cancellationToken);
         }
 
         exam.Status = ExamStatus.Published;
-        exam.Major = ExamMajorResolver.Normalize(exam.Major, exam.Code, exam.Title);
+        var publishedSubject = await ExamSubjectBinder.ResolveSubjectAsync(
+            exam.Code,
+            _subjectRepository,
+            cancellationToken);
+        ExamSubjectBinder.ApplySubject(exam, publishedSubject);
         exam.UpdatedAt = DateTime.UtcNow;
         await _examRepository.UpdateAsync(exam, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -292,8 +328,8 @@ public sealed class AdminExamService : IAdminExamService
             throw new DomainException("Không thể xóa đề đang có bản revision chờ duyệt. Hãy xử lý hàng chờ trước.");
         }
 
-        var liveCode = exam.Code;
-        exam.Code = $"{liveCode}-DEL-{DateTime.UtcNow:yyyyMMddHHmmss}";
+        var livePaperCode = exam.Title;
+        exam.Title = $"{livePaperCode}-DEL-{DateTime.UtcNow:yyyyMMddHHmmss}";
         exam.Status = ExamStatus.Archived;
         exam.UpdatedAt = DateTime.UtcNow;
 
@@ -329,20 +365,21 @@ public sealed class AdminExamService : IAdminExamService
         return $"{request.Code}|{request.Title}|{request.Description}|{request.AssetUrl}";
     }
 
-    private static Exam BuildExamFromRequest(CreateExamRequest request, string contentHash, Guid? submittedById)
+    private static Exam BuildExamFromRequest(
+        CreateExamRequest request,
+        Subject subject,
+        string contentHash,
+        Guid? submittedById)
     {
         var examId = Guid.NewGuid();
         Enum.TryParse<ExamType>(request.ExamType, true, out var examType);
-        int.TryParse(request.Semester, out var semester);
 
         var exam = new Exam
         {
             Id = examId,
-            Code = request.Code,
-            Title = request.Title,
+            Code = subject.Code,
+            Title = request.Title.Trim(),
             ExamType = examType,
-            Semester = semester,
-            Major = ExamMajorResolver.Normalize(request.Major, request.Code, request.Title),
             Description = request.Description ?? string.Empty,
             AssetUrl = request.AssetUrl,
             SubmittedById = submittedById,
@@ -351,6 +388,8 @@ public sealed class AdminExamService : IAdminExamService
             QuestionCount = request.Questions.Count,
             CreatedAt = DateTime.UtcNow
         };
+
+        ExamSubjectBinder.ApplySubject(exam, subject);
 
         exam.Questions = request.Questions.Select(q => BuildQuestion(q, examId)).ToList();
         return exam;
@@ -418,15 +457,15 @@ public sealed class AdminExamService : IAdminExamService
         return [];
     }
 
-    private static Exam CloneExamAsRevision(Exam published, string revisionCode)
+    private static Exam CloneExamAsRevision(Exam published, string revisionTitle)
     {
         var revisionId = Guid.NewGuid();
 
         var revision = new Exam
         {
             Id = revisionId,
-            Code = revisionCode,
-            Title = published.Title,
+            Code = published.Code,
+            Title = revisionTitle,
             ExamType = published.ExamType,
             Semester = published.Semester,
             Major = published.Major,
@@ -492,26 +531,26 @@ public sealed class AdminExamService : IAdminExamService
 
     private async Task<Exam> CloneExamAsRevisionAsync(Exam published, CancellationToken cancellationToken)
     {
-        var revisionCode = await BuildRevisionCodeAsync(published.Code, cancellationToken);
-        return CloneExamAsRevision(published, revisionCode);
+        var revisionTitle = await BuildRevisionTitleAsync(published.Title, cancellationToken);
+        return CloneExamAsRevision(published, revisionTitle);
     }
 
-    private async Task<string> BuildRevisionCodeAsync(string publishedCode, CancellationToken cancellationToken)
+    private async Task<string> BuildRevisionTitleAsync(string publishedTitle, CancellationToken cancellationToken)
     {
-        var baseCode = $"{publishedCode.Trim()}-Rev";
-        if (baseCode.Length > 50)
+        var baseTitle = $"{publishedTitle.Trim()}-Rev";
+        if (baseTitle.Length > 100)
         {
-            baseCode = baseCode[..50];
+            baseTitle = baseTitle[..100];
         }
 
-        var candidate = baseCode;
+        var candidate = baseTitle;
         var suffix = 2;
-        while (await _examRepository.GetByCodeAsync(candidate, cancellationToken) is not null)
+        while (await _examRepository.GetByTitleAsync(candidate, cancellationToken) is not null)
         {
-            candidate = $"{baseCode}-{suffix}";
-            if (candidate.Length > 50)
+            candidate = $"{baseTitle}-{suffix}";
+            if (candidate.Length > 100)
             {
-                candidate = candidate[..50];
+                candidate = candidate[..100];
             }
 
             suffix++;
@@ -583,6 +622,7 @@ public sealed class AdminExamService : IAdminExamService
             Id = exam.Id,
             Code = exam.Code,
             Title = exam.Title,
+            SubjectName = exam.Subject?.Name ?? string.Empty,
             ExamType = exam.ExamType.ToString(),
             Semester = exam.Semester.ToString(),
             Major = exam.Major,

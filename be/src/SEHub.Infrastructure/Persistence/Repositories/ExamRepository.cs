@@ -4,7 +4,6 @@ using SEHub.Contracts.Exams;
 using SEHub.Contracts.Subjects;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
-using SEHub.Shared.Subjects;
 
 namespace SEHub.Infrastructure.Persistence.Repositories;
 
@@ -22,7 +21,11 @@ public class ExamRepository : IExamRepository
             query = query.Include(e => e.Questions).ThenInclude(q => q.Options);
         }
 
-        return await query.Include(e => e.RevisionOfExam).FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+        return await query
+            .Include(e => e.Subject)
+            .Include(e => e.RevisionOfExam)
+            .ThenInclude(r => r!.Subject)
+            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
 
     public async Task<IReadOnlyList<Exam>> GetByIdsAsync(
@@ -35,19 +38,30 @@ public class ExamRepository : IExamRepository
         }
 
         return await _context.Exams
+            .Include(e => e.Subject)
             .Where(e => ids.Contains(e.Id))
             .ToListAsync(cancellationToken);
     }
 
-    public Task<Exam?> GetByCodeAsync(string code, CancellationToken cancellationToken = default) =>
-        _context.Exams.FirstOrDefaultAsync(e => e.Code == code, cancellationToken);
+    public Task<Exam?> GetByTitleAsync(string paperCode, CancellationToken cancellationToken = default)
+    {
+        var normalized = paperCode.Trim();
+        return _context.Exams
+            .Include(e => e.Subject)
+            .FirstOrDefaultAsync(
+                e => e.Title.ToLower() == normalized.ToLower(),
+                cancellationToken);
+    }
 
     public Task<Exam?> GetByContentHashAsync(string contentHash, CancellationToken cancellationToken = default) =>
         _context.Exams.FirstOrDefaultAsync(e => e.ContentHash == contentHash, cancellationToken);
 
     public async Task<(IReadOnlyList<Exam> Items, int TotalCount)> GetPagedAsync(ExamQueryParams query, CancellationToken cancellationToken = default)
     {
-        var dbQuery = _context.Exams.AsQueryable();
+        var dbQuery = _context.Exams
+            .Include(e => e.Subject)
+            .Include(e => e.RevisionOfExam)
+            .AsQueryable();
 
         if (query.IncludeUnpublished)
         {
@@ -83,18 +97,8 @@ public class ExamRepository : IExamRepository
 
         if (!string.IsNullOrWhiteSpace(query.Code))
         {
-            var code = query.Code.Trim();
-            var subjectCode = SubjectCodeResolver.Resolve(code) ?? code;
-            var paperCodePrefixFe = $"FE-{subjectCode}-";
-            var paperCodePrefixPe = $"PE-{subjectCode}-";
-
-            dbQuery = dbQuery.Where(e =>
-                e.Code == code
-                || e.Code.StartsWith(code + "-")
-                || e.Code.StartsWith(code + "_")
-                || e.Major == code
-                || e.Code.StartsWith(paperCodePrefixFe)
-                || e.Code.StartsWith(paperCodePrefixPe));
+            var subjectCode = query.Code.Trim();
+            dbQuery = dbQuery.Where(e => e.Code.ToLower() == subjectCode.ToLower());
         }
 
         if (!string.IsNullOrWhiteSpace(query.Major))
@@ -104,7 +108,6 @@ public class ExamRepository : IExamRepository
 
         var total = await dbQuery.CountAsync(cancellationToken);
         var items = await dbQuery
-            .Include(e => e.RevisionOfExam)
             .OrderByDescending(e => e.CreatedAt)
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
@@ -159,36 +162,7 @@ public class ExamRepository : IExamRepository
                 e => e.RevisionOfExamId == publishedExamId && e.Status == ExamStatus.PendingApproval,
                 cancellationToken);
 
-    public async Task<IReadOnlyList<SubjectSourceEntryDto>> GetDistinctPublishedSubjectsAsync(
-        CancellationToken cancellationToken = default)
-    {
-        var exams = await _context.Exams
-            .Where(e => e.Status == ExamStatus.Published)
-            .Select(e => new { e.Code, e.Title, e.Semester, e.Major })
-            .ToListAsync(cancellationToken);
-
-        var entries = new Dictionary<(int Semester, string Code, string Major), SubjectSourceEntryDto>();
-
-        foreach (var exam in exams)
-        {
-            var subjectCode = SubjectCodeResolver.Resolve(exam.Code, exam.Title, exam.Major);
-            if (subjectCode is null || exam.Semester <= 0 || string.IsNullOrWhiteSpace(exam.Major))
-            {
-                continue;
-            }
-
-            var major = ExamMajorResolver.Normalize(exam.Major, exam.Code, exam.Title);
-            var key = (exam.Semester, subjectCode, major);
-            entries.TryAdd(
-                key,
-                new SubjectSourceEntryDto
-                {
-                    Code = subjectCode,
-                    Semester = exam.Semester,
-                    Major = major,
-                });
-        }
-
-        return entries.Values.ToList();
-    }
+    public Task<IReadOnlyList<SubjectSourceEntryDto>> GetDistinctPublishedSubjectsAsync(
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<SubjectSourceEntryDto>>([]);
 }

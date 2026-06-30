@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SEHub.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using SEHub.Infrastructure.Persistence;
 namespace SEHub.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(SEHubDbContext))]
-    partial class SEHubDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260630072021_AddSubjectsCatalog")]
+    partial class AddSubjectsCatalog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -841,8 +844,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Code")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("ContentHash")
                         .IsRequired()
@@ -896,8 +899,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -912,10 +915,10 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("SubmittedById");
 
-                    b.HasIndex("Title")
+                    b.HasIndex("Major", "Code")
                         .IsUnique();
 
-                    b.HasIndex("Code", "Status", "ExamType");
+                    b.HasIndex("Major", "Status", "ExamType");
 
                     b.ToTable("Exams");
                 });
@@ -2954,12 +2957,6 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("SEHub.Domain.Entities.Exam", b =>
                 {
-                    b.HasOne("SEHub.Domain.Entities.Subject", "Subject")
-                        .WithMany()
-                        .HasForeignKey("Code")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("RejectedById")
@@ -2976,8 +2973,6 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("RevisionOfExam");
-
-                    b.Navigation("Subject");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.ExamAttachment", b =>

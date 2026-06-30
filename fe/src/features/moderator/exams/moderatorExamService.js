@@ -8,6 +8,8 @@ import {
 import {
   buildExamDisplayFields,
   enrichRevisionExamEntries,
+  extractCourseSubjectCode,
+  isBareSubjectCode,
   normalizeCourseSubjectCode,
   resolveExamMajor,
 } from "@/utils/examDisplay";
@@ -51,13 +53,15 @@ export function mapApiExamToContributionEntry(dto, moderatorUsername) {
     moderator: moderatorUsername,
     examType,
     action: revisionOfExamId ? "revision_submitted" : "submitted",
-    subjectCode: dto.major ?? dto.code?.split("-")?.[0] ?? "",
+    subjectCode: isBareSubjectCode(dto.code)
+      ? (normalizeCourseSubjectCode(dto.code) ?? dto.code)
+      : (dto.subjectName ? normalizeCourseSubjectCode(dto.code) : extractCourseSubjectCode(dto.code, dto.title)) ?? "",
     semester: dto.semester ? `Học kỳ ${dto.semester}` : "",
     title: dto.title,
     description: dto.description ?? "",
     pendingId: dto.id,
     examApiId: dto.id,
-    examCode: dto.code,
+    examCode: dto.title ?? dto.code,
     questionCount: dto.questionCount ?? null,
     status,
     statusLabel: CONTRIBUTION_STATUS_LABELS[status],
@@ -94,8 +98,8 @@ export function buildFinalExamCreateBody(examInfo, questions) {
   });
 
   return {
-    code: paperCode,
-    title: paperCode || examInfo.subjectName || subjectCode,
+    code: subjectCode,
+    title: paperCode || `${subjectCode} — Cuối kỳ`,
     examType: "Final",
     semester: parseSemesterId(examInfo.semesterLabel),
     major,
@@ -115,7 +119,7 @@ export function buildPracticeExamCreateBody(payload) {
   });
 
   return {
-    code: paperCode,
+    code: subjectCode,
     title: paperCode,
     examType: "Practice",
     semester: parseSemesterId(payload.semester),

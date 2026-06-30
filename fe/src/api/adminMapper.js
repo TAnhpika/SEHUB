@@ -3,9 +3,12 @@ import { resolveAssetUrl } from "@/api/assetUrl";
 import {
   buildExamDisplayFields,
   extractCourseSubjectCode,
+  isBareSubjectCode,
+  isExamPaperCode,
   normalizeCourseSubjectCode,
   resolveExamMajor,
   resolvePublicExamName,
+  stripRevisionLabel,
 } from "@/utils/examDisplay";
 import { mapModerationPostImages } from "@/utils/mapModerationPostImages";
 import { getExamAssetFileName } from "@/utils/examAssetUrl";
@@ -330,10 +333,10 @@ export function mapFinalExamWizardToCreateRequest(examInfo, questions) {
   });
 
   return {
-    code: paperCode,
+    code: subjectCode,
     title: paperCode || `${subjectCode} — Cuối kỳ`,
     examType: "Final",
-    semester: parseSemesterNumber(examInfo.semesterLabel),
+    semester: String(parseSemesterNumber(examInfo.semesterLabel) ?? ""),
     major,
     description: `${examInfo.subjectName ?? subjectCode} · ${examInfo.durationMinutes} phút`,
     questions: mapWizardQuestionsToCreateItems(questions),
@@ -364,11 +367,12 @@ export function mapExamDetailToWizard(dto) {
   const durationMatch = String(dto.description ?? "").match(/(\d+)\s*phút/);
   const durationMinutes = durationMatch ? Number(durationMatch[1]) : 60;
   const questionCount = Math.max(dto.questionCount ?? 0, wizardQuestions.length, 1);
-  const publicName = resolvePublicExamName(dto);
-  const subjectCode =
-    extractCourseSubjectCode(dto.major, dto.revisionSourceCode, dto.code, dto.title) ??
-    dto.major ??
-    "";
+  const subjectCode = isBareSubjectCode(dto.code)
+    ? (normalizeCourseSubjectCode(dto.code) ?? dto.code)
+    : (extractCourseSubjectCode(dto.code, dto.revisionSourceCode, dto.title) ?? "");
+  const paperCode = isExamPaperCode(dto.title)
+    ? stripRevisionLabel(dto.title)
+    : resolvePublicExamName(dto);
   const major = resolveExamMajor({
     major: dto.major,
     subjectCode,
@@ -378,10 +382,12 @@ export function mapExamDetailToWizard(dto) {
   return {
     examInfo: {
       subjectCode,
-      subjectName: String(dto.description ?? "").split(" · ")[0]?.trim() || publicName,
+      subjectName:
+        dto.subjectName
+        ?? ((String(dto.description ?? "").split(" · ")[0]?.trim()) || paperCode),
       major,
       semesterLabel: dto.semester ? `Học kỳ ${dto.semester}` : "",
-      examCode: publicName,
+      examCode: paperCode,
       revisionSourceCode: dto.revisionSourceCode ?? null,
       revisionSourceTitle: dto.revisionSourceTitle ?? null,
       durationMinutes,
@@ -472,8 +478,9 @@ export function mapAdminExamFormToCreateRequest(form, { questions = [] } = {}) {
     form.githubGuide ??
     "Nộp link repository GitHub công khai. README ghi rõ MSSV, họ tên và hướng dẫn chạy project.";
 
-  const isFinal = form.typeKey === "final";
-  const paperCode = form.title.trim();
+  const subjectCode =
+    normalizeCourseSubjectCode(form.code) ?? String(form.code ?? "").trim();
+  const paperCode = String(form.title ?? "").trim();
 
   const description =
     form.typeKey === "practice"
@@ -481,9 +488,9 @@ export function mapAdminExamFormToCreateRequest(form, { questions = [] } = {}) {
       : form.description?.trim() ?? "";
 
   return {
-    code: isFinal ? paperCode : form.code.trim(),
-    title: isFinal ? paperCode : form.title.trim(),
-    examType: isFinal ? "Final" : "Practice",
+    code: subjectCode,
+    title: paperCode,
+    examType: form.typeKey === "final" ? "Final" : "Practice",
     semester: form.semester,
     major: form.track ?? "SE",
     description,
@@ -492,13 +499,14 @@ export function mapAdminExamFormToCreateRequest(form, { questions = [] } = {}) {
 }
 
 export function mapAdminExamFormToUpdateRequest(form, { questions = null } = {}) {
-  const isFinal = form.typeKey === "final";
-  const paperCode = form.title.trim();
+  const subjectCode =
+    normalizeCourseSubjectCode(form.code) ?? String(form.code ?? "").trim();
+  const paperCode = String(form.title ?? "").trim();
 
   const body = {
-    code: isFinal ? paperCode : form.code.trim(),
-    title: isFinal ? paperCode : form.title.trim(),
-    examType: isFinal ? "Final" : "Practice",
+    code: subjectCode,
+    title: paperCode,
+    examType: form.typeKey === "final" ? "Final" : "Practice",
     semester: form.semester,
     major: form.track ?? "SE",
     description: form.description?.trim() ?? "",
@@ -525,10 +533,10 @@ export function mapPracticeExamFormToCreateRequest(form) {
   });
 
   return {
-    code: paperCode,
+    code: subjectCode,
     title: paperCode,
     examType: "Practice",
-    semester: parseSemesterNumber(form.semester),
+    semester: String(parseSemesterNumber(form.semester) ?? ""),
     major,
     description: [form.description, githubGuide].filter(Boolean).join("\n\n"),
     assetUrl: form.assetUrl ?? null,
