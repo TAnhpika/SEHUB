@@ -76,13 +76,48 @@ function MessagesPage() {
     setBlockedUsersLoading(true);
     try {
       const items = await listBlockedUsers();
-      setBlockedUsers((items ?? []).map(mapBlockedUserListItem));
-    } catch {
-      setBlockedUsers([]);
+      const mapped = Array.isArray(items) ? items.map(mapBlockedUserListItem) : [];
+      setBlockedUsers(mapped);
+      return mapped;
+    } catch (err) {
+      setBlockedUsers((current) => current);
+      if (blockedListOpen) {
+        showToast(err.message ?? "Không tải được danh sách bị chặn.");
+      }
+      return null;
     } finally {
       setBlockedUsersLoading(false);
     }
-  }, []);
+  }, [blockedListOpen, showToast]);
+
+  function addBlockedUserLocally(conversation) {
+    if (!conversation?.otherUserId) return;
+
+    setBlockedUsers((current) => {
+      if (current.some((item) => item.userId === conversation.otherUserId)) {
+        return current;
+      }
+
+      return [
+        ...current,
+        mapBlockedUserListItem({
+          userId: conversation.otherUserId,
+          username: conversation.username ?? "",
+          fullName: conversation.name ?? "",
+          avatarUrl: conversation.avatarUrl ?? null,
+          conversationId: conversation.conversationId ?? null,
+          blockedAt: new Date().toISOString(),
+        }),
+      ];
+    });
+  }
+
+  async function handleOpenBlockedList() {
+    setInboxMenuOpen(false);
+    setBlockedListOpen(true);
+    setIsEditMode(false);
+    await fetchBlockedUsers();
+  }
 
   useEffect(() => {
     fetchBlockedUsers();
@@ -294,6 +329,7 @@ function MessagesPage() {
       setConversations((current) =>
         current.filter((item) => item.conversationId !== conversationId),
       );
+      addBlockedUserLocally(activeConversation);
       await fetchBlockedUsers();
       showToast("Đã chặn người dùng này.");
     } catch (err) {
@@ -440,11 +476,7 @@ function MessagesPage() {
                     type="button"
                     className={styles["inbox-menu-item"]}
                     role="menuitem"
-                    onClick={() => {
-                      setInboxMenuOpen(false);
-                      setBlockedListOpen(true);
-                      setIsEditMode(false);
-                    }}
+                    onClick={handleOpenBlockedList}
                   >
                     <FontAwesomeIcon icon={faUserSlash} className={styles["inbox-menu-icon"]} />
                     Danh sách bị chặn
