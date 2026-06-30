@@ -14,11 +14,9 @@ function GuestHeader() {
   const { pathname } = useLocation();
   const { isAuthenticated, isBootstrapping } = useAuth();
   const mainShell = useMainShellOptional();
-  const homePath = isAuthenticated ? "/home" : "/";
-  const isHome = isAuthenticated ? pathname.startsWith("/home") : pathname === "/";
-  const isCommunity = isAuthenticated
-    ? pathname.startsWith("/home")
-    : pathname.startsWith("/community");
+  const homePath = "/";
+  const isHome = pathname === "/";
+  const isCommunity = pathname.startsWith("/community");
   const isSupport = pathname.startsWith("/support");
 
   return (
@@ -48,7 +46,7 @@ function GuestHeader() {
             Trang chủ
           </Link>
           <Link
-            to={isAuthenticated ? "/home" : "/community"}
+            to="/community"
             className={`${styles["nav-link"]} ${isCommunity ? styles["nav-active"] : ""}`}
           >
             Cộng đồng
