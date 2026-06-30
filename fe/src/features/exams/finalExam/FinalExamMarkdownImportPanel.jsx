@@ -11,7 +11,16 @@ function FinalExamMarkdownImportPanel({
   showModeSwitch = false,
   inputMode,
   onInputModeChange,
+  fileName = "",
+  onFileChange,
+  onRunOcr,
+  ocrRunning = false,
+  ocrLabel = "Chạy OCR & import vào đề",
+  maxQuestions = 50,
 }) {
+  const isUploadMode = showModeSwitch && inputMode === "upload";
+  const isMarkdownMode = !showModeSwitch || inputMode === "markdown";
+
   return (
     <section className={styles.panel}>
       {showModeSwitch ? (
@@ -37,29 +46,63 @@ function FinalExamMarkdownImportPanel({
         </div>
       ) : null}
 
-      <h2 className={styles.title}>Import câu hỏi bằng Markdown</h2>
-      <p className={styles.desc}>
-        Mỗi câu: tiêu đề <code>## Câu N</code> hoặc <code>Câu N</code>, nội dung, phương án <code>A.</code>–
-        <code>H.</code>, dòng <code>**Đáp án: X**</code> hoặc <code>Đáp án: X</code>. Đúng/sai dùng A. Đúng / B. Sai.
-        Nội dung có thể nhắc &quot;A. B. C. D.&quot; trong đề — phương án vẫn ghi riêng từng dòng.
-        Multi-select: <code>[MULTI:3]</code> và <code>**Đáp án: A, C, E**</code>.
-      </p>
-      <textarea
-        className={styles.textarea}
-        rows={14}
-        value={markdownText}
-        onChange={(event) => onMarkdownChange(event.target.value)}
-        placeholder={MARKDOWN_IMPORT_PLACEHOLDER}
-      />
-      <p className={styles.hint}>
-        Phân tách các câu bằng <strong>## Câu N</strong> hoặc dòng <strong>---</strong>.
-        Câu thiếu phương án / thiếu dòng đáp án sẽ bị bỏ qua — xem toast cảnh báo sau khi import.
-      </p>
-      <div className={styles.actions}>
-        <Button type="button" onClick={onImport} disabled={importing}>
-          {importing ? "Đang import..." : importLabel}
-        </Button>
-      </div>
+      {isUploadMode ? (
+        <>
+          <h2 className={styles.title}>Upload đề, OCR</h2>
+          <p className={styles.desc}>
+            Upload file PDF hoặc ảnh đề thi để OCR. Sau khi chạy OCR, câu hỏi được import vào đề để
+            bạn rà soát đáp án trước khi tiếp tục.
+          </p>
+          <label className={styles.uploadZone}>
+            <span className={styles.uploadText}>
+              {fileName || "Kéo thả hoặc chọn file"}
+            </span>
+            <span className={styles.uploadHint}>
+              PDF, PNG, JPG — tối đa 50MB · Tối đa {maxQuestions} câu/lần làm
+            </span>
+            <input
+              type="file"
+              accept=".pdf,image/*"
+              className={styles.fileInput}
+              onChange={onFileChange}
+            />
+          </label>
+          <div className={styles.actions}>
+            <Button type="button" onClick={onRunOcr} disabled={!fileName || ocrRunning}>
+              {ocrRunning ? "Đang OCR..." : ocrLabel}
+            </Button>
+          </div>
+        </>
+      ) : null}
+
+      {isMarkdownMode ? (
+        <>
+          <h2 className={styles.title}>Import câu hỏi bằng Markdown</h2>
+          <p className={styles.desc}>
+            Mỗi câu: tiêu đề <code>## Câu N</code> hoặc <code>Câu N</code>, nội dung, phương án{" "}
+            <code>A.</code>–<code>H.</code>, dòng <code>**Đáp án: X**</code> hoặc{" "}
+            <code>Đáp án: X</code>. Đúng/sai dùng A. Đúng / B. Sai. Nội dung có thể nhắc
+            &quot;A. B. C. D.&quot; trong đề — phương án vẫn ghi riêng từng dòng. Multi-select:{" "}
+            <code>[MULTI:3]</code> và <code>**Đáp án: A, C, E**</code>.
+          </p>
+          <textarea
+            className={styles.textarea}
+            rows={14}
+            value={markdownText}
+            onChange={(event) => onMarkdownChange(event.target.value)}
+            placeholder={MARKDOWN_IMPORT_PLACEHOLDER}
+          />
+          <p className={styles.hint}>
+            Phân tách các câu bằng <strong>## Câu N</strong> hoặc dòng <strong>---</strong>. Câu thiếu
+            phương án / thiếu dòng đáp án sẽ bị bỏ qua — xem toast cảnh báo sau khi import.
+          </p>
+          <div className={styles.actions}>
+            <Button type="button" onClick={onImport} disabled={importing}>
+              {importing ? "Đang import..." : importLabel}
+            </Button>
+          </div>
+        </>
+      ) : null}
     </section>
   );
 }

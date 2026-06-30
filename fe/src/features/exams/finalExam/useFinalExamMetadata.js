@@ -11,6 +11,11 @@ import {
   loadExistingExamPaperIdentifiers,
 } from "@/utils/examPaperCode";
 import { parseSemesterNumberFromLabel } from "@/features/moderator/practiceExams/practiceExamData";
+import {
+  createDefaultExamTermFields,
+  getAcademicYearOptions,
+  EXAM_TERM_SEASON_OPTIONS,
+} from "@/features/exams/finalExam/examTermOptions";
 
 /**
  * Shared semester / subject catalog + auto exam paper code for final-exam wizards.
@@ -19,6 +24,8 @@ export function useFinalExamMetadata({
   semesterLabel,
   subjectCode,
   subjectName = "",
+  termSeason,
+  academicYear,
   examCode,
   isEditMode = false,
   examType = "final",
@@ -26,14 +33,19 @@ export function useFinalExamMetadata({
 }) {
   const [reviewCourses, setReviewCourses] = useState(REVIEW_COURSES);
   const [existingPaperCodes, setExistingPaperCodes] = useState([]);
-  const [examCodeManuallyEdited, setExamCodeManuallyEdited] = useState(false);
   const onPatchRef = useRef(onPatch);
   onPatchRef.current = onPatch;
+
+  const defaultTerm = useMemo(() => createDefaultExamTermFields(), []);
+  const resolvedTermSeason = termSeason || defaultTerm.termSeason;
+  const resolvedAcademicYear = academicYear || defaultTerm.academicYear;
 
   const subjectOptions = useMemo(
     () => getSubjectOptionsForSemester(semesterLabel, reviewCourses),
     [semesterLabel, reviewCourses],
   );
+
+  const academicYearOptions = useMemo(() => getAcademicYearOptions(), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,23 +76,27 @@ export function useFinalExamMetadata({
   }, []);
 
   useEffect(() => {
-    if (isEditMode || examCodeManuallyEdited) return;
-    if (!subjectCode?.trim()) {
+    if (isEditMode) return;
+    if (!subjectCode?.trim() || !resolvedTermSeason || !resolvedAcademicYear) {
       if (examCode) {
         onPatchRef.current({ examCode: "" });
       }
       return;
     }
 
-    const nextCode = generateExamPaperCode(examType, subjectCode, existingPaperCodes);
+    const nextCode = generateExamPaperCode(examType, subjectCode, existingPaperCodes, {
+      season: resolvedTermSeason,
+      year: resolvedAcademicYear,
+    });
     if (nextCode && nextCode !== examCode) {
       onPatchRef.current({ examCode: nextCode });
     }
   }, [
     subjectCode,
+    resolvedTermSeason,
+    resolvedAcademicYear,
     existingPaperCodes,
     isEditMode,
-    examCodeManuallyEdited,
     examType,
     examCode,
   ]);
@@ -117,7 +133,6 @@ export function useFinalExamMetadata({
 
   function handleSemesterChange(event) {
     const nextLabel = event.target.value;
-    setExamCodeManuallyEdited(false);
     onPatchRef.current({
       semesterLabel: nextLabel,
       subjectCode: "",
@@ -129,7 +144,6 @@ export function useFinalExamMetadata({
 
   function handleSubjectChange(event) {
     const code = event.target.value;
-    setExamCodeManuallyEdited(false);
     const semesterNumber = parseSemesterNumberFromLabel(semesterLabel);
     const selected = subjectOptions.find((item) => item.code === code);
     const major =
@@ -158,18 +172,22 @@ export function useFinalExamMetadata({
     }
   }
 
-  function handleExamCodeChange(event) {
-    setExamCodeManuallyEdited(true);
-    onPatchRef.current({ examCode: event.target.value });
+  function handleTermSeasonChange(event) {
+    onPatchRef.current({ termSeason: event.target.value });
+  }
+
+  function handleAcademicYearChange(event) {
+    onPatchRef.current({ academicYear: event.target.value });
   }
 
   return {
     semesterOptions: PRACTICE_SEMESTER_OPTIONS,
     subjectOptions,
-    examCodeManuallyEdited,
-    setExamCodeManuallyEdited,
+    termSeasonOptions: EXAM_TERM_SEASON_OPTIONS,
+    academicYearOptions,
     handleSemesterChange,
     handleSubjectChange,
-    handleExamCodeChange,
+    handleTermSeasonChange,
+    handleAcademicYearChange,
   };
 }

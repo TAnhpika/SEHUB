@@ -13,13 +13,18 @@ function FinalExamInfoFields({
   const {
     semesterOptions,
     subjectOptions,
+    termSeasonOptions,
+    academicYearOptions,
     handleSemesterChange,
     handleSubjectChange,
-    handleExamCodeChange,
+    handleTermSeasonChange,
+    handleAcademicYearChange,
   } = useFinalExamMetadata({
     semesterLabel: value.semesterLabel,
     subjectCode: value.subjectCode,
     subjectName: value.subjectName,
+    termSeason: value.termSeason,
+    academicYear: value.academicYear,
     examCode: value.examCode,
     isEditMode,
     examType,
@@ -86,14 +91,56 @@ function FinalExamInfoFields({
       <div className={styles.row}>
         <label className={styles.field}>
           <span className={styles.label}>
+            Kỳ học <span className={styles.required}>*</span>
+          </span>
+          <select
+            className={styles.input}
+            value={value.termSeason ?? ""}
+            required
+            disabled={isEditMode}
+            onChange={handleTermSeasonChange}
+          >
+            <option value="">Chọn kỳ</option>
+            {termSeasonOptions.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className={styles.field}>
+          <span className={styles.label}>
+            Năm học <span className={styles.required}>*</span>
+          </span>
+          <select
+            className={styles.input}
+            value={value.academicYear ?? ""}
+            required
+            disabled={isEditMode}
+            onChange={handleAcademicYearChange}
+          >
+            <option value="">Chọn năm</option>
+            {academicYearOptions.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className={styles.row}>
+        <label className={styles.field}>
+          <span className={styles.label}>
             Mã đề thi <span className={styles.required}>*</span>
           </span>
           <input
             type="text"
             className={styles.input}
             value={value.examCode}
-            placeholder="Tự động sinh khi chọn môn — có thể chỉnh sửa"
-            onChange={handleExamCodeChange}
+            readOnly
+            placeholder="Tự động sinh khi chọn môn, kỳ và năm học"
           />
         </label>
 

@@ -33,8 +33,12 @@ function FinalExamInfoStep() {
       showToast("Vui lòng chọn mã môn học.");
       return false;
     }
+    if (!examInfo.termSeason?.trim() || !examInfo.academicYear?.trim()) {
+      showToast("Vui lòng chọn kỳ học (SP/SU/FA) và năm học.");
+      return false;
+    }
     if (!examInfo.examCode.trim()) {
-      showToast("Vui lòng nhập mã đề thi.");
+      showToast("Mã đề thi chưa được sinh — chọn đủ môn, kỳ và năm học.");
       return false;
     }
     if (examInfo.durationMinutes < 15 || examInfo.durationMinutes > 180) {
@@ -63,6 +67,14 @@ function FinalExamInfoStep() {
     }
     if (!examInfo.subjectCode.trim()) {
       showToast("Vui lòng chọn mã môn học.");
+      return;
+    }
+    if (!examInfo.termSeason?.trim() || !examInfo.academicYear?.trim()) {
+      showToast("Vui lòng chọn kỳ học (SP/SU/FA) và năm học.");
+      return;
+    }
+    if (!examInfo.examCode.trim()) {
+      showToast("Mã đề thi chưa được sinh — chọn đủ môn, kỳ và năm học.");
       return;
     }
     const totalQuestions = parseTotalQuestions(questionCountInput);

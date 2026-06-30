@@ -16,6 +16,10 @@ import {
 } from "@/features/exams/finalExam/semesterUtils";
 import { parseTotalQuestions } from "@/features/moderator/finalExams/finalExamData";
 import {
+  createDefaultExamTermFields,
+  parseTermFromExamCode,
+} from "@/features/exams/finalExam/examTermOptions";
+import {
   DEMO_DUPLICATE_SHA,
   EXAM_SEMESTERS,
   EXAM_TRACKS,
@@ -42,6 +46,8 @@ const STEPS_FINAL = ["Thông tin", "Upload & OCR", "Xác nhận"];
 const STEPS_PRACTICE = ["Thông tin", "Nội dung đề", "Xác nhận"];
 
 function buildInitialForm(exam) {
+  const defaultTerm = createDefaultExamTermFields();
+
   if (!exam) {
     return {
       typeKey: "final",
@@ -50,6 +56,7 @@ function buildInitialForm(exam) {
       subjectName: "",
       track: "SE",
       semester: "5",
+      ...defaultTerm,
       description: "",
       githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
       deadline: "",
@@ -58,19 +65,25 @@ function buildInitialForm(exam) {
       attachments: [],
     };
   }
+
+  const paperCode =
+    exam.typeKey === "final"
+      ? exam.displayExamCode ?? exam.code ?? exam.title
+      : exam.title;
+  const parsedTerm = exam.typeKey === "final" ? parseTermFromExamCode(paperCode) : null;
+
   return {
     typeKey: exam.typeKey ?? "final",
     code:
       exam.typeKey === "final"
         ? exam.subjectCode ?? extractCourseSubjectCode(exam.code, exam.title) ?? exam.code
         : exam.code,
-    title:
-      exam.typeKey === "final"
-        ? exam.displayExamCode ?? exam.code ?? exam.title
-        : exam.title,
+    title: paperCode,
     subjectName: exam.subjectName ?? "",
     track: exam.track,
     semester: exam.semester,
+    termSeason: parsedTerm?.termSeason ?? defaultTerm.termSeason,
+    academicYear: parsedTerm?.academicYear ?? defaultTerm.academicYear,
     description: exam.description ?? "",
     githubGuide: exam.githubGuide ?? PRACTICE_EXAM_DEFAULTS.githubGuide,
     deadline: exam.deadline ?? "",
@@ -170,7 +183,11 @@ function AdminExamFormPage() {
         return false;
       }
       if (!form.title.trim()) {
-        showToast("Vui lòng nhập mã đề thi.");
+        showToast("Vui lòng chọn môn, kỳ học và năm học để sinh mã đề thi.");
+        return false;
+      }
+      if (!form.termSeason?.trim() || !form.academicYear?.trim()) {
+        showToast("Vui lòng chọn kỳ học (SP/SU/FA) và năm học.");
         return false;
       }
       const totalQuestions = parseTotalQuestions(questionCountInput);
@@ -487,6 +504,12 @@ function AdminExamFormPage() {
     if ("subjectName" in patch) {
       updates.subjectName = patch.subjectName;
     }
+    if ("termSeason" in patch) {
+      updates.termSeason = patch.termSeason;
+    }
+    if ("academicYear" in patch) {
+      updates.academicYear = patch.academicYear;
+    }
     if ("major" in patch) {
       updates.track = patch.major;
     }
@@ -635,6 +658,8 @@ function AdminExamFormPage() {
                   semesterLabel: semesterIdToLabel(form.semester),
                   subjectCode: form.code,
                   subjectName: form.subjectName ?? "",
+                  termSeason: form.termSeason,
+                  academicYear: form.academicYear,
                   examCode: form.title,
                   durationMinutes: form.durationMinutes,
                 }}
@@ -736,35 +761,17 @@ function AdminExamFormPage() {
               onImport={handleImportMarkdown}
               importing={importingMarkdown}
               importLabel="Import Markdown và sang bước xác nhận"
+              fileName={fileName}
+              onFileChange={handleFileChange}
+              onRunOcr={runOcr}
+              ocrLabel="Chạy OCR & sang bước xác nhận"
+              maxQuestions={FINAL_EXAM_DEFAULTS.maxQuestions}
             />
-
-            {finalInputMode === "upload" ? (
-              <label className={styles.field}>
-                <span className={styles.label}>File đề (PDF / ảnh)</span>
-                <div className={styles.uploadZone}>
-                  <span className={styles.uploadText}>{fileName || "Kéo thả hoặc chọn file"}</span>
-                  <span className={styles.uploadHint}>
-                    PDF, PNG, JPG — tối đa 50MB · Tối đa {FINAL_EXAM_DEFAULTS.maxQuestions} câu/lần làm
-                  </span>
-                  <input
-                    type="file"
-                    accept=".pdf,image/*"
-                    style={{ marginTop: "0.5rem" }}
-                    onChange={handleFileChange}
-                  />
-                </div>
-              </label>
-            ) : null}
 
             <div className={formStyles.formActions}>
               <Button type="button" look="outline" onClick={() => setStep(0)}>
                 Quay lại
               </Button>
-              {finalInputMode === "upload" ? (
-                <Button type="button" onClick={runOcr} disabled={!fileName}>
-                  Chạy OCR &amp; sang bước xác nhận
-                </Button>
-              ) : null}
             </div>
           </>
         ) : null}

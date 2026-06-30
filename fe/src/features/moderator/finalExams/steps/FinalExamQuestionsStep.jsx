@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
-import { importExamQuestionsFromMarkdown } from "@/features/admin/exams/adminExamData";
+import {
+  buildMockOcrImportQuestions,
+  FINAL_EXAM_DEFAULTS,
+  importExamQuestionsFromMarkdown,
+} from "@/features/admin/exams/adminExamData";
 import {
   buildFinalExamContributionPayload,
   recordExamDraft,
@@ -41,6 +45,9 @@ function FinalExamQuestionsStep() {
   const [markdownText, setMarkdownText] = useState("");
   const [importingMarkdown, setImportingMarkdown] = useState(false);
   const [inputMode, setInputMode] = useState("manual");
+  const [importSubMode, setImportSubMode] = useState("upload");
+  const [fileName, setFileName] = useState("");
+  const [ocrRunning, setOcrRunning] = useState(false);
 
   useEffect(() => {
     ensureQuestionSlots(totalQuestions);
@@ -70,6 +77,39 @@ function FinalExamQuestionsStep() {
     navigate(`${basePath}/review`);
   }
 
+  function applyImportedQuestions(imported, warnings = []) {
+    const mapped = mapImportedExamQuestions(imported, warnings);
+    setQuestions(mapped);
+    setExamInfo((prev) => ({ ...prev, totalQuestions: mapped.length }));
+    setActiveQuestionIndex(0);
+    setInputMode("manual");
+  }
+
+  function handleFileChange(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    event.target.value = "";
+  }
+
+  async function handleRunOcr() {
+    if (!fileName) {
+      showToast("Chọn file PDF/ảnh trước khi OCR.");
+      return;
+    }
+
+    setOcrRunning(true);
+    try {
+      const imported = buildMockOcrImportQuestions();
+      applyImportedQuestions(imported);
+      showToast("OCR hoàn tất — rà soát đáp án trước khi tiếp tục.");
+    } catch (err) {
+      showToast(err.message ?? "OCR thất bại.");
+    } finally {
+      setOcrRunning(false);
+    }
+  }
+
   async function handleImportMarkdown() {
     if (!markdownText.trim()) {
       showToast("Dán nội dung Markdown câu hỏi trước khi import.");
@@ -86,22 +126,18 @@ function FinalExamQuestionsStep() {
       }
 
       const warnings = result?.warnings ?? [];
-      const mapped = mapImportedExamQuestions(imported, warnings);
-      setQuestions(mapped);
-      setExamInfo((prev) => ({ ...prev, totalQuestions: mapped.length }));
-      setActiveQuestionIndex(0);
-      setInputMode("manual");
+      applyImportedQuestions(imported, warnings);
 
       const skippedCount = warnings.length;
       if (skippedCount > 0) {
         const preview = warnings.slice(0, 2).join(" · ");
         const suffix = skippedCount > 2 ? ` · +${skippedCount - 2} cảnh báo` : "";
         showToast(
-          `Đã import ${mapped.length} câu. ${skippedCount} câu không hợp lệ: ${preview}${suffix}`,
+          `Đã import ${imported.length} câu. ${skippedCount} câu không hợp lệ: ${preview}${suffix}`,
           6000,
         );
       } else {
-        showToast(`Đã import ${mapped.length} câu hỏi từ Markdown.`);
+        showToast(`Đã import ${imported.length} câu hỏi từ Markdown.`);
       }
     } catch (err) {
       showToast(err.message ?? "Import Markdown thất bại.");
@@ -150,11 +186,11 @@ function FinalExamQuestionsStep() {
         <button
           type="button"
           role="tab"
-          aria-selected={inputMode === "markdown"}
-          className={`${styles.modeBtn} ${inputMode === "markdown" ? styles.modeBtnActive : ""}`}
-          onClick={() => setInputMode("markdown")}
+          aria-selected={inputMode === "import"}
+          className={`${styles.modeBtn} ${inputMode === "import" ? styles.modeBtnActive : ""}`}
+          onClick={() => setInputMode("import")}
         >
-          Import Markdown
+          Upload &amp; OCR / Markdown
         </button>
       </div>
 
@@ -201,12 +237,22 @@ function FinalExamQuestionsStep() {
           )}
         </>
       ) : (
-        <FinalExamMarkdownImportPanel
-          markdownText={markdownText}
-          onMarkdownChange={setMarkdownText}
-          onImport={handleImportMarkdown}
-          importing={importingMarkdown}
-        />
+        <div className={styles.markdownPanel}>
+          <FinalExamMarkdownImportPanel
+            showModeSwitch
+            inputMode={importSubMode}
+            onInputModeChange={setImportSubMode}
+            markdownText={markdownText}
+            onMarkdownChange={setMarkdownText}
+            onImport={handleImportMarkdown}
+            importing={importingMarkdown}
+            fileName={fileName}
+            onFileChange={handleFileChange}
+            onRunOcr={handleRunOcr}
+            ocrRunning={ocrRunning}
+            maxQuestions={examInfo.totalQuestions ?? FINAL_EXAM_DEFAULTS.maxQuestions}
+          />
+        </div>
       )}
 
       <WizardBottomActions
