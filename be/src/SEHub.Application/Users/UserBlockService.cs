@@ -10,17 +10,23 @@ public sealed class UserBlockService : IUserBlockService
 {
     private readonly IUserBlockRepository _blockRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IUserSearchRepository _searchRepository;
+    private readonly IConversationRepository _conversationRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
     public UserBlockService(
         IUserBlockRepository blockRepository,
         IUserRepository userRepository,
+        IUserSearchRepository searchRepository,
+        IConversationRepository conversationRepository,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
         _blockRepository = blockRepository;
         _userRepository = userRepository;
+        _searchRepository = searchRepository;
+        _conversationRepository = conversationRepository;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -93,6 +99,43 @@ public sealed class UserBlockService : IUserBlockService
             IsBlockedByThem = blockedByThem,
             IsBlockedEitherWay = blockedByMe || blockedByThem
         };
+    }
+
+    public async Task<IReadOnlyList<BlockedUserListItemDto>> ListBlockedByMeAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var blockerId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+        var blocks = await _blockRepository.GetBlockedByMeAsync(blockerId, cancellationToken);
+        if (blocks.Count == 0)
+        {
+            return [];
+        }
+
+        var blockedUserIds = blocks.Select(block => block.BlockedUserId).Distinct().ToList();
+        var summaries = await _searchRepository.GetByIdsAsync(blockedUserIds, cancellationToken);
+        var summaryById = summaries.ToDictionary(summary => summary.UserId);
+
+        var items = new List<BlockedUserListItemDto>(blocks.Count);
+        foreach (var block in blocks)
+        {
+            summaryById.TryGetValue(block.BlockedUserId, out var summary);
+            var conversationId = await _conversationRepository.GetDirectConversationIdAsync(
+                blockerId,
+                block.BlockedUserId,
+                cancellationToken);
+
+            items.Add(new BlockedUserListItemDto
+            {
+                UserId = block.BlockedUserId,
+                Username = summary?.Username ?? string.Empty,
+                FullName = summary?.FullName ?? string.Empty,
+                AvatarUrl = summary?.AvatarUrl,
+                ConversationId = conversationId,
+                BlockedAt = block.CreatedAt,
+            });
+        }
+
+        return items;
     }
 
     private async Task EnsureTargetUserExistsAsync(Guid userId, CancellationToken cancellationToken)

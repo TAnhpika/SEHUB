@@ -84,14 +84,14 @@ public sealed class MessagingService : IMessagingService
         CancellationToken cancellationToken = default)
     {
         var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
-        var blockedUserIds = await _blockRepository.GetBlockedRelatedUserIdsAsync(userId, cancellationToken);
+        var blockedByMeUserIds = await _blockRepository.GetBlockedByMeUserIdsAsync(userId, cancellationToken);
         var conversations = await _conversationRepository.GetForUserAsync(userId, cancellationToken);
         var items = new List<ConversationListItemDto>();
 
         foreach (var conversation in conversations)
         {
             var otherParticipant = conversation.Participants.FirstOrDefault(p => p.UserId != userId);
-            if (otherParticipant is not null && blockedUserIds.Contains(otherParticipant.UserId))
+            if (otherParticipant is not null && blockedByMeUserIds.Contains(otherParticipant.UserId))
             {
                 continue;
             }

@@ -16,3 +16,7 @@ export function unblockUser(userId) {
 export function getBlockStatus(userId) {
   return apiRequest(`/api/v1/users/${encodeURIComponent(userId)}/block-status`);
 }
+
+export function listBlockedUsers() {
+  return apiRequest("/api/v1/users/me/blocked");
+}
