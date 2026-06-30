@@ -119,6 +119,14 @@ public sealed class UsersController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("me/blocked")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> ListMyBlockedUsers(CancellationToken cancellationToken)
+    {
+        var result = await _blockService.ListBlockedByMeAsync(cancellationToken);
+        return Ok(result);
+    }
+
     [HttpPost("{userId:guid}/block")]
     [Authorize(Policy = PolicyNames.RequireAuthenticated)]
     public async Task<IActionResult> Block(Guid userId, CancellationToken cancellationToken)

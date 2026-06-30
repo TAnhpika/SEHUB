@@ -98,10 +98,12 @@ function ConversationChat({
   onBack,
   onClose,
   isBlockedByMe = false,
+  isBlockedByThem = false,
   isBlockedEitherWay = false,
   onBlock,
   onUnblock,
   onReport,
+  onReportUser,
 }) {
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -334,14 +336,26 @@ function ConversationChat({
       </div>
 
       <footer className={styles.footer}>
-        {isBlockedEitherWay && (
-          <p className={styles.blockedNotice}>
-            {isBlockedByMe
-              ? "Bạn đã chặn người dùng này. Bỏ chặn để tiếp tục nhắn tin."
-              : "Bạn không thể nhắn tin với người dùng này."}
-          </p>
-        )}
-
+        {isBlockedEitherWay ? (
+          <div className={styles.blockedBar}>
+            {isBlockedByMe ? (
+              <>
+                <p className={styles.blockedMessage}>Bạn đã chặn tài khoản này</p>
+                <div className={styles.blockedActions}>
+                  <button type="button" className={styles.blockedActionPrimary} onClick={() => onUnblock?.()}>
+                    Hủy block
+                  </button>
+                  <button type="button" className={styles.blockedActionSecondary} onClick={() => onReportUser?.()}>
+                    Báo cáo
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className={styles.blockedMessage}>Bạn hiện không thể nhắn tin với người này</p>
+            )}
+          </div>
+        ) : (
+          <>
         <button
           type="button"
           className={styles["footer-btn"]}
@@ -431,6 +445,8 @@ function ConversationChat({
         >
           <FontAwesomeIcon icon={faPaperPlane} />
         </button>
+          </>
+        )}
       </footer>
 
       <ChatImageLightbox image={lightboxImage} onClose={() => setLightboxImage(null)} />
