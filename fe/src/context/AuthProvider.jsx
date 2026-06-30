@@ -47,7 +47,18 @@ function purgeLegacyMockSession() {
   }
 }
 
+function purgeDevSessionIfEnabled() {
+  if (!import.meta.env.DEV || import.meta.env.VITE_DEV_CLEAR_SESSION !== "true") {
+    return;
+  }
+
+  clearAuthTokens();
+  localStorage.removeItem(STORAGE_KEY);
+  clearServerAiTokenSnapshot();
+}
+
 purgeLegacyMockSession();
+purgeDevSessionIfEnabled();
 
 function enrichUser(stored) {
   if (!stored) return null;
