@@ -39,6 +39,7 @@ import styles from "@/features/admin/shared/adminPage.module.css";
 import { reconcilePoints } from "@/api/adminApi";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { ACTION_LOADING } from "@/utils/actionLoadingLabels";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import StatusBadge from "@/features/admin/shared/StatusBadge";
 import BadgeFormModal from "@/features/admin/gamification/BadgeFormModal";
@@ -80,6 +81,7 @@ function AdminGamificationConfigPage() {
   const [reconcileUserId, setReconcileUserId] = useState("");
   const [reconcileRows, setReconcileRows] = useState([]);
   const [reconcileLoading, setReconcileLoading] = useState(false);
+  const [reconcilePending, setReconcilePending] = useState(null);
   const [reconcileConfirmOpen, setReconcileConfirmOpen] = useState(false);
 
   useEffect(() => {
@@ -231,6 +233,7 @@ function AdminGamificationConfigPage() {
 
   async function runReconcile(applyFix) {
     setReconcileLoading(true);
+    setReconcilePending(applyFix ? "apply" : "scan");
     try {
       const trimmedUserId = reconcileUserId.trim();
       const result = await reconcilePoints({
@@ -252,6 +255,7 @@ function AdminGamificationConfigPage() {
       showToast(err.message ?? "Đối soát điểm thất bại.");
     } finally {
       setReconcileLoading(false);
+      setReconcilePending(null);
       setReconcileConfirmOpen(false);
     }
   }
@@ -318,6 +322,8 @@ function AdminGamificationConfigPage() {
           <Button
             look="outline"
             disabled={reconcileLoading}
+            loading={reconcilePending === "scan"}
+            loadingLabel={ACTION_LOADING.scan}
             onClick={() => runReconcile(false)}
           >
             Dry-run
@@ -821,7 +827,10 @@ function AdminGamificationConfigPage() {
         open={reconcileConfirmOpen}
         title="Áp dụng sửa điểm"
         targetLabel="toàn bộ drift phát hiện"
-        onClose={() => setReconcileConfirmOpen(false)}
+        confirmLabel="Áp dụng"
+        submitting={reconcilePending === "apply"}
+        submittingLabel={ACTION_LOADING.apply}
+        onClose={() => !reconcileLoading && setReconcileConfirmOpen(false)}
         onConfirm={() => runReconcile(true)}
       />
       <GamificationDeleteModal

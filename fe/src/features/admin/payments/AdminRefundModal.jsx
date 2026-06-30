@@ -4,6 +4,7 @@ import { faRotateLeft, faXmark } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { Modal } from "@/common/Modal/Modal";
 import backdropStyles from "@/common/styles/modalBackdrop.module.css";
+import { ACTION_LOADING } from "@/utils/actionLoadingLabels";
 import payStyles from "@/features/admin/payments/AdminPayments.module.css";
 
 /**
@@ -18,9 +19,10 @@ import payStyles from "@/features/admin/payments/AdminPayments.module.css";
  *   onClose: () => void;
  *   onSubmit: (payload: { reason: string }) => void;
  *   error?: string;
+ *   submitting?: boolean;
  * }} props
  */
-function AdminRefundModal({ open, payment, onClose, onSubmit, error = "" }) {
+function AdminRefundModal({ open, payment, onClose, onSubmit, error = "", submitting = false }) {
   const [reason, setReason] = useState("");
 
   useEffect(() => {
@@ -33,12 +35,13 @@ function AdminRefundModal({ open, payment, onClose, onSubmit, error = "" }) {
   const canSubmit = reason.trim().length >= 10;
 
   function handleClose() {
+    if (submitting) return;
     onClose();
   }
 
   function handleSubmit(event) {
     event.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || submitting) return;
     onSubmit({ reason: reason.trim() });
   }
 
@@ -48,7 +51,7 @@ function AdminRefundModal({ open, payment, onClose, onSubmit, error = "" }) {
       onClose={handleClose}
       className={backdropStyles.overlay}
       panelClassName={payStyles.tokenModal}
-      closeOnOverlay
+      closeOnOverlay={!submitting}
     >
         <header className={payStyles.tokenModalHead}>
           <div className={payStyles.tokenModalHeadMain}>
@@ -69,6 +72,7 @@ function AdminRefundModal({ open, payment, onClose, onSubmit, error = "" }) {
             className={payStyles.modalClose}
             aria-label="Đóng"
             onClick={handleClose}
+            disabled={submitting}
           >
             <FontAwesomeIcon icon={faXmark} />
           </button>
@@ -101,10 +105,10 @@ function AdminRefundModal({ open, payment, onClose, onSubmit, error = "" }) {
           {error ? <p className={payStyles.hintError}>{error}</p> : null}
 
           <footer className={payStyles.tokenModalFooter}>
-            <Button type="button" look="outline" onClick={handleClose}>
+            <Button type="button" look="outline" onClick={handleClose} disabled={submitting}>
               Hủy
             </Button>
-            <Button type="submit" disabled={!canSubmit}>
+            <Button type="submit" disabled={!canSubmit || submitting} loading={submitting} loadingLabel={ACTION_LOADING.dismiss}>
               Xác nhận hoàn tiền
             </Button>
           </footer>

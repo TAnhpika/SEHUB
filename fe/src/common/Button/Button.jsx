@@ -21,6 +21,8 @@ function Button({
   to,
   type = "button",
   disabled = false,
+  loading = false,
+  loadingLabel,
   onClick,
   className = "",
 }) {
@@ -43,8 +45,8 @@ function Button({
   }
 
   return (
-    <button type={type} className={classes} disabled={disabled} onClick={onClick}>
-      {children}
+    <button type={type} className={classes} disabled={disabled || loading} onClick={onClick}>
+      {loading && loadingLabel ? loadingLabel : children}
     </button>
   );
 }

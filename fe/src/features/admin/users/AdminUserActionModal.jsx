@@ -13,6 +13,7 @@ import {
 import Button from "@/common/Button/Button";
 import { Modal } from "@/common/Modal/Modal";
 import backdropStyles from "@/common/styles/modalBackdrop.module.css";
+import { ACTION_LOADING } from "@/utils/actionLoadingLabels";
 import { PREMIUM_PLANS } from "@/features/admin/payments/adminPaymentPolicy";
 import payStyles from "@/features/admin/payments/AdminPayments.module.css";
 
@@ -69,9 +70,10 @@ const MODE_META = {
  *   onClose: () => void;
  *   onSubmit: (payload: object) => void;
  *   error?: string;
+ *   submitting?: boolean;
  * }} props
  */
-function AdminUserActionModal({ open, mode, user, onClose, onSubmit, error = "" }) {
+function AdminUserActionModal({ open, mode, user, onClose, onSubmit, error = "", submitting = false }) {
   const [reason, setReason] = useState("");
   const [planId, setPlanId] = useState("semester");
   const [amount, setAmount] = useState("100");
@@ -89,9 +91,19 @@ function AdminUserActionModal({ open, mode, user, onClose, onSubmit, error = "" 
 
   const needsReason = meta.needsReason;
   const canSubmit =
-    !needsReason || reason.trim().length >= 10
+    !submitting &&
+    (!needsReason || reason.trim().length >= 10
       ? mode !== "grantToken" || (Number(amount) >= 1 && reason.trim().length >= 10)
-      : false;
+      : false);
+
+  const loadingLabelByMode = {
+    ban: ACTION_LOADING.ban,
+    unban: ACTION_LOADING.unban,
+    resetPassword: ACTION_LOADING.submit,
+    grantPremium: ACTION_LOADING.submit,
+    grantToken: ACTION_LOADING.submit,
+    grantModerator: ACTION_LOADING.submit,
+  };
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -105,10 +117,10 @@ function AdminUserActionModal({ open, mode, user, onClose, onSubmit, error = "" 
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={submitting ? undefined : onClose}
       className={backdropStyles.overlay}
       panelClassName={payStyles.tokenModal}
-      closeOnOverlay
+      closeOnOverlay={!submitting}
     >
         <header className={payStyles.tokenModalHead}>
           <div className={payStyles.tokenModalHeadMain}>
@@ -122,7 +134,7 @@ function AdminUserActionModal({ open, mode, user, onClose, onSubmit, error = "" 
               <p className={payStyles.tokenModalSubtitle}>{meta.subtitle}</p>
             </div>
           </div>
-          <button type="button" className={payStyles.modalClose} onClick={onClose} aria-label="Đóng">
+          <button type="button" className={payStyles.modalClose} onClick={onClose} disabled={submitting} aria-label="Đóng">
             <FontAwesomeIcon icon={faXmark} />
           </button>
         </header>
@@ -191,10 +203,10 @@ function AdminUserActionModal({ open, mode, user, onClose, onSubmit, error = "" 
           {error ? <p className={payStyles.hintError}>{error}</p> : null}
 
           <footer className={payStyles.tokenModalFooter}>
-            <Button type="button" look="outline" onClick={onClose}>
+            <Button type="button" look="outline" onClick={onClose} disabled={submitting}>
               Hủy
             </Button>
-            <Button type="submit" disabled={!canSubmit}>
+            <Button type="submit" disabled={!canSubmit} loading={submitting} loadingLabel={loadingLabelByMode[mode] ?? ACTION_LOADING.submit}>
               {meta.confirm}
             </Button>
           </footer>

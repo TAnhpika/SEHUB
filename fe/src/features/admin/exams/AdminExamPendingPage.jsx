@@ -16,6 +16,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { ACTION_LOADING } from "@/utils/actionLoadingLabels";
 import { useScrollBoundaryChain } from "@/hooks/useScrollBoundaryChain";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import AdminExamRejectModal from "@/features/admin/exams/AdminExamRejectModal";
@@ -629,7 +630,7 @@ function AdminExamPendingPage() {
                 </div>
 
                 <div className={pendingStyles.detailActions}>
-                  <Button onClick={() => handleApprove(selected)} disabled={actionLoading}>
+                  <Button onClick={() => handleApprove(selected)} disabled={actionLoading} loading={actionLoading} loadingLabel={ACTION_LOADING.approve}>
                     Duyệt & {EXAM_STATUS_LABELS.published}
                   </Button>
                   <Button
@@ -833,8 +834,9 @@ function AdminExamPendingPage() {
       <AdminExamRejectModal
         open={Boolean(rejectTarget)}
         examTitle={rejectTarget ? `[${getExamDisplayCode(rejectTarget)}] ${getExamDisplayTitle(rejectTarget)}` : ""}
-        onClose={() => setRejectTarget(null)}
+        onClose={() => !actionLoading && setRejectTarget(null)}
         onConfirm={handleReject}
+        submitting={actionLoading}
       />
     </AdminPageLayout>
   );

@@ -12,16 +12,28 @@ import gStyles from "@/features/admin/gamification/Gamification.module.css";
  *   targetLabel: string;
  *   onClose: () => void;
  *   onConfirm: () => void;
+ *   confirmLabel?: string;
+ *   submitting?: boolean;
+ *   submittingLabel?: string;
  * }} props
  */
-function GamificationDeleteModal({ open, title, targetLabel, onClose, onConfirm }) {
+function GamificationDeleteModal({
+  open,
+  title,
+  targetLabel,
+  onClose,
+  onConfirm,
+  confirmLabel = "Xóa",
+  submitting = false,
+  submittingLabel = "Đang xóa...",
+}) {
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={submitting ? undefined : onClose}
       className={backdropStyles.overlay}
       panelClassName={gStyles.modal}
-      closeOnOverlay
+      closeOnOverlay={!submitting}
     >
         <header className={gStyles.modalHead}>
           <div>
@@ -32,16 +44,22 @@ function GamificationDeleteModal({ open, title, targetLabel, onClose, onConfirm 
               Xóa <strong>{targetLabel}</strong>? Hành động không hoàn tác.
             </p>
           </div>
-          <button type="button" className={gStyles.modalClose} aria-label="Đóng" onClick={onClose}>
+          <button type="button" className={gStyles.modalClose} aria-label="Đóng" onClick={onClose} disabled={submitting}>
             <FontAwesomeIcon icon={faXmark} />
           </button>
         </header>
         <footer className={`${gStyles.modalBody} ${gStyles.modalFooter}`}>
-          <Button type="button" look="outline" onClick={onClose}>
+          <Button type="button" look="outline" onClick={onClose} disabled={submitting}>
             Hủy
           </Button>
-          <Button type="button" onClick={onConfirm}>
-            <FontAwesomeIcon icon={faTrash} /> Xóa
+          <Button type="button" onClick={onConfirm} disabled={submitting} loading={submitting} loadingLabel={submittingLabel}>
+            {confirmLabel === "Xóa" ? (
+              <>
+                <FontAwesomeIcon icon={faTrash} /> {confirmLabel}
+              </>
+            ) : (
+              confirmLabel
+            )}
           </Button>
         </footer>
     </Modal>

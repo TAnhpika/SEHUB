@@ -93,6 +93,7 @@ function ModerationRecord({ item }) {
  *   onApprove?: (id: string) => void,
  *   onReject?: (id: string) => void,
  *   isApproving?: boolean,
+ *   isRejecting?: boolean,
  *   onPin?: (id: string) => void,
  *   onUnpin?: (id: string) => void,
  * }} props
@@ -105,6 +106,7 @@ function ContentPostDetailPanel({
   onApprove,
   onReject,
   isApproving = false,
+  isRejecting = false,
   onPin,
   onUnpin,
 }) {
@@ -305,16 +307,16 @@ function ContentPostDetailPanel({
           <button
             type="button"
             className={styles.detailReject}
-            disabled={isApproving}
+            disabled={isApproving || isRejecting}
             onClick={() => onReject?.(item.id)}
           >
             <FontAwesomeIcon icon={faXmark} />
-            Từ chối
+            {isRejecting ? "Đang từ chối..." : "Từ chối"}
           </button>
           <button
             type="button"
             className={styles.detailApprove}
-            disabled={isApproving}
+            disabled={isApproving || isRejecting}
             onClick={() => onApprove?.(item.id)}
           >
             <FontAwesomeIcon icon={faCheck} />

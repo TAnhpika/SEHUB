@@ -1,0 +1,16 @@
+export const ACTION_LOADING = {
+  approve: "Đang duyệt...",
+  reject: "Đang từ chối...",
+  delete: "Đang xóa...",
+  dismiss: "Đang xử lý...",
+  ban: "Đang khóa...",
+  escalate: "Đang chuyển...",
+  forward: "Đang gửi...",
+  confirm: "Đang xác nhận...",
+  save: "Đang lưu...",
+  submit: "Đang gửi...",
+  unban: "Đang mở khóa...",
+  unlock: "Đang gỡ khóa...",
+  scan: "Đang quét...",
+  apply: "Đang áp dụng...",
+};

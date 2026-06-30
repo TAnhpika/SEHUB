@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import Button from "@/common/Button/Button";
 
 import { useToast } from "@/common/Toast/ToastProvider";
+import { ACTION_LOADING } from "@/utils/actionLoadingLabels";
 
 import { useAuth } from "@/context";
 
@@ -123,6 +124,8 @@ function AdminPaymentListPage() {
   const [refundPaymentId, setRefundPaymentId] = useState(null);
 
   const [refundError, setRefundError] = useState("");
+  const [pendingPaymentAction, setPendingPaymentAction] = useState(null);
+  const [refundSubmitting, setRefundSubmitting] = useState(false);
 
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -244,6 +247,8 @@ function AdminPaymentListPage() {
 
 
   function handleConfirmPayment(paymentId) {
+    if (pendingPaymentAction) return;
+    setPendingPaymentAction({ paymentId, type: "confirm" });
 
     confirmPayOsPaymentViaApi(paymentId, user?.username ?? "admin_sehub").then((result) => {
 
@@ -259,6 +264,8 @@ function AdminPaymentListPage() {
 
       }
 
+    }).finally(() => {
+      setPendingPaymentAction(null);
     });
 
   }
@@ -272,8 +279,9 @@ function AdminPaymentListPage() {
   }
 
   function handleRefund({ reason }) {
-    if (!refundPaymentId) return;
+    if (!refundPaymentId || refundSubmitting) return;
     setRefundError("");
+    setRefundSubmitting(true);
 
     const payment = payments.find((p) => p.id === refundPaymentId);
     const approvePending = payment?.status === "refund_requested";
@@ -301,10 +309,15 @@ function AdminPaymentListPage() {
       setRefundOpen(false);
       setRefundPaymentId(null);
       bump();
+    }).finally(() => {
+      setRefundSubmitting(false);
     });
   }
 
   function handleQuickCompleteRefund(paymentId) {
+    if (pendingPaymentAction) return;
+    setPendingPaymentAction({ paymentId, type: "complete-refund" });
+
     completeRefundViaApi(paymentId, "Admin xác nhận đã chuyển khoản hoàn tiền").then((result) => {
       if (result.ok) {
         showToast(result.message);
@@ -312,10 +325,15 @@ function AdminPaymentListPage() {
       } else {
         showToast(result.message);
       }
+    }).finally(() => {
+      setPendingPaymentAction(null);
     });
   }
 
   function handleQuickApproveRefund(paymentId) {
+    if (pendingPaymentAction) return;
+    setPendingPaymentAction({ paymentId, type: "approve-refund" });
+
     approveRefundViaApi(paymentId, "Admin duyệt yêu cầu hoàn tiền của sinh viên").then(
       (result) => {
         if (result.ok) {
@@ -325,7 +343,9 @@ function AdminPaymentListPage() {
           showToast(result.message);
         }
       },
-    );
+    ).finally(() => {
+      setPendingPaymentAction(null);
+    });
   }
 
   async function handleGrantTokens({ username, amount, reason }) {
@@ -620,6 +640,8 @@ function AdminPaymentListPage() {
                 paymentPage.pageItems.map((payment) => {
 
                   const meta = PAYMENT_STATUS_META[payment.status];
+                  const rowPending =
+                    pendingPaymentAction?.paymentId === payment.id ? pendingPaymentAction.type : null;
 
                   return (
 
@@ -699,11 +721,13 @@ function AdminPaymentListPage() {
 
                               className={payStyles.confirmBtn}
 
+                              disabled={Boolean(pendingPaymentAction)}
+
                               onClick={() => handleConfirmPayment(payment.id)}
 
                             >
 
-                              Xác nhận & kích hoạt
+                              {rowPending === "confirm" ? ACTION_LOADING.confirm : "Xác nhận & kích hoạt"}
 
                             </button>
 
@@ -715,11 +739,13 @@ function AdminPaymentListPage() {
 
                               className={payStyles.confirmBtn}
 
+                              disabled={Boolean(pendingPaymentAction)}
+
                               onClick={() => handleQuickApproveRefund(payment.id)}
 
                             >
 
-                              Duyệt hoàn tiền
+                              {rowPending === "approve-refund" ? ACTION_LOADING.approve : "Duyệt hoàn tiền"}
 
                             </button>
 
@@ -731,11 +757,13 @@ function AdminPaymentListPage() {
 
                               className={payStyles.confirmBtn}
 
+                              disabled={Boolean(pendingPaymentAction)}
+
                               onClick={() => handleQuickCompleteRefund(payment.id)}
 
                             >
 
-                              Xác nhận đã hoàn tiền
+                              {rowPending === "complete-refund" ? ACTION_LOADING.dismiss : "Xác nhận đã hoàn tiền"}
 
                             </button>
 
@@ -746,6 +774,8 @@ function AdminPaymentListPage() {
                               type="button"
 
                               className={payStyles.refundBtn}
+
+                              disabled={Boolean(pendingPaymentAction)}
 
                               onClick={() => openRefundModal(payment.id)}
 
@@ -929,7 +959,9 @@ function AdminPaymentListPage() {
         open={refundOpen}
         payment={refundPayment}
         error={refundError}
+        submitting={refundSubmitting}
         onClose={() => {
+          if (refundSubmitting) return;
           setRefundOpen(false);
           setRefundPaymentId(null);
           setRefundError("");

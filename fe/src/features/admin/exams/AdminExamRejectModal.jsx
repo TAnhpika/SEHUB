@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Button from "@/common/Button/Button";
 import { Modal } from "@/common/Modal/Modal";
 import backdropStyles from "@/common/styles/modalBackdrop.module.css";
+import { ACTION_LOADING } from "@/utils/actionLoadingLabels";
 import { EXAM_REJECT_REASONS } from "@/features/admin/exams/adminExamData";
 import styles from "./AdminExam.module.css";
 
@@ -18,9 +19,10 @@ const OTHER_REASON_ID = "other";
  *     reasonDetail: string;
  *     reasonFull: string;
  *   }) => void;
+ *   submitting?: boolean;
  * }} props
  */
-function AdminExamRejectModal({ open, examTitle, onClose, onConfirm }) {
+function AdminExamRejectModal({ open, examTitle, onClose, onConfirm, submitting = false }) {
   const [reasonId, setReasonId] = useState("");
   const [otherDetail, setOtherDetail] = useState("");
 
@@ -39,7 +41,7 @@ function AdminExamRejectModal({ open, examTitle, onClose, onConfirm }) {
 
   function handleSubmit(event) {
     event.preventDefault();
-    if (!selected) return;
+    if (!selected || submitting) return;
     const detail = isOther ? otherDetail.trim() : "";
     const reasonFull = isOther ? detail : selected.label;
     onConfirm({
@@ -53,6 +55,7 @@ function AdminExamRejectModal({ open, examTitle, onClose, onConfirm }) {
   }
 
   function handleClose() {
+    if (submitting) return;
     setReasonId("");
     setOtherDetail("");
     onClose();
@@ -64,7 +67,7 @@ function AdminExamRejectModal({ open, examTitle, onClose, onConfirm }) {
       onClose={handleClose}
       className={backdropStyles.overlay}
       panelClassName={styles.modal}
-      closeOnOverlay
+      closeOnOverlay={!submitting}
     >
         <h2 id="reject-exam-title" className={styles.modalTitle}>
           Từ chối đề thi
@@ -107,10 +110,10 @@ function AdminExamRejectModal({ open, examTitle, onClose, onConfirm }) {
           ) : null}
 
           <div className={styles.modalActions}>
-            <Button type="button" look="outline" onClick={handleClose}>
+            <Button type="button" look="outline" onClick={handleClose} disabled={submitting}>
               Hủy
             </Button>
-            <Button type="submit" disabled={!canSubmit}>
+            <Button type="submit" disabled={!canSubmit || submitting} loading={submitting} loadingLabel={ACTION_LOADING.reject}>
               Xác nhận từ chối
             </Button>
           </div>
