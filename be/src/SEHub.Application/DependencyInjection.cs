@@ -89,6 +89,7 @@ public static class DependencyInjection
 
         services.AddScoped<IFeedbackService, FeedbackService>();
         services.AddScoped<ISubjectCatalogService, SubjectCatalogService>();
+        services.AddScoped<ISubjectLookupService, SubjectLookupService>();
 
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IDocumentAccessService, DocumentAccessService>();

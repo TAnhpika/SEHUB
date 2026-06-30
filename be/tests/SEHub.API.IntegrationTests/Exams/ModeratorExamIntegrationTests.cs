@@ -27,11 +27,11 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
 
         var response = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
         {
-            Code = $"INT-MOD-PRAC-{Guid.NewGuid():N}"[..20],
-            Title = "Moderator practice contribution",
+            Code = "PRF192",
+            Title = $"INT-MOD-PRAC-{Guid.NewGuid():N}"[..24],
             ExamType = nameof(ExamType.Practice),
             Semester = "3",
-            Major = "PRF192",
+            Major = "SE",
             Description = "Integration test practice exam from moderator."
         });
 
@@ -46,14 +46,14 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
         var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
 
-        var uniqueCode = $"INT-MOD-MINE-{Guid.NewGuid():N}"[..20];
+        var uniquePaper = $"INT-MOD-MINE-{Guid.NewGuid():N}"[..24];
         var createResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
         {
-            Code = uniqueCode,
-            Title = "Mine filter test",
+            Code = "MAE101",
+            Title = uniquePaper,
             ExamType = nameof(ExamType.Final),
             Semester = "2",
-            Major = "MAE101",
+            Major = "SE",
             Description = "Final exam pending approval.",
             Questions =
             [
@@ -85,7 +85,7 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
         var listResponse = await _client.GetAsync("/api/v1/admin/exams?mine=true&status=PendingApproval&pageSize=50");
         listResponse.EnsureSuccessStatusCode();
         var list = await listResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResult<ExamListItemDto>>>();
-        list!.Data!.Items.Should().Contain(e => e.Code == uniqueCode);
+        list!.Data!.Items.Should().Contain(e => e.Title == uniquePaper);
         list.Data.Items.Should().OnlyContain(e => e.Status == nameof(ExamStatus.PendingApproval));
     }
 
@@ -95,16 +95,16 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
         var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
 
-        var uniqueCode = $"INT-LIST-ATT-{Guid.NewGuid():N}"[..24];
+        var uniquePaper = $"INT-LIST-ATT-{Guid.NewGuid():N}"[..24];
         const string description = "Practice exam with Drive attachment for admin list.";
 
         var createResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
         {
-            Code = uniqueCode,
-            Title = "List attachment metadata test",
+            Code = "PRF192",
+            Title = uniquePaper,
             ExamType = nameof(ExamType.Practice),
             Semester = "5",
-            Major = "PRF192",
+            Major = "SE",
             Description = description,
         });
         createResponse.EnsureSuccessStatusCode();
@@ -128,7 +128,7 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
         var listResponse = await _client.GetAsync("/api/v1/admin/exams?status=PendingApproval&pageSize=50");
         listResponse.EnsureSuccessStatusCode();
         var list = await listResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResult<ExamListItemDto>>>();
-        var item = list!.Data!.Items.Should().ContainSingle(e => e.Code == uniqueCode).Subject;
+        var item = list!.Data!.Items.Should().ContainSingle(e => e.Title == uniquePaper).Subject;
         item.Description.Should().Be(description);
         item.AssetUrl.Should().BeNull();
     }

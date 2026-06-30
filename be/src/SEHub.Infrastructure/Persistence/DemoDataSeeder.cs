@@ -49,13 +49,15 @@ public static class DemoDataSeeder
 
     private const string DemoPostTag = "demo-seed";
     private const string DemoReportTag = "demo-seed-report";
-    private const string FinalExamCode = "PRF192-FINAL-01";
-    private const string PracticeExamCode = "PRF192-LAB-01";
+    private const string FinalExamSubjectCode = "PRF192";
+    private const string FinalExamPaperCode = "PRF192-FINAL-01";
+    private const string PracticeExamSubjectCode = "PRF192";
+    private const string PracticeExamPaperCode = "PRF192-LAB-01";
     private const string DocumentCategoryName = "PRF192";
     private const string DocumentTitle = "Slide PRF192 - Chương 1";
     private const string DocumentRelativePath = "demo/prf192-ch1.pdf";
-    private const string LegacyFinalExamCode = "SE301-FINAL-01";
-    private const string LegacyPracticeExamCode = "SE301-LAB-01";
+    private const string LegacyFinalExamPaperCode = "SE301-FINAL-01";
+    private const string LegacyPracticeExamPaperCode = "SE301-LAB-01";
     private const string LegacyDocumentCategoryName = "SE301 - Software Engineering";
     private const string LegacyDocumentTitle = "Slide SE301 - Chương 1";
     private const string LegacyDocumentRelativePath = "demo/se301-ch1.pdf";
@@ -94,8 +96,8 @@ public static class DemoDataSeeder
     private static readonly Guid DemoPracticeSubmissionReviewedId = Guid.Parse("faaaaaa2-aaaa-aaaa-aaaa-aaaaaaaaaaa2");
     private static readonly Guid DemoPracticeSubmissionPassedId = Guid.Parse("faaaaaa3-aaaa-aaaa-aaaa-aaaaaaaaaaa3");
 
-    private const string ModPendingFinalCode = "MOD-PENDING-FINAL-01";
-    private const string ModPendingPracticeCode = "MOD-PENDING-PRAC-01";
+    private const string ModPendingFinalPaperCode = "MOD-PENDING-FINAL-01";
+    private const string ModPendingPracticePaperCode = "MOD-PENDING-PRAC-01";
 
     private static readonly byte[] MinimalPdfBytes =
         "%PDF-1.1\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"u8.ToArray();
@@ -227,8 +229,8 @@ public static class DemoDataSeeder
         var legacyExamIds = await context.Exams
             .Where(e =>
                 e.Id != ModPendingFinalExamId
-                && (e.Code == LegacyFinalExamCode
-                    || e.Code == LegacyPracticeExamCode
+                && (e.Title == LegacyFinalExamPaperCode
+                    || e.Title == LegacyPracticeExamPaperCode
                     || e.Major == "SE301"))
             .Select(e => e.Id)
             .ToListAsync();
@@ -794,7 +796,7 @@ public static class DemoDataSeeder
 
     private static async Task SeedFinalExamAsync(SEHubDbContext context, ILogger logger)
     {
-        if (await context.Exams.AnyAsync(e => e.Id == DemoFinalExamId || e.Code == FinalExamCode))
+        if (await context.Exams.AnyAsync(e => e.Id == DemoFinalExamId || e.Title == FinalExamPaperCode))
         {
             return;
         }
@@ -813,8 +815,8 @@ public static class DemoDataSeeder
         var exam = new Exam
         {
             Id = DemoFinalExamId,
-            Code = FinalExamCode,
-            Title = "Đề cuối kỳ PRF192",
+            Code = FinalExamSubjectCode,
+            Title = FinalExamPaperCode,
             ExamType = ExamType.Final,
             Semester = 1,
             Major = "SE",
@@ -910,12 +912,12 @@ public static class DemoDataSeeder
 
         context.Exams.Add(exam);
         await context.SaveChangesAsync();
-        logger.LogInformation("Seeded final exam {Code} with {QuestionCount} questions", FinalExamCode, exam.QuestionCount);
+        logger.LogInformation("Seeded final exam {Code} with {QuestionCount} questions", FinalExamPaperCode, exam.QuestionCount);
     }
 
     private static async Task SeedPracticeExamAsync(SEHubDbContext context, ILogger logger)
     {
-        if (await context.Exams.AnyAsync(e => e.Id == DemoPracticeExamId || e.Code == PracticeExamCode))
+        if (await context.Exams.AnyAsync(e => e.Id == DemoPracticeExamId || e.Title == PracticeExamPaperCode))
         {
             return;
         }
@@ -923,8 +925,8 @@ public static class DemoDataSeeder
         var exam = new Exam
         {
             Id = DemoPracticeExamId,
-            Code = PracticeExamCode,
-            Title = "Bài thực hành Lab 01",
+            Code = PracticeExamSubjectCode,
+            Title = PracticeExamPaperCode,
             ExamType = ExamType.Practice,
             Semester = 1,
             Major = "SE",
@@ -938,20 +940,20 @@ public static class DemoDataSeeder
 
         context.Exams.Add(exam);
         await context.SaveChangesAsync();
-        logger.LogInformation("Seeded practice exam {Code}", PracticeExamCode);
+        logger.LogInformation("Seeded practice exam {Code}", PracticeExamPaperCode);
     }
 
     private static async Task SeedModeratorPendingExamsAsync(SEHubDbContext context, ILogger logger)
     {
         var now = DateTime.UtcNow;
 
-        if (!await context.Exams.AnyAsync(e => e.Id == ModPendingFinalExamId || e.Code == ModPendingFinalCode))
+        if (!await context.Exams.AnyAsync(e => e.Id == ModPendingFinalExamId || e.Title == ModPendingFinalPaperCode))
         {
             context.Exams.Add(new Exam
             {
                 Id = ModPendingFinalExamId,
-                Code = ModPendingFinalCode,
-                Title = "Đề cuối kỳ PRF192 — chờ duyệt (Mod)",
+                Code = FinalExamSubjectCode,
+                Title = ModPendingFinalPaperCode,
                 ExamType = ExamType.Final,
                 Semester = 5,
                 Major = "SE",
@@ -964,19 +966,19 @@ public static class DemoDataSeeder
                 UpdatedAt = now.AddDays(-2)
             });
             await context.SaveChangesAsync();
-            logger.LogInformation("Seeded moderator pending final exam {FinalCode}", ModPendingFinalCode);
+            logger.LogInformation("Seeded moderator pending final exam {FinalCode}", ModPendingFinalPaperCode);
         }
 
-        if (!await context.Exams.AnyAsync(e => e.Id == ModPendingPracticeExamId || e.Code == ModPendingPracticeCode))
+        if (!await context.Exams.AnyAsync(e => e.Id == ModPendingPracticeExamId || e.Title == ModPendingPracticePaperCode))
         {
             context.Exams.Add(new Exam
             {
                 Id = ModPendingPracticeExamId,
-                Code = ModPendingPracticeCode,
-                Title = "Lab React — chờ duyệt (Mod)",
+                Code = PracticeExamSubjectCode,
+                Title = ModPendingPracticePaperCode,
                 ExamType = ExamType.Practice,
                 Semester = 5,
-                Major = "PRF192",
+                Major = "SE",
                 QuestionCount = 0,
                 Status = ExamStatus.PendingApproval,
                 ContentHash = ComputeContentHash("mod-pending-practice-prf192"),
@@ -987,7 +989,7 @@ public static class DemoDataSeeder
                 UpdatedAt = now.AddDays(-1)
             });
             await context.SaveChangesAsync();
-            logger.LogInformation("Seeded moderator pending practice exam {PracticeCode}", ModPendingPracticeCode);
+            logger.LogInformation("Seeded moderator pending practice exam {PracticeCode}", ModPendingPracticePaperCode);
         }
     }
 
@@ -1043,7 +1045,7 @@ public static class DemoDataSeeder
             });
 
         await context.SaveChangesAsync();
-        logger.LogInformation("Seeded demo practice submissions for exam {Code}", PracticeExamCode);
+        logger.LogInformation("Seeded demo practice submissions for exam {Code}", PracticeExamPaperCode);
     }
 
     private static async Task SeedDocumentCategoryAndDocumentAsync(
@@ -1059,9 +1061,10 @@ public static class DemoDataSeeder
             category = new DocumentCategory
             {
                 Id = DemoDocumentCategoryId,
-                Name = DocumentCategoryName,
+                Name = "PRF192 — Programming Fundamentals",
                 Semester = 1,
                 Major = "SE",
+                SubjectCode = "PRF192",
                 CreatedAt = DateTime.UtcNow
             };
             context.DocumentCategories.Add(category);
@@ -1611,9 +1614,9 @@ public static class DemoDataSeeder
             Reports = await context.PostReports.CountAsync(r =>
                 r.Reason.Contains(DemoReportTag) && r.Status == ReportStatus.Pending),
             Exams = await context.Exams.CountAsync(e =>
-                e.Code == FinalExamCode || e.Code == PracticeExamCode),
-            Questions = await context.Questions.CountAsync(q => q.Exam.Code == FinalExamCode),
-            Options = await context.QuestionOptions.CountAsync(o => o.Question.Exam.Code == FinalExamCode),
+                e.Code == FinalExamSubjectCode || e.Code == PracticeExamSubjectCode),
+            Questions = await context.Questions.CountAsync(q => q.Exam.Code == FinalExamSubjectCode),
+            Options = await context.QuestionOptions.CountAsync(o => o.Question.Exam.Code == FinalExamSubjectCode),
             DocumentCategories = await context.DocumentCategories.CountAsync(c => c.Name == DocumentCategoryName),
             Documents = await context.Documents.CountAsync(d => d.Title == DocumentTitle && !d.IsDeleted),
             Subscriptions = demoSubscriptionCount

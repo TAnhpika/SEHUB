@@ -10,11 +10,11 @@ public class ExamConfiguration : IEntityTypeConfiguration<Exam>
     public void Configure(EntityTypeBuilder<Exam> builder)
     {
         builder.HasKey(e => e.Id);
-        builder.HasIndex(e => new { e.Major, e.Code }).IsUnique();
-        builder.HasIndex(e => new { e.Major, e.Status, e.ExamType });
+        builder.HasIndex(e => e.Title).IsUnique();
+        builder.HasIndex(e => new { e.Code, e.Status, e.ExamType });
         builder.HasIndex(e => e.ContentHash);
-        builder.Property(e => e.Code).HasMaxLength(50).IsRequired();
-        builder.Property(e => e.Title).HasMaxLength(200).IsRequired();
+        builder.Property(e => e.Code).HasMaxLength(20).IsRequired();
+        builder.Property(e => e.Title).HasMaxLength(100).IsRequired();
         builder.Property(e => e.Major).HasMaxLength(100).IsRequired();
         builder.Property(e => e.ContentHash).HasMaxLength(64).IsRequired();
         builder.Property(e => e.Description).HasMaxLength(4000);
@@ -23,6 +23,12 @@ public class ExamConfiguration : IEntityTypeConfiguration<Exam>
         builder.Property(e => e.RejectionReasonDetail).HasMaxLength(2000);
         builder.HasIndex(e => e.SubmittedById);
         builder.HasIndex(e => e.RevisionOfExamId);
+
+        builder.HasOne(e => e.Subject)
+            .WithMany()
+            .HasForeignKey(e => e.Code)
+            .HasPrincipalKey(s => s.Code)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(e => e.RevisionOfExam)
             .WithMany()

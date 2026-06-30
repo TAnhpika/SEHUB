@@ -2,6 +2,7 @@ using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Documents;
+using SEHub.Application.Subjects;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Documents;
@@ -15,6 +16,7 @@ public sealed class AdminDocumentService : IAdminDocumentService
 {
     private readonly IDocumentRepository _documentRepository;
     private readonly IDocumentCategoryRepository _categoryRepository;
+    private readonly ISubjectLookupService _subjectLookupService;
     private readonly ICloudFileStorageService _cloudStorage;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
@@ -23,6 +25,7 @@ public sealed class AdminDocumentService : IAdminDocumentService
     public AdminDocumentService(
         IDocumentRepository documentRepository,
         IDocumentCategoryRepository categoryRepository,
+        ISubjectLookupService subjectLookupService,
         ICloudFileStorageService cloudStorage,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork,
@@ -30,6 +33,7 @@ public sealed class AdminDocumentService : IAdminDocumentService
     {
         _documentRepository = documentRepository;
         _categoryRepository = categoryRepository;
+        _subjectLookupService = subjectLookupService;
         _cloudStorage = cloudStorage;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
@@ -168,25 +172,28 @@ public sealed class AdminDocumentService : IAdminDocumentService
             }
         }
 
-        var subjectCode = request.SubjectCode.Trim().ToUpperInvariant();
+        var subjectCode = request.SubjectCode.Trim();
         if (string.IsNullOrWhiteSpace(subjectCode))
         {
             throw new NotFoundException("DocumentCategory", request.CategoryId);
         }
 
-        var existingBySubject = await _categoryRepository.FindBySubjectCodeAsync(subjectCode, cancellationToken);
+        var subject = await _subjectLookupService.GetByCodeAsync(subjectCode, cancellationToken)
+            ?? throw new NotFoundException($"Subject '{subjectCode}' was not found.");
+
+        var existingBySubject = await _categoryRepository.FindBySubjectCodeAsync(subject.Code, cancellationToken);
         if (existingBySubject is not null)
         {
             return existingBySubject;
         }
 
-        var semester = request.Semester > 0 ? request.Semester : 1;
         var category = new DocumentCategory
         {
             Id = Guid.NewGuid(),
-            Name = $"{subjectCode} - Documents",
-            Semester = semester,
-            Major = "SE",
+            Name = $"{subject.Code} — {subject.Name}",
+            Semester = subject.Semester,
+            Major = subject.Major,
+            SubjectCode = subject.Code,
             CreatedAt = DateTime.UtcNow
         };
 

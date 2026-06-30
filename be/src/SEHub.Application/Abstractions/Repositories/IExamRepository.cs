@@ -8,7 +8,7 @@ public interface IExamRepository
 {
     Task<Exam?> GetByIdAsync(Guid id, bool includeQuestions = false, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Exam>> GetByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken = default);
-    Task<Exam?> GetByCodeAsync(string code, CancellationToken cancellationToken = default);
+    Task<Exam?> GetByTitleAsync(string paperCode, CancellationToken cancellationToken = default);
     Task<Exam?> GetByContentHashAsync(string contentHash, CancellationToken cancellationToken = default);
     Task<(IReadOnlyList<Exam> Items, int TotalCount)> GetPagedAsync(ExamQueryParams query, CancellationToken cancellationToken = default);
     Task AddAsync(Exam exam, CancellationToken cancellationToken = default);

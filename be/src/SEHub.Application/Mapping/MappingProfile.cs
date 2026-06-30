@@ -19,12 +19,14 @@ public sealed class MappingProfile : Profile
         CreateMap<Exam, ExamListItemDto>()
             .ForMember(d => d.ExamType, o => o.MapFrom(s => s.ExamType.ToString()))
             .ForMember(d => d.Semester, o => o.MapFrom(s => s.Semester.ToString()))
-            .ForMember(d => d.Status, o => o.MapFrom(s => s.Status.ToString()));
+            .ForMember(d => d.Status, o => o.MapFrom(s => s.Status.ToString()))
+            .ForMember(d => d.SubjectName, o => o.MapFrom(s => s.Subject != null ? s.Subject.Name : string.Empty));
 
         CreateMap<Exam, ExamDetailDto>()
             .ForMember(d => d.ExamType, o => o.MapFrom(s => s.ExamType.ToString()))
             .ForMember(d => d.Semester, o => o.MapFrom(s => s.Semester.ToString()))
-            .ForMember(d => d.Status, o => o.MapFrom(s => s.Status.ToString()));
+            .ForMember(d => d.Status, o => o.MapFrom(s => s.Status.ToString()))
+            .ForMember(d => d.SubjectName, o => o.MapFrom(s => s.Subject != null ? s.Subject.Name : string.Empty));
 
         CreateMap<PracticeSubmission, PracticeSubmissionDto>()
             .ForMember(d => d.Status, o => o.MapFrom(s => s.Status.ToString()));

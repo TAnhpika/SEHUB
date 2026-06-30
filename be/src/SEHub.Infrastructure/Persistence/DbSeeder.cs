@@ -28,6 +28,8 @@ public static class DbSeeder
         try
         {
             await context.Database.MigrateAsync();
+            await SubjectSeedData.SyncAsync(context, logger);
+            await ExamSchemaMigration.MigrateLegacyExamCodesAsync(context, logger);
             await SeedRolesAsync(roleManager, logger);
             await SeedLevelConfigsAsync(context, logger);
             await SeedSubscriptionPlansAsync(context, logger);

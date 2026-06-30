@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
@@ -177,6 +178,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
 
         await context.Database.EnsureCreatedAsync();
+        await SubjectSeedData.SyncAsync(context, NullLogger.Instance);
 
         foreach (var role in new[] { RoleNames.Student, RoleNames.Moderator, RoleNames.Admin })
         {
@@ -371,8 +373,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             context.Exams.Add(new Exam
             {
                 Id = PublishedExamId,
-                Code = "INT-001",
-                Title = "Integration Final Exam",
+                Code = "PRF192",
+                Title = "INT-FINAL-001",
                 ExamType = ExamType.Final,
                 Semester = 1,
                 Major = "SE",
@@ -389,8 +391,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             context.Exams.Add(new Exam
             {
                 Id = PracticeExamId,
-                Code = "INT-PRAC-01",
-                Title = "Integration Practice Exam",
+                Code = "PRF192",
+                Title = "INT-PRAC-01",
                 ExamType = ExamType.Practice,
                 Semester = 1,
                 Major = "SE",

@@ -155,13 +155,12 @@ function FinalExamInfoStep() {
     const code = event.target.value;
     setExamCodeManuallyEdited(false);
     const semesterNumber = parseSemesterNumberFromLabel(examInfo.semesterLabel);
-    const major = code
-      ? findCourseMajor(code, semesterNumber, reviewCourses) ?? "SE"
-      : "";
+    const selected = subjectOptions.find((item) => item.code === code);
+    const major = selected?.major ?? (code ? findCourseMajor(code, semesterNumber, reviewCourses) ?? "SE" : "");
     setExamInfo((prev) => ({
       ...prev,
       subjectCode: code,
-      subjectName: code ? prev.subjectName || `Môn ${code}` : "",
+      subjectName: selected?.name ?? "",
       major,
     }));
   }
@@ -212,9 +211,9 @@ function FinalExamInfoStep() {
               <option value="">
                 {examInfo.semesterLabel ? "Chọn môn học" : "Chọn học kỳ trước"}
               </option>
-              {subjectOptions.map((code) => (
-                <option key={code} value={code}>
-                  {code}
+              {subjectOptions.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.name ? `${item.code} — ${item.name}` : item.code}
                 </option>
               ))}
             </select>
@@ -227,10 +226,8 @@ function FinalExamInfoStep() {
             type="text"
             className={styles.input}
             value={examInfo.subjectName}
-            onChange={(event) =>
-              setExamInfo((prev) => ({ ...prev, subjectName: event.target.value }))
-            }
-            placeholder="VD: Mạng máy tính"
+            readOnly
+            placeholder="Chọn mã môn để tự điền"
           />
         </label>
 

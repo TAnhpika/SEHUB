@@ -63,6 +63,7 @@ public sealed class ExamQueryService : IExamQueryService
             Id = dto.Id,
             Code = dto.Code,
             Title = dto.Title,
+            SubjectName = exam.Subject?.Name ?? string.Empty,
             ExamType = dto.ExamType,
             Semester = dto.Semester,
             Major = dto.Major,
