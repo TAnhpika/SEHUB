@@ -2,6 +2,7 @@ using SEHub.Application.Abstractions.Repositories;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Shared.Constants;
+using SEHub.Shared.Subjects;
 
 namespace SEHub.Application.Notifications;
 
@@ -495,7 +496,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             NotificationType.PracticeResult,
             $"Kết quả thực hành: {statusLabel}",
             body,
-            $"/exams/{exam.Id}/practice",
+            ExamFrontendPaths.BuildPracticeExamDetailPath(exam.Code, exam.Title, exam.Major),
             reviewerUserId,
             submission.Id,
             cancellationToken);
