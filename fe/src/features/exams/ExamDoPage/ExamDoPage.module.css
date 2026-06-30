@@ -355,6 +355,7 @@
 }
 
 .option {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -429,6 +430,7 @@
 }
 
 .page-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -460,6 +462,33 @@
   font-weight: 500;
   color: var(--color-text);
   text-align: center;
+}
+
+.hasShortcut::after {
+  content: attr(data-shortcut);
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  transform: translateY(-50%);
+  padding: 0.2rem 0.45rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.hasShortcut:hover::after,
+.hasShortcut:focus-visible::after {
+  opacity: 1;
+}
+
+.hasShortcut:disabled::after {
+  display: none;
 }
 
 .palette {
