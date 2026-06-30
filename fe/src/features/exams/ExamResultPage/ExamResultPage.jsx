@@ -277,8 +277,16 @@ function ExamResultPage({ page = "review" }) {
 
   if (!examReady) {
     return (
-      <div className={styles.page}>
-        <p>Đang tải kết quả...</p>
+      <div
+        className={isReviewFocusMode ? styles.loadingShellFocus : styles.loadingShell}
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <div className={styles.loading}>
+          <div className={styles.spinner} aria-hidden="true" />
+          <p className={styles.loadingText}>Đang tải kết quả...</p>
+        </div>
       </div>
     );
   }
