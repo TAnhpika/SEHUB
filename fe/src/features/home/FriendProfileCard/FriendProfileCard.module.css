@@ -107,17 +107,21 @@
 }
 
 .actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.625rem;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.5rem;
   padding: 0.875rem 1.25rem 0;
 }
 
 .follow-btn,
 .message-btn {
+  flex: 1;
+  padding: 0.6875rem 0.875rem !important;
   border-radius: var(--radius-full) !important;
   font-size: 0.8125rem !important;
   font-weight: 600 !important;
+  white-space: nowrap;
 }
 
 .progress {
