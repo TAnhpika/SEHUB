@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import {
@@ -8,18 +8,8 @@ import {
 } from "@/features/moderator/exams/moderatorExamContributionStore";
 import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
 import { parseTotalQuestions } from "@/features/moderator/finalExams/finalExamData";
-import {
-  getSubjectOptionsForSemester,
-  PRACTICE_SEMESTER_OPTIONS,
-} from "@/features/moderator/practiceExams/practiceExamData";
-import { parseSemesterNumberFromLabel } from "@/features/moderator/practiceExams/practiceExamData";
-import { loadReviewCourses, REVIEW_COURSES } from "@/features/review/ReviewQuestionsPage/reviewData";
-import { findCourseMajor } from "@/utils/examDisplay";
+import FinalExamInfoFields from "@/features/exams/finalExam/FinalExamInfoFields";
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
-import {
-  generateExamPaperCode,
-  loadExistingExamPaperIdentifiers,
-} from "@/utils/examPaperCode";
 import styles from "./FinalExamInfoStep.module.css";
 
 function FinalExamInfoStep() {
@@ -31,61 +21,8 @@ function FinalExamInfoStep() {
   const [questionCountInput, setQuestionCountInput] = useState(() =>
     String(examInfo.totalQuestions ?? ""),
   );
-  const [existingPaperCodes, setExistingPaperCodes] = useState([]);
-  const [reviewCourses, setReviewCourses] = useState(REVIEW_COURSES);
-  const [examCodeManuallyEdited, setExamCodeManuallyEdited] = useState(false);
 
   const previewQuestionCount = parseTotalQuestions(questionCountInput);
-  const subjectOptions = useMemo(
-    () => getSubjectOptionsForSemester(examInfo.semesterLabel, reviewCourses),
-    [examInfo.semesterLabel, reviewCourses],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    loadReviewCourses()
-      .then((courses) => {
-        if (!cancelled) setReviewCourses(courses);
-      })
-      .catch(() => {
-        // Giữ catalog tĩnh khi API/DB không phản hồi — tránh dropdown trống.
-        if (!cancelled) setReviewCourses(REVIEW_COURSES);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    loadExistingExamPaperIdentifiers()
-      .then((codes) => {
-        if (!cancelled) setExistingPaperCodes(codes);
-      })
-      .catch(() => {
-        if (!cancelled) setExistingPaperCodes([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isEditMode || examCodeManuallyEdited) return;
-    if (!examInfo.subjectCode.trim()) {
-      setExamInfo((prev) => (prev.examCode ? { ...prev, examCode: "" } : prev));
-      return;
-    }
-
-    const nextCode = generateExamPaperCode("final", examInfo.subjectCode, existingPaperCodes);
-    setExamInfo((prev) => (prev.examCode === nextCode ? prev : { ...prev, examCode: nextCode }));
-  }, [
-    examInfo.subjectCode,
-    existingPaperCodes,
-    isEditMode,
-    examCodeManuallyEdited,
-    setExamInfo,
-  ]);
 
   function validateExamInfo() {
     if (!examInfo.semesterLabel.trim()) {
@@ -138,33 +75,6 @@ function FinalExamInfoStep() {
     navigate(`${basePath}/questions`);
   }
 
-  function handleSemesterChange(event) {
-    const semesterLabel = event.target.value;
-    setExamCodeManuallyEdited(false);
-    setExamInfo((prev) => ({
-      ...prev,
-      semesterLabel,
-      subjectCode: "",
-      subjectName: "",
-      major: "",
-      examCode: "",
-    }));
-  }
-
-  function handleSubjectChange(event) {
-    const code = event.target.value;
-    setExamCodeManuallyEdited(false);
-    const semesterNumber = parseSemesterNumberFromLabel(examInfo.semesterLabel);
-    const selected = subjectOptions.find((item) => item.code === code);
-    const major = selected?.major ?? (code ? findCourseMajor(code, semesterNumber, reviewCourses) ?? "SE" : "");
-    setExamInfo((prev) => ({
-      ...prev,
-      subjectCode: code,
-      subjectName: selected?.name ?? "",
-      major,
-    }));
-  }
-
   return (
     <div className={styles.step}>
       <header className={styles.header}>
@@ -176,105 +86,13 @@ function FinalExamInfoStep() {
       </header>
 
       <section className={styles.card}>
-        <div className={styles.row}>
-          <label className={styles.field}>
-            <span className={styles.label}>
-              Học kỳ <span className={styles.required}>*</span>
-            </span>
-            <select
-              className={styles.input}
-              value={examInfo.semesterLabel}
-              required
-              disabled={isEditMode}
-              onChange={handleSemesterChange}
-            >
-              <option value="">Chọn học kỳ</option>
-              {PRACTICE_SEMESTER_OPTIONS.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className={styles.field}>
-            <span className={styles.label}>
-              Mã môn học <span className={styles.required}>*</span>
-            </span>
-            <select
-              className={styles.input}
-              value={examInfo.subjectCode}
-              required
-              disabled={!examInfo.semesterLabel || isEditMode}
-              onChange={handleSubjectChange}
-            >
-              <option value="">
-                {examInfo.semesterLabel ? "Chọn môn học" : "Chọn học kỳ trước"}
-              </option>
-              {subjectOptions.map((item) => (
-                <option key={item.code} value={item.code}>
-                  {item.name ? `${item.code} — ${item.name}` : item.code}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <label className={styles.field}>
-          <span className={styles.label}>Tên môn học</span>
-          <input
-            type="text"
-            className={styles.input}
-            value={examInfo.subjectName}
-            readOnly
-            placeholder="Chọn mã môn để tự điền"
-          />
-        </label>
-
-        <div className={styles.row}>
-          <label className={styles.field}>
-            <span className={styles.label}>Mã đề thi</span>
-            <input
-              type="text"
-              className={styles.input}
-              value={examInfo.examCode}
-              placeholder="Tự động sinh khi chọn môn — có thể chỉnh sửa"
-              onChange={(event) => {
-                setExamCodeManuallyEdited(true);
-                setExamInfo((prev) => ({ ...prev, examCode: event.target.value }));
-              }}
-            />
-          </label>
-
-          <label className={styles.field}>
-            <span className={styles.label}>Thời gian làm bài (phút)</span>
-            <input
-              type="number"
-              min={15}
-              max={180}
-              className={styles.input}
-              value={examInfo.durationMinutes}
-              onChange={(event) =>
-                setExamInfo((prev) => ({
-                  ...prev,
-                  durationMinutes: Number(event.target.value) || 60,
-                }))
-              }
-            />
-          </label>
-
-          <label className={styles.field}>
-            <span className={styles.label}>Số câu hỏi</span>
-            <input
-              type="text"
-              inputMode="numeric"
-              className={styles.input}
-              value={questionCountInput}
-              onChange={(event) => setQuestionCountInput(event.target.value)}
-              placeholder="VD: 50"
-            />
-          </label>
-        </div>
+        <FinalExamInfoFields
+          value={examInfo}
+          onChange={(patch) => setExamInfo((prev) => ({ ...prev, ...patch }))}
+          isEditMode={isEditMode}
+          questionCountInput={questionCountInput}
+          onQuestionCountInputChange={setQuestionCountInput}
+        />
       </section>
 
       <WizardBottomActions

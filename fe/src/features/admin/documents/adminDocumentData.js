@@ -268,20 +268,6 @@ let documentsStore = [
     source: "upload",
     description: "Case study quy trình phát triển phần mềm — Premium.",
   },
-
-  /* ── CSI105 · Kỳ 1 · AI ── */
-  {
-    id: "doc-csi105-intro",
-    name: "Intro_ComputerScience.pdf",
-    subject: "CSI105",
-    semester: "1",
-    track: "AI",
-    access: "Free (3 trang)",
-    pages: 20,
-    uploadedAt: "2026-05-08, 08:00:00",
-    source: "upload",
-    description: "Giới thiệu ngành AI & khoa học máy tính.",
-  },
 ];
 
 export function getAdminDocuments() {

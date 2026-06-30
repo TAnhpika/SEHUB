@@ -729,7 +729,9 @@ function AdminGamificationConfigPage() {
                       ) : null}
                     </td>
                     <td>
-                      <strong>+{rule.points}</strong>
+                      <strong>
+                        {rule.points > 0 ? `+${rule.points}` : rule.points}
+                      </strong>
                     </td>
                     <td>
                       <button

@@ -28,7 +28,6 @@ export const REVIEW_COURSES = [
   {
     semester: 1,
     courses: [
-      { code: "CSI105", major: "AI" },
       { code: "MAE101", major: "SE" },
       { code: "PRF192", major: "SE" },
       { code: "CEA201", major: "SE" },
@@ -39,8 +38,6 @@ export const REVIEW_COURSES = [
   {
     semester: 2,
     courses: [
-      { code: "CSD203", major: "AI" },
-      { code: "AIG202C", major: "AI" },
       { code: "MAD101", major: "SE" },
       { code: "OSG202", major: "SE" },
       { code: "PRO192", major: "SE" },
@@ -119,6 +116,16 @@ export const REVIEW_COURSES = [
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
+function normalizeCatalogCourseCode(course) {
+  return String(normalizeCourseSubjectCode(course?.code ?? course?.Code) ?? course?.code ?? course?.Code ?? "")
+    .trim()
+    .toUpperCase();
+}
+
+function readCatalogCourseName(course) {
+  return String(course?.name ?? course?.Name ?? "").trim();
+}
+
 function normalizeCatalogMajor(code, major) {
   const trimmed = String(major ?? "").trim().toUpperCase();
   if (trimmed === "SE" || trimmed === "AI") {
@@ -134,47 +141,74 @@ function normalizeCatalogMajor(code, major) {
 }
 
 function mergeCourseCatalog(apiCourses = []) {
-  const staticCodes = new Set(
-    REVIEW_COURSES.flatMap((group) =>
-      (group.courses ?? []).map((course) => String(course.code ?? "").trim().toUpperCase()),
-    ),
-  );
+  const nameByCode = new Map();
+  const majorByCode = new Map();
+
+  for (const group of apiCourses ?? []) {
+    for (const course of group?.courses ?? group?.Courses ?? []) {
+      const code = normalizeCatalogCourseCode(course);
+      if (!code) continue;
+      const name = readCatalogCourseName(course);
+      if (name) {
+        nameByCode.set(code, name);
+      }
+      majorByCode.set(
+        code,
+        normalizeCatalogMajor(code, course?.major ?? course?.Major ?? "SE"),
+      );
+    }
+  }
+
   const semesterMap = new Map();
 
-  const addGroup = (group, { skipStaticSubjects = false } = {}) => {
-    const semester = Number(group?.semester);
-    if (!Number.isFinite(semester) || semester <= 0) {
+  const upsertCourse = (semester, course) => {
+    const parsedSemester = Number(semester);
+    if (!Number.isFinite(parsedSemester) || parsedSemester <= 0) {
       return;
     }
 
-    if (!semesterMap.has(semester)) {
-      semesterMap.set(semester, new Map());
+    const code = normalizeCatalogCourseCode(course);
+    if (!code) {
+      return;
     }
 
-    const codeMap = semesterMap.get(semester);
-    for (const course of group.courses ?? []) {
-      const code = String(course?.code ?? "").trim().toUpperCase();
-      if (!code) {
-        continue;
-      }
+    if (!semesterMap.has(parsedSemester)) {
+      semesterMap.set(parsedSemester, new Map());
+    }
 
-      if (skipStaticSubjects && staticCodes.has(code)) {
-        continue;
-      }
+    const codeMap = semesterMap.get(parsedSemester);
+    const existing = codeMap.get(code);
+    const name =
+      readCatalogCourseName(course) ||
+      nameByCode.get(code) ||
+      existing?.name ||
+      "";
 
-      codeMap.set(code, {
+    if (!name) {
+      return;
+    }
+
+    codeMap.set(code, {
+      code,
+      name,
+      major: normalizeCatalogMajor(
         code,
-        major: normalizeCatalogMajor(code, course.major ?? "SE"),
-      });
-    }
+        course?.major ?? course?.Major ?? majorByCode.get(code) ?? existing?.major ?? "SE",
+      ),
+    });
   };
 
   for (const group of REVIEW_COURSES) {
-    addGroup(group);
+    for (const course of group.courses ?? []) {
+      upsertCourse(group.semester, course);
+    }
   }
 
-  for (const group of apiCourses) {
-    addGroup(group, { skipStaticSubjects: true });
+  for (const group of apiCourses ?? []) {
+    const semester = group?.semester ?? group?.Semester;
+    for (const course of group?.courses ?? group?.Courses ?? []) {
+      upsertCourse(semester, course);
+    }
   }
 
   return [...semesterMap.entries()]

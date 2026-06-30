@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import { importExamQuestionsFromMarkdown } from "@/features/admin/exams/adminExamData";
@@ -10,10 +9,10 @@ import {
 } from "@/features/moderator/exams/moderatorExamContributionStore";
 import {
   isQuestionComplete,
-  MARKDOWN_IMPORT_PLACEHOLDER,
   mapImportedExamQuestions,
 } from "@/features/moderator/finalExams/finalExamData";
 import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
+import FinalExamMarkdownImportPanel from "@/features/exams/finalExam/FinalExamMarkdownImportPanel";
 import QuestionEditorCard from "@/features/moderator/finalExams/components/QuestionEditorCard";
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
 import styles from "./FinalExamQuestionsStep.module.css";
@@ -202,31 +201,12 @@ function FinalExamQuestionsStep() {
           )}
         </>
       ) : (
-        <section className={styles.markdownPanel}>
-          <h2 className={styles.markdownTitle}>Import câu hỏi bằng Markdown</h2>
-          <p className={styles.markdownDesc}>
-            Mỗi câu: tiêu đề <code>## Câu N</code> hoặc <code>Câu N</code>, nội dung, phương án <code>A.</code>–
-            <code>H.</code>, dòng <code>**Đáp án: X**</code> hoặc <code>Đáp án: X</code>. Đúng/sai dùng A. Đúng / B. Sai.
-            Nội dung có thể nhắc &quot;A. B. C. D.&quot; trong đề — phương án vẫn ghi riêng từng dòng.
-            Multi-select: <code>[MULTI:3]</code> và <code>**Đáp án: A, C, E**</code>.
-          </p>
-          <textarea
-            className={styles.markdownInput}
-            rows={14}
-            value={markdownText}
-            onChange={(event) => setMarkdownText(event.target.value)}
-            placeholder={MARKDOWN_IMPORT_PLACEHOLDER}
-          />
-          <p className={styles.markdownHint}>
-            Phân tách các câu bằng <strong>## Câu N</strong> hoặc dòng <strong>---</strong>.
-            Câu thiếu phương án / thiếu dòng đáp án sẽ bị bỏ qua — xem toast cảnh báo sau khi import.
-          </p>
-          <div className={styles.markdownActions}>
-            <Button type="button" onClick={handleImportMarkdown} disabled={importingMarkdown}>
-              {importingMarkdown ? "Đang import..." : "Import Markdown vào đề"}
-            </Button>
-          </div>
-        </section>
+        <FinalExamMarkdownImportPanel
+          markdownText={markdownText}
+          onMarkdownChange={setMarkdownText}
+          onImport={handleImportMarkdown}
+          importing={importingMarkdown}
+        />
       )}
 
       <WizardBottomActions
