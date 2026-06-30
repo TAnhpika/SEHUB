@@ -22,6 +22,7 @@ public class Exam : BaseEntity
     public DateTime? RejectedAt { get; set; }
     public Guid? RejectedById { get; set; }
 
+    public Subject? Subject { get; set; }
     public Exam? RevisionOfExam { get; set; }
 
     public ICollection<Question> Questions { get; set; } = [];

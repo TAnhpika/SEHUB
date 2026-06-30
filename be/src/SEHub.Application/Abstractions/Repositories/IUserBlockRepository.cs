@@ -18,6 +18,14 @@ public interface IUserBlockRepository
         Guid userId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<Guid>> GetBlockedByMeUserIdsAsync(
+        Guid blockerId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<UserBlock>> GetBlockedByMeAsync(
+        Guid blockerId,
+        CancellationToken cancellationToken = default);
+
     Task AddAsync(UserBlock block, CancellationToken cancellationToken = default);
 
     Task RemoveAsync(UserBlock block, CancellationToken cancellationToken = default);

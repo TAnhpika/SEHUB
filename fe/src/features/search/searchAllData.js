@@ -85,9 +85,9 @@ function buildPracticeExamIndex() {
 }
 
 function mapExamSearchResult(dto, examTypeLabel) {
-  const courseCode = (dto.major ?? dto.code ?? "").toString().toUpperCase();
+  const courseCode = (dto.code ?? dto.major ?? "").toString().toUpperCase();
   const catalogKey = examTypeLabel === "Practice" ? "practice" : "exams";
-  const id = dto.code || dto.id;
+  const id = dto.title || dto.code || dto.id;
 
   return {
     id,

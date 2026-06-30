@@ -337,9 +337,9 @@ function AddPracticeExamPage() {
                       required
                     >
                       <option value="">{semester ? "Chọn môn học" : "Chọn học kỳ trước"}</option>
-                      {subjectOptions.map((code) => (
-                        <option key={code} value={code}>
-                          {code}
+                      {subjectOptions.map((item) => (
+                        <option key={item.code} value={item.code}>
+                          {item.name ? `${item.code} — ${item.name}` : item.code}
                         </option>
                       ))}
                     </select>

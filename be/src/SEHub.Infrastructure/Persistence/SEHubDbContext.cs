@@ -33,6 +33,7 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<ExamAttempt> ExamAttempts => Set<ExamAttempt>();
     public DbSet<PracticeSubmission> PracticeSubmissions => Set<PracticeSubmission>();
     public DbSet<DocumentCategory> DocumentCategories => Set<DocumentCategory>();
+    public DbSet<Subject> Subjects => Set<Subject>();
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<DocumentAccessLog> DocumentAccessLogs => Set<DocumentAccessLog>();
     public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();

@@ -1,11 +1,20 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass, faPenToSquare, faTrash } from "@fortawesome/free-solid-svg-icons";
+import {
+  faEllipsis,
+  faMagnifyingGlass,
+  faPenToSquare,
+  faTrash,
+  faUserSlash,
+} from "@fortawesome/free-solid-svg-icons";
 import ConversationAvatar from "@/features/chat/ConversationAvatar/ConversationAvatar";
 import ConversationChat from "@/features/chat/ConversationChat/ConversationChat";
+import BlockedUsersList from "@/features/chat/BlockedUsersList/BlockedUsersList";
 import ChatEmptyState, { faCommentDots, faInbox } from "@/features/chat/ChatEmptyState/ChatEmptyState";
 import ReportConversationModal from "@/features/chat/ReportConversationModal/ReportConversationModal";
+import ReportReasonModal from "@/features/reports/ReportReasonModal/ReportReasonModal";
+import reportModalStyles from "@/features/feed/ReportPostModal/ReportPostModal.module.css";
 import {
   loadConversationMessages,
   loadConversations,
@@ -14,8 +23,10 @@ import {
   sendConversationAttachment,
   sendConversationMessage,
 } from "@/features/chat/messagesData";
-import { blockUser, getBlockStatus, unblockUser } from "@/api/blockApi";
+import { blockUser, getBlockStatus, listBlockedUsers, unblockUser } from "@/api/blockApi";
+import { blockedUserToConversation, mapBlockedUserListItem } from "@/api/blockMapper";
 import { mapMessageItem, appendMessageIfNew, getMessagePreview } from "@/api/messagesMapper";
+import * as usersApi from "@/api/usersApi";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
@@ -43,7 +54,13 @@ function MessagesPage() {
     isBlockedEitherWay: false,
   });
   const [reportOpen, setReportOpen] = useState(false);
+  const [userReportOpen, setUserReportOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [blockedUsers, setBlockedUsers] = useState([]);
+  const [blockedListOpen, setBlockedListOpen] = useState(false);
+  const [blockedUsersLoading, setBlockedUsersLoading] = useState(false);
+  const [inboxMenuOpen, setInboxMenuOpen] = useState(false);
+  const inboxMenuRef = useRef(null);
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== "undefined" ? window.matchMedia("(max-width: 900px)").matches : false,
   );
@@ -54,6 +71,70 @@ function MessagesPage() {
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
+
+  const fetchBlockedUsers = useCallback(async () => {
+    setBlockedUsersLoading(true);
+    try {
+      const items = await listBlockedUsers();
+      const mapped = Array.isArray(items) ? items.map(mapBlockedUserListItem) : [];
+      setBlockedUsers(mapped);
+      return mapped;
+    } catch (err) {
+      setBlockedUsers((current) => current);
+      if (blockedListOpen) {
+        showToast(err.message ?? "Không tải được danh sách bị chặn.");
+      }
+      return null;
+    } finally {
+      setBlockedUsersLoading(false);
+    }
+  }, [blockedListOpen, showToast]);
+
+  function addBlockedUserLocally(conversation) {
+    if (!conversation?.otherUserId) return;
+
+    setBlockedUsers((current) => {
+      if (current.some((item) => item.userId === conversation.otherUserId)) {
+        return current;
+      }
+
+      return [
+        ...current,
+        mapBlockedUserListItem({
+          userId: conversation.otherUserId,
+          username: conversation.username ?? "",
+          fullName: conversation.name ?? "",
+          avatarUrl: conversation.avatarUrl ?? null,
+          conversationId: conversation.conversationId ?? null,
+          blockedAt: new Date().toISOString(),
+        }),
+      ];
+    });
+  }
+
+  async function handleOpenBlockedList() {
+    setInboxMenuOpen(false);
+    setBlockedListOpen(true);
+    setIsEditMode(false);
+    await fetchBlockedUsers();
+  }
+
+  useEffect(() => {
+    fetchBlockedUsers();
+  }, [fetchBlockedUsers]);
+
+  useEffect(() => {
+    if (!inboxMenuOpen) return undefined;
+
+    function handlePointerDown(event) {
+      if (inboxMenuRef.current && !inboxMenuRef.current.contains(event.target)) {
+        setInboxMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [inboxMenuOpen]);
 
   const handleReceiveMessage = useCallback((messageDto) => {
     const mapped = mapMessageItem(messageDto, { currentUserId });
@@ -177,8 +258,20 @@ function MessagesPage() {
     );
   }, [conversations, query]);
 
-  const activeConversation =
-    conversations.find((item) => item.conversationId === selectedId) ?? null;
+  const activeConversation = useMemo(() => {
+    const fromInbox = conversations.find((item) => item.conversationId === selectedId);
+    if (fromInbox) return fromInbox;
+
+    const blocked = blockedUsers.find(
+      (item) => item.conversationId === selectedId || item.userId === selectedId,
+    );
+    return blocked ? blockedUserToConversation(blocked) : null;
+  }, [conversations, blockedUsers, selectedId]);
+
+  const selectedBlockedUserId = activeConversation?.isBlockedEntry
+    ? activeConversation.otherUserId
+    : null;
+
   const showMobileChat = isMobile && Boolean(activeConversation);
 
   useEffect(() => {
@@ -224,6 +317,8 @@ function MessagesPage() {
   async function handleBlockUser() {
     if (!activeConversation?.otherUserId) return;
 
+    const conversationId = activeConversation.conversationId;
+
     try {
       await blockUser(activeConversation.otherUserId);
       setBlockStatus({
@@ -232,10 +327,10 @@ function MessagesPage() {
         isBlockedEitherWay: true,
       });
       setConversations((current) =>
-        current.filter((item) => item.conversationId !== activeConversation.conversationId),
+        current.filter((item) => item.conversationId !== conversationId),
       );
-      setSelectedId(null);
-      setMessages([]);
+      addBlockedUserLocally(activeConversation);
+      await fetchBlockedUsers();
       showToast("Đã chặn người dùng này.");
     } catch (err) {
       showToast(err.message ?? "Không chặn được người dùng.");
@@ -249,12 +344,43 @@ function MessagesPage() {
       await unblockUser(activeConversation.otherUserId);
       setBlockStatus({
         isBlockedByMe: false,
-        isBlockedByThem: false,
-        isBlockedEitherWay: false,
+        isBlockedByThem: blockStatus.isBlockedByThem,
+        isBlockedEitherWay: blockStatus.isBlockedByThem,
       });
+
+      const items = await loadConversations();
+      setConversations(items);
+      setBlockedUsers((current) =>
+        current.filter((item) => item.userId !== activeConversation.otherUserId),
+      );
       showToast("Đã bỏ chặn người dùng.");
     } catch (err) {
       showToast(err.message ?? "Không bỏ chặn được người dùng.");
+    }
+  }
+
+  async function handleSubmitUserReport({ reasonLabel, detail }) {
+    if (!activeConversation?.otherUserId) return;
+
+    await usersApi.reportUser(activeConversation.otherUserId, {
+      source: "profile",
+      reason: reasonLabel,
+      detail,
+    });
+    window.dispatchEvent(new CustomEvent("sehubs-user-reports-changed"));
+    window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
+    showToast("Đã gửi báo cáo người dùng. SEHub sẽ xem xét trong thời gian sớm nhất.");
+  }
+
+  function handleSelectBlockedUser(item) {
+    setSelectedId(item.conversationId ?? item.userId);
+  }
+
+  function handleCloseBlockedList() {
+    setBlockedListOpen(false);
+    if (activeConversation?.isBlockedEntry) {
+      setSelectedId(null);
+      setMessages([]);
     }
   }
 
@@ -324,17 +450,53 @@ function MessagesPage() {
       >
         <div className={styles["inbox-header"]}>
           <h1 className={styles["inbox-title"]}>Tin nhắn</h1>
-          <button
-            type="button"
-            className={`${styles.compose} ${isEditMode ? styles.composeActive : ""}`}
-            aria-label={isEditMode ? "Hoàn tất chỉnh sửa" : "Chỉnh sửa danh sách hội thoại"}
-            aria-pressed={isEditMode}
-            onClick={toggleEditMode}
-          >
-            <FontAwesomeIcon icon={faPenToSquare} />
-          </button>
+          <div className={styles["header-actions"]}>
+            <button
+              type="button"
+              className={`${styles.compose} ${isEditMode ? styles.composeActive : ""}`}
+              aria-label={isEditMode ? "Hoàn tất chỉnh sửa" : "Chỉnh sửa danh sách hội thoại"}
+              aria-pressed={isEditMode}
+              onClick={toggleEditMode}
+            >
+              <FontAwesomeIcon icon={faPenToSquare} />
+            </button>
+            <div className={styles["menu-wrap"]} ref={inboxMenuRef}>
+              <button
+                type="button"
+                className={styles["menu-trigger"]}
+                aria-label="Tùy chọn tin nhắn"
+                aria-expanded={inboxMenuOpen}
+                onClick={() => setInboxMenuOpen((current) => !current)}
+              >
+                <FontAwesomeIcon icon={faEllipsis} />
+              </button>
+              {inboxMenuOpen && (
+                <div className={styles["inbox-menu"]} role="menu">
+                  <button
+                    type="button"
+                    className={styles["inbox-menu-item"]}
+                    role="menuitem"
+                    onClick={handleOpenBlockedList}
+                  >
+                    <FontAwesomeIcon icon={faUserSlash} className={styles["inbox-menu-icon"]} />
+                    Danh sách bị chặn
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
+        {blockedListOpen ? (
+          <BlockedUsersList
+            items={blockedUsers}
+            loading={blockedUsersLoading}
+            selectedUserId={selectedBlockedUserId}
+            onBack={handleCloseBlockedList}
+            onSelect={handleSelectBlockedUser}
+          />
+        ) : (
+          <>
         <label className={styles.search}>
           <FontAwesomeIcon icon={faMagnifyingGlass} className={styles["search-icon"]} />
           <input
@@ -411,6 +573,8 @@ function MessagesPage() {
             );
           })}
         </ul>
+          </>
+        )}
       </aside>
 
       <section className={styles.chat} aria-label="Khung chat">
@@ -424,10 +588,12 @@ function MessagesPage() {
             onBack={() => setSelectedId(null)}
             onSend={handleSend}
             isBlockedByMe={blockStatus.isBlockedByMe}
+            isBlockedByThem={blockStatus.isBlockedByThem}
             isBlockedEitherWay={blockStatus.isBlockedEitherWay}
             onBlock={handleBlockUser}
             onUnblock={handleUnblockUser}
             onReport={() => setReportOpen(true)}
+            onReportUser={() => setUserReportOpen(true)}
           />
         ) : (
           <ChatEmptyState
@@ -443,6 +609,30 @@ function MessagesPage() {
         onClose={() => setReportOpen(false)}
         conversationId={activeConversation?.conversationId}
         conversationName={activeConversation?.name}
+      />
+
+      <ReportReasonModal
+        open={userReportOpen}
+        onClose={() => setUserReportOpen(false)}
+        title="Báo cáo người dùng"
+        icon={faUserSlash}
+        iconClassName={reportModalStyles.iconUser}
+        subtitle={
+          activeConversation?.username ? (
+            <>
+              Bạn đang báo cáo tài khoản{" "}
+              <strong>
+                {activeConversation.username.startsWith("@")
+                  ? activeConversation.username
+                  : `@${activeConversation.username}`}
+              </strong>
+            </>
+          ) : (
+            "Bạn đang báo cáo tài khoản này"
+          )
+        }
+        detailPlaceholder="Mô tả cụ thể hành vi vi phạm của người dùng này..."
+        onSubmit={handleSubmitUserReport}
       />
     </div>
   );

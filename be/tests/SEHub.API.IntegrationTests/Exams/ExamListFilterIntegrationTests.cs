@@ -32,7 +32,7 @@ public sealed class ExamListFilterIntegrationTests : IClassFixture<CustomWebAppl
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var body = await response.Content.ReadFromJsonAsync<ApiResponse<PagedResult<ExamListItemDto>>>();
-        body!.Data!.Items.Should().Contain(exam => exam.Id == PaperExamId && exam.Code == "FE-JPD113-SU2026-3");
+        body!.Data!.Items.Should().Contain(exam => exam.Id == PaperExamId && exam.Code == "JPD113" && exam.Title == "FE-JPD113-SU2026-3");
     }
 
     private async Task SeedPaperCodeExamAsync()
@@ -48,7 +48,7 @@ public sealed class ExamListFilterIntegrationTests : IClassFixture<CustomWebAppl
         context.Exams.Add(new Exam
         {
             Id = PaperExamId,
-            Code = "FE-JPD113-SU2026-3",
+            Code = "JPD113",
             Title = "FE-JPD113-SU2026-3",
             ExamType = ExamType.Final,
             Semester = 3,

@@ -66,6 +66,14 @@ if (app.Environment.IsDevelopment())
     await DemoDataSeeder.SeedAsync(app.Services);
 }
 
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var context = scope.ServiceProvider.GetRequiredService<SEHubDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<SEHubDbContext>>();
+    await ExamSchemaMigration.EnsureSubjectForeignKeyAsync(context, logger);
+}
+
 app.Run();
 
 public partial class Program;

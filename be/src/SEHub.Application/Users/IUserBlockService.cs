@@ -9,4 +9,6 @@ public interface IUserBlockService
     Task<BlockActionResultDto> UnblockAsync(Guid targetUserId, CancellationToken cancellationToken = default);
 
     Task<BlockStatusDto> GetBlockStatusAsync(Guid targetUserId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<BlockedUserListItemDto>> ListBlockedByMeAsync(CancellationToken cancellationToken = default);
 }

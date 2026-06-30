@@ -16,6 +16,7 @@ function ReviewQuestionsPage({ scope = "community" }) {
       subtitle="Đề thi cuối kỳ và tài liệu học tập"
       courses={courses}
       detailBasePath={getSubjectCatalogPath("review", scope)}
+      showSubjectName={false}
     />
   );
 }

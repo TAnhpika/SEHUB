@@ -47,6 +47,22 @@ public class UserBlockRepository : IUserBlockRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Guid>> GetBlockedByMeUserIdsAsync(
+        Guid blockerId,
+        CancellationToken cancellationToken = default) =>
+        await _context.UserBlocks
+            .Where(b => b.BlockerId == blockerId)
+            .Select(b => b.BlockedUserId)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<UserBlock>> GetBlockedByMeAsync(
+        Guid blockerId,
+        CancellationToken cancellationToken = default) =>
+        await _context.UserBlocks
+            .Where(b => b.BlockerId == blockerId)
+            .OrderByDescending(b => b.CreatedAt)
+            .ToListAsync(cancellationToken);
+
     public async Task AddAsync(UserBlock block, CancellationToken cancellationToken = default) =>
         await _context.UserBlocks.AddAsync(block, cancellationToken);
 

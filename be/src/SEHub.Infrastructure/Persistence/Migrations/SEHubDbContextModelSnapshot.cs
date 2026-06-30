@@ -813,10 +813,16 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Property<int>("Semester")
                         .HasColumnType("integer");
 
+                    b.Property<string>("SubjectCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SubjectCode");
 
                     b.HasIndex("Semester", "Major");
 
@@ -835,8 +841,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Code")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("ContentHash")
                         .IsRequired()
@@ -890,8 +896,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -906,10 +912,10 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("SubmittedById");
 
-                    b.HasIndex("Major", "Code")
+                    b.HasIndex("Title")
                         .IsUnique();
 
-                    b.HasIndex("Major", "Status", "ExamType");
+                    b.HasIndex("Code", "Status", "ExamType");
 
                     b.ToTable("Exams");
                 });
@@ -1960,6 +1966,32 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.ToTable("RewardRules");
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.Subject", b =>
+                {
+                    b.Property<string>("Code")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Semester")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Code");
+
+                    b.HasIndex("DisplayOrder");
+
+                    b.HasIndex("Semester");
+
+                    b.ToTable("Subjects", (string)null);
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.Subscription", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2910,8 +2942,24 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Navigation("Document");
                 });
 
+            modelBuilder.Entity("SEHub.Domain.Entities.DocumentCategory", b =>
+                {
+                    b.HasOne("SEHub.Domain.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectCode")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Subject");
+                });
+
             modelBuilder.Entity("SEHub.Domain.Entities.Exam", b =>
                 {
+                    b.HasOne("SEHub.Domain.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("RejectedById")
@@ -2928,6 +2976,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("RevisionOfExam");
+
+                    b.Navigation("Subject");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.ExamAttachment", b =>

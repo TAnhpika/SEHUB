@@ -263,7 +263,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             [RoleNames.Admin],
             NotificationType.ExamReview,
             $"{actorName} gửi đề chờ duyệt",
-            $"{exam.Code} — {exam.Title}",
+            $"{exam.Title} ({exam.Code})",
             $"/admin/exams/{exam.Id}",
             actorUserId,
             exam.Id,
@@ -282,8 +282,8 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         }
 
         var title = approved
-            ? $"Đề {exam.Code} đã được Admin duyệt"
-            : $"Đề {exam.Code} bị Admin từ chối";
+            ? $"Đề {exam.Title} đã được Admin duyệt"
+            : $"Đề {exam.Title} bị Admin từ chối";
 
         var body = approved
             ? exam.Title
@@ -407,7 +407,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         await NotifyRoleMembersAsync(
             [RoleNames.Moderator, RoleNames.Admin],
             NotificationType.Moderation,
-            $"{actorName} báo cáo câu hỏi đề {exam.Code}",
+            $"{actorName} báo cáo câu hỏi đề {exam.Title}",
             $"Lý do: {reasonLabel} — {preview}",
             "/moderator/reports",
             reporterUserId,
@@ -489,14 +489,14 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
 
         var body = !string.IsNullOrWhiteSpace(reviewerComment)
             ? Truncate(reviewerComment, 160)
-            : $"{exam.Code} — {exam.Title}";
+            : exam.Title;
 
         await _notificationService.CreateAsync(
             submission.UserId,
             NotificationType.PracticeResult,
             $"Kết quả thực hành: {statusLabel}",
             body,
-            ExamFrontendPaths.BuildPracticeExamDetailPath(exam.Code, exam.Title, exam.Major),
+            ExamFrontendPaths.BuildPracticeExamDetailPath(exam.Code, exam.Title),
             reviewerUserId,
             submission.Id,
             cancellationToken);
@@ -533,7 +533,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             [RoleNames.Moderator, RoleNames.Admin],
             NotificationType.Moderation,
             $"{actorName} nộp bài thực hành",
-            $"{exam.Code} — {exam.Title}",
+            $"{exam.Title} ({exam.Code})",
             "/admin/exams/submissions",
             studentUserId,
             submission.Id,
