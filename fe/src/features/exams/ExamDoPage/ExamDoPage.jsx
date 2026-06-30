@@ -292,9 +292,23 @@ function ExamDoPage({ page = "review" }) {
   }
 
   if (!examReady || !exam || !sessionReady) {
-    return examReady && !exam ? (
-      <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />
-    ) : null;
+    if (examReady && !exam) {
+      return <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />;
+    }
+
+    return (
+      <div
+        className={isFocusMode ? styles.loadingShellFocus : styles.loadingShell}
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <div className={styles.loading}>
+          <div className={styles.spinner} aria-hidden="true" />
+          <p className={styles.loadingText}>Đang tải đề thi...</p>
+        </div>
+      </div>
+    );
   }
 
   const currentQuestion = questions[currentIndex];
