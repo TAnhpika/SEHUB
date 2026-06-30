@@ -3,13 +3,14 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faHouse } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { useAuth } from "@/context";
+import { getRoleHomePath } from "@/utils/roleHelpers";
 import logoSrc from "@/img/logo.png";
 import styles from "./NotFound.module.css";
 
 function NotFound() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const homePath = isAuthenticated ? "/home" : "/";
+  const { isAuthenticated, user } = useAuth();
+  const homePath = isAuthenticated ? getRoleHomePath(user) : "/";
 
   return (
     <div className={styles.page}>

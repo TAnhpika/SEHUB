@@ -6,16 +6,17 @@ import HeaderUserActions from "@/common/Header/HeaderUserActions/HeaderUserActio
 import ThemeSwitcher from "@/common/ThemeSwitcher/ThemeSwitcher";
 import { useMainShellOptional } from "@/common/context/MainShellContext";
 import { useAuth } from "@/context";
+import { getRoleHomePath } from "@/utils/roleHelpers";
 import logoSrc from "@/img/logo.png";
 import mainHeaderStyles from "@/common/Header/MainHeader/MainHeader.module.css";
 import styles from "./GuestHeader.module.css";
 
 function GuestHeader() {
   const { pathname } = useLocation();
-  const { isAuthenticated, isBootstrapping } = useAuth();
+  const { isAuthenticated, isBootstrapping, user } = useAuth();
   const mainShell = useMainShellOptional();
-  const homePath = "/";
-  const isHome = pathname === "/";
+  const homePath = isAuthenticated ? getRoleHomePath(user) : "/";
+  const isHome = isAuthenticated ? pathname === homePath : pathname === "/";
   const isCommunity = pathname.startsWith("/community");
   const isSupport = pathname.startsWith("/support");
 
