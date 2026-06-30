@@ -24,6 +24,7 @@ import PremiumRoute from "@/common/guards/PremiumRoute";
 import PracticeFocusRedirect from "@/common/routes/PracticeFocusRedirect";
 import ExamFocusResultRedirect from "@/common/routes/ExamFocusResultRedirect";
 import PracticalExamRedirect from "@/common/routes/PracticalExamRedirect";
+import PracticeExamLegacyRedirect from "@/features/exams/PracticeExamLegacyRedirect/PracticeExamLegacyRedirect";
 import ScrollToTop from "@/common/routes/ScrollToTop";
 import AuthBootstrapFallback from "@/common/loading/AuthBootstrapFallback";
 import AdminRoute from "@/common/guards/AdminRoute";
@@ -301,6 +302,7 @@ function App() {
               </Route>
             </Route>
             <Route path="/landing" element={<Navigate to="/" replace />} />
+            <Route path="/exams/:examId/practice" element={<PracticeExamLegacyRedirect />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
