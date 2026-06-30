@@ -13,6 +13,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { ACTION_LOADING } from "@/utils/actionLoadingLabels";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import StatusBadge from "@/features/admin/shared/StatusBadge";
 import { getAdminUserDetailUrl } from "@/features/admin/adminMockData";
@@ -73,6 +74,7 @@ function AdminModerationPage() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [lastResolved, setLastResolved] = useState(null);
+  const [pendingAction, setPendingAction] = useState(null);
 
   const pendingCount = reports.filter((r) => r.status === "pending").length;
   const urgentCount = reports.filter(
@@ -139,25 +141,32 @@ function AdminModerationPage() {
     }
   }
 
-  async function handleCommunityResolve(mockFn, toastMsg, apiResolveFn) {
-    if (!selected || selected.category !== "community") return;
-    let result = null;
-    if (apiResolveFn) {
-      result = await apiResolveFn(selected.id);
-    }
-    if (!result) {
-      result = mockFn(selected.id);
-    } else if (mockFn !== dismissReport && mockFn !== deleteReportedPost) {
-      mockFn(selected.id);
-    }
-    if (!result) return;
+  async function handleCommunityResolve(mockFn, toastMsg, apiResolveFn, actionKey) {
+    if (!selected || selected.category !== "community" || pendingAction) return;
+    setPendingAction(actionKey);
+    try {
+      let result = null;
+      if (apiResolveFn) {
+        result = await apiResolveFn(selected.id);
+      }
+      if (!result) {
+        result = mockFn(selected.id);
+      } else if (mockFn !== dismissReport && mockFn !== deleteReportedPost) {
+        mockFn(selected.id);
+      }
+      if (!result) return;
 
-    const refreshedList = await refreshAllReports();
-    finishResolved(selected.id, result, refreshedList, toastMsg);
+      const refreshedList = await refreshAllReports();
+      finishResolved(selected.id, result, refreshedList, toastMsg);
+    } finally {
+      setPendingAction(null);
+    }
   }
 
   async function handleCommunityBan(durationDays, permanent = false) {
-    if (!selected || selected.category !== "community") return;
+    if (!selected || selected.category !== "community" || pendingAction) return;
+    const actionKey = permanent ? "community-ban-perm" : "community-ban-7";
+    setPendingAction(actionKey);
     const reportedUserId = selected.reportedUserId;
     const reason = selected.reason ?? selected.post?.excerpt ?? "Báo cáo vi phạm cộng đồng";
 
@@ -184,6 +193,8 @@ function AdminModerationPage() {
       );
     } catch (err) {
       showToast(err.message ?? "Không khóa được tài khoản.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -212,7 +223,8 @@ function AdminModerationPage() {
   }
 
   async function handleUserDismiss() {
-    if (!selected || selected.category !== "user") return;
+    if (!selected || selected.category !== "user" || pendingAction) return;
+    setPendingAction("user-dismiss");
     try {
       await resolveConversationReport(selected.id, "ignored");
       const refreshedList = await refreshAllReports();
@@ -224,14 +236,19 @@ function AdminModerationPage() {
       );
     } catch (err) {
       showToast(err.message ?? "Không xử lý được báo cáo.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
   async function handleUserBan(durationDays, permanent = false) {
-    if (!selected || selected.category !== "user") return;
+    if (!selected || selected.category !== "user" || pendingAction) return;
+    const actionKey = permanent ? "user-ban-perm" : "user-ban-7";
+    setPendingAction(actionKey);
     const userId = selected.reportedUserId;
     if (!userId) {
       showToast("Không xác định được người dùng bị báo cáo.");
+      setPendingAction(null);
       return;
     }
 
@@ -267,11 +284,14 @@ function AdminModerationPage() {
       );
     } catch (err) {
       showToast(err.message ?? "Không khóa được tài khoản.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
   async function handleExamDismiss() {
-    if (!selected || selected.category !== "exam_question") return;
+    if (!selected || selected.category !== "exam_question" || pendingAction) return;
+    setPendingAction("exam-dismiss");
     try {
       await resolveExamQuestionReport(selected.id, "ignored");
       const refreshedList = await refreshAllReports();
@@ -283,11 +303,14 @@ function AdminModerationPage() {
       );
     } catch (err) {
       showToast(err.message ?? "Không xử lý được báo cáo.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
   async function handleExamResolved() {
-    if (!selected || selected.category !== "exam_question") return;
+    if (!selected || selected.category !== "exam_question" || pendingAction) return;
+    setPendingAction("exam-resolve");
     try {
       await resolveExamQuestionReport(selected.id, "resolved_exam");
       const refreshedList = await refreshAllReports();
@@ -299,11 +322,14 @@ function AdminModerationPage() {
       );
     } catch (err) {
       showToast(err.message ?? "Không xử lý được báo cáo.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
   const showLoadMore =
     communityHasMore && (category === "all" || category === "community");
+  const isActing = Boolean(pendingAction);
 
   return (
     <AdminPageLayout
@@ -611,11 +637,20 @@ function AdminModerationPage() {
                       <Button
                         look="outline"
                         className={modStyles.actionBtnDismiss}
+                        disabled={isActing}
+                        loading={pendingAction === "exam-dismiss"}
+                        loadingLabel={ACTION_LOADING.dismiss}
                         onClick={handleExamDismiss}
                       >
                         Bỏ qua báo cáo
                       </Button>
-                      <Button className={modStyles.actionBtnResolve} onClick={handleExamResolved}>
+                      <Button
+                        className={modStyles.actionBtnResolve}
+                        disabled={isActing}
+                        loading={pendingAction === "exam-resolve"}
+                        loadingLabel={ACTION_LOADING.dismiss}
+                        onClick={handleExamResolved}
+                      >
                         Đã xử lý đề
                       </Button>
                     </>
@@ -691,6 +726,9 @@ function AdminModerationPage() {
                       <Button
                         look="outline"
                         className={modStyles.actionBtnDismiss}
+                        disabled={isActing}
+                        loading={pendingAction === "user-dismiss"}
+                        loadingLabel={ACTION_LOADING.dismiss}
                         onClick={handleUserDismiss}
                       >
                         Bỏ qua báo cáo
@@ -698,6 +736,9 @@ function AdminModerationPage() {
                       <Button
                         look="outline"
                         className={modStyles.actionBtnBanTemp}
+                        disabled={isActing}
+                        loading={pendingAction === "user-ban-7"}
+                        loadingLabel={ACTION_LOADING.ban}
                         onClick={() => handleUserBan(7)}
                       >
                         <FontAwesomeIcon icon={faUserSlash} />
@@ -706,6 +747,9 @@ function AdminModerationPage() {
                       <Button
                         look="outline"
                         className={modStyles.actionBtnBanPerm}
+                        disabled={isActing}
+                        loading={pendingAction === "user-ban-perm"}
+                        loadingLabel={ACTION_LOADING.ban}
                         onClick={() => handleUserBan(0, true)}
                       >
                         Khóa vĩnh viễn
@@ -787,11 +831,15 @@ function AdminModerationPage() {
                     <>
                       <Button
                         className={modStyles.actionBtnDelete}
+                        disabled={isActing}
+                        loading={pendingAction === "community-delete"}
+                        loadingLabel={ACTION_LOADING.delete}
                         onClick={() =>
                           handleCommunityResolve(
                             deleteReportedPost,
                             "Đã xóa bài viết.",
                             resolveReportDeleteViaApi,
+                            "community-delete",
                           )
                         }
                       >
@@ -800,11 +848,15 @@ function AdminModerationPage() {
                       <Button
                         look="outline"
                         className={modStyles.actionBtnKeep}
+                        disabled={isActing}
+                        loading={pendingAction === "community-keep"}
+                        loadingLabel={ACTION_LOADING.dismiss}
                         onClick={() =>
                           handleCommunityResolve(
                             dismissReport,
                             "Đã từ chối báo cáo — giữ bài.",
                             resolveReportDismissViaApi,
+                            "community-keep",
                           )
                         }
                       >
@@ -813,6 +865,9 @@ function AdminModerationPage() {
                       <Button
                         look="outline"
                         className={modStyles.actionBtnBanTemp}
+                        disabled={isActing}
+                        loading={pendingAction === "community-ban-7"}
+                        loadingLabel={ACTION_LOADING.ban}
                         onClick={() => handleCommunityBan(7)}
                       >
                         <FontAwesomeIcon icon={faUserSlash} />
@@ -821,6 +876,9 @@ function AdminModerationPage() {
                       <Button
                         look="outline"
                         className={modStyles.actionBtnBanPerm}
+                        disabled={isActing}
+                        loading={pendingAction === "community-ban-perm"}
+                        loadingLabel={ACTION_LOADING.ban}
                         onClick={() => handleCommunityBan(0, true)}
                       >
                         Khóa vĩnh viễn

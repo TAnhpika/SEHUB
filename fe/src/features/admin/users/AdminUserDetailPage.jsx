@@ -39,6 +39,7 @@ function AdminUserDetailPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [actionModal, setActionModal] = useState({ open: false, mode: "ban" });
   const [actionError, setActionError] = useState("");
+  const [actionSubmitting, setActionSubmitting] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
@@ -130,14 +131,18 @@ function AdminUserDetailPage() {
   }
 
   function closeAction() {
+    if (actionSubmitting) return;
     setActionModal({ open: false, mode: "ban" });
     setActionError("");
   }
 
   async function handleActionSubmit(payload) {
+    if (actionSubmitting) return;
+    setActionSubmitting(true);
     const admin = authUser?.username ?? "admin_sehub";
     let result;
 
+    try {
     switch (actionModal.mode) {
       case "ban":
         result = await banUserPermanentlyViaApi(id, { reason: payload.reason, adminUsername: admin });
@@ -158,8 +163,12 @@ function AdminUserDetailPage() {
     }
 
     showToast(result.message);
-    closeAction();
+    setActionModal({ open: false, mode: "ban" });
+    setActionError("");
     setRefreshKey((k) => k + 1);
+    } finally {
+      setActionSubmitting(false);
+    }
   }
 
   return (
@@ -482,6 +491,7 @@ function AdminUserDetailPage() {
         onClose={closeAction}
         onSubmit={handleActionSubmit}
         error={actionError}
+        submitting={actionSubmitting}
       />
     </AdminPageLayout>
   );

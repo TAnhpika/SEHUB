@@ -174,7 +174,7 @@ function ContentModerationPage() {
                             </button>
                             <button type="button" className={styles.bulkReject} disabled={acting} onClick={() => handleReject([...selectedIds])}>
                                 <FontAwesomeIcon icon={faXmark} />
-                                Từ chối tất cả
+                                {pendingAction?.type === "reject" ? "Đang từ chối..." : "Từ chối tất cả"}
                             </button>
                             <button type="button" className={styles.bulkApprove} disabled={acting} onClick={() => handleApprove([...selectedIds])}>
                                 <FontAwesomeIcon icon={faCheck} />
@@ -316,6 +316,7 @@ function ContentModerationPage() {
                                 item={focusedItem}
                                 mode="queue"
                                 isApproving={pendingAction?.type === "approve" && focusedItem != null && pendingAction.ids.includes(focusedItem.id)}
+                                isRejecting={pendingAction?.type === "reject" && focusedItem != null && pendingAction.ids.includes(focusedItem.id)}
                                 onApprove={(id) => handleApprove([id])}
                                 onReject={(id) => handleReject([id])}
                             />

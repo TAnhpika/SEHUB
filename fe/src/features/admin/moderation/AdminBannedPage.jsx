@@ -14,6 +14,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { ACTION_LOADING } from "@/utils/actionLoadingLabels";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import StatusBadge from "@/features/admin/shared/StatusBadge";
 import {
@@ -39,6 +40,7 @@ function AdminBannedPage() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [lastUnbanned, setLastUnbanned] = useState(null);
+  const [unbanLoading, setUnbanLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,18 +106,22 @@ function AdminBannedPage() {
     );
   }
 
-  function handleUnban() {
-    if (!selected) return;
+  async function handleUnban() {
+    if (!selected || unbanLoading) return;
+    setUnbanLoading(true);
+    try {
     const removed = unbanUser(selected.id);
     if (!removed) return;
     unbanFromBannedList(removed.username);
     refresh();
     setLastUnbanned(removed);
     showToast(`Đã mở khóa @${removed.username}.`);
-    loadAdminBannedUsers().then((next) => {
-      setBanned(next);
-      setSelectedId(next[0]?.id ?? null);
-    });
+    const next = await loadAdminBannedUsers();
+    setBanned(next);
+    setSelectedId(next[0]?.id ?? null);
+    } finally {
+      setUnbanLoading(false);
+    }
   }
 
   return (
@@ -365,7 +371,7 @@ function AdminBannedPage() {
                 </div>
 
                 <footer className={modStyles.detailActions}>
-                  <Button onClick={handleUnban}>
+                  <Button onClick={handleUnban} disabled={unbanLoading} loading={unbanLoading} loadingLabel={ACTION_LOADING.unban}>
                     <FontAwesomeIcon icon={faUnlock} />
                     Mở khóa tài khoản
                   </Button>

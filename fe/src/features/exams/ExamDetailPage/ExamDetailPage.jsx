@@ -86,12 +86,15 @@ function ExamDetailPage({ page }) {
   const [examReady, setExamReady] = useState(false);
   const [apiExamId, setApiExamId] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [questionsReady, setQuestionsReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     async function fetchExam() {
       setExamReady(false);
+      setQuestions([]);
+      setQuestionsReady(false);
 
       if (page === "documents") {
         try {
@@ -144,19 +147,24 @@ function ExamDetailPage({ page }) {
     let cancelled = false;
 
     async function fetchQuestions() {
+      setQuestionsReady(false);
       const fallback = buildExamQuestions(exam.questionCount, page);
 
-      if (page !== "review") {
-        setQuestions(fallback);
-        return;
-      }
-
-      if (!isAuthenticated && !apiExamId) {
-        setQuestions(fallback);
-        return;
-      }
-
       try {
+        if (page !== "review") {
+          if (!cancelled) {
+            setQuestions(fallback);
+          }
+          return;
+        }
+
+        if (!isAuthenticated && !apiExamId) {
+          if (!cancelled) {
+            setQuestions(fallback);
+          }
+          return;
+        }
+
         let resolvedApiId = apiExamId;
         if (!resolvedApiId) {
           resolvedApiId = await resolveExamApiId(exam.id);
@@ -177,12 +185,18 @@ function ExamDetailPage({ page }) {
             return;
           }
         }
-      } catch {
-        /* fallback below */
-      }
 
-      if (!cancelled) {
-        setQuestions(fallback);
+        if (!cancelled) {
+          setQuestions(fallback);
+        }
+      } catch {
+        if (!cancelled) {
+          setQuestions(fallback);
+        }
+      } finally {
+        if (!cancelled) {
+          setQuestionsReady(true);
+        }
       }
     }
 
@@ -303,6 +317,50 @@ function ExamDetailPage({ page }) {
     showToast,
   ]);
 
+  useEffect(() => {
+    if (!examReady || !questionsReady || !exam || page === "documents" || orderedQuestions.length === 0) {
+      return undefined;
+    }
+
+    function isTypingTarget(target) {
+      if (!target || !(target instanceof HTMLElement)) return false;
+      const tag = target.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+      return target.isContentEditable;
+    }
+
+    function handleKeyDown(event) {
+      if (event.defaultPrevented) return;
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (isTypingTarget(event.target)) return;
+
+      if (event.key === "ArrowLeft") {
+        if (currentIndex <= 0) return;
+        event.preventDefault();
+        setCurrentIndex((index) => index - 1);
+        return;
+      }
+
+      if (event.key === "ArrowRight") {
+        if (currentIndex >= orderedQuestions.length - 1) return;
+        event.preventDefault();
+        setCurrentIndex((index) => index + 1);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    examReady,
+    questionsReady,
+    exam,
+    page,
+    currentIndex,
+    orderedQuestions.length,
+  ]);
+
   if (scope === "community" && !isAuthenticated) {
     return (
       <Navigate
@@ -313,7 +371,7 @@ function ExamDetailPage({ page }) {
     );
   }
 
-  if (!examReady) {
+  if (!examReady || (exam && isReviewExam && !questionsReady)) {
     return <ExamDetailSkeleton />;
   }
 
@@ -321,7 +379,7 @@ function ExamDetailPage({ page }) {
     return <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />;
   }
 
-  if (isReviewExam && orderedQuestions.length === 0) {
+  if (isReviewExam && questionsReady && orderedQuestions.length === 0) {
     return (
       <div className={styles.page}>
         <p>

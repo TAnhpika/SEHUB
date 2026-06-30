@@ -12,6 +12,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { ACTION_LOADING } from "@/utils/actionLoadingLabels";
 import {
   loadModeratorCommunityReports,
   REASON_META,
@@ -90,6 +91,7 @@ function ReportsPage() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [lastResolved, setLastResolved] = useState(null);
+  const [pendingAction, setPendingAction] = useState(null);
   const deepLinkSyncedRef = useRef(false);
   const detailScrollRef = useRef(null);
   const urlReportId = searchParams.get("id");
@@ -427,6 +429,9 @@ function ReportsPage() {
   }
 
   async function handleDismiss(id) {
+    if (pendingAction) return;
+    setPendingAction("dismiss");
+    try {
     const target = reports.find((report) => report.id === id);
     if (target?.category === "exam_question") {
       resolveReportLocal(id, "ignored");
@@ -464,10 +469,14 @@ function ReportsPage() {
           : "Đã bỏ qua báo cáo — giữ nguyên nội dung.",
     );
     window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
+    } finally {
+      setPendingAction(null);
+    }
   }
 
   async function handleEscalateToViolations(report) {
-    if (!report) return;
+    if (!report || pendingAction) return;
+    setPendingAction("escalate");
 
     try {
       const result = await escalateUserReportToViolations(report.id, report.userReportType);
@@ -483,10 +492,15 @@ function ReportsPage() {
       window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
     } catch (err) {
       showToast(err.message ?? "Không chuyển được sang trang vi phạm.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
   async function handleDelete(id) {
+    if (pendingAction) return;
+    setPendingAction("delete");
+    try {
     const target = reports.find((report) => report.id === id);
     if (target?.category === "exam_question") {
       resolveReportLocal(id, "deleted");
@@ -509,13 +523,19 @@ function ReportsPage() {
     }
     showToast("Đã xóa nội dung vi phạm.");
     window.dispatchEvent(new CustomEvent("sehub-moderator-stats-updated"));
+    } finally {
+      setPendingAction(null);
+    }
   }
 
   function handleForwardExamReport(id) {
+    if (pendingAction) return;
+    setPendingAction("forward");
     resolveReportLocal(id, "forwarded_admin");
     showToast("Đã ghi nhận — chuyển Admin duyệt chỉnh sửa đề thi.");
     const nextPending = reports.filter((r) => r.id !== id && r.status === "pending");
     setSelectedId(nextPending[0]?.id ?? null);
+    setPendingAction(null);
   }
 
   return (
@@ -871,28 +891,61 @@ function ReportsPage() {
                 {selected.status === "pending" ? (
                   selected.category === "exam_question" ? (
                     <>
-                      <Button look="outline" onClick={() => handleDismiss(selected.id)}>
+                      <Button
+                        look="outline"
+                        disabled={Boolean(pendingAction)}
+                        loading={pendingAction === "dismiss"}
+                        loadingLabel={ACTION_LOADING.dismiss}
+                        onClick={() => handleDismiss(selected.id)}
+                      >
                         Bỏ qua — giữ câu hỏi
                       </Button>
-                      <Button onClick={() => handleForwardExamReport(selected.id)}>
+                      <Button
+                        disabled={Boolean(pendingAction)}
+                        loading={pendingAction === "forward"}
+                        loadingLabel={ACTION_LOADING.forward}
+                        onClick={() => handleForwardExamReport(selected.id)}
+                      >
                         Ghi nhận — chuyển Admin sửa đề
                       </Button>
                     </>
                   ) : selected.category === "user" ? (
                     <>
-                      <Button look="outline" onClick={() => handleDismiss(selected.id)}>
+                      <Button
+                        look="outline"
+                        disabled={Boolean(pendingAction)}
+                        loading={pendingAction === "dismiss"}
+                        loadingLabel={ACTION_LOADING.dismiss}
+                        onClick={() => handleDismiss(selected.id)}
+                      >
                         Bỏ qua báo cáo
                       </Button>
-                      <Button onClick={() => handleEscalateToViolations(selected)}>
+                      <Button
+                        disabled={Boolean(pendingAction)}
+                        loading={pendingAction === "escalate"}
+                        loadingLabel={ACTION_LOADING.escalate}
+                        onClick={() => handleEscalateToViolations(selected)}
+                      >
                         Chuyển xử lý vi phạm
                       </Button>
                     </>
                   ) : (
                     <>
-                      <Button look="outline" onClick={() => handleDismiss(selected.id)}>
+                      <Button
+                        look="outline"
+                        disabled={Boolean(pendingAction)}
+                        loading={pendingAction === "dismiss"}
+                        loadingLabel={ACTION_LOADING.dismiss}
+                        onClick={() => handleDismiss(selected.id)}
+                      >
                         Bỏ qua báo cáo
                       </Button>
-                      <Button onClick={() => handleDelete(selected.id)}>
+                      <Button
+                        disabled={Boolean(pendingAction)}
+                        loading={pendingAction === "delete"}
+                        loadingLabel={ACTION_LOADING.delete}
+                        onClick={() => handleDelete(selected.id)}
+                      >
                         <FontAwesomeIcon icon={faTrash} />
                         Xóa nội dung
                       </Button>

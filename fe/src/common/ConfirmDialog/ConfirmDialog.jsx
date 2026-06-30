@@ -10,12 +10,13 @@ function ConfirmDialog({
   confirmLabel = "Xác nhận",
   cancelLabel = "Hủy",
   variant = "primary",
+  loading = false,
   onConfirm,
   onCancel,
   children,
 }) {
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open || loading) return undefined;
 
     function handleKeyDown(event) {
       if (event.key === "Escape") onCancel?.();
@@ -23,12 +24,16 @@ function ConfirmDialog({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onCancel]);
+  }, [open, loading, onCancel]);
 
   if (!open) return null;
 
+  function handleOverlayClick() {
+    if (!loading) onCancel?.();
+  }
+
   return (
-    <div className={styles.overlay} role="presentation" onClick={onCancel}>
+    <div className={styles.overlay} role="presentation" onClick={handleOverlayClick}>
       <div
         className={styles.dialog}
         role="dialog"
@@ -40,20 +45,27 @@ function ConfirmDialog({
           <h2 id="confirm-dialog-title" className={styles.title}>
             {title}
           </h2>
-          <button type="button" className={styles.closeBtn} onClick={onCancel} aria-label="Đóng">
+          <button
+            type="button"
+            className={styles.closeBtn}
+            onClick={onCancel}
+            disabled={loading}
+            aria-label="Đóng"
+          >
             <FontAwesomeIcon icon={faXmark} />
           </button>
         </header>
         {description ? <p className={styles.description}>{description}</p> : null}
         {children}
         <footer className={styles.footer}>
-          <button type="button" className={styles.cancelBtn} onClick={onCancel}>
+          <button type="button" className={styles.cancelBtn} onClick={onCancel} disabled={loading}>
             {cancelLabel}
           </button>
           <button
             type="button"
             className={`${styles.confirmBtn} ${styles[`confirm-${variant}`]}`}
             onClick={onConfirm}
+            disabled={loading}
           >
             {confirmLabel}
           </button>

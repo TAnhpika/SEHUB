@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { ACTION_LOADING } from "@/utils/actionLoadingLabels";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import {
@@ -209,7 +210,7 @@ function AdminChatbotPage() {
             Bật chatbot cho Premium
           </label>
           <div className={styles.actions}>
-            <Button onClick={handleSaveSettings} disabled={isSaving}>
+            <Button onClick={handleSaveSettings} disabled={isSaving} loading={isSaving} loadingLabel={ACTION_LOADING.save}>
               Lưu cài đặt
             </Button>
           </div>
@@ -270,7 +271,7 @@ function AdminChatbotPage() {
             Đang kích hoạt
           </label>
           <div className={styles.actions}>
-            <Button onClick={handleSaveKnowledge} disabled={isSaving}>
+            <Button onClick={handleSaveKnowledge} disabled={isSaving} loading={isSaving} loadingLabel={ACTION_LOADING.save}>
               {editingKnowledgeId ? "Cập nhật" : "Thêm mục"}
             </Button>
             {editingKnowledgeId ? (
