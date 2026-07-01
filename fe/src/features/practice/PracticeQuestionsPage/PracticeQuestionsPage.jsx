@@ -16,6 +16,7 @@ function PracticeQuestionsPage({ scope = "community" }) {
       subtitle="Đề thi thực hành và tài liệu học tập"
       courses={courses}
       detailBasePath={getSubjectCatalogPath("practice", scope)}
+      showSubjectName={false}
     />
   );
 }
