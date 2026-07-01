@@ -142,7 +142,7 @@ function StreakDropdown() {
           )}
 
           <p className={styles.footer}>
-            Hoàn thành tất cả nhiệm vụ để nhận phần thưởng đặc biệt! 🔥
+            Hoàn thành cả 3 nhiệm vụ hôm nay để nhận phần thưởng đặc biệt! 🔥
           </p>
         </div>
       )}

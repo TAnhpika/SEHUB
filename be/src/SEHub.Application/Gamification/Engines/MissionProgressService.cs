@@ -28,8 +28,14 @@ public sealed class MissionProgressService : IMissionProgressService
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var weekStart = today.AddDays(-(int)today.DayOfWeek);
 
+        var allDailyMissions = await _missionRepository.GetActiveDailyMissionsAsync(cancellationToken);
+        var assignedDailyCodes = DailyMissionPicker
+            .PickForUser(userId, today, allDailyMissions, static mission => mission.Code)
+            .Select(mission => mission.Code)
+            .ToHashSet(StringComparer.Ordinal);
+
         var dailyMissions = await _missionRepository.GetActiveDailyByEventTypeAsync(eventType, cancellationToken);
-        foreach (var mission in dailyMissions)
+        foreach (var mission in dailyMissions.Where(mission => assignedDailyCodes.Contains(mission.Code)))
         {
             var periodKey = today.ToString("yyyy-MM-dd");
             var progress = await _missionProgressRepository.IncrementAsync(

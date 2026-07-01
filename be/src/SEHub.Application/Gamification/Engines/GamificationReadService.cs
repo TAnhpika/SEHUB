@@ -50,9 +50,14 @@ public sealed class GamificationReadService : IGamificationReadService
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var dayStart = today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var missions = await _missionRepository.GetActiveDailyMissionsAsync(cancellationToken);
+        var pickedMissions = DailyMissionPicker.PickForUser(
+            userId,
+            today,
+            missions,
+            static mission => mission.Code);
 
-        var results = new List<DailyMissionProgressDto>(missions.Count);
-        foreach (var mission in missions)
+        var results = new List<DailyMissionProgressDto>(pickedMissions.Count);
+        foreach (var mission in pickedMissions)
         {
             var sourceTypes = ResolveSourceTypes(mission.EventType);
             var current = await _transactionRepository.CountPostedQualifyingEventsSinceAsync(

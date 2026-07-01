@@ -4,7 +4,7 @@ import { getSubjectCatalogPath } from "@/utils/subjectPaths";
 import { useReviewCourses } from "@/features/review/ReviewQuestionsPage/reviewData";
 
 function PracticeQuestionsPage({ scope = "community" }) {
-  const { courses, loading } = useReviewCourses();
+  const { courses, loading } = useReviewCourses({ apiOnly: true, contentFilter: "practice" });
 
   if (loading) {
     return <CourseCatalogSkeleton />;
