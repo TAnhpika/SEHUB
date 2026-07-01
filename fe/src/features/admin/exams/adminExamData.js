@@ -274,6 +274,25 @@ export const MOCK_OCR_QUESTIONS = [
   },
 ];
 
+/** Chuẩn hóa kết quả OCR demo → format import câu hỏi (Moderator / Admin wizard). */
+export function buildMockOcrImportQuestions() {
+  return MOCK_OCR_QUESTIONS.map((question, index) => {
+    const options = question.options.map((text, optionIndex) => ({
+      id: crypto.randomUUID(),
+      label: String.fromCharCode(65 + optionIndex),
+      text,
+    }));
+
+    return {
+      orderIndex: index + 1,
+      content: question.text,
+      questionType: "SingleChoice",
+      options,
+      correctOptionId: options[question.correct]?.id ?? null,
+    };
+  });
+}
+
 export function getAdminExams() {
   return [...examsStore];
 }

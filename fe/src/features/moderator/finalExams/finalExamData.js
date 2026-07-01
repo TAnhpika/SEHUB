@@ -4,6 +4,7 @@ import {
   OPTION_LABELS,
   QUESTION_TYPES,
 } from "@/features/exams/examQuestionTypes";
+import { createDefaultExamTermFields } from "@/features/exams/finalExam/examTermOptions";
 
 export const ANSWER_KEYS = OPTION_LABELS.slice(0, 4);
 
@@ -41,6 +42,7 @@ export const EMPTY_FINAL_EXAM_INFO = {
   subjectName: "",
   major: "",
   semesterLabel: "",
+  ...createDefaultExamTermFields(),
   examCode: "",
   durationMinutes: 60,
   totalQuestions: 50,

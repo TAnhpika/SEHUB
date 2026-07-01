@@ -1,19 +1,22 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
-import { importExamQuestionsFromMarkdown } from "@/features/admin/exams/adminExamData";
+import {
+  buildMockOcrImportQuestions,
+  FINAL_EXAM_DEFAULTS,
+  importExamQuestionsFromMarkdown,
+} from "@/features/admin/exams/adminExamData";
 import {
   buildFinalExamContributionPayload,
   recordExamDraft,
 } from "@/features/moderator/exams/moderatorExamContributionStore";
 import {
   isQuestionComplete,
-  MARKDOWN_IMPORT_PLACEHOLDER,
   mapImportedExamQuestions,
 } from "@/features/moderator/finalExams/finalExamData";
 import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
+import FinalExamMarkdownImportPanel from "@/features/exams/finalExam/FinalExamMarkdownImportPanel";
 import QuestionEditorCard from "@/features/moderator/finalExams/components/QuestionEditorCard";
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
 import styles from "./FinalExamQuestionsStep.module.css";
@@ -42,6 +45,9 @@ function FinalExamQuestionsStep() {
   const [markdownText, setMarkdownText] = useState("");
   const [importingMarkdown, setImportingMarkdown] = useState(false);
   const [inputMode, setInputMode] = useState("manual");
+  const [importSubMode, setImportSubMode] = useState("upload");
+  const [fileName, setFileName] = useState("");
+  const [ocrRunning, setOcrRunning] = useState(false);
 
   useEffect(() => {
     ensureQuestionSlots(totalQuestions);
@@ -71,6 +77,39 @@ function FinalExamQuestionsStep() {
     navigate(`${basePath}/review`);
   }
 
+  function applyImportedQuestions(imported, warnings = []) {
+    const mapped = mapImportedExamQuestions(imported, warnings);
+    setQuestions(mapped);
+    setExamInfo((prev) => ({ ...prev, totalQuestions: mapped.length }));
+    setActiveQuestionIndex(0);
+    setInputMode("manual");
+  }
+
+  function handleFileChange(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    event.target.value = "";
+  }
+
+  async function handleRunOcr() {
+    if (!fileName) {
+      showToast("Chọn file PDF/ảnh trước khi OCR.");
+      return;
+    }
+
+    setOcrRunning(true);
+    try {
+      const imported = buildMockOcrImportQuestions();
+      applyImportedQuestions(imported);
+      showToast("OCR hoàn tất — rà soát đáp án trước khi tiếp tục.");
+    } catch (err) {
+      showToast(err.message ?? "OCR thất bại.");
+    } finally {
+      setOcrRunning(false);
+    }
+  }
+
   async function handleImportMarkdown() {
     if (!markdownText.trim()) {
       showToast("Dán nội dung Markdown câu hỏi trước khi import.");
@@ -87,22 +126,18 @@ function FinalExamQuestionsStep() {
       }
 
       const warnings = result?.warnings ?? [];
-      const mapped = mapImportedExamQuestions(imported, warnings);
-      setQuestions(mapped);
-      setExamInfo((prev) => ({ ...prev, totalQuestions: mapped.length }));
-      setActiveQuestionIndex(0);
-      setInputMode("manual");
+      applyImportedQuestions(imported, warnings);
 
       const skippedCount = warnings.length;
       if (skippedCount > 0) {
         const preview = warnings.slice(0, 2).join(" · ");
         const suffix = skippedCount > 2 ? ` · +${skippedCount - 2} cảnh báo` : "";
         showToast(
-          `Đã import ${mapped.length} câu. ${skippedCount} câu không hợp lệ: ${preview}${suffix}`,
+          `Đã import ${imported.length} câu. ${skippedCount} câu không hợp lệ: ${preview}${suffix}`,
           6000,
         );
       } else {
-        showToast(`Đã import ${mapped.length} câu hỏi từ Markdown.`);
+        showToast(`Đã import ${imported.length} câu hỏi từ Markdown.`);
       }
     } catch (err) {
       showToast(err.message ?? "Import Markdown thất bại.");
@@ -151,11 +186,11 @@ function FinalExamQuestionsStep() {
         <button
           type="button"
           role="tab"
-          aria-selected={inputMode === "markdown"}
-          className={`${styles.modeBtn} ${inputMode === "markdown" ? styles.modeBtnActive : ""}`}
-          onClick={() => setInputMode("markdown")}
+          aria-selected={inputMode === "import"}
+          className={`${styles.modeBtn} ${inputMode === "import" ? styles.modeBtnActive : ""}`}
+          onClick={() => setInputMode("import")}
         >
-          Import Markdown
+          Upload &amp; OCR / Markdown
         </button>
       </div>
 
@@ -202,31 +237,22 @@ function FinalExamQuestionsStep() {
           )}
         </>
       ) : (
-        <section className={styles.markdownPanel}>
-          <h2 className={styles.markdownTitle}>Import câu hỏi bằng Markdown</h2>
-          <p className={styles.markdownDesc}>
-            Mỗi câu: tiêu đề <code>## Câu N</code> hoặc <code>Câu N</code>, nội dung, phương án <code>A.</code>–
-            <code>H.</code>, dòng <code>**Đáp án: X**</code> hoặc <code>Đáp án: X</code>. Đúng/sai dùng A. Đúng / B. Sai.
-            Nội dung có thể nhắc &quot;A. B. C. D.&quot; trong đề — phương án vẫn ghi riêng từng dòng.
-            Multi-select: <code>[MULTI:3]</code> và <code>**Đáp án: A, C, E**</code>.
-          </p>
-          <textarea
-            className={styles.markdownInput}
-            rows={14}
-            value={markdownText}
-            onChange={(event) => setMarkdownText(event.target.value)}
-            placeholder={MARKDOWN_IMPORT_PLACEHOLDER}
+        <div className={styles.markdownPanel}>
+          <FinalExamMarkdownImportPanel
+            showModeSwitch
+            inputMode={importSubMode}
+            onInputModeChange={setImportSubMode}
+            markdownText={markdownText}
+            onMarkdownChange={setMarkdownText}
+            onImport={handleImportMarkdown}
+            importing={importingMarkdown}
+            fileName={fileName}
+            onFileChange={handleFileChange}
+            onRunOcr={handleRunOcr}
+            ocrRunning={ocrRunning}
+            maxQuestions={examInfo.totalQuestions ?? FINAL_EXAM_DEFAULTS.maxQuestions}
           />
-          <p className={styles.markdownHint}>
-            Phân tách các câu bằng <strong>## Câu N</strong> hoặc dòng <strong>---</strong>.
-            Câu thiếu phương án / thiếu dòng đáp án sẽ bị bỏ qua — xem toast cảnh báo sau khi import.
-          </p>
-          <div className={styles.markdownActions}>
-            <Button type="button" onClick={handleImportMarkdown} disabled={importingMarkdown}>
-              {importingMarkdown ? "Đang import..." : "Import Markdown vào đề"}
-            </Button>
-          </div>
-        </section>
+        </div>
       )}
 
       <WizardBottomActions

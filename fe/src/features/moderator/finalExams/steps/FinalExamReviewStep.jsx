@@ -131,6 +131,12 @@ function FinalExamReviewStep() {
             <dd>{examInfo.semesterLabel}</dd>
           </div>
           <div>
+            <dt>Kỳ học</dt>
+            <dd>
+              {examInfo.termSeason} {examInfo.academicYear}
+            </dd>
+          </div>
+          <div>
             <dt>Mã đề</dt>
             <dd>{examInfo.examCode}</dd>
           </div>

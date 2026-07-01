@@ -17,6 +17,10 @@ import {
   sanitizeWizardQuestionContent,
 } from "@/features/moderator/finalExams/finalExamData";
 import {
+  createDefaultExamTermFields,
+  parseTermFromExamCode,
+} from "@/features/exams/finalExam/examTermOptions";
+import {
   appendQuestionImageToContent,
   extractQuestionImageUrl,
   stripQuestionImageMarkup,
@@ -378,6 +382,8 @@ export function mapExamDetailToWizard(dto) {
     subjectCode,
     semester: dto.semester,
   });
+  const termParts = parseTermFromExamCode(paperCode);
+  const defaultTerm = createDefaultExamTermFields();
 
   return {
     examInfo: {
@@ -387,6 +393,8 @@ export function mapExamDetailToWizard(dto) {
         ?? ((String(dto.description ?? "").split(" · ")[0]?.trim()) || paperCode),
       major,
       semesterLabel: dto.semester ? `Học kỳ ${dto.semester}` : "",
+      termSeason: termParts?.termSeason ?? defaultTerm.termSeason,
+      academicYear: termParts?.academicYear ?? defaultTerm.academicYear,
       examCode: paperCode,
       revisionSourceCode: dto.revisionSourceCode ?? null,
       revisionSourceTitle: dto.revisionSourceTitle ?? null,
