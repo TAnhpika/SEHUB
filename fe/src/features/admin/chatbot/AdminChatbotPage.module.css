@@ -35,6 +35,7 @@
 .label {
   font-size: 0.8125rem;
   font-weight: 600;
+  color: var(--moderator-text);
 }
 
 .textarea,
@@ -43,10 +44,33 @@
   padding: 0.625rem 0.75rem;
   font: inherit;
   font-size: 0.875rem;
+  line-height: 1.45;
   color: var(--moderator-text);
   background: var(--moderator-input-bg);
   border: 1px solid var(--moderator-border);
   border-radius: var(--radius-md);
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.textarea::placeholder,
+.input::placeholder {
+  color: var(--moderator-text-subtle);
+  opacity: 1;
+}
+
+.textarea:focus,
+.input:focus {
+  border-color: color-mix(in srgb, var(--moderator-primary) 55%, var(--moderator-border));
+  box-shadow: 0 0 0 3px var(--moderator-primary-muted);
+}
+
+.textarea:disabled,
+.input:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .textarea {
@@ -59,6 +83,13 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
+  color: var(--moderator-text-muted);
+}
+
+.checkboxRow input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: color-mix(in srgb, var(--moderator-primary) 75%, #64748b);
 }
 
 .table {
@@ -116,4 +147,103 @@
   font-size: 0.8125rem;
   line-height: 1.5;
   white-space: pre-wrap;
+}
+
+.skeletonField {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.skeletonLabel {
+  display: block;
+  width: 8rem;
+  height: 0.875rem;
+  border-radius: 4px;
+}
+
+.skeletonInput {
+  display: block;
+  width: 100%;
+  height: 2.75rem;
+  border-radius: var(--radius-md);
+}
+
+.skeletonInputShort {
+  display: block;
+  width: 6rem;
+  height: 2.75rem;
+  border-radius: var(--radius-md);
+}
+
+.skeletonTextarea {
+  display: block;
+  width: 100%;
+  height: 6rem;
+  border-radius: var(--radius-md);
+}
+
+.skeletonTextareaShort {
+  height: 4.5rem;
+}
+
+.skeletonCheckbox {
+  display: block;
+  width: 11rem;
+  height: 1rem;
+  border-radius: 4px;
+}
+
+.skeletonButton {
+  display: block;
+  width: 7.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+}
+
+.skeletonTable {
+  display: block;
+  width: 100%;
+  height: 14rem;
+  border-radius: var(--radius-md);
+}
+
+.skeletonMessage {
+  display: block;
+  width: 100%;
+  height: 3.5rem;
+  border-radius: var(--radius-md);
+}
+
+.loadingMessages {
+  margin: 0;
+  padding: 1rem 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--moderator-text-subtle);
+  text-align: center;
+}
+
+.tableEmpty {
+  padding: 1.25rem 0.75rem !important;
+  font-size: 0.8125rem;
+  color: var(--moderator-text-subtle);
+  text-align: center;
+}
+
+.statusActive,
+.statusInactive {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  border-radius: 9999px;
+}
+
+.statusActive {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.statusInactive {
+  color: var(--moderator-text-subtle);
+  background: var(--moderator-bg);
 }

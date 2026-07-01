@@ -46,13 +46,20 @@
 }
 
 .kpiCardClickable:hover {
-  border-color: rgba(0, 74, 198, 0.3);
-  box-shadow: 0 4px 14px rgba(0, 74, 198, 0.08);
+  border-color: color-mix(in srgb, var(--moderator-primary) 35%, var(--moderator-border));
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--moderator-primary) 10%, transparent);
 }
 
 .kpiCardActive {
   border-color: var(--moderator-primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--moderator-primary) 12%, transparent);
+  background: color-mix(in srgb, var(--moderator-primary) 10%, var(--moderator-surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--moderator-primary) 14%, transparent);
+}
+
+.kpiCardActive.kpiWarn,
+.kpiCardActive.kpiRefund,
+.kpiCardActive.kpiDanger {
+  border-left-color: var(--moderator-primary);
 }
 
 .kpiIcon {
@@ -72,8 +79,8 @@
 }
 
 .kpiWarn .kpiIcon {
-  color: #b45309;
-  background: #fef3c7;
+  color: var(--color-icon-amber);
+  background: var(--color-icon-amber-bg);
 }
 
 .kpiNeutral .kpiIcon {
@@ -82,17 +89,17 @@
 }
 
 .kpiRefund .kpiIcon {
-  color: #6d28d9;
-  background: #ede9fe;
+  color: #a78bfa;
+  background: color-mix(in srgb, #8b5cf6 16%, var(--moderator-surface));
 }
 
 .kpiDanger .kpiIcon {
-  color: #b91c1c;
-  background: #fee2e2;
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
 }
 
 .kpiWarn {
-  border-left: 3px solid #f59e0b;
+  border-left: 3px solid color-mix(in srgb, var(--color-icon-amber) 65%, var(--moderator-border));
 }
 
 .kpiRefund {
@@ -138,8 +145,8 @@
 /* Panel hoàn tiền */
 .refundPanel {
   padding: 1.25rem 1.5rem;
-  background: linear-gradient(135deg, #faf5ff 0%, #f7f9fc 100%);
-  border: 1px solid rgba(139, 92, 246, 0.28);
+  background: color-mix(in srgb, #8b5cf6 10%, var(--moderator-surface));
+  border: 1px solid color-mix(in srgb, #8b5cf6 24%, var(--moderator-border));
   border-radius: 12px;
 }
 
@@ -166,10 +173,10 @@
   width: 2.25rem;
   height: 2.25rem;
   font-size: 1rem;
-  color: #6d28d9;
+  color: #a78bfa;
   background: var(--moderator-surface);
   border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.12);
+  box-shadow: 0 2px 8px color-mix(in srgb, #8b5cf6 18%, transparent);
 }
 
 .refundPanelTitle {
@@ -213,15 +220,15 @@
   font-family: inherit;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #6d28d9;
+  color: #c4b5fd;
   cursor: pointer;
   background: var(--moderator-surface);
-  border: 1px solid rgba(139, 92, 246, 0.35);
+  border: 1px solid color-mix(in srgb, #8b5cf6 30%, var(--moderator-border));
   border-radius: 8px;
 }
 
 .refundPanelLink:hover {
-  background: #ede9fe;
+  background: color-mix(in srgb, #8b5cf6 14%, var(--moderator-surface));
 }
 
 .refundList {
@@ -274,7 +281,7 @@
   margin: 0;
   font-size: 0.8125rem;
   line-height: 1.5;
-  color: #5b21b6;
+  color: #c4b5fd;
 }
 
 .refundDates {
@@ -416,14 +423,14 @@ thead .actionCol {
   padding: 0.75rem 1rem;
   margin-bottom: 1rem;
   font-size: 0.8125rem;
-  color: #5b21b6;
-  background: #faf5ff;
-  border: 1px solid #e9d5ff;
+  color: #c4b5fd;
+  background: color-mix(in srgb, #8b5cf6 12%, var(--moderator-surface));
+  border: 1px solid color-mix(in srgb, #8b5cf6 24%, var(--moderator-border));
   border-radius: 10px;
 }
 
 .refundHintBanner strong {
-  color: #4c1d95;
+  color: #ddd6fe;
 }
 
 .refundHintAction {
@@ -453,7 +460,7 @@ thead .actionCol {
 }
 
 .confirmBtn:hover {
-  background: #003d9e;
+  background: var(--moderator-primary-hover);
 }
 
 .confirmBtn:disabled {
@@ -465,21 +472,21 @@ thead .actionCol {
   padding: 0.3rem 0.65rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #6d28d9;
+  color: #c4b5fd;
   cursor: pointer;
-  background: #f5f3ff;
-  border: 1px solid #c4b5fd;
+  background: color-mix(in srgb, #8b5cf6 12%, var(--moderator-surface));
+  border: 1px solid color-mix(in srgb, #8b5cf6 28%, var(--moderator-border));
   border-radius: 6px;
 }
 
 .refundBtn:hover {
-  color: #5b21b6;
-  background: #ede9fe;
+  color: #ddd6fe;
+  background: color-mix(in srgb, #8b5cf6 20%, var(--moderator-surface));
 }
 
 .refundModalIcon {
-  color: #6d28d9;
-  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.15);
+  color: #a78bfa;
+  box-shadow: 0 2px 8px color-mix(in srgb, #8b5cf6 18%, transparent);
 }
 
 .refundSummary {
@@ -487,8 +494,8 @@ thead .actionCol {
   font-size: 0.8125rem;
   line-height: 1.5;
   color: var(--moderator-text-muted);
-  background: #faf5ff;
-  border: 1px solid #e9d5ff;
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border);
   border-radius: 10px;
 }
 
@@ -500,6 +507,10 @@ thead .actionCol {
   margin-top: 0.25rem;
 }
 
+.refundSummary strong {
+  color: var(--moderator-text);
+}
+
 .auditType {
   display: inline-block;
   padding: 0.1rem 0.45rem;
@@ -509,25 +520,25 @@ thead .actionCol {
 }
 
 .auditPayos {
-  color: #166534;
-  background: #dcfce7;
+  color: var(--color-success);
+  background: var(--color-success-bg);
 }
 
 .auditToken {
-  color: #1d4ed8;
-  background: #dbeafe;
+  color: var(--moderator-primary);
+  background: color-mix(in srgb, var(--moderator-primary) 16%, var(--moderator-surface));
 }
 
 .auditRefund {
-  color: #5b21b6;
-  background: #ede9fe;
+  color: #c4b5fd;
+  background: color-mix(in srgb, #8b5cf6 16%, var(--moderator-surface));
 }
 
 .hintError {
   margin: 0.35rem 0 0;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #b45309;
+  color: var(--color-icon-amber);
 }
 
 .hintOk {
@@ -598,7 +609,7 @@ thead .actionCol {
   color: var(--moderator-primary);
   background: var(--moderator-surface);
   border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 74, 198, 0.12);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--moderator-primary) 14%, transparent);
 }
 
 .tokenModalTitle {
@@ -666,22 +677,30 @@ thead .actionCol {
   padding: 0.6rem 0.75rem 0.6rem 2.25rem;
   font-family: inherit;
   font-size: 0.875rem;
+  color: var(--moderator-text);
+  background: var(--moderator-input-bg);
   border: 1px solid var(--moderator-border);
   border-radius: 10px;
   outline: none;
 }
 
+.studentSearchInput::placeholder {
+  color: var(--moderator-text-subtle);
+  opacity: 1;
+}
+
 .studentSearchInput:focus {
-  border-color: var(--moderator-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--moderator-primary) 12%, transparent);
+  border-color: color-mix(in srgb, var(--moderator-primary) 55%, var(--moderator-border));
+  box-shadow: 0 0 0 3px var(--moderator-primary-muted);
 }
 
 .studentCount {
   padding: 0.25rem 0.6rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #1d4ed8;
-  background: #dbeafe;
+  color: var(--moderator-primary);
+  background: color-mix(in srgb, var(--moderator-primary) 14%, var(--moderator-surface));
+  border: 1px solid color-mix(in srgb, var(--moderator-primary) 22%, var(--moderator-border));
   border-radius: 9999px;
 }
 
@@ -712,14 +731,14 @@ thead .actionCol {
 }
 
 .studentCard:hover:not(:disabled) {
-  border-color: rgba(0, 74, 198, 0.35);
-  box-shadow: 0 2px 8px rgba(0, 74, 198, 0.08);
+  border-color: color-mix(in srgb, var(--moderator-primary) 40%, var(--moderator-border));
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--moderator-primary) 10%, transparent);
 }
 
 .studentCardSelected {
   border-color: var(--moderator-primary);
-  background: #f0f6ff;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--moderator-primary) 12%, transparent);
+  background: var(--color-primary-light);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--moderator-primary) 14%, transparent);
 }
 
 .studentCardDisabled {
@@ -735,8 +754,8 @@ thead .actionCol {
   width: 2.25rem;
   height: 2.25rem;
   font-size: 0.9375rem;
-  color: #166534;
-  background: #dcfce7;
+  color: var(--color-success);
+  background: var(--color-success-bg);
   border-radius: 8px;
 }
 
@@ -787,7 +806,7 @@ thead .actionCol {
   text-align: center;
   color: var(--moderator-text-muted);
   background: var(--moderator-bg);
-  border: 1px dashed #c3c6d7;
+  border: 1px dashed var(--moderator-border);
   border-radius: 10px;
 }
 
@@ -828,15 +847,24 @@ thead .actionCol {
   padding: 0.625rem 0.75rem;
   font-family: inherit;
   font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--moderator-text);
+  background: var(--moderator-input-bg);
   border: 1px solid var(--moderator-border);
   border-radius: 8px;
   outline: none;
 }
 
+.grantInput::placeholder,
+.grantTextarea::placeholder {
+  color: var(--moderator-text-subtle);
+  opacity: 1;
+}
+
 .grantInput:focus,
 .grantTextarea:focus {
-  border-color: var(--moderator-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--moderator-primary) 12%, transparent);
+  border-color: color-mix(in srgb, var(--moderator-primary) 55%, var(--moderator-border));
+  box-shadow: 0 0 0 3px var(--moderator-primary-muted);
 }
 
 .grantTextarea {
