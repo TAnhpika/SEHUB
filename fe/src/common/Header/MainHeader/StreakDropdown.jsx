@@ -3,12 +3,27 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFire } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import { useHoverDropdown } from "@/hooks/useHoverDropdown";
-import {
-  buildDailyTasks,
-  getCompletedTaskCount,
-  loadDailyTasks,
-} from "./streakData";
+import Shimmer from "@/common/Skeleton/Shimmer";
+import { getCompletedTaskCount, loadDailyTasks } from "./streakData";
 import styles from "./StreakDropdown.module.css";
+
+const SKELETON_COUNT = 4;
+
+function TaskSkeletonList() {
+  return (
+    <ul className={styles.list} aria-busy="true" aria-label="Đang tải nhiệm vụ">
+      {Array.from({ length: SKELETON_COUNT }, (_, index) => (
+        <li key={index} className={styles.skeletonItem}>
+          <Shimmer className={styles.skeletonCheck} />
+          <div className={styles.skeletonContent}>
+            <Shimmer className={styles.skeletonLine} />
+            <Shimmer className={`${styles.skeletonLine} ${styles.skeletonLineShort}`} />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function StreakDropdown() {
   const { user } = useAuth();
@@ -16,16 +31,21 @@ function StreakDropdown() {
   const rootRef = useRef(null);
   const panelId = useId();
   const streakDays = user?.streak ?? 0;
-  const [dailyTasks, setDailyTasks] = useState(() => buildDailyTasks(streakDays));
+  const [dailyTasks, setDailyTasks] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const completedCount = getCompletedTaskCount(dailyTasks);
 
   useEffect(() => {
     let cancelled = false;
 
     async function fetchTasks() {
-      const tasks = await loadDailyTasks(streakDays);
+      setIsLoading(true);
+      const { tasks, error } = await loadDailyTasks();
       if (!cancelled) {
         setDailyTasks(tasks);
+        setLoadError(Boolean(error));
+        setIsLoading(false);
       }
     }
 
@@ -34,7 +54,7 @@ function StreakDropdown() {
     return () => {
       cancelled = true;
     };
-  }, [streakDays, user?.id]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -52,13 +72,23 @@ function StreakDropdown() {
     };
   }, [open, setOpen]);
 
+  const summaryLabel = isLoading
+    ? "…"
+    : loadError
+      ? "—"
+      : `${completedCount}/${dailyTasks.length}`;
+
   return (
     <div className={styles.root} ref={rootRef} {...rootProps}>
       <button
         type="button"
         className={`${styles.trigger} ${open ? styles["trigger-open"] : ""}`}
         onClick={handleTriggerClick}
-        aria-label={`Streak ${streakDays} ngày, ${completedCount}/${dailyTasks.length} nhiệm vụ hoàn thành`}
+        aria-label={
+          isLoading
+            ? `Streak ${streakDays} ngày, đang tải nhiệm vụ`
+            : `Streak ${streakDays} ngày, ${completedCount}/${dailyTasks.length} nhiệm vụ hoàn thành`
+        }
         aria-haspopup="true"
         aria-expanded={open}
         aria-controls={panelId}
@@ -79,34 +109,40 @@ function StreakDropdown() {
               <h2 className={styles.title}>Nhiệm vụ hàng ngày</h2>
               <p className={styles.streakMeta}>Streak {streakDays} ngày liên tiếp</p>
             </div>
-            <span className={styles.summary}>
-              {completedCount}/{dailyTasks.length}
-            </span>
+            <span className={styles.summary}>{summaryLabel}</span>
           </header>
 
-          <ul className={styles.list}>
-            {dailyTasks.map((task) => {
-              const isDone = task.current >= task.target;
+          {isLoading ? (
+            <TaskSkeletonList />
+          ) : loadError ? (
+            <p className={styles.errorState}>Không tải được nhiệm vụ. Thử lại sau.</p>
+          ) : dailyTasks.length === 0 ? (
+            <p className={styles.emptyState}>Chưa có nhiệm vụ hôm nay</p>
+          ) : (
+            <ul className={styles.list}>
+              {dailyTasks.map((task) => {
+                const isDone = task.current >= task.target;
 
-              return (
-                <li key={task.id} className={styles.item}>
-                  <span
-                    className={`${styles.check} ${isDone ? styles["check-done"] : ""}`}
-                    aria-hidden="true"
-                  />
-                  <div className={styles.content}>
-                    <p className={styles["task-title"]}>{task.title}</p>
-                    <p className={styles.progress}>
-                      Tiến độ: {task.current}/{task.target}
-                    </p>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                return (
+                  <li key={task.id} className={styles.item}>
+                    <span
+                      className={`${styles.check} ${isDone ? styles["check-done"] : ""}`}
+                      aria-hidden="true"
+                    />
+                    <div className={styles.content}>
+                      <p className={styles["task-title"]}>{task.title}</p>
+                      <p className={styles.progress}>
+                        Tiến độ: {task.current}/{task.target}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
 
           <p className={styles.footer}>
-            Hoàn thành tất cả nhiệm vụ để nhận phần thưởng đặc biệt! 🔥
+            Hoàn thành cả 3 nhiệm vụ hôm nay để nhận phần thưởng đặc biệt! 🔥
           </p>
         </div>
       )}

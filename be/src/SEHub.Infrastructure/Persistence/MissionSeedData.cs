@@ -11,7 +11,17 @@ internal static class MissionSeedData
     [
         ("daily-login", "Đăng nhập hôm nay", GamificationConstants.EventDailyLogin, 1, 5),
         ("daily-comment", "Bình luận 1 lần", GamificationConstants.EventCommentCreated, 1, 3),
+        ("daily-comment-3", "Bình luận 3 lần", GamificationConstants.EventCommentCreated, 3, 8),
+        ("daily-comment-5", "Bình luận 5 lần", GamificationConstants.EventCommentCreated, 5, 15),
         ("daily-read", "Đọc tài liệu", GamificationConstants.EventDocumentRead, 1, 5),
+        ("daily-read-2", "Đọc 2 tài liệu", GamificationConstants.EventDocumentRead, 2, 8),
+        ("daily-read-3", "Đọc 3 tài liệu", GamificationConstants.EventDocumentRead, 3, 12),
+        ("daily-exam-1", "Hoàn thành 1 đề thi", GamificationConstants.EventExamCompleted, 1, 10),
+        ("daily-exam-2", "Hoàn thành 2 đề thi", GamificationConstants.EventExamCompleted, 2, 18),
+        ("daily-ai-1", "Dùng AI 1 lần", GamificationConstants.EventAiUsed, 1, 5),
+        ("daily-ai-3", "Dùng AI 3 lần", GamificationConstants.EventAiUsed, 3, 12),
+        ("daily-post-1", "Đăng bài được duyệt", GamificationConstants.EventPostPublished, 1, 15),
+        ("daily-like-3", "Nhận 3 lượt thích", GamificationConstants.EventLikeReceived, 3, 8),
     ];
 
     internal static readonly (string Code, string Name, string EventType, int TargetCount, int RewardPoints)[] WeeklyMissions =

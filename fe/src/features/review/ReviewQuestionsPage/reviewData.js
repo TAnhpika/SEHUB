@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import * as subjectsApi from "@/api/subjectsApi";
+import * as examsApi from "@/api/examsApi";
+import * as documentsApi from "@/api/documentsApi";
 import {
   inferMajorFromSubjectCode,
   normalizeCourseSubjectCode,
@@ -220,7 +222,103 @@ function mergeCourseCatalog(apiCourses = []) {
     .filter((group) => group.courses.length > 0);
 }
 
-export async function loadReviewCourses({ apiOnly = false } = {}) {
+/** @typedef {"final" | "practice" | "documents"} CourseContentFilter */
+
+const EXAM_CONTENT_FILTERS = {
+  final: "Final",
+  practice: "Practice",
+};
+
+function extractDocumentSubjectCode(dto) {
+  const category = String(dto?.category ?? "").trim();
+  const match = category.match(/^([A-Z0-9]+)/i);
+  if (match?.[1]) {
+    return normalizeCourseSubjectCode(match[1]) ?? match[1].toUpperCase();
+  }
+
+  const title = String(dto?.title ?? "").trim();
+  const titleMatch = title.match(/^([A-Z0-9]+)/i);
+  return titleMatch?.[1]
+    ? normalizeCourseSubjectCode(titleMatch[1]) ?? titleMatch[1].toUpperCase()
+    : "";
+}
+
+async function loadSubjectCodesWithExams(examType) {
+  const codes = new Set();
+  let page = 1;
+  let totalCount = 0;
+
+  do {
+    const result = await examsApi.listExams({ type: examType, page, pageSize: 200 });
+    totalCount = Number(result?.totalCount ?? 0);
+
+    for (const item of result?.items ?? []) {
+      const code =
+        normalizeCourseSubjectCode(item?.code) ??
+        String(item?.code ?? "").trim().toUpperCase();
+      if (code) {
+        codes.add(code);
+      }
+    }
+
+    page += 1;
+  } while ((page - 1) * 200 < totalCount);
+
+  return codes;
+}
+
+async function loadSubjectCodesWithDocuments() {
+  const codes = new Set();
+  let page = 1;
+  let totalCount = 0;
+
+  do {
+    const result = await documentsApi.listDocuments({ page, pageSize: 200 });
+    totalCount = Number(result?.totalCount ?? 0);
+
+    for (const item of result?.items ?? []) {
+      const code = extractDocumentSubjectCode(item);
+      if (code) {
+        codes.add(code);
+      }
+    }
+
+    page += 1;
+  } while ((page - 1) * 200 < totalCount);
+
+  return codes;
+}
+
+function filterCatalogBySubjectCodes(catalog, subjectCodes) {
+  if (!subjectCodes?.size) {
+    return [];
+  }
+
+  return catalog
+    .map((group) => ({
+      ...group,
+      courses: (group.courses ?? []).filter((course) => {
+        const code = normalizeCatalogCourseCode(course);
+        return code && subjectCodes.has(code);
+      }),
+    }))
+    .filter((group) => group.courses.length > 0);
+}
+
+async function resolveSubjectCodesWithContent(contentFilter) {
+  if (contentFilter === "documents") {
+    return loadSubjectCodesWithDocuments();
+  }
+
+  const examType = EXAM_CONTENT_FILTERS[contentFilter];
+  if (!examType) {
+    return null;
+  }
+
+  return loadSubjectCodesWithExams(examType);
+}
+
+export async function loadReviewCourses({ apiOnly = false, contentFilter = null } = {}) {
   if (USE_MOCK) {
     return REVIEW_COURSES;
   }
@@ -234,10 +332,18 @@ export async function loadReviewCourses({ apiOnly = false } = {}) {
       major: normalizeCatalogMajor(course.code, course.major ?? "SE"),
     })),
   }));
-  return apiOnly ? normalizedApiCourses : mergeCourseCatalog(normalizedApiCourses);
+
+  let catalog = apiOnly ? normalizedApiCourses : mergeCourseCatalog(normalizedApiCourses);
+
+  if (contentFilter) {
+    const subjectCodes = await resolveSubjectCodesWithContent(contentFilter);
+    catalog = filterCatalogBySubjectCodes(catalog, subjectCodes);
+  }
+
+  return catalog;
 }
 
-export function useReviewCourses({ apiOnly = false } = {}) {
+export function useReviewCourses({ apiOnly = false, contentFilter = null } = {}) {
   const [courses, setCourses] = useState(apiOnly && !USE_MOCK ? [] : REVIEW_COURSES);
   const [loading, setLoading] = useState(!USE_MOCK);
 
@@ -248,7 +354,7 @@ export function useReviewCourses({ apiOnly = false } = {}) {
     }
 
     let cancelled = false;
-    loadReviewCourses({ apiOnly })
+    loadReviewCourses({ apiOnly, contentFilter })
       .then((data) => {
         if (!cancelled) {
           setCourses(data);
@@ -257,6 +363,7 @@ export function useReviewCourses({ apiOnly = false } = {}) {
       })
       .catch(() => {
         if (!cancelled) {
+          setCourses([]);
           setLoading(false);
         }
       });
@@ -264,7 +371,7 @@ export function useReviewCourses({ apiOnly = false } = {}) {
     return () => {
       cancelled = true;
     };
-  }, [apiOnly]);
+  }, [apiOnly, contentFilter]);
 
   return { courses, loading };
 }

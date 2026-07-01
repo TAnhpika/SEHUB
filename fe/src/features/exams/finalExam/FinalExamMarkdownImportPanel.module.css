@@ -130,3 +130,33 @@
   margin: 0;
   font-size: 0.8125rem;
 }
+
+[data-theme="dark"] .modeSwitch {
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border-light);
+}
+
+[data-theme="dark"] .modeBtnActive {
+  background: var(--moderator-surface-elevated);
+  box-shadow: none;
+}
+
+[data-theme="dark"] .textarea {
+  background: var(--moderator-surface-elevated);
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+[data-theme="dark"] .desc code {
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border-light);
+}
+
+[data-theme="dark"] .uploadZone {
+  background: var(--moderator-surface-elevated);
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+[data-theme="dark"] .uploadZone:hover {
+  background: var(--moderator-primary-soft);
+  border-color: var(--moderator-primary);
+}

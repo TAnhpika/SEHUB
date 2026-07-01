@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Button from "@/common/Button/Button";
+import Shimmer from "@/common/Skeleton/Shimmer";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { ACTION_LOADING } from "@/utils/actionLoadingLabels";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
@@ -36,6 +37,57 @@ const EMPTY_KNOWLEDGE = {
   sortOrder: 0,
 };
 
+function ChatbotSettingsSkeleton() {
+  return (
+    <div className={styles.panel} aria-busy="true" aria-label="Đang tải cài đặt chatbot">
+      <div className={styles.skeletonField}>
+        <Shimmer className={styles.skeletonLabel} />
+        <Shimmer className={styles.skeletonTextarea} />
+      </div>
+      <div className={styles.skeletonField}>
+        <Shimmer className={styles.skeletonLabel} />
+        <Shimmer className={`${styles.skeletonTextarea} ${styles.skeletonTextareaShort}`} />
+      </div>
+      <Shimmer className={styles.skeletonCheckbox} />
+      <Shimmer className={styles.skeletonButton} />
+    </div>
+  );
+}
+
+function ChatbotKnowledgeSkeleton() {
+  return (
+    <div className={styles.panel} aria-busy="true" aria-label="Đang tải knowledge base">
+      <div className={styles.skeletonField}>
+        <Shimmer className={styles.skeletonLabel} />
+        <Shimmer className={styles.skeletonInput} />
+      </div>
+      <div className={styles.skeletonField}>
+        <Shimmer className={styles.skeletonLabel} />
+        <Shimmer className={styles.skeletonTextarea} />
+      </div>
+      <div className={styles.skeletonField}>
+        <Shimmer className={styles.skeletonLabel} />
+        <Shimmer className={styles.skeletonInput} />
+      </div>
+      <div className={styles.skeletonField}>
+        <Shimmer className={styles.skeletonLabel} />
+        <Shimmer className={styles.skeletonInputShort} />
+      </div>
+      <Shimmer className={styles.skeletonCheckbox} />
+      <Shimmer className={styles.skeletonButton} />
+      <Shimmer className={styles.skeletonTable} />
+    </div>
+  );
+}
+
+function ChatbotTableSkeleton() {
+  return (
+    <div className={styles.panel} aria-busy="true" aria-label="Đang tải dữ liệu">
+      <Shimmer className={styles.skeletonTable} />
+    </div>
+  );
+}
+
 function AdminChatbotPage() {
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
@@ -51,9 +103,14 @@ function AdminChatbotPage() {
   const [conversations, setConversations] = useState([]);
   const [selectedConversationId, setSelectedConversationId] = useState(null);
   const [conversationMessages, setConversationMessages] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+
     Promise.all([
       getAdminChatbotSettings().then(mapChatbotSettingsDto),
       listAdminChatbotKnowledge().then((list) =>
@@ -64,6 +121,7 @@ function AdminChatbotPage() {
       ),
     ])
       .then(([settings, entries, convs]) => {
+        if (cancelled) return;
         if (settings) {
           setSettingsForm(settings);
         }
@@ -71,8 +129,19 @@ function AdminChatbotPage() {
         setConversations(convs);
       })
       .catch((error) => {
-        showToast(error?.message ?? "Không tải được dữ liệu chatbot.");
+        if (!cancelled) {
+          showToast(error?.message ?? "Không tải được dữ liệu chatbot.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [showToast]);
 
   async function handleSaveSettings() {
@@ -147,6 +216,8 @@ function AdminChatbotPage() {
 
   async function handleSelectConversation(conversationId) {
     setSelectedConversationId(conversationId);
+    setConversationMessages([]);
+    setIsLoadingMessages(true);
     try {
       const list = await getAdminChatbotConversationMessages(conversationId);
       setConversationMessages(
@@ -155,6 +226,8 @@ function AdminChatbotPage() {
     } catch (error) {
       showToast(error?.message ?? "Không tải được tin nhắn.");
       setConversationMessages([]);
+    } finally {
+      setIsLoadingMessages(false);
     }
   }
 
@@ -177,12 +250,16 @@ function AdminChatbotPage() {
       </div>
 
       {tab === "settings" ? (
+        isLoading ? (
+          <ChatbotSettingsSkeleton />
+        ) : (
         <div className={styles.panel}>
           <label className={styles.field}>
             <span className={styles.label}>System prompt</span>
             <textarea
               className={styles.textarea}
               value={settingsForm.systemPrompt}
+              disabled={isSaving}
               onChange={(event) =>
                 setSettingsForm((prev) => ({ ...prev, systemPrompt: event.target.value }))
               }
@@ -194,6 +271,7 @@ function AdminChatbotPage() {
               className={styles.textarea}
               rows={3}
               value={settingsForm.welcomeMessage}
+              disabled={isSaving}
               onChange={(event) =>
                 setSettingsForm((prev) => ({ ...prev, welcomeMessage: event.target.value }))
               }
@@ -203,6 +281,7 @@ function AdminChatbotPage() {
             <input
               type="checkbox"
               checked={settingsForm.isEnabled}
+              disabled={isSaving}
               onChange={(event) =>
                 setSettingsForm((prev) => ({ ...prev, isEnabled: event.target.checked }))
               }
@@ -215,15 +294,20 @@ function AdminChatbotPage() {
             </Button>
           </div>
         </div>
+        )
       ) : null}
 
       {tab === "knowledge" ? (
+        isLoading ? (
+          <ChatbotKnowledgeSkeleton />
+        ) : (
         <div className={styles.panel}>
           <label className={styles.field}>
             <span className={styles.label}>Tiêu đề</span>
             <input
               className={styles.input}
               value={knowledgeForm.title}
+              disabled={isSaving}
               onChange={(event) =>
                 setKnowledgeForm((prev) => ({ ...prev, title: event.target.value }))
               }
@@ -234,6 +318,7 @@ function AdminChatbotPage() {
             <textarea
               className={styles.textarea}
               value={knowledgeForm.content}
+              disabled={isSaving}
               onChange={(event) =>
                 setKnowledgeForm((prev) => ({ ...prev, content: event.target.value }))
               }
@@ -244,6 +329,7 @@ function AdminChatbotPage() {
             <input
               className={styles.input}
               value={knowledgeForm.tags}
+              disabled={isSaving}
               onChange={(event) =>
                 setKnowledgeForm((prev) => ({ ...prev, tags: event.target.value }))
               }
@@ -255,6 +341,7 @@ function AdminChatbotPage() {
               className={styles.input}
               type="number"
               value={knowledgeForm.sortOrder}
+              disabled={isSaving}
               onChange={(event) =>
                 setKnowledgeForm((prev) => ({ ...prev, sortOrder: event.target.value }))
               }
@@ -264,6 +351,7 @@ function AdminChatbotPage() {
             <input
               type="checkbox"
               checked={knowledgeForm.isActive}
+              disabled={isSaving}
               onChange={(event) =>
                 setKnowledgeForm((prev) => ({ ...prev, isActive: event.target.checked }))
               }
@@ -277,6 +365,7 @@ function AdminChatbotPage() {
             {editingKnowledgeId ? (
               <Button
                 look="outline"
+                disabled={isSaving}
                 onClick={() => {
                   setEditingKnowledgeId(null);
                   setKnowledgeForm(EMPTY_KNOWLEDGE);
@@ -297,42 +386,68 @@ function AdminChatbotPage() {
               </tr>
             </thead>
             <tbody>
-              {knowledge.map((entry) => (
-                <tr key={entry.id}>
-                  <td>{entry.title}</td>
-                  <td>{entry.tags || "—"}</td>
-                  <td>{entry.isActive ? "Active" : "Inactive"}</td>
-                  <td>
-                    <div className={styles.actions}>
-                      <Button
-                        size="sm"
-                        look="outline"
-                        onClick={() => {
-                          setEditingKnowledgeId(entry.id);
-                          setKnowledgeForm({
-                            title: entry.title,
-                            content: entry.content,
-                            tags: entry.tags ?? "",
-                            isActive: entry.isActive,
-                            sortOrder: entry.sortOrder,
-                          });
-                        }}
+              {knowledge.length > 0 ? (
+                knowledge.map((entry) => (
+                  <tr key={entry.id}>
+                    <td>{entry.title}</td>
+                    <td>{entry.tags || "—"}</td>
+                    <td>
+                      <span
+                        className={
+                          entry.isActive ? styles.statusActive : styles.statusInactive
+                        }
                       >
-                        Sửa
-                      </Button>
-                      <Button size="sm" look="outline" onClick={() => handleDeleteKnowledge(entry.id)}>
-                        Xóa
-                      </Button>
-                    </div>
+                        {entry.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td>
+                      <div className={styles.actions}>
+                        <Button
+                          size="sm"
+                          look="outline"
+                          disabled={isSaving}
+                          onClick={() => {
+                            setEditingKnowledgeId(entry.id);
+                            setKnowledgeForm({
+                              title: entry.title,
+                              content: entry.content,
+                              tags: entry.tags ?? "",
+                              isActive: entry.isActive,
+                              sortOrder: entry.sortOrder,
+                            });
+                          }}
+                        >
+                          Sửa
+                        </Button>
+                        <Button
+                          size="sm"
+                          look="outline"
+                          disabled={isSaving}
+                          onClick={() => handleDeleteKnowledge(entry.id)}
+                        >
+                          Xóa
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4} className={styles.tableEmpty}>
+                    Chưa có mục knowledge nào.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
+        )
       ) : null}
 
       {tab === "conversations" ? (
+        isLoading ? (
+          <ChatbotTableSkeleton />
+        ) : (
         <div className={styles.panel}>
           <table className={styles.table}>
             <thead>
@@ -353,6 +468,9 @@ function AdminChatbotPage() {
                     <Button
                       size="sm"
                       look="outline"
+                      disabled={isLoadingMessages && selectedConversationId === conversation.id}
+                      loading={isLoadingMessages && selectedConversationId === conversation.id}
+                      loadingLabel="Đang tải..."
                       onClick={() => handleSelectConversation(conversation.id)}
                     >
                       Xem
@@ -364,16 +482,27 @@ function AdminChatbotPage() {
           </table>
 
           {selectedConversationId ? (
-            <div className={styles.messageList}>
-              {conversationMessages.map((message) => (
-                <div key={message.id} className={styles.messageItem}>
-                  <p className={styles.messageRole}>{message.role}</p>
-                  <p className={styles.messageText}>{message.text}</p>
-                </div>
-              ))}
+            <div className={styles.messageList} aria-busy={isLoadingMessages}>
+              {isLoadingMessages ? (
+                <>
+                  <Shimmer className={styles.skeletonMessage} />
+                  <Shimmer className={styles.skeletonMessage} />
+                  <Shimmer className={styles.skeletonMessage} />
+                </>
+              ) : conversationMessages.length > 0 ? (
+                conversationMessages.map((message) => (
+                  <div key={message.id} className={styles.messageItem}>
+                    <p className={styles.messageRole}>{message.role}</p>
+                    <p className={styles.messageText}>{message.text}</p>
+                  </div>
+                ))
+              ) : (
+                <p className={styles.loadingMessages}>Không có tin nhắn trong hội thoại này.</p>
+              )}
             </div>
           ) : null}
         </div>
+        )
       ) : null}
     </AdminPageLayout>
   );
