@@ -268,6 +268,7 @@ export function mapAdminExamDetail(dto) {
 
   return {
     ...base,
+    questions: dto.questions ?? [],
     questionsData: (dto.questions ?? []).map((question, index) =>
       mapAdminReviewQuestion(question, index),
     ),

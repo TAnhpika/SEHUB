@@ -142,6 +142,17 @@
   color: var(--moderator-text);
 }
 
+.questionReview {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.questionReview .title {
+  font-size: 1.25rem;
+}
+
 .formActions {
   display: flex;
   flex-wrap: wrap;

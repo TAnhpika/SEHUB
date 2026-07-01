@@ -387,6 +387,7 @@ export async function saveAdminExamViaApi(form, options = {}) {
   const {
     status = "draft",
     ocrQuestions = [],
+    questionsAreCreateItems = false,
     pdfFile = null,
     confirmDuplicate = false,
   } = options;
@@ -403,7 +404,11 @@ export async function saveAdminExamViaApi(form, options = {}) {
   }
 
   const questions =
-    form.typeKey === "final" ? mapMockOcrQuestionsToCreateItems(ocrQuestions) : [];
+    form.typeKey === "final"
+      ? questionsAreCreateItems
+        ? ocrQuestions
+        : mapMockOcrQuestionsToCreateItems(ocrQuestions)
+      : [];
   const body = mapAdminExamFormToCreateRequest(form, { questions });
   const dto = await adminApi.createExam(body, confirmDuplicate);
 
@@ -430,6 +435,7 @@ export async function updateAdminExamViaApi(examId, form, options = {}) {
   const {
     status = "draft",
     ocrQuestions = [],
+    questionsAreCreateItems = false,
     pdfFile = null,
     confirmDuplicate = false,
   } = options;
@@ -445,7 +451,9 @@ export async function updateAdminExamViaApi(examId, form, options = {}) {
 
   const questions =
     form.typeKey === "final" && ocrQuestions.length > 0
-      ? mapMockOcrQuestionsToCreateItems(ocrQuestions)
+      ? questionsAreCreateItems
+        ? ocrQuestions
+        : mapMockOcrQuestionsToCreateItems(ocrQuestions)
       : null;
   const body = mapAdminExamFormToUpdateRequest(form, { questions });
 

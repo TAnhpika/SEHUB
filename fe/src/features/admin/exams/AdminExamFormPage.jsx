@@ -1,20 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { mapAdminReviewQuestion } from "@/api/adminMapper";
-import * as adminApi from "@/api/adminApi";
+import { mapWizardQuestionsToCreateItems } from "@/api/adminMapper";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { extractCourseSubjectCode } from "@/utils/examDisplay";
-import { mergeQuestionImage } from "@/utils/examQuestionContent";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
-import AdminQuestionImageField from "@/features/admin/exams/AdminQuestionImageField";
 import FinalExamInfoFields from "@/features/exams/finalExam/FinalExamInfoFields";
 import FinalExamMarkdownImportPanel from "@/features/exams/finalExam/FinalExamMarkdownImportPanel";
+import QuestionEditorCard from "@/features/moderator/finalExams/components/QuestionEditorCard";
 import {
   semesterIdToLabel,
   semesterLabelToId,
 } from "@/features/exams/finalExam/semesterUtils";
-import { parseTotalQuestions } from "@/features/moderator/finalExams/finalExamData";
+import {
+  isQuestionComplete,
+  mapImportedExamQuestions,
+  parseTotalQuestions,
+} from "@/features/moderator/finalExams/finalExamData";
 import {
   createDefaultExamTermFields,
   parseTermFromExamCode,
@@ -23,8 +25,8 @@ import {
   DEMO_DUPLICATE_SHA,
   EXAM_TYPE_OPTIONS,
   FINAL_EXAM_DEFAULTS,
-  MOCK_OCR_QUESTIONS,
   PRACTICE_EXAM_DEFAULTS,
+  buildMockOcrImportQuestions,
   findDuplicateBySha,
   getSemesterLabel,
   getTrackLabel,
@@ -38,9 +40,10 @@ import {
 } from "@/features/admin/exams/adminExamData";
 import examStyles from "@/features/admin/exams/AdminExam.module.css";
 import formStyles from "@/features/admin/exams/AdminExamFormPage.module.css";
+import questionStyles from "@/features/moderator/finalExams/steps/FinalExamQuestionsStep.module.css";
 import styles from "@/features/admin/shared/adminPage.module.css";
 
-const STEPS_FINAL = ["Thông tin", "Upload & OCR", "Xác nhận"];
+const STEPS_FINAL = ["Thông tin", "Upload & OCR", "Rà soát câu hỏi"];
 const STEPS_PRACTICE = ["Thông tin", "Nội dung đề", "Xác nhận"];
 
 function buildInitialForm(exam) {
@@ -103,9 +106,8 @@ function AdminExamFormPage() {
   const [ocrConfirmed, setOcrConfirmed] = useState(false);
   const [forceUniqueSha, setForceUniqueSha] = useState(false);
   const [markdownText, setMarkdownText] = useState("");
-  const [importedQuestions, setImportedQuestions] = useState([]);
-  const [questionImages, setQuestionImages] = useState({});
-  const [uploadingQuestionIndex, setUploadingQuestionIndex] = useState(null);
+  const [editableQuestions, setEditableQuestions] = useState([]);
+  const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [importingMarkdown, setImportingMarkdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [questionCountInput, setQuestionCountInput] = useState(() =>
@@ -131,6 +133,9 @@ function AdminExamFormPage() {
         setOcrConfirmed(
           Boolean(loaded.ocrConfirmed ?? (loaded.typeKey === "final" && loaded.questionCount > 0)),
         );
+        if (loaded.typeKey === "final" && Array.isArray(loaded.questions) && loaded.questions.length > 0) {
+          setEditableQuestions(mapImportedExamQuestions(loaded.questions));
+        }
       }
       setLoadingExam(false);
     });
@@ -176,6 +181,36 @@ function AdminExamFormPage() {
     setOcrConfirmed(false);
     setForceUniqueSha(false);
     setQuestionCountInput(String(FINAL_EXAM_DEFAULTS.maxQuestions));
+    setEditableQuestions([]);
+    setActiveQuestionIndex(0);
+    setMarkdownText("");
+  }
+
+  function applyImportedQuestions(imported, warnings = []) {
+    const mapped = mapImportedExamQuestions(imported, warnings);
+    setEditableQuestions(mapped);
+    setActiveQuestionIndex(0);
+    setOcrDone(true);
+    setOcrConfirmed(false);
+    patchForm({ totalQuestions: mapped.length });
+  }
+
+  function updateActiveQuestion(patch) {
+    setEditableQuestions((prev) =>
+      prev.map((question, index) =>
+        index === activeQuestionIndex ? { ...question, ...patch } : question,
+      ),
+    );
+  }
+
+  function updateActiveAnswer(key, value) {
+    setEditableQuestions((prev) =>
+      prev.map((question, index) =>
+        index === activeQuestionIndex
+          ? { ...question, answers: { ...question.answers, [key]: value } }
+          : question,
+      ),
+    );
   }
 
   function validateStep0() {
@@ -216,7 +251,7 @@ function AdminExamFormPage() {
 
   function validateStep1() {
     if (isFinal) {
-      if (!fileName && importedQuestions.length === 0 && !isEdit) {
+      if (!fileName && editableQuestions.length === 0 && !isEdit) {
         showToast("Chọn file OCR hoặc import câu hỏi bằng Markdown.");
         return false;
       }
@@ -264,10 +299,11 @@ function AdminExamFormPage() {
       showToast("Chọn file PDF/ảnh trước khi OCR.");
       return;
     }
-    setOcrDone(true);
     if (!sha256) setSha256(mockComputeSha256());
+    applyImportedQuestions(buildMockOcrImportQuestions());
+    setForceUniqueSha(false);
     setStep(2);
-    showToast("OCR hoàn tất — Admin rà soát đáp án trước khi lưu.");
+    showToast("OCR hoàn tất — rà soát đáp án trước khi lưu.");
   }
 
   async function handleImportMarkdown() {
@@ -284,13 +320,11 @@ function AdminExamFormPage() {
         showToast("Không parse được câu hỏi từ Markdown.");
         return;
       }
-      setImportedQuestions(questions);
-      setQuestionImages({});
-      setOcrDone(true);
-      setOcrConfirmed(false);
-      setStep(2);
 
       const warnings = result?.warnings ?? [];
+      applyImportedQuestions(questions, warnings);
+      setStep(2);
+
       const skippedCount = warnings.length;
       if (skippedCount > 0) {
         const preview = warnings.slice(0, 2).join(" · ");
@@ -318,63 +352,24 @@ function AdminExamFormPage() {
     }
   }
 
-  const reviewQuestions = useMemo(() => {
-    const source =
-      importedQuestions.length > 0
-        ? importedQuestions
-        : MOCK_OCR_QUESTIONS;
-
-    return source.map((question, index) => {
-      const mapped = mapAdminReviewQuestion(question, index);
-      const imageUrl = questionImages[index] ?? mapped.imageUrl ?? null;
-      return {
-        ...mapped,
-        imageUrl,
-      };
-    });
-  }, [importedQuestions, questionImages]);
+  const activeQuestion = editableQuestions[activeQuestionIndex] ?? null;
+  const questionCompleteCount = useMemo(
+    () => editableQuestions.filter(isQuestionComplete).length,
+    [editableQuestions],
+  );
+  const questionProgressPercent =
+    editableQuestions.length > 0
+      ? Math.round((questionCompleteCount / editableQuestions.length) * 100)
+      : 0;
 
   function getQuestionsForSave() {
-    const source =
-      importedQuestions.length > 0
-        ? importedQuestions
-        : MOCK_OCR_QUESTIONS;
-
-    return source.map((question, index) =>
-      mergeQuestionImage(question, questionImages[index]),
-    );
-  }
-
-  async function handleQuestionImageUpload(questionIndex, file) {
-    setUploadingQuestionIndex(questionIndex);
-    try {
-      const result = await adminApi.uploadExamQuestionImage(file);
-      const url = result?.url ?? result?.Url;
-      if (!url) {
-        throw new Error("Không nhận được URL ảnh.");
-      }
-      setQuestionImages((prev) => ({
-        ...prev,
-        [questionIndex]: url,
-      }));
-      showToast(`Đã tải ảnh cho câu ${questionIndex + 1}.`);
-    } finally {
-      setUploadingQuestionIndex(null);
-    }
-  }
-
-  function handleQuestionImageRemove(questionIndex) {
-    setQuestionImages((prev) => {
-      const next = { ...prev };
-      delete next[questionIndex];
-      return next;
-    });
+    return mapWizardQuestionsToCreateItems(editableQuestions);
   }
 
   function goNext() {
     if (step === 0 && !validateStep0()) return;
     if (step === 1 && !validateStep1()) return;
-    if (step === 1 && isFinal && fileName && !ocrDone && importedQuestions.length === 0) {
+    if (step === 1 && isFinal && fileName && !ocrDone && editableQuestions.length === 0) {
       runOcr();
       return;
     }
@@ -388,6 +383,7 @@ function AdminExamFormPage() {
         isFinal && ocrDone
           ? getQuestionsForSave()
           : [],
+      questionsAreCreateItems: true,
       pdfFile,
       confirmDuplicate: forceUniqueSha,
     };
@@ -445,7 +441,11 @@ function AdminExamFormPage() {
         return;
       }
       if (!ocrConfirmed) {
-        showToast("Tick xác nhận đã rà soát đáp án OCR.");
+        showToast("Tick xác nhận đã rà soát đáp án.");
+        return;
+      }
+      if (questionCompleteCount < 1) {
+        showToast("Cần ít nhất một câu hỏi hoàn chỉnh trước khi publish.");
         return;
       }
     } else if (form.attachments.length === 0) {
@@ -493,23 +493,17 @@ function AdminExamFormPage() {
       isFinal
         ? {
             label: "Số câu",
-            value: ocrDone
-              ? String(importedQuestions.length > 0 ? importedQuestions.length : reviewQuestions.length)
-              : "—",
+            value:
+              editableQuestions.length > 0
+                ? `${questionCompleteCount}/${editableQuestions.length} hoàn chỉnh`
+                : "—",
           }
         : { label: "Hạn nộp bài", value: form.deadline || "Chưa đặt" },
       isPractice
         ? { label: "File đính kèm", value: String(form.attachments.length) }
         : null,
     ].filter(Boolean),
-    [
-      form,
-      isFinal,
-      isPractice,
-      ocrDone,
-      importedQuestions.length,
-      reviewQuestions.length,
-    ],
+    [form, isFinal, isPractice, editableQuestions.length, questionCompleteCount],
   );
 
   function handleFinalInfoChange(patch) {
@@ -741,7 +735,7 @@ function AdminExamFormPage() {
               onMarkdownChange={setMarkdownText}
               onImport={handleImportMarkdown}
               importing={importingMarkdown}
-              importLabel="Import Markdown và sang bước xác nhận"
+              importLabel="Import Markdown và rà soát câu hỏi"
               fileName={fileName}
               onFileChange={handleFileChange}
               onRunOcr={runOcr}
@@ -838,10 +832,12 @@ function AdminExamFormPage() {
 
         {step === 2 ? (
           <>
-            <h2 className={styles.panelTitle}>Xác nhận trước khi lưu</h2>
+            <h2 className={styles.panelTitle}>
+              {isFinal && ocrDone ? "Rà soát câu hỏi" : "Xác nhận trước khi lưu"}
+            </h2>
             <p className={styles.panelDesc}>
               {isFinal
-                ? "Admin review kết quả OCR — bắt buộc trước khi publish (§4.2)."
+                ? "Chỉnh sửa nội dung, đáp án và giải thích — giống luồng Moderator trước khi publish (§4.2)."
                 : "Kiểm tra thông tin trước khi publish lên danh sách đề thực hành."}
             </p>
             <div className={styles.divider} />
@@ -855,46 +851,83 @@ function AdminExamFormPage() {
               ))}
             </dl>
 
-            {isFinal && ocrDone ? (
-              <div className={examStyles.ocrPanel}>
-                <p className={examStyles.ocrPanelTitle}>
-                  {reviewQuestions.length} câu {importedQuestions.length > 0 ? "Markdown" : "OCR"} — rà soát đáp án và thêm ảnh minh họa nếu cần
-                </p>
-                <ul className={examStyles.questionList}>
-                  {reviewQuestions.map((q, questionIndex) => (
-                    <li key={q.id} className={examStyles.questionItem}>
-                      <p className={examStyles.questionText}>
-                        Câu {q.id}. {q.text}
-                        {q.isMulti ? (
-                          <span className={examStyles.multiBadge}>
-                            Chọn {q.requiredSelectCount} đáp án
-                          </span>
-                        ) : null}
+            {isFinal && ocrDone && activeQuestion ? (
+              <div className={formStyles.questionReview}>
+                <section className={questionStyles.summary}>
+                  <div className={questionStyles.summaryHead}>
+                    <div>
+                      <h3 className={questionStyles.title}>Nhập câu hỏi trắc nghiệm</h3>
+                      <p className={questionStyles.subtitle}>
+                        {form.subjectName
+                          ? `${form.code} — ${form.subjectName}`
+                          : form.code || "Đề cuối kỳ"}
+                        {form.semester ? ` · ${getSemesterLabel(form.semester)}` : ""}
                       </p>
-                      <AdminQuestionImageField
-                        questionIndex={questionIndex}
-                        imageUrl={q.imageUrl}
-                        uploading={uploadingQuestionIndex === questionIndex}
-                        onUpload={handleQuestionImageUpload}
-                        onRemove={handleQuestionImageRemove}
-                        onError={(message) => showToast(message)}
-                      />
-                      <ol className={examStyles.optionList}>
-                        {q.options.map((opt, i) => (
-                          <li
-                            key={`${q.id}-${i}`}
-                            className={
-                              q.correctIndices?.includes(i) ? examStyles.optionCorrect : undefined
-                            }
-                          >
-                            {String.fromCharCode(65 + i)}. {opt}
-                            {q.correctIndices?.includes(i) ? " ✓" : ""}
-                          </li>
-                        ))}
-                      </ol>
-                    </li>
-                  ))}
-                </ul>
+                    </div>
+                    <p className={questionStyles.count}>
+                      Hoàn thiện: {questionCompleteCount}/{editableQuestions.length} câu
+                    </p>
+                  </div>
+                  <div
+                    className={questionStyles.progress}
+                    role="progressbar"
+                    aria-valuenow={questionProgressPercent}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  >
+                    <div
+                      className={questionStyles.progressFill}
+                      style={{ width: `${questionProgressPercent}%` }}
+                    />
+                  </div>
+                </section>
+
+                <QuestionEditorCard
+                  questionNumber={activeQuestionIndex + 1}
+                  question={activeQuestion}
+                  importWarnings={activeQuestion.importWarnings}
+                  onChange={updateActiveQuestion}
+                  onAnswerChange={updateActiveAnswer}
+                  onCorrectAnswerChange={(key) => updateActiveQuestion({ correctAnswer: key })}
+                  onCorrectAnswersChange={(correctAnswers) =>
+                    updateActiveQuestion({ correctAnswers })
+                  }
+                  onToggleExplanation={() =>
+                    updateActiveQuestion({
+                      showExplanation: !activeQuestion.showExplanation,
+                    })
+                  }
+                />
+
+                {editableQuestions.length > 1 ? (
+                  <div className={questionStyles.picker}>
+                    <span className={questionStyles.pickerLabel}>
+                      Chuyển câu ({editableQuestions.length} câu):
+                    </span>
+                    <div className={questionStyles.pickerList}>
+                      {editableQuestions.map((item, index) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={`${questionStyles.pickerBtn} ${
+                            index === activeQuestionIndex ? questionStyles["pickerBtn-active"] : ""
+                          } ${isQuestionComplete(item) ? questionStyles["pickerBtn-complete"] : ""} ${
+                            item.importWarnings?.length ? questionStyles["pickerBtn-warning"] : ""
+                          }`}
+                          onClick={() => setActiveQuestionIndex(index)}
+                          title={
+                            item.importWarnings?.length
+                              ? item.importWarnings.join(" · ")
+                              : undefined
+                          }
+                        >
+                          {index + 1}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
                 <div className={formStyles.confirmRow}>
                   <input
                     id="ocr-confirm"
@@ -903,7 +936,7 @@ function AdminExamFormPage() {
                     onChange={(e) => setOcrConfirmed(e.target.checked)}
                   />
                   <label htmlFor="ocr-confirm">
-                    Tôi đã rà soát nội dung OCR và đáp án đúng. Cho phép lưu đề cuối kỳ lên hệ thống.
+                    Tôi đã rà soát nội dung và đáp án đúng. Cho phép lưu đề cuối kỳ lên hệ thống.
                   </label>
                 </div>
               </div>
@@ -936,7 +969,10 @@ function AdminExamFormPage() {
               </Button>
               <Button
                 type="submit"
-                disabled={blockSave || (isFinal && (!ocrDone || !ocrConfirmed))}
+                disabled={
+                  blockSave ||
+                  (isFinal && (!ocrDone || !ocrConfirmed || questionCompleteCount < 1))
+                }
               >
                 {isEdit ? "Lưu & xuất bản" : "Publish đề thi"}
               </Button>
