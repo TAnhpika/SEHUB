@@ -25,6 +25,12 @@ export function getDefaultAcademicYear(now = new Date()) {
   return String(now.getFullYear());
 }
 
+export const EXAM_TERM_SEASON_LABELS = {
+  SP: "Spring",
+  SU: "Summer",
+  FA: "Fall",
+};
+
 export function parseTermFromExamCode(examCode) {
   const parsed = parseExamPaperCode(examCode);
   if (!parsed?.season || !parsed?.year) {
@@ -34,6 +40,19 @@ export function parseTermFromExamCode(examCode) {
   return {
     termSeason: parsed.season,
     academicYear: parsed.year,
+  };
+}
+
+export function resolveExamTermFromCode(examCode) {
+  const parsed = parseExamPaperCode(examCode);
+  if (!parsed?.season || !parsed?.year) {
+    return null;
+  }
+
+  return {
+    termLabel: EXAM_TERM_SEASON_LABELS[parsed.season] ?? parsed.season,
+    year: parsed.year,
+    season: parsed.season,
   };
 }
 

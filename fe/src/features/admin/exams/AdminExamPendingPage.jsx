@@ -631,7 +631,7 @@ function AdminExamPendingPage() {
 
                 <div className={pendingStyles.detailActions}>
                   <Button onClick={() => handleApprove(selected)} disabled={actionLoading} loading={actionLoading} loadingLabel={ACTION_LOADING.approve}>
-                    Duyệt & {EXAM_STATUS_LABELS.published}
+                    Duyệt & Xuất bản
                   </Button>
                   <Button
                     look="outline"

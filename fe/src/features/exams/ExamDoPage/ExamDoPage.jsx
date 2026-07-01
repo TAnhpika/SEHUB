@@ -46,6 +46,11 @@ import {
   setSingleSelectAnswer,
   toggleMultiSelectAnswer,
 } from "@/features/exams/examQuestionTypes";
+import {
+  getAnswerShortcutKey,
+  resolveOptionKeyFromDigit,
+  shouldIgnoreExamShortcut,
+} from "@/features/exams/examDoKeyboard";
 import styles from "./ExamDoPage.module.css";
 
 /** §3.3 — Làm bài trực tuyến: 45 phút (mock; production có thể cấu hình theo đề) */
@@ -283,6 +288,86 @@ function ExamDoPage({ page = "review" }) {
     submitExam(true);
   }, [sessionReady, timeRemainingMs, submitExam]);
 
+  const goToQuestion = useCallback((index) => {
+    if (index < 0 || index >= questions.length) return;
+    setCurrentIndex(index);
+  }, [questions.length]);
+
+  const handleSelectAnswer = useCallback(
+    async (answerKey) => {
+      const question = questions[currentIndex];
+      if (!question || !exam) return;
+
+      const isMultiQuestion = isMultiSelectQuestion(question);
+      const requiredSelectCount =
+        question.requiredSelectCount ?? question.correctAnswers?.length ?? 2;
+      const session = getOrCreateExamSession(exam.id);
+      const nextAnswers = isMultiQuestion
+        ? toggleMultiSelectAnswer(
+            question.id,
+            answerKey,
+            session.answers,
+            requiredSelectCount,
+          )
+        : setSingleSelectAnswer(question.id, answerKey, session.answers);
+
+      const next = saveExamAnswers(exam.id, nextAnswers);
+      setAnswers({ ...next.answers });
+
+      if (useApiFlow && apiExamId && attemptId) {
+        try {
+          await persistAttemptAnswers(apiExamId, attemptId, questions, next.answers);
+        } catch (error) {
+          showToast(error.message ?? "Không lưu được câu trả lời.");
+        }
+      }
+    },
+    [exam, questions, currentIndex, useApiFlow, apiExamId, attemptId, showToast],
+  );
+
+  useEffect(() => {
+    if (!sessionReady || !exam) return undefined;
+
+    const question = questions[currentIndex];
+    if (!question?.options?.length) return undefined;
+
+    function handleKeyDown(event) {
+      if (shouldIgnoreExamShortcut(event) || isSubmitting) return;
+
+      if (event.key === "ArrowLeft") {
+        if (currentIndex <= 0) return;
+        event.preventDefault();
+        goToQuestion(currentIndex - 1);
+        return;
+      }
+
+      if (event.key === "ArrowRight") {
+        if (currentIndex >= questions.length - 1) return;
+        event.preventDefault();
+        goToQuestion(currentIndex + 1);
+        return;
+      }
+
+      if (/^[1-6]$/.test(event.key)) {
+        const optionKey = resolveOptionKeyFromDigit(event.key, question.options);
+        if (!optionKey) return;
+        event.preventDefault();
+        handleSelectAnswer(optionKey);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    sessionReady,
+    exam,
+    questions,
+    currentIndex,
+    isSubmitting,
+    goToQuestion,
+    handleSelectAnswer,
+  ]);
+
   if (page !== "review") {
     return <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />;
   }
@@ -292,9 +377,23 @@ function ExamDoPage({ page = "review" }) {
   }
 
   if (!examReady || !exam || !sessionReady) {
-    return examReady && !exam ? (
-      <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />
-    ) : null;
+    if (examReady && !exam) {
+      return <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />;
+    }
+
+    return (
+      <div
+        className={isFocusMode ? styles.loadingShellFocus : styles.loadingShell}
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <div className={styles.loading}>
+          <div className={styles.spinner} aria-hidden="true" />
+          <p className={styles.loadingText}>Đang tải đề thi...</p>
+        </div>
+      </div>
+    );
   }
 
   const currentQuestion = questions[currentIndex];
@@ -311,34 +410,6 @@ function ExamDoPage({ page = "review" }) {
     currentQuestion?.requiredSelectCount ?? currentQuestion?.correctAnswers?.length ?? 2;
   const typeLabel = EXAM_TYPE_LABELS[page] ?? exam.type;
   const isTimeCritical = timeRemainingMs <= 5 * 60 * 1000;
-
-  async function handleSelectAnswer(answerKey) {
-    const session = getOrCreateExamSession(exam.id);
-    const nextAnswers = isMultiQuestion
-      ? toggleMultiSelectAnswer(
-          currentQuestion.id,
-          answerKey,
-          session.answers,
-          requiredSelectCount,
-        )
-      : setSingleSelectAnswer(currentQuestion.id, answerKey, session.answers);
-
-    const next = saveExamAnswers(exam.id, nextAnswers);
-    setAnswers({ ...next.answers });
-
-    if (useApiFlow && apiExamId && attemptId) {
-      try {
-        await persistAttemptAnswers(apiExamId, attemptId, questions, next.answers);
-      } catch (error) {
-        showToast(error.message ?? "Không lưu được câu trả lời.");
-      }
-    }
-  }
-
-  function goToQuestion(index) {
-    if (index < 0 || index >= questions.length) return;
-    setCurrentIndex(index);
-  }
 
   async function handleSubmitClick() {
     const unanswered = questions.length - answeredCount;
@@ -495,14 +566,18 @@ function ExamDoPage({ page = "review" }) {
               ) : null}
 
               <ul className={styles.options}>
-                {currentQuestion.options.map((option) => {
+                {currentQuestion.options.map((option, optionIndex) => {
                   const isSelected = selectedKeys.includes(option.key);
+                  const shortcut = getAnswerShortcutKey(optionIndex);
 
                   return (
                     <li key={option.key}>
                       <button
                         type="button"
-                        className={`${styles.option} ${isSelected ? styles["option-selected"] : ""}`}
+                        className={`${styles.option} ${styles.hasShortcut} ${isSelected ? styles["option-selected"] : ""}`}
+                        data-shortcut={shortcut ?? undefined}
+                        aria-label={`Đáp án ${option.key}${shortcut ? `, phím ${shortcut}` : ""}`}
+                        title={shortcut ? `Phím ${shortcut}` : undefined}
                         onClick={() => handleSelectAnswer(option.key)}
                       >
                         <span className={styles["option-key"]}>{option.key}</span>
@@ -519,10 +594,12 @@ function ExamDoPage({ page = "review" }) {
                 <div className={styles.pagination}>
                   <button
                     type="button"
-                    className={styles["page-btn"]}
+                    className={`${styles["page-btn"]} ${styles.hasShortcut}`}
                     onClick={() => goToQuestion(currentIndex - 1)}
                     disabled={isFirstQuestion}
-                    aria-label="Câu trước"
+                    data-shortcut={isFirstQuestion ? undefined : "←"}
+                    aria-label="Câu trước (←)"
+                    title="←"
                   >
                     <FontAwesomeIcon icon={faChevronLeft} />
                   </button>
@@ -531,10 +608,12 @@ function ExamDoPage({ page = "review" }) {
                   </span>
                   <button
                     type="button"
-                    className={styles["page-btn"]}
+                    className={`${styles["page-btn"]} ${styles.hasShortcut}`}
                     onClick={() => goToQuestion(currentIndex + 1)}
                     disabled={isLastQuestion}
-                    aria-label="Câu sau"
+                    data-shortcut={isLastQuestion ? undefined : "→"}
+                    aria-label="Câu sau (→)"
+                    title="→"
                   >
                     <FontAwesomeIcon icon={faChevronRight} />
                   </button>

@@ -39,6 +39,7 @@ import {
   getExamById,
   getSubjectDetailConfig,
 } from "@/features/subjects/SubjectDetailPage/subjectDetailData";
+import { resolveExamTermFromCode } from "@/features/exams/finalExam/examTermOptions";
 import {
   getExamDetailPath,
   getExamFocusDoPath,
@@ -49,7 +50,15 @@ import {
 import styles from "./ExamResultPage.module.css";
 
 function getReviewExamTitle(exam) {
-  return `${exam.termLabel} ${exam.year} Final Examination`;
+  const resolved = resolveExamTermFromCode(exam.id ?? exam.paperCode ?? exam.title);
+  const termLabel = exam.termLabel ?? resolved?.termLabel;
+  const year = exam.year ?? resolved?.year;
+
+  if (termLabel && year) {
+    return `${termLabel} ${year} Final Examination`;
+  }
+
+  return exam.title ?? exam.id ?? "Final Examination";
 }
 
 function getReviewAccuracyPercent(correctCount, total) {
@@ -277,8 +286,16 @@ function ExamResultPage({ page = "review" }) {
 
   if (!examReady) {
     return (
-      <div className={styles.page}>
-        <p>Đang tải kết quả...</p>
+      <div
+        className={isReviewFocusMode ? styles.loadingShellFocus : styles.loadingShell}
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <div className={styles.loading}>
+          <div className={styles.spinner} aria-hidden="true" />
+          <p className={styles.loadingText}>Đang tải kết quả...</p>
+        </div>
       </div>
     );
   }

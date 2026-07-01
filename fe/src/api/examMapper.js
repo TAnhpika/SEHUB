@@ -3,6 +3,7 @@ import {
   isMultiSelectQuestion,
   optionIdsToLabels,
 } from "@/features/exams/examQuestionTypes";
+import { resolveExamTermFromCode } from "@/features/exams/finalExam/examTermOptions";
 
 export function mapExamAttachmentDto(attachment, examId) {
   const viewPath =
@@ -27,9 +28,11 @@ export function mapExamDetailDtoToFeExam(dto, courseCode) {
     mapExamAttachmentDto(attachment, dto.id),
   );
   const primaryAttachment = attachments[0];
+  const paperCode = dto.title || dto.code;
+  const term = resolveExamTermFromCode(paperCode);
 
   return {
-    id: dto.title || dto.code || dto.id,
+    id: paperCode || dto.id,
     apiId: dto.id,
     courseCode: (courseCode?.toUpperCase() ?? dto.code ?? "").toUpperCase(),
     subjectName: dto.subjectName ?? "",
@@ -37,7 +40,7 @@ export function mapExamDetailDtoToFeExam(dto, courseCode) {
     examType: dto.examType,
     questionCount: dto.questionCount ?? 0,
     title: dto.title,
-    paperCode: dto.title,
+    paperCode,
     subjectCode: dto.code,
     description: dto.description,
     assetUrl: dto.assetUrl ?? primaryAttachment?.viewUrl ?? primaryAttachment?.viewPath ?? null,
@@ -45,6 +48,9 @@ export function mapExamDetailDtoToFeExam(dto, courseCode) {
     semester: dto.semester,
     major: dto.major,
     status: dto.status,
+    termLabel: term?.termLabel,
+    year: term?.year,
+    term: term?.season,
   };
 }
 
