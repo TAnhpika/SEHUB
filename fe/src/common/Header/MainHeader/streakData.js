@@ -1,52 +1,7 @@
 import * as gamificationApi from "@/api/gamificationApi";
 
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
-
-export const DAILY_TASKS = [
-  {
-    id: "tests-5",
-    title: "Hoàn thành 5 bài kiểm tra",
-    current: 0,
-    target: 5,
-  },
-  {
-    id: "likes-7",
-    title: "Thực hiện 7 like",
-    current: 0,
-    target: 7,
-  },
-  {
-    id: "posts-1",
-    title: "Đăng 1 bài viết",
-    current: 0,
-    target: 1,
-  },
-  {
-    id: "tests-2",
-    title: "Hoàn thành 2 bài kiểm tra",
-    current: 0,
-    target: 2,
-  },
-  {
-    id: "posts-3",
-    title: "Đăng 3 bài viết",
-    current: 0,
-    target: 3,
-  },
-];
-
 export function getCompletedTaskCount(tasks) {
   return tasks.filter((task) => task.current >= task.target).length;
-}
-
-/** Demo: số nhiệm vụ hoàn thành tỉ lệ với streak ngày của user (tối đa 5 nhiệm vụ). */
-export function buildDailyTasks(streakDays = 0) {
-  const completedTasks = Math.min(Math.max(streakDays, 0), DAILY_TASKS.length);
-
-  return DAILY_TASKS.map((task, index) => ({
-    ...task,
-    current: index < completedTasks ? task.target : 0,
-  }));
 }
 
 function mapDailyMissionDto(dto) {
@@ -58,18 +13,12 @@ function mapDailyMissionDto(dto) {
   };
 }
 
-export async function loadDailyTasks(streakDays = 0) {
-  if (USE_MOCK) {
-    return buildDailyTasks(streakDays);
-  }
-
+export async function loadDailyTasks() {
   try {
     const missions = await gamificationApi.getMyDailyMissions();
-    if (!missions?.length) {
-      return [];
-    }
-    return missions.map(mapDailyMissionDto);
+    const tasks = (missions ?? []).map(mapDailyMissionDto);
+    return { tasks, error: null };
   } catch {
-    return buildDailyTasks(streakDays);
+    return { tasks: [], error: true };
   }
 }

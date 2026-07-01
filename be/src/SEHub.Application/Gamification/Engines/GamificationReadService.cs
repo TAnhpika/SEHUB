@@ -81,6 +81,7 @@ public sealed class GamificationReadService : IGamificationReadService
         eventType switch
         {
             GamificationConstants.EventDailyLogin => ["login", GamificationConstants.EventDailyLogin],
+            GamificationConstants.EventLikeReceived => ["like", GamificationConstants.EventLikeReceived],
             _ => [eventType]
         };
 }
