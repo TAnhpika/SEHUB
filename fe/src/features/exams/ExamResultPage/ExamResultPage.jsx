@@ -6,15 +6,18 @@ import {
   faBookOpen,
   faChartColumn,
   faCheck,
+  faChevronLeft,
+  faChevronRight,
   faCircleCheck,
   faClock,
   faDownload,
   faRotateRight,
-  faWandMagicSparkles,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
 import RichTextContent from "@/common/RichTextEditor/RichTextContent";
+import ExamAiExplanation from "@/features/exams/ExamAiExplanation/ExamAiExplanation";
+import ExamQuestionReportButton from "@/features/exams/ExamQuestionReportButton/ExamQuestionReportButton";
 import { useToast } from "@/common/Toast/ToastProvider";
 import {
   getMockPeerComparison,
@@ -98,16 +101,90 @@ function getOptionReviewState(item, optionKey) {
   return "neutral";
 }
 
-function ReviewQuestionCard({ item, index, onOpenExplanation }) {
-  const isCorrect = item.isCorrect;
+function getQuestionReviewStatus(item) {
   const hasAnswer = Boolean(item.selectedAnswer || item.selectedAnswers?.length);
-  const status = !hasAnswer ? "empty" : isCorrect ? "correct" : "wrong";
+  if (!hasAnswer) return "empty";
+  return item.isCorrect ? "correct" : "wrong";
+}
+
+function getAllReviewEntries(items) {
+  return items.map((item, index) => ({ item, index }));
+}
+
+function ReviewQuestionsSidebar({ entries, activeIndex, onSelect }) {
+  if (entries.length === 0) {
+    return null;
+  }
+
+  const correctCount = entries.filter(({ item }) => getQuestionReviewStatus(item) === "correct").length;
+  const wrongCount = entries.filter(({ item }) => getQuestionReviewStatus(item) === "wrong").length;
+  const emptyCount = entries.length - correctCount - wrongCount;
+
+  const statusLabel = (status) => {
+    if (status === "correct") return "Đúng";
+    if (status === "wrong") return "Sai";
+    return "Chưa trả lời";
+  };
 
   return (
-    <details
-      className={`${styles["review-question"]} ${styles[`review-question-${status}`]}`}
-    >
-      <summary className={styles["review-question-summary"]}>
+    <aside className={styles.reviewSidebar} aria-label="Danh sách câu hỏi">
+      <div className={styles.reviewSidebarHead}>
+        <h2 className={styles.reviewSidebarTitle}>Danh sách câu</h2>
+        <p className={styles.reviewSidebarMeta}>
+          {correctCount > 0 ? `${correctCount} đúng` : null}
+          {correctCount > 0 && wrongCount > 0 ? " · " : null}
+          {wrongCount > 0 ? `${wrongCount} sai` : null}
+          {(correctCount > 0 || wrongCount > 0) && emptyCount > 0 ? " · " : null}
+          {emptyCount > 0 ? `${emptyCount} chưa trả lời` : null}
+        </p>
+        <p className={styles.reviewSidebarHint}>Nhấn số câu để xem chi tiết</p>
+      </div>
+
+      <div className={styles.reviewSidebarGrid}>
+        {entries.map(({ item, index }) => {
+          const status = getQuestionReviewStatus(item);
+          return (
+            <button
+              key={item.questionId}
+              type="button"
+              className={`${styles.reviewSidebarCell} ${styles[`reviewSidebarCell-${status}`]} ${
+                activeIndex === index ? styles.reviewSidebarCellActive : ""
+              }`}
+              title={`Câu ${index + 1}: ${statusLabel(status)}`}
+              onClick={() => onSelect(index)}
+            >
+              {index + 1}
+            </button>
+          );
+        })}
+      </div>
+    </aside>
+  );
+}
+
+function ReviewQuestionCard({
+  item,
+  index,
+  examId,
+  courseCode,
+  total,
+  isFirst,
+  isLast,
+  onPrevious,
+  onNext,
+}) {
+  const status = getQuestionReviewStatus(item);
+  const isCorrect = item.isCorrect;
+  const hasAnswer = status !== "empty";
+  const questionForAi = {
+    id: item.questionId,
+    text: item.text,
+    options: item.options ?? [],
+  };
+
+  return (
+    <article className={`${styles["review-question"]} ${styles[`review-question-${status}`]}`}>
+      <div className={styles["review-question-header"]}>
         <div className={styles["review-question-head"]}>
           <div className={styles["review-question-title-wrap"]}>
             <span
@@ -120,20 +197,29 @@ function ReviewQuestionCard({ item, index, onOpenExplanation }) {
               className={styles["review-question-text"]}
             />
           </div>
-          <span
-            className={`${styles["review-status-badge"]} ${
-              !hasAnswer
-                ? styles["review-status-empty"]
-                : isCorrect
-                  ? styles["review-status-correct"]
-                  : styles["review-status-wrong"]
-            }`}
-          >
-            <FontAwesomeIcon icon={!hasAnswer ? faClock : isCorrect ? faCheck : faXmark} />
-            {!hasAnswer ? "CHƯA TRẢ LỜI" : isCorrect ? "CHÍNH XÁC" : "CHƯA ĐÚNG"}
-          </span>
+          <div className={styles.reviewQuestionActions}>
+            <ExamQuestionReportButton
+              className={`${styles.reviewReportBtn} ${styles.reviewReportBtnActive}`}
+              examId={examId}
+              courseCode={courseCode}
+              questionIndex={index + 1}
+              question={questionForAi}
+            />
+            <span
+              className={`${styles["review-status-badge"]} ${
+                !hasAnswer
+                  ? styles["review-status-empty"]
+                  : isCorrect
+                    ? styles["review-status-correct"]
+                    : styles["review-status-wrong"]
+              }`}
+            >
+              <FontAwesomeIcon icon={!hasAnswer ? faClock : isCorrect ? faCheck : faXmark} />
+              {!hasAnswer ? "CHƯA TRẢ LỜI" : isCorrect ? "CHÍNH XÁC" : "CHƯA ĐÚNG"}
+            </span>
+          </div>
         </div>
-      </summary>
+      </div>
 
       <div className={styles["review-question-body"]}>
         <ul className={styles["review-options"]}>
@@ -159,16 +245,35 @@ function ReviewQuestionCard({ item, index, onOpenExplanation }) {
           })}
         </ul>
 
-        <button
-          type="button"
-          className={styles["review-explain-link"]}
-          onClick={() => onOpenExplanation(index)}
-        >
-          <FontAwesomeIcon icon={faWandMagicSparkles} />
-          Xem giải thích chi tiết
-        </button>
+        <ExamAiExplanation key={item.questionId} examId={examId} question={questionForAi} />
+
+        <div className={styles.reviewPagination}>
+          <button
+            type="button"
+            className={styles.reviewPageBtn}
+            onClick={onPrevious}
+            disabled={isFirst}
+            aria-label="Câu trước"
+          >
+            <FontAwesomeIcon icon={faChevronLeft} />
+            <span>Câu trước</span>
+          </button>
+          <span className={styles.reviewPageIndicator}>
+            {index + 1} / {total}
+          </span>
+          <button
+            type="button"
+            className={styles.reviewPageBtn}
+            onClick={onNext}
+            disabled={isLast}
+            aria-label="Câu sau"
+          >
+            <span>Câu sau</span>
+            <FontAwesomeIcon icon={faChevronRight} />
+          </button>
+        </div>
       </div>
-    </details>
+    </article>
   );
 }
 
@@ -209,6 +314,7 @@ function ExamResultPage({ page = "review" }) {
   const { pathname, state: locationState } = useLocation();
   const { showToast } = useToast();
   const [showDetail, setShowDetail] = useState(false);
+  const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
   const isReviewFocusMode = page === "review" && isExamFocusPath(pathname);
   const scope = resolveExamScope(pathname, locationState);
   const config = getSubjectDetailConfig(page, scope);
@@ -383,13 +489,20 @@ function ExamResultPage({ page = "review" }) {
     showToast("Đã xuất báo cáo kết quả.");
   }
 
-  function handleOpenExplanation(questionIndex) {
-    navigate(detailPath, { state: { questionIndex } });
+  function handleSelectReviewQuestion(index) {
+    setCurrentReviewIndex(index);
+  }
+
+  function handlePreviousReviewQuestion() {
+    setCurrentReviewIndex((current) => Math.max(0, current - 1));
+  }
+
+  function handleNextReviewQuestion() {
+    setCurrentReviewIndex((current) => Math.min(result.items.length - 1, current + 1));
   }
 
   function getQuestionStatus(item) {
-    if (!item.selectedAnswer) return "empty";
-    return item.isCorrect ? "correct" : "wrong";
+    return getQuestionReviewStatus(item);
   }
 
   const unitSingular = isPracticeExam ? "bài" : "câu";
@@ -403,11 +516,12 @@ function ExamResultPage({ page = "review" }) {
   const reviewWrongCount = result.wrongCount;
   const reviewUnansweredCount = result.unansweredCount;
   const reviewAccuracy = getReviewAccuracyPercent(result.correctCount, result.total);
+  const reviewQuestionEntries = getAllReviewEntries(result.items);
 
   if (!isPracticeExam) {
     return (
       <div className={`${styles.page} ${styles.pageReview}`}>
-        <Link to={detailPath} className={styles["review-back"]}>
+        <Link to={detailPath} className={styles.back}>
           <FontAwesomeIcon icon={faArrowLeft} />
           Quay lại
         </Link>
@@ -465,16 +579,28 @@ function ExamResultPage({ page = "review" }) {
           </div>
         </section>
 
-        <section className={styles["review-questions"]} aria-label="Chi tiết từng câu hỏi">
-          {result.items.map((item, index) => (
+        <div className={styles.reviewLayout}>
+          <section className={styles["review-questions"]} aria-label="Chi tiết từng câu hỏi">
             <ReviewQuestionCard
-              key={item.questionId}
-              item={item}
-              index={index}
-              onOpenExplanation={handleOpenExplanation}
+              key={result.items[currentReviewIndex].questionId}
+              item={result.items[currentReviewIndex]}
+              index={currentReviewIndex}
+              examId={exam.id}
+              courseCode={exam.courseCode}
+              total={result.total}
+              isFirst={currentReviewIndex === 0}
+              isLast={currentReviewIndex === result.items.length - 1}
+              onPrevious={handlePreviousReviewQuestion}
+              onNext={handleNextReviewQuestion}
             />
-          ))}
-        </section>
+          </section>
+
+          <ReviewQuestionsSidebar
+            entries={reviewQuestionEntries}
+            activeIndex={currentReviewIndex}
+            onSelect={handleSelectReviewQuestion}
+          />
+        </div>
 
         <section className={styles.actions} aria-label="Hành động">
           <Button onClick={handleRetry}>
