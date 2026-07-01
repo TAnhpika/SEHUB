@@ -194,7 +194,7 @@
 
   --color-bg: #0f172a;
   --color-surface: #1e293b;
-  --color-surface-muted: #334155;
+  --color-surface-muted: #273449;
   --color-surface-elevated: #273449;
 
   --color-text: #f1f5f9;
@@ -270,7 +270,7 @@
   --moderator-bg: #0f172a;
   --moderator-surface: #1e293b;
   --moderator-surface-elevated: #273449;
-  --moderator-input-bg: #334155;
+  --moderator-input-bg: #1e293b;
   --moderator-on-primary: #ffffff;
   --moderator-border: rgba(148, 163, 184, 0.38);
   --moderator-border-light: rgba(148, 163, 184, 0.24);

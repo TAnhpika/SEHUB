@@ -712,9 +712,11 @@ function AdminExamFormPage() {
             )}
 
             <div className={formStyles.formActions}>
-              <Button type="button" onClick={goNext}>
-                Tiếp theo
-              </Button>
+              <div className={formStyles.formActionsRight}>
+                <Button type="button" onClick={goNext}>
+                  Tiếp theo
+                </Button>
+              </div>
             </div>
           </>
         ) : null}
@@ -744,9 +746,11 @@ function AdminExamFormPage() {
             />
 
             <div className={formStyles.formActions}>
-              <Button type="button" look="outline" onClick={() => setStep(0)}>
-                Quay lại
-              </Button>
+              <div className={formStyles.formActionsRight}>
+                <Button type="button" look="outline" onClick={() => setStep(0)}>
+                  Quay lại
+                </Button>
+              </div>
             </div>
           </>
         ) : null}
@@ -820,12 +824,14 @@ function AdminExamFormPage() {
             </label>
 
             <div className={formStyles.formActions}>
-              <Button type="button" look="outline" onClick={() => setStep(0)}>
-                Quay lại
-              </Button>
-              <Button type="button" onClick={goNext}>
-                Tiếp — Xác nhận
-              </Button>
+              <div className={formStyles.formActionsRight}>
+                <Button type="button" look="outline" onClick={() => setStep(0)}>
+                  Quay lại
+                </Button>
+                <Button type="button" onClick={goNext}>
+                  Tiếp — Xác nhận
+                </Button>
+              </div>
             </div>
           </>
         ) : null}
@@ -964,21 +970,23 @@ function AdminExamFormPage() {
             ) : null}
 
             <div className={formStyles.formActions}>
-              <Button type="button" look="outline" onClick={() => setStep(1)}>
-                Quay lại
-              </Button>
-              <Button
-                type="submit"
-                disabled={
-                  blockSave ||
-                  (isFinal && (!ocrDone || !ocrConfirmed || questionCompleteCount < 1))
-                }
-              >
-                {isEdit ? "Lưu & xuất bản" : "Publish đề thi"}
-              </Button>
               <Button type="button" look="outline" onClick={handleDraft} disabled={blockSave}>
                 Lưu nháp
               </Button>
+              <div className={formStyles.formActionsRight}>
+                <Button type="button" look="outline" onClick={() => setStep(1)}>
+                  Quay lại
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    blockSave ||
+                    (isFinal && (!ocrDone || !ocrConfirmed || questionCompleteCount < 1))
+                  }
+                >
+                  {isEdit ? "Lưu & xuất bản" : "Publish đề thi"}
+                </Button>
+              </div>
             </div>
           </>
         ) : null}

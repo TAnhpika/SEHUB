@@ -156,8 +156,34 @@
 .formActions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
   margin-top: 1.5rem;
   padding-top: 1.25rem;
   border-top: 1px solid var(--moderator-border);
+}
+
+.formActionsRight {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-left: auto;
+}
+
+@media (max-width: 640px) {
+  .formActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .formActionsRight {
+    flex-direction: column;
+    margin-left: 0;
+  }
+
+  .formActionsRight :global(button) {
+    width: 100%;
+  }
 }

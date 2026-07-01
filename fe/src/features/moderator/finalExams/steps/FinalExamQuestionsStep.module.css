@@ -226,3 +226,37 @@
   background: var(--color-warning-bg);
   border-color: var(--color-warning);
 }
+
+[data-theme="dark"] .modeSwitch {
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border-light);
+}
+
+[data-theme="dark"] .modeBtnActive {
+  background: var(--moderator-surface-elevated);
+  box-shadow: none;
+}
+
+[data-theme="dark"] .markdownInput {
+  background: var(--moderator-surface-elevated);
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+[data-theme="dark"] .markdownDesc code {
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border-light);
+}
+
+[data-theme="dark"] .addQuestion {
+  background: var(--moderator-surface-elevated);
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+[data-theme="dark"] .progress {
+  background: var(--moderator-bg);
+}
+
+[data-theme="dark"] .pickerBtn {
+  background: var(--moderator-surface-elevated);
+  border-color: rgba(148, 163, 184, 0.38);
+}

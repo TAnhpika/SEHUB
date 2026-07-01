@@ -127,6 +127,27 @@
   border-color: var(--moderator-primary);
 }
 
+[data-theme="dark"] .editorFloating {
+  background: var(--moderator-surface-elevated);
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+[data-theme="dark"] .floatingRoot .floatingToolbar {
+  background: var(--moderator-bg);
+  border-color: rgba(148, 163, 184, 0.38);
+}
+
+[data-theme="dark"] .floatingToolbar .tool {
+  background: var(--moderator-surface-elevated);
+  border-color: rgba(148, 163, 184, 0.38);
+  color: var(--moderator-text-subtle);
+}
+
+[data-theme="dark"] .floatingToolbar .tool:hover:not(:disabled) {
+  color: var(--moderator-text);
+  background: var(--moderator-surface);
+}
+
 .bordered .editor {
   min-height: 280px;
 }

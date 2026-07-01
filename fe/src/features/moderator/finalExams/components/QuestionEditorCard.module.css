@@ -212,7 +212,8 @@
 }
 
 .answerInput::placeholder {
-  color: rgba(100, 116, 139, 0.5);
+  color: var(--moderator-text-subtle);
+  opacity: 0.7;
 }
 
 .explainToggle {
@@ -245,8 +246,60 @@
   width: 100%;
   padding: 0.625rem 0.75rem;
   font: inherit;
+  font-size: 0.875rem;
+  color: var(--moderator-text);
+  background-color: var(--moderator-input-bg);
   border: 1px solid var(--moderator-border);
   border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.select {
+  cursor: pointer;
+  appearance: none;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2364748b' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+}
+
+.select:focus,
+.numberInput:focus {
+  border-color: var(--moderator-primary);
+  box-shadow: 0 0 0 3px var(--moderator-primary-muted);
+}
+
+.select option {
+  color: var(--moderator-text);
+  background: var(--moderator-surface);
+}
+
+[data-theme="dark"] .textareaPlain,
+[data-theme="dark"] .answer,
+[data-theme="dark"] .toolBtn {
+  background: var(--moderator-surface-elevated);
+  border-color: rgba(148, 163, 184, 0.38);
+}
+
+[data-theme="dark"] .select,
+[data-theme="dark"] .numberInput {
+  background-color: var(--moderator-surface-elevated);
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+[data-theme="dark"] .select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23cbd5e1' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+}
+
+[data-theme="dark"] .select:hover,
+[data-theme="dark"] .numberInput:hover {
+  border-color: rgba(147, 197, 253, 0.45);
+}
+
+[data-theme="dark"] .answerKey {
+  background: var(--moderator-bg);
+  border: 1px solid var(--moderator-border-light);
 }
 
 .addOptionBtn {
