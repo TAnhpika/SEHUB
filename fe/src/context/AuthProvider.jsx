@@ -47,11 +47,18 @@ function purgeLegacyMockSession() {
   }
 }
 
+const DEV_SESSION_CLEARED_KEY = "sehubs_dev_session_cleared";
+
 function purgeDevSessionIfEnabled() {
   if (!import.meta.env.DEV || import.meta.env.VITE_DEV_CLEAR_SESSION !== "true") {
     return;
   }
 
+  if (sessionStorage.getItem(DEV_SESSION_CLEARED_KEY)) {
+    return;
+  }
+
+  sessionStorage.setItem(DEV_SESSION_CLEARED_KEY, "1");
   clearAuthTokens();
   localStorage.removeItem(STORAGE_KEY);
   clearServerAiTokenSnapshot();

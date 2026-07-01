@@ -43,11 +43,26 @@ export function getSeasonTerm(date = new Date()) {
   return `${season}${year}`;
 }
 
-export function buildExamPaperCodePrefix(examType, subjectCode, date = new Date()) {
+function resolvePaperTerm(term) {
+  if (term instanceof Date) {
+    const combined = getSeasonTerm(term);
+    return { season: combined.slice(0, 2), year: combined.slice(2) };
+  }
+
+  const payload = term && typeof term === "object" ? term : {};
+  const fallback = getSeasonTerm();
+  return {
+    season: String(payload.season ?? fallback.slice(0, 2)).toUpperCase(),
+    year: String(payload.year ?? fallback.slice(2)),
+  };
+}
+
+export function buildExamPaperCodePrefix(examType, subjectCode, term = new Date()) {
   const typePrefix = EXAM_TYPE_PREFIX[examType] ?? EXAM_TYPE_PREFIX.final;
   const subject = normalizeSubjectCode(subjectCode);
   if (!subject) return null;
-  return `${typePrefix}-${subject}-${getSeasonTerm(date)}`;
+  const { season, year } = resolvePaperTerm(term);
+  return `${typePrefix}-${subject}-${season}${year}`;
 }
 
 export function parseExamPaperCode(value) {
@@ -144,9 +159,9 @@ export function generateExamPaperCode(
   examType,
   subjectCode,
   existingIdentifiers = [],
-  date = new Date(),
+  term = new Date(),
 ) {
-  const prefix = buildExamPaperCodePrefix(examType, subjectCode, date);
+  const prefix = buildExamPaperCodePrefix(examType, subjectCode, term);
   if (!prefix) return "";
   const sequence = nextExamPaperSequence(existingIdentifiers, prefix);
   return `${prefix}-${sequence}`;

@@ -25,8 +25,12 @@ export function getRoleHomePath(user, fallback = "/home") {
 
 /**
  * Đích sau khi map /community → /home cho user đã đăng nhập.
- * Trang chủ (/) luôn hiển thị landing — không redirect theo role.
+ * Staff (admin/moderator) luôn về workspace tương ứng thay vì /home.
  */
-export function resolveAuthenticatedLandingPath(_user, path = "/home") {
+export function resolveAuthenticatedLandingPath(user, path = "/home") {
+  if (isStaffUser(user)) {
+    return getRoleHomePath(user);
+  }
+
   return path;
 }

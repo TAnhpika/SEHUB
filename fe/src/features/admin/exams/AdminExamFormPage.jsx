@@ -8,6 +8,17 @@ import { extractCourseSubjectCode } from "@/utils/examDisplay";
 import { mergeQuestionImage } from "@/utils/examQuestionContent";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import AdminQuestionImageField from "@/features/admin/exams/AdminQuestionImageField";
+import FinalExamInfoFields from "@/features/exams/finalExam/FinalExamInfoFields";
+import FinalExamMarkdownImportPanel from "@/features/exams/finalExam/FinalExamMarkdownImportPanel";
+import {
+  semesterIdToLabel,
+  semesterLabelToId,
+} from "@/features/exams/finalExam/semesterUtils";
+import { parseTotalQuestions } from "@/features/moderator/finalExams/finalExamData";
+import {
+  createDefaultExamTermFields,
+  parseTermFromExamCode,
+} from "@/features/exams/finalExam/examTermOptions";
 import {
   DEMO_DUPLICATE_SHA,
   EXAM_SEMESTERS,
@@ -35,36 +46,49 @@ const STEPS_FINAL = ["Thông tin", "Upload & OCR", "Xác nhận"];
 const STEPS_PRACTICE = ["Thông tin", "Nội dung đề", "Xác nhận"];
 
 function buildInitialForm(exam) {
+  const defaultTerm = createDefaultExamTermFields();
+
   if (!exam) {
     return {
       typeKey: "final",
       code: "",
       title: "",
+      subjectName: "",
       track: "SE",
       semester: "5",
+      ...defaultTerm,
       description: "",
       githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
       deadline: "",
       durationMinutes: FINAL_EXAM_DEFAULTS.durationMinutes,
+      totalQuestions: FINAL_EXAM_DEFAULTS.maxQuestions,
       attachments: [],
     };
   }
+
+  const paperCode =
+    exam.typeKey === "final"
+      ? exam.displayExamCode ?? exam.code ?? exam.title
+      : exam.title;
+  const parsedTerm = exam.typeKey === "final" ? parseTermFromExamCode(paperCode) : null;
+
   return {
     typeKey: exam.typeKey ?? "final",
     code:
       exam.typeKey === "final"
         ? exam.subjectCode ?? extractCourseSubjectCode(exam.code, exam.title) ?? exam.code
         : exam.code,
-    title:
-      exam.typeKey === "final"
-        ? exam.displayExamCode ?? exam.code ?? exam.title
-        : exam.title,
+    title: paperCode,
+    subjectName: exam.subjectName ?? "",
     track: exam.track,
     semester: exam.semester,
+    termSeason: parsedTerm?.termSeason ?? defaultTerm.termSeason,
+    academicYear: parsedTerm?.academicYear ?? defaultTerm.academicYear,
     description: exam.description ?? "",
     githubGuide: exam.githubGuide ?? PRACTICE_EXAM_DEFAULTS.githubGuide,
     deadline: exam.deadline ?? "",
     durationMinutes: exam.durationMinutes ?? FINAL_EXAM_DEFAULTS.durationMinutes,
+    totalQuestions: exam.questionCount ?? FINAL_EXAM_DEFAULTS.maxQuestions,
     attachments: exam.attachments ?? [],
   };
 }
@@ -91,6 +115,10 @@ function AdminExamFormPage() {
   const [uploadingQuestionIndex, setUploadingQuestionIndex] = useState(null);
   const [importingMarkdown, setImportingMarkdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [questionCountInput, setQuestionCountInput] = useState(() =>
+    String(FINAL_EXAM_DEFAULTS.maxQuestions),
+  );
+  const [finalInputMode, setFinalInputMode] = useState("upload");
 
   useEffect(() => {
     if (!isEdit) {
@@ -104,6 +132,7 @@ function AdminExamFormPage() {
       setExam(loaded);
       if (loaded) {
         setForm(buildInitialForm(loaded));
+        setQuestionCountInput(String(loaded.questionCount ?? FINAL_EXAM_DEFAULTS.maxQuestions));
         setSha256(loaded.sha256 ?? "");
         setOcrDone(Boolean(loaded.questionCount && loaded.typeKey === "final"));
         setOcrConfirmed(
@@ -144,10 +173,38 @@ function AdminExamFormPage() {
   }
 
   function validateStep0() {
+    if (isFinal) {
+      if (!form.semester || !semesterIdToLabel(form.semester)) {
+        showToast("Vui lòng chọn học kỳ.");
+        return false;
+      }
+      if (!form.code.trim()) {
+        showToast("Vui lòng chọn mã môn học.");
+        return false;
+      }
+      if (!form.title.trim()) {
+        showToast("Vui lòng chọn môn, kỳ học và năm học để sinh mã đề thi.");
+        return false;
+      }
+      if (!form.termSeason?.trim() || !form.academicYear?.trim()) {
+        showToast("Vui lòng chọn kỳ học (SP/SU/FA) và năm học.");
+        return false;
+      }
+      const totalQuestions = parseTotalQuestions(questionCountInput);
+      if (totalQuestions === null) {
+        showToast("Số câu hỏi phải lớn hơn 0.");
+        return false;
+      }
+      if (form.durationMinutes < 15 || form.durationMinutes > 180) {
+        showToast("Thời gian làm bài phải từ 15 đến 180 phút.");
+        return false;
+      }
+      patchForm({ totalQuestions });
+      return true;
+    }
+
     if (!form.code.trim() || !form.title.trim()) {
-      showToast(
-        isFinal ? "Nhập mã môn học và mã đề thi." : "Nhập mã môn và tiêu đề đề thi.",
-      );
+      showToast("Nhập mã môn và tiêu đề đề thi.");
       return false;
     }
     return true;
@@ -228,16 +285,28 @@ function AdminExamFormPage() {
       setOcrDone(true);
       setOcrConfirmed(false);
       setStep(2);
-      const multiCount = questions.filter((question) => {
-        const type = String(question.questionType ?? question.QuestionType ?? "").toLowerCase();
-        const correctIds = question.correctOptionIds ?? question.CorrectOptionIds ?? [];
-        return type === "multiselect" || correctIds.length > 1;
-      }).length;
-      showToast(
-        multiCount > 0
-          ? `Đã import ${questions.length} câu (${multiCount} câu chọn nhiều đáp án).`
-          : `Đã import ${questions.length} câu hỏi từ Markdown.`,
-      );
+
+      const warnings = result?.warnings ?? [];
+      const skippedCount = warnings.length;
+      if (skippedCount > 0) {
+        const preview = warnings.slice(0, 2).join(" · ");
+        const suffix = skippedCount > 2 ? ` · +${skippedCount - 2} cảnh báo` : "";
+        showToast(
+          `Đã import ${questions.length} câu. ${skippedCount} câu không hợp lệ: ${preview}${suffix}`,
+          6000,
+        );
+      } else {
+        const multiCount = questions.filter((question) => {
+          const type = String(question.questionType ?? question.QuestionType ?? "").toLowerCase();
+          const correctIds = question.correctOptionIds ?? question.CorrectOptionIds ?? [];
+          return type === "multiselect" || correctIds.length > 1;
+        }).length;
+        showToast(
+          multiCount > 0
+            ? `Đã import ${questions.length} câu (${multiCount} câu chọn nhiều đáp án).`
+            : `Đã import ${questions.length} câu hỏi từ Markdown.`,
+        );
+      }
     } catch (err) {
       showToast(err.message ?? "Import Markdown thất bại.");
     } finally {
@@ -400,7 +469,12 @@ function AdminExamFormPage() {
   const summaryItems = useMemo(
     () => [
       { label: "Loại", value: isFinal ? "Cuối kỳ" : "Thực hành" },
-      { label: "Mã môn", value: form.code || "—" },
+      {
+        label: "Môn học",
+        value: form.subjectName
+          ? `${form.code || "—"} — ${form.subjectName}`
+          : form.code || "—",
+      },
       { label: isFinal ? "Mã đề thi" : "Tiêu đề", value: form.title || "—" },
       { label: "Ngành", value: getTrackLabel(form.track) },
       { label: "Kỳ", value: getSemesterLabel(form.semester) },
@@ -408,11 +482,45 @@ function AdminExamFormPage() {
         ? { label: "Thời gian làm bài", value: `${form.durationMinutes} phút` }
         : { label: "Deadline", value: form.deadline || "Chưa đặt" },
       isFinal
-        ? { label: "Số câu OCR", value: ocrDone ? String(MOCK_OCR_QUESTIONS.length) : "—" }
+        ? {
+            label: "Số câu",
+            value: ocrDone
+              ? String(importedQuestions.length > 0 ? importedQuestions.length : reviewQuestions.length)
+              : "—",
+          }
         : { label: "File đính kèm", value: String(form.attachments.length) },
     ],
-    [form, isFinal, ocrDone],
+    [form, isFinal, ocrDone, importedQuestions.length, reviewQuestions.length],
   );
+
+  function handleFinalInfoChange(patch) {
+    const updates = {};
+    if ("semesterLabel" in patch) {
+      updates.semester = semesterLabelToId(patch.semesterLabel);
+    }
+    if ("subjectCode" in patch) {
+      updates.code = patch.subjectCode;
+    }
+    if ("subjectName" in patch) {
+      updates.subjectName = patch.subjectName;
+    }
+    if ("termSeason" in patch) {
+      updates.termSeason = patch.termSeason;
+    }
+    if ("academicYear" in patch) {
+      updates.academicYear = patch.academicYear;
+    }
+    if ("major" in patch) {
+      updates.track = patch.major;
+    }
+    if ("examCode" in patch) {
+      updates.title = patch.examCode;
+    }
+    if ("durationMinutes" in patch) {
+      updates.durationMinutes = patch.durationMinutes;
+    }
+    patchForm(updates);
+  }
 
   if (isEdit && loadingExam) {
     return (
@@ -538,10 +646,30 @@ function AdminExamFormPage() {
           <>
             <h2 className={styles.panelTitle}>Thông tin chung</h2>
             <p className={styles.panelDesc}>
-              Lọc theo kỳ học (Kì 1–9) và chuyên ngành AI/SE — đồng bộ danh sách đề công khai.
+              {isFinal
+                ? "Chọn học kỳ, mã môn và mã đề — mã đề tự sinh theo quy tắc FE-{môn}-{kỳ}-{số thứ tự}."
+                : "Lọc theo kỳ học (Kì 1–9) và chuyên ngành AI/SE — đồng bộ danh sách đề công khai."}
             </p>
             <div className={styles.divider} />
 
+            {isFinal ? (
+              <FinalExamInfoFields
+                value={{
+                  semesterLabel: semesterIdToLabel(form.semester),
+                  subjectCode: form.code,
+                  subjectName: form.subjectName ?? "",
+                  termSeason: form.termSeason,
+                  academicYear: form.academicYear,
+                  examCode: form.title,
+                  durationMinutes: form.durationMinutes,
+                }}
+                onChange={handleFinalInfoChange}
+                isEditMode={isEdit}
+                questionCountInput={questionCountInput}
+                onQuestionCountInputChange={setQuestionCountInput}
+              />
+            ) : (
+              <>
             <div className={styles.formRow2}>
               <label className={styles.field}>
                 <span className={styles.label}>Mã môn học *</span>
@@ -584,45 +712,29 @@ function AdminExamFormPage() {
                   ))}
                 </select>
               </label>
-              {isFinal ? (
-                <label className={styles.field}>
-                  <span className={styles.label}>Thời gian làm bài (phút)</span>
-                  <input
-                    type="number"
-                    className={styles.input}
-                    min={15}
-                    max={180}
-                    value={form.durationMinutes}
-                    onChange={(e) =>
-                      patchForm({ durationMinutes: Number(e.target.value) || 60 })
-                    }
-                  />
-                </label>
-              ) : (
-                <label className={styles.field}>
-                  <span className={styles.label}>Hạn nộp bài</span>
-                  <input
-                    type="date"
-                    className={styles.input}
-                    value={form.deadline}
-                    onChange={(e) => patchForm({ deadline: e.target.value })}
-                  />
-                </label>
-              )}
+              <label className={styles.field}>
+                <span className={styles.label}>Hạn nộp bài</span>
+                <input
+                  type="date"
+                  className={styles.input}
+                  value={form.deadline}
+                  onChange={(e) => patchForm({ deadline: e.target.value })}
+                />
+              </label>
             </div>
 
             <label className={styles.field}>
-              <span className={styles.label}>{isFinal ? "Mã đề thi *" : "Tiêu đề đề thi *"}</span>
+              <span className={styles.label}>Tiêu đề đề thi *</span>
               <input
                 className={styles.input}
                 value={form.title}
                 onChange={(e) => patchForm({ title: e.target.value })}
-                placeholder={
-                  isFinal ? "VD: CEA201_SU25" : "VD: Thực hành PRF192 — Lab GitHub"
-                }
+                placeholder="VD: Thực hành PRF192 — Lab GitHub"
                 required
               />
             </label>
+              </>
+            )}
 
             <div className={formStyles.formActions}>
               <Button type="button" onClick={goNext}>
@@ -636,49 +748,29 @@ function AdminExamFormPage() {
           <>
             <h2 className={styles.panelTitle}>Upload đề, OCR hoặc Markdown</h2>
             <p className={styles.panelDesc}>
-              Upload PDF/ảnh để OCR, hoặc dán file Markdown câu hỏi (## Câu 1, A./B./C./D., **Đáp án: X**).
+              Upload PDF/ảnh để OCR, hoặc import câu hỏi bằng Markdown (cùng định dạng với luồng Moderator).
             </p>
             <div className={styles.divider} />
 
-            <label className={styles.field}>
-              <span className={styles.label}>File đề (PDF / ảnh) *</span>
-              <div className={styles.uploadZone}>
-                <span className={styles.uploadText}>{fileName || "Kéo thả hoặc chọn file"}</span>
-                <span className={styles.uploadHint}>
-                  PDF, PNG, JPG — tối đa 50MB · Tối đa {FINAL_EXAM_DEFAULTS.maxQuestions} câu/lần làm
-                </span>
-                <input
-                  type="file"
-                  accept=".pdf,image/*"
-                  style={{ marginTop: "0.5rem" }}
-                  onChange={handleFileChange}
-                />
-              </div>
-            </label>
-
-            <label className={styles.field}>
-              <span className={styles.label}>Import câu hỏi bằng Markdown</span>
-              <textarea
-                className={styles.textarea}
-                rows={10}
-                value={markdownText}
-                onChange={(e) => setMarkdownText(e.target.value)}
-                placeholder={`## Câu 1\nNội dung câu hỏi?\n\nA. Phương án A\nB. Phương án B\nC. Phương án C\nD. Phương án D\n\n**Đáp án: B**`}
-              />
-              <p className={styles.hint}>
-                Mỗi câu bắt đầu bằng ## Câu N (hoặc phân tách bằng ---). Dòng cuối: **Đáp án: X**.
-              </p>
-            </label>
+            <FinalExamMarkdownImportPanel
+              showModeSwitch
+              inputMode={finalInputMode}
+              onInputModeChange={setFinalInputMode}
+              markdownText={markdownText}
+              onMarkdownChange={setMarkdownText}
+              onImport={handleImportMarkdown}
+              importing={importingMarkdown}
+              importLabel="Import Markdown và sang bước xác nhận"
+              fileName={fileName}
+              onFileChange={handleFileChange}
+              onRunOcr={runOcr}
+              ocrLabel="Chạy OCR & sang bước xác nhận"
+              maxQuestions={FINAL_EXAM_DEFAULTS.maxQuestions}
+            />
 
             <div className={formStyles.formActions}>
               <Button type="button" look="outline" onClick={() => setStep(0)}>
                 Quay lại
-              </Button>
-              <Button type="button" onClick={handleImportMarkdown} disabled={importingMarkdown}>
-                {importingMarkdown ? "Đang import..." : "Import Markdown"}
-              </Button>
-              <Button type="button" onClick={runOcr} disabled={!fileName}>
-                Chạy OCR &amp; sang bước xác nhận
               </Button>
             </div>
           </>
