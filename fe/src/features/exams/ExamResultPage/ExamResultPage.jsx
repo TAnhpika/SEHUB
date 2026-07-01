@@ -39,6 +39,7 @@ import {
   getExamById,
   getSubjectDetailConfig,
 } from "@/features/subjects/SubjectDetailPage/subjectDetailData";
+import { resolveExamTermFromCode } from "@/features/exams/finalExam/examTermOptions";
 import {
   getExamDetailPath,
   getExamFocusDoPath,
@@ -49,7 +50,15 @@ import {
 import styles from "./ExamResultPage.module.css";
 
 function getReviewExamTitle(exam) {
-  return `${exam.termLabel} ${exam.year} Final Examination`;
+  const resolved = resolveExamTermFromCode(exam.id ?? exam.paperCode ?? exam.title);
+  const termLabel = exam.termLabel ?? resolved?.termLabel;
+  const year = exam.year ?? resolved?.year;
+
+  if (termLabel && year) {
+    return `${termLabel} ${year} Final Examination`;
+  }
+
+  return exam.title ?? exam.id ?? "Final Examination";
 }
 
 function getReviewAccuracyPercent(correctCount, total) {
