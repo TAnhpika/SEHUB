@@ -42,6 +42,14 @@ public sealed class GamificationController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("levels")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetLevels(CancellationToken cancellationToken)
+    {
+        var result = await _catalogService.GetLevelsAsync(cancellationToken);
+        return Ok(result);
+    }
+
     [HttpGet("me")]
     [Authorize]
     public async Task<IActionResult> GetMyGamification(CancellationToken cancellationToken)

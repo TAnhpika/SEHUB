@@ -1,7 +1,9 @@
+import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBullseye,
   faCalendarDays,
+  faChevronRight,
   faClock,
   faComment,
   faFileLines,
@@ -19,20 +21,35 @@ function ProfileCard({
   isOwner = false,
   isPremiumUsername = false,
   onFollowChange,
+  onOpenRankLadder,
+  examHistoryTo,
 }) {
   const rank = getRankDisplay(profile.level);
+  const hasNextLevel = Boolean(profile.nextLevel);
+  const points = profile.stats?.points ?? 0;
 
   return (
     <aside className={styles.card}>
       {isOwner && <ProfileCardMenu username={profile.username} />}
 
       <div className={styles.hero}>
-        <span
-          className={`${styles.badge} ${getRankBadgeStyleClass(profile.level, rankStyles)}`}
-          aria-hidden="true"
-        >
-          <FontAwesomeIcon icon={rank.icon} />
-        </span>
+        {onOpenRankLadder ? (
+          <button
+            type="button"
+            className={`${styles.badge} ${styles.badgeButton} ${getRankBadgeStyleClass(profile.level, rankStyles)}`}
+            aria-label={`Cấp ${rank.label}, xem bảng cấp độ`}
+            onClick={onOpenRankLadder}
+          >
+            <FontAwesomeIcon icon={rank.icon} />
+          </button>
+        ) : (
+          <span
+            className={`${styles.badge} ${getRankBadgeStyleClass(profile.level, rankStyles)}`}
+            aria-hidden="true"
+          >
+            <FontAwesomeIcon icon={rank.icon} />
+          </span>
+        )}
         <span className={styles.avatar} aria-hidden={Boolean(profile.avatarUrl)}>
           {profile.avatarUrl ? (
             <img
@@ -63,18 +80,53 @@ function ProfileCard({
         </div>
       </div>
 
-      <div className={styles.progress}>
-        <div className={styles["progress-head"]}>
-          <span className={styles["progress-title"]}>Đến {profile.nextLevel}</span>
-          <span className={styles["progress-meta"]}>{profile.pointsToNext} điểm nữa</span>
+      {onOpenRankLadder ? (
+        <button
+          type="button"
+          className={styles.progressButton}
+          onClick={onOpenRankLadder}
+          aria-label="Xem bảng cấp độ và phần thưởng"
+        >
+          <p className={styles.progressSummary}>
+            {rank.label} · {points} điểm
+          </p>
+          <div className={styles["progress-head"]}>
+            <span className={styles["progress-title"]}>
+              {hasNextLevel ? `Đến ${profile.nextLevel}` : "Đã đạt cấp cao nhất"}
+            </span>
+            {hasNextLevel ? (
+              <span className={styles["progress-meta"]}>{profile.pointsToNext} điểm nữa</span>
+            ) : null}
+          </div>
+          <div className={styles["progress-bar"]}>
+            <span
+              className={styles["progress-fill"]}
+              style={{ width: `${hasNextLevel ? profile.levelProgress : 100}%` }}
+            />
+          </div>
+          <span className={styles.progressHint}>
+            Xem cấp độ & phần thưởng
+            <FontAwesomeIcon icon={faChevronRight} />
+          </span>
+        </button>
+      ) : (
+        <div className={styles.progress}>
+          <div className={styles["progress-head"]}>
+            <span className={styles["progress-title"]}>
+              {hasNextLevel ? `Đến ${profile.nextLevel}` : "Đã đạt cấp cao nhất"}
+            </span>
+            {hasNextLevel ? (
+              <span className={styles["progress-meta"]}>{profile.pointsToNext} điểm nữa</span>
+            ) : null}
+          </div>
+          <div className={styles["progress-bar"]}>
+            <span
+              className={styles["progress-fill"]}
+              style={{ width: `${hasNextLevel ? profile.levelProgress : 100}%` }}
+            />
+          </div>
         </div>
-        <div className={styles["progress-bar"]}>
-          <span
-            className={styles["progress-fill"]}
-            style={{ width: `${profile.levelProgress}%` }}
-          />
-        </div>
-      </div>
+      )}
 
       {!isOwner && profile.userId && onFollowChange ? (
         <ProfileInteractionActions profile={profile} onFollowChange={onFollowChange} />
@@ -89,9 +141,23 @@ function ProfileCard({
             <span className={styles["stat-label"]}>Điểm</span>
           </div>
           <div className={styles["stat-item"]}>
-            <FontAwesomeIcon icon={faMedal} className={styles["stat-icon"]} />
-            <span className={styles["stat-value"]}>{profile.stats.exams}</span>
-            <span className={styles["stat-label"]}>Bài thi</span>
+            {examHistoryTo ? (
+              <Link
+                to={examHistoryTo}
+                className={styles.statButton}
+                aria-label="Xem lịch sử đề đã làm"
+              >
+                <FontAwesomeIcon icon={faMedal} className={styles["stat-icon"]} />
+                <span className={styles["stat-value"]}>{profile.stats.exams}</span>
+                <span className={styles["stat-label"]}>Bài thi</span>
+              </Link>
+            ) : (
+              <>
+                <FontAwesomeIcon icon={faMedal} className={styles["stat-icon"]} />
+                <span className={styles["stat-value"]}>{profile.stats.exams}</span>
+                <span className={styles["stat-label"]}>Bài thi</span>
+              </>
+            )}
           </div>
           <div className={styles["stat-item"]}>
             <FontAwesomeIcon icon={faComment} className={styles["stat-icon"]} />

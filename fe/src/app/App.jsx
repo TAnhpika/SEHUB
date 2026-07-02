@@ -80,6 +80,7 @@ const ExamDetailPage = lazy(() => import("@/features/exams/ExamDetailPage/ExamDe
 const ExamDoPage = lazy(() => import("@/features/exams/ExamDoPage/ExamDoPage"));
 const PracticeDoPage = lazy(() => import("@/features/exams/PracticeDoPage/PracticeDoPage"));
 const ExamResultPage = lazy(() => import("@/features/exams/ExamResultPage/ExamResultPage"));
+const MyLearningPage = lazy(() => import("@/features/exams/myLearning/MyLearningPage"));
 const FeedbackPage = lazy(() => import("@/features/feedback/FeedbackPage/FeedbackPage"));
 const MessagesPage = lazy(() => import("@/features/chat/MessagesPage/MessagesPage"));
 const EditProfilePage = lazy(() => import("@/features/profile/EditProfilePage/EditProfilePage"));
@@ -228,6 +229,7 @@ function App() {
                 <Route path="/profile/:username" element={<ProfilePage />} />
                 <Route element={<PremiumRoute />}>
                   <Route path="/home/advisor" element={<ChatbotAdvisorPage />} />
+                  <Route path="/home/my-learning" element={<MyLearningPage />} />
                 </Route>
               </Route>
               <Route element={<PremiumRoute />}>

@@ -20,11 +20,18 @@ export function getSubjectScopeFromPath(pathname) {
   return pathname.startsWith("/home/") ? "home" : "community";
 }
 
-const HOME_SUBJECT_PREFIXES = [
+export const MY_LEARNING_HOME_PATH = "/home/my-learning";
+
+const HOME_SUBJECT_CONTENT_PREFIXES = [
   "/home/final-exam",
   "/home/practical-exam",
   "/home/pratical-exam",
   "/home/documents",
+];
+
+const HOME_SUBJECT_PREFIXES = [
+  ...HOME_SUBJECT_CONTENT_PREFIXES,
+  MY_LEARNING_HOME_PATH,
 ];
 
 const SUBJECT_CONTENT_PREFIXES = [
@@ -32,7 +39,7 @@ const SUBJECT_CONTENT_PREFIXES = [
   "/community/practical-exam",
   "/community/pratical-exam",
   "/community/documents",
-  ...HOME_SUBJECT_PREFIXES,
+  ...HOME_SUBJECT_CONTENT_PREFIXES,
 ];
 
 /** @param {string} pathname */
@@ -55,6 +62,13 @@ export function isSubjectContentPath(pathname) {
  * @returns {string | null}
  */
 export function mapHomeSubjectPathToCommunity(pathname) {
+  if (
+    pathname === MY_LEARNING_HOME_PATH
+    || pathname.startsWith(`${MY_LEARNING_HOME_PATH}/`)
+  ) {
+    return null;
+  }
+
   if (!isHomeSubjectArea(pathname)) return null;
   return pathname.replace(/^\/home/, "/community");
 }
@@ -78,13 +92,24 @@ export function mapCommunityPathToHome(pathname) {
 
 /**
  * @param {"community" | "home"} [scope="community"]
+ * @param {{ isPremium?: boolean }} [options]
  */
-export function getSubjectNavLinks(scope = "community") {
+export function getSubjectNavLinks(scope = "community", { isPremium = false } = {}) {
   const base = scope === "home" ? "/home" : "/community";
 
-  return [
+  const links = [
     { to: `${base}/final-exam`, label: "Câu hỏi ôn tập", key: "review" },
     { to: `${base}/practical-exam`, label: "Câu hỏi thực hành", key: "practice" },
     { to: `${base}/documents`, label: "Tài liệu", key: "documents" },
   ];
+
+  if (scope === "home" && isPremium) {
+    links.push({
+      to: MY_LEARNING_HOME_PATH,
+      label: "Lịch sử học tập",
+      key: "history",
+    });
+  }
+
+  return links;
 }
