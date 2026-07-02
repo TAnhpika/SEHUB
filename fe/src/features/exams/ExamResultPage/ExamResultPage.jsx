@@ -245,8 +245,6 @@ function ReviewQuestionCard({
           })}
         </ul>
 
-        <ExamAiExplanation key={item.questionId} examId={examId} question={questionForAi} />
-
         <div className={styles.reviewPagination}>
           <button
             type="button"
@@ -272,6 +270,8 @@ function ReviewQuestionCard({
             <FontAwesomeIcon icon={faChevronRight} />
           </button>
         </div>
+
+        <ExamAiExplanation key={item.questionId} examId={examId} question={questionForAi} />
       </div>
     </article>
   );

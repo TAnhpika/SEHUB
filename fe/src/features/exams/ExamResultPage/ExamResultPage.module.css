@@ -1019,7 +1019,7 @@
   gap: 0.5rem;
   max-height: min(70vh, 28rem);
   overflow-y: auto;
-  padding-right: 0.125rem;
+  padding: 2px;
 }
 
 .reviewSidebarCell {
@@ -1032,12 +1032,12 @@
   font-size: 0.75rem;
   font-weight: 700;
   border-radius: var(--radius-md);
-  border: 1px solid transparent;
+  border: 2px solid transparent;
   cursor: pointer;
   transition:
     transform 0.12s ease,
-    box-shadow 0.12s ease,
-    border-color 0.12s ease;
+    border-color 0.12s ease,
+    background 0.12s ease;
 }
 
 .reviewSidebarCell:hover {
@@ -1063,8 +1063,8 @@
 }
 
 .reviewSidebarCellActive {
-  box-shadow: 0 0 0 2px var(--color-primary);
   border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-muted));
 }
 
 .review-question-active {
@@ -1106,9 +1106,9 @@
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  margin-top: 0.25rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--color-border-light);
+  margin-bottom: 0.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .reviewPageBtn {
