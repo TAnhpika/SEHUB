@@ -66,7 +66,7 @@ public sealed class RewardEngine : IRewardEngine
             userId,
             NotificationType.Token,
             $"Thưởng hạng {level?.Name ?? "mới"}!",
-            $"Bạn nhận voucher Premium giảm {rule.DiscountPercent}% (hết hạn sau {rule.ExpiryDays} ngày).",
+            $"Bạn nhận Voucher FTES {rule.DiscountPercent}% (hết hạn sau {rule.ExpiryDays} ngày).",
             user is null ? null : $"/home/premium",
             cancellationToken: cancellationToken);
     }

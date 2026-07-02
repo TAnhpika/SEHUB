@@ -1,0 +1,3 @@
+export const EXAM_HISTORY_PAGE_SIZE = 10;
+export const PRACTICE_HISTORY_PAGE_SIZE = 10;
+export const EXAM_COMPLETED_REWARD_POINTS = 15;

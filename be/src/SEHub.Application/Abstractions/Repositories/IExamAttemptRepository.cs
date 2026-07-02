@@ -12,4 +12,9 @@ public interface IExamAttemptRepository
     Task<IReadOnlyList<ExamAttempt>> GetByUserAndExamAsync(Guid userId, Guid examId, ExamAttemptStatus? status, CancellationToken cancellationToken = default);
     Task<int> CountSubmittedByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<int> CountSubmittedWithMinScoreAsync(Guid userId, decimal minScore, CancellationToken cancellationToken = default);
+    Task<(IReadOnlyList<ExamAttempt> Items, int TotalCount)> GetSubmittedFinalPagedByUserIdAsync(
+        Guid userId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
 }

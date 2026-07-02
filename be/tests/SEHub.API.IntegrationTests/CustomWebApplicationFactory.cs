@@ -29,6 +29,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     public const string FreeUserPassword = "Free@Test123";
 
     public static readonly Guid PublishedExamId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+    public static readonly Guid SubmittedExamAttemptId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa01");
     public static readonly Guid PracticeExamId = Guid.Parse("33333333-3333-3333-3333-333333333333");
     public static readonly Guid PracticeSubmissionId = Guid.Parse("44444444-4444-4444-4444-444444444444");
     public static readonly Guid SubscriptionPlanId = Guid.Parse("33333333-3333-3333-3333-333333333333");
@@ -415,6 +416,22 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 SubmittedAt = DateTime.UtcNow.AddHours(-2),
                 Status = PracticeSubmissionStatus.Submitted,
                 IsLatest = true,
+                CreatedAt = DateTime.UtcNow.AddHours(-2)
+            });
+        }
+
+        if (!await context.ExamAttempts.AnyAsync(a => a.Id == SubmittedExamAttemptId))
+        {
+            context.ExamAttempts.Add(new ExamAttempt
+            {
+                Id = SubmittedExamAttemptId,
+                UserId = ModeratorUserId,
+                ExamId = PublishedExamId,
+                StartedAt = DateTime.UtcNow.AddHours(-2),
+                SubmittedAt = DateTime.UtcNow.AddHours(-1),
+                Score = 76m,
+                Status = ExamAttemptStatus.Submitted,
+                AnswersJson = "{}",
                 CreatedAt = DateTime.UtcNow.AddHours(-2)
             });
         }

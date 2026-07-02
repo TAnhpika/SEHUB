@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -50,6 +50,8 @@ import {
   isExamFocusPath,
   resolveExamScope,
 } from "@/utils/examFocusPaths";
+import { loadHistoryExamSession } from "@/features/exams/myLearning/examResultHistory";
+import { getMyLearningPath } from "@/features/exams/myLearning/myLearningPaths";
 import styles from "./ExamResultPage.module.css";
 
 function getReviewExamTitle(exam) {
@@ -312,6 +314,7 @@ function ExamResultPage({ page = "review" }) {
   const { courseCode, examId, questionIndex } = useParams();
   const navigate = useNavigate();
   const { pathname, state: locationState } = useLocation();
+  const [searchParams] = useSearchParams();
   const { showToast } = useToast();
   const [showDetail, setShowDetail] = useState(false);
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
@@ -321,9 +324,12 @@ function ExamResultPage({ page = "review" }) {
   const isPracticeExam = page === "practice";
   const decodedExamId = decodeURIComponent(examId ?? "");
   const questionNumber = Math.max(1, Number(questionIndex) || 1);
+  const historyAttemptId = searchParams.get("attemptId");
 
   const [exam, setExam] = useState(null);
   const [examReady, setExamReady] = useState(false);
+  const [remoteSession, setRemoteSession] = useState(null);
+  const [remoteSessionState, setRemoteSessionState] = useState("idle");
 
   useEffect(() => {
     let cancelled = false;
@@ -375,8 +381,49 @@ function ExamResultPage({ page = "review" }) {
     if (isPracticeExam) {
       return question ? getPracticeSession(exam.id, question.id) : null;
     }
-    return getExamSession(exam.id);
-  }, [exam, isPracticeExam, question]);
+
+    const localSession = getExamSession(exam.id);
+    if (localSession?.submitted && localSession.result) {
+      return localSession;
+    }
+
+    return remoteSession;
+  }, [exam, isPracticeExam, question, remoteSession]);
+
+  useEffect(() => {
+    if (isPracticeExam || !historyAttemptId || !exam?.apiId) {
+      return undefined;
+    }
+
+    const localSession = getExamSession(exam.id);
+    if (localSession?.submitted && localSession.result) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    async function fetchHistorySession() {
+      setRemoteSessionState("loading");
+      setRemoteSession(null);
+
+      try {
+        const loaded = await loadHistoryExamSession(exam.apiId, historyAttemptId);
+        if (!cancelled) {
+          setRemoteSession(loaded);
+          setRemoteSessionState("ready");
+        }
+      } catch {
+        if (!cancelled) {
+          setRemoteSessionState("error");
+        }
+      }
+    }
+
+    fetchHistorySession();
+    return () => {
+      cancelled = true;
+    };
+  }, [exam?.apiId, exam?.id, historyAttemptId, isPracticeExam]);
 
   useEffect(() => {
     if (!isReviewFocusMode || !exam) return;
@@ -416,6 +463,35 @@ function ExamResultPage({ page = "review" }) {
         to={getExamDetailPath(exam.courseCode, exam.id, scope, "practice")}
         replace
       />
+    );
+  }
+
+  if (historyAttemptId && !isPracticeExam && remoteSessionState === "loading") {
+    return (
+      <div
+        className={isReviewFocusMode ? styles.loadingShellFocus : styles.loadingShell}
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <div className={styles.loading}>
+          <div className={styles.spinner} aria-hidden="true" />
+          <p className={styles.loadingText}>Đang tải kết quả từ lịch sử...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (historyAttemptId && !isPracticeExam && remoteSessionState === "error") {
+    return (
+      <div className={styles.loadingShell}>
+        <div className={styles.loading}>
+          <p className={styles.loadingText}>Không tải được kết quả bài làm này.</p>
+          <Button to={getMyLearningPath("exams")} look="outline" size="sm">
+            Quay lại lịch sử học tập
+          </Button>
+        </div>
+      </div>
     );
   }
 
