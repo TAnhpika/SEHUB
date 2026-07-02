@@ -243,26 +243,44 @@ function extractDocumentSubjectCode(dto) {
     : "";
 }
 
+const EXAM_CODES_PAGE_SIZE = 500;
+
+function collectSubjectCodesFromExamItems(items = []) {
+  const codes = new Set();
+
+  for (const item of items) {
+    const code =
+      normalizeCourseSubjectCode(item?.code) ??
+      String(item?.code ?? "").trim().toUpperCase();
+    if (code) {
+      codes.add(code);
+    }
+  }
+
+  return codes;
+}
+
 async function loadSubjectCodesWithExams(examType) {
   const codes = new Set();
   let page = 1;
   let totalCount = 0;
+  const pageSize = EXAM_CODES_PAGE_SIZE;
 
   do {
-    const result = await examsApi.listExams({ type: examType, page, pageSize: 200 });
-    totalCount = Number(result?.totalCount ?? 0);
+    const result = await examsApi.listExams({ type: examType, page, pageSize });
+    const items = result?.items ?? [];
+    totalCount = Number(result?.totalCount ?? items.length);
 
-    for (const item of result?.items ?? []) {
-      const code =
-        normalizeCourseSubjectCode(item?.code) ??
-        String(item?.code ?? "").trim().toUpperCase();
-      if (code) {
-        codes.add(code);
-      }
+    for (const code of collectSubjectCodesFromExamItems(items)) {
+      codes.add(code);
+    }
+
+    if (items.length < pageSize) {
+      break;
     }
 
     page += 1;
-  } while ((page - 1) * 200 < totalCount);
+  } while ((page - 1) * pageSize < totalCount);
 
   return codes;
 }
@@ -318,52 +336,94 @@ async function resolveSubjectCodesWithContent(contentFilter) {
   return loadSubjectCodesWithExams(examType);
 }
 
-export async function loadReviewCourses({ apiOnly = false, contentFilter = null } = {}) {
-  if (USE_MOCK) {
-    return REVIEW_COURSES;
-  }
-
-  const data = await subjectsApi.listSubjects();
-  const apiCourses = Array.isArray(data) ? data : [];
-  const normalizedApiCourses = apiCourses.map((group) => ({
+function normalizeApiSubjectCatalog(apiCourses = []) {
+  return apiCourses.map((group) => ({
     ...group,
     courses: (group.courses ?? []).map((course) => ({
       ...course,
       major: normalizeCatalogMajor(course.code, course.major ?? "SE"),
     })),
   }));
+}
 
+export async function loadReviewCourses({ apiOnly = false, contentFilter = null } = {}) {
+  if (USE_MOCK) {
+    return REVIEW_COURSES;
+  }
+
+  const [subjectsData, subjectCodes] = await Promise.all([
+    subjectsApi.listSubjects(),
+    contentFilter ? resolveSubjectCodesWithContent(contentFilter) : Promise.resolve(null),
+  ]);
+
+  const apiCourses = Array.isArray(subjectsData) ? subjectsData : [];
+  const normalizedApiCourses = normalizeApiSubjectCatalog(apiCourses);
   let catalog = apiOnly ? normalizedApiCourses : mergeCourseCatalog(normalizedApiCourses);
 
-  if (contentFilter) {
-    const subjectCodes = await resolveSubjectCodesWithContent(contentFilter);
+  if (contentFilter && subjectCodes) {
     catalog = filterCatalogBySubjectCodes(catalog, subjectCodes);
   }
 
   return catalog;
 }
 
+const LOAD_TIMEOUT_MS = 30_000;
+
+function withTimeout(promise, ms = LOAD_TIMEOUT_MS) {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      reject(new Error("Máy chủ phản hồi quá chậm. Vui lòng thử lại."));
+    }, ms);
+
+    promise
+      .then((value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        window.clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
+
 export function useReviewCourses({ apiOnly = false, contentFilter = null } = {}) {
   const [courses, setCourses] = useState(apiOnly && !USE_MOCK ? [] : REVIEW_COURSES);
   const [loading, setLoading] = useState(!USE_MOCK);
+  const [error, setError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (USE_MOCK) {
+      setCourses(REVIEW_COURSES);
       setLoading(false);
+      setError(null);
       return undefined;
     }
 
     let cancelled = false;
-    loadReviewCourses({ apiOnly, contentFilter })
+    setLoading(true);
+    setError(null);
+
+    withTimeout(loadReviewCourses({ apiOnly, contentFilter }))
       .then((data) => {
         if (!cancelled) {
           setCourses(data);
-          setLoading(false);
+          setError(null);
         }
       })
-      .catch(() => {
+      .catch((err) => {
         if (!cancelled) {
           setCourses([]);
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Không tải được danh sách môn học. Vui lòng thử lại.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
           setLoading(false);
         }
       });
@@ -371,7 +431,11 @@ export function useReviewCourses({ apiOnly = false, contentFilter = null } = {})
     return () => {
       cancelled = true;
     };
-  }, [apiOnly, contentFilter]);
+  }, [apiOnly, contentFilter, reloadKey]);
 
-  return { courses, loading };
+  function reload() {
+    setReloadKey((value) => value + 1);
+  }
+
+  return { courses, loading, error, reload };
 }

@@ -426,7 +426,7 @@ function ViolatingAccountsPage() {
 
                     return (
                       <tr key={account.id} className={isSelected ? styles.rowSelected : undefined}>
-                        <td>
+                        <td data-label="Tài khoản">
                           <div className={styles.account}>
                             <div className={styles.avatar} aria-hidden>
                               {account.initial}
@@ -437,20 +437,20 @@ function ViolatingAccountsPage() {
                             </div>
                           </div>
                         </td>
-                        <td>
+                        <td data-label="Email / Liên hệ">
                           <p className={styles.email}>{account.email}</p>
                           <p className={styles.dept}>{account.studentId}</p>
                         </td>
-                        <td>
+                        <td data-label="Hạng thành viên">
                           <RankBadge rank={account.rank} />
                         </td>
-                        <td>
+                        <td data-label="Số vi phạm">
                           <span className={styles.violations}>{account.violations}</span>
                         </td>
-                        <td>
+                        <td data-label="Trạng thái">
                           <StatusBadge account={account} />
                         </td>
-                        <td>
+                        <td data-label="Cảnh báo / khóa tạm">
                           <div className={styles.sanctionActions}>
                             <button
                               type="button"
@@ -478,7 +478,7 @@ function ViolatingAccountsPage() {
                             </div>
                           </div>
                         </td>
-                        <td className={styles.detailCell}>
+                        <td className={styles.detailCell} data-label="Thao tác">
                           <button
                             type="button"
                             className={styles.detailBtn}

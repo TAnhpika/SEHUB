@@ -358,7 +358,9 @@
 
 /* Table */
 .tableWrap {
+  width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--moderator-border-light);
   border-radius: 10px;
 }
@@ -696,6 +698,48 @@
 @media (max-width: 640px) {
   .formRow2 {
     grid-template-columns: 1fr;
+  }
+
+  .search {
+    flex: 1 1 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .searchRow .search {
+    min-width: 0;
+  }
+
+  .filterRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filterActions {
+    flex-wrap: wrap;
+    margin-left: 0;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pageHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .headerCopy {
+    min-width: 0;
+  }
+
+  .headerActions {
+    width: 100%;
+  }
+
+  .headerActions > * {
+    flex: 1 1 auto;
   }
 }
 

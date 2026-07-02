@@ -4,42 +4,31 @@ import MainSidebar from "@/common/Sidebar/MainSidebar/MainSidebar";
 import HomeSidebar from "@/common/Sidebar/HomeSidebar/HomeSidebar";
 import Footer from "@/common/Footer/Footer";
 import ChatFab from "@/features/chat/ChatFab/ChatFab";
-import { MainShellProvider } from "@/common/context/MainShellContext";
+import { MainShellProvider, useMainShell } from "@/common/context/MainShellContext";
 import { isHomeSubjectArea } from "@/utils/subjectPaths";
 import styles from "./MainLayout.module.css";
 
-function MainLayout() {
-  const { pathname } = useLocation();
-  const isSubjectArea = isHomeSubjectArea(pathname);
-  const isFriendsArea = useMatch({ path: "/home/friends", end: false });
-  const isFriendProfilePage = useMatch("/home/friends/:username");
-  const isProfilePage = useMatch({ path: "/profile/:username", end: true });
-  const isEditProfilePage = useMatch("/profile/:username/edit");
-  const isCreatePostPage = useMatch("/home/create-post");
-  const isFeedbackPage = useMatch("/home/feedback");
-  const isMessagesPage = useMatch("/home/messages");
-  const isPremiumPage = useMatch({ path: "/home/premium", end: true });
-  const isCheckoutPage = useMatch("/home/premium/checkout/:planId");
-  const isPaymentSuccessPage = useMatch("/home/premium/success/:planId");
-  const isPostDetailPage = useMatch("/home/posts/:postId");
-  const isSearchPage = useMatch("/home/search");
-  const hideRightSidebar =
-    isSubjectArea ||
-    isSearchPage ||
-    isFriendsArea ||
-    isProfilePage ||
-    isEditProfilePage ||
-    isCreatePostPage ||
-    isFeedbackPage ||
-    isMessagesPage ||
-    isPremiumPage ||
-    isCheckoutPage ||
-    isPaymentSuccessPage;
+function MainLayoutFrame({
+  hideRightSidebar,
+  isSubjectArea,
+  isFriendsArea,
+  isFriendProfilePage,
+  isProfilePage,
+  isEditProfilePage,
+  isCreatePostPage,
+  isFeedbackPage,
+  isMessagesPage,
+  isPremiumPage,
+  isCheckoutPage,
+  isPaymentSuccessPage,
+  isPostDetailPage,
+  isSearchPage,
+}) {
+  const { sidebarOpen } = useMainShell();
 
   return (
-    <MainShellProvider layout="main">
-      <div className={styles.layout}>
-        <MainHeader />
+    <div className={styles.layout}>
+      <MainHeader />
 
       <div
         className={[
@@ -49,7 +38,14 @@ function MainLayout() {
           .filter(Boolean)
           .join(" ")}
       >
-        <div className={styles["col-left"]}>
+        <div
+          className={[
+            styles["col-left"],
+            sidebarOpen && styles["col-left-drawer-open"],
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
           <MainSidebar />
         </div>
 
@@ -82,15 +78,62 @@ function MainLayout() {
         !isCheckoutPage &&
         !isPaymentSuccessPage &&
         !isPostDetailPage &&
-        !isSearchPage && (
-        <Footer />
-      )}
+        !isSearchPage && <Footer />}
       {!isMessagesPage &&
         !isEditProfilePage &&
         !isPremiumPage &&
         !isCheckoutPage &&
         !isPaymentSuccessPage && <ChatFab />}
-      </div>
+    </div>
+  );
+}
+
+function MainLayout() {
+  const { pathname } = useLocation();
+  const isSubjectArea = isHomeSubjectArea(pathname);
+  const isFriendsArea = useMatch({ path: "/home/friends", end: false });
+  const isFriendProfilePage = useMatch("/home/friends/:username");
+  const isProfilePage = useMatch({ path: "/profile/:username", end: true });
+  const isEditProfilePage = useMatch("/profile/:username/edit");
+  const isCreatePostPage = useMatch("/home/create-post");
+  const isFeedbackPage = useMatch("/home/feedback");
+  const isMessagesPage = useMatch("/home/messages");
+  const isPremiumPage = useMatch({ path: "/home/premium", end: true });
+  const isCheckoutPage = useMatch("/home/premium/checkout/:planId");
+  const isPaymentSuccessPage = useMatch("/home/premium/success/:planId");
+  const isPostDetailPage = useMatch("/home/posts/:postId");
+  const isSearchPage = useMatch("/home/search");
+  const hideRightSidebar =
+    isSubjectArea ||
+    isSearchPage ||
+    isFriendsArea ||
+    isProfilePage ||
+    isEditProfilePage ||
+    isCreatePostPage ||
+    isFeedbackPage ||
+    isMessagesPage ||
+    isPremiumPage ||
+    isCheckoutPage ||
+    isPaymentSuccessPage;
+
+  return (
+    <MainShellProvider layout="main">
+      <MainLayoutFrame
+        hideRightSidebar={hideRightSidebar}
+        isSubjectArea={isSubjectArea}
+        isFriendsArea={isFriendsArea}
+        isFriendProfilePage={Boolean(isFriendProfilePage)}
+        isProfilePage={Boolean(isProfilePage)}
+        isEditProfilePage={Boolean(isEditProfilePage)}
+        isCreatePostPage={Boolean(isCreatePostPage)}
+        isFeedbackPage={Boolean(isFeedbackPage)}
+        isMessagesPage={Boolean(isMessagesPage)}
+        isPremiumPage={Boolean(isPremiumPage)}
+        isCheckoutPage={Boolean(isCheckoutPage)}
+        isPaymentSuccessPage={Boolean(isPaymentSuccessPage)}
+        isPostDetailPage={Boolean(isPostDetailPage)}
+        isSearchPage={Boolean(isSearchPage)}
+      />
     </MainShellProvider>
   );
 }

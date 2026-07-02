@@ -2,6 +2,10 @@
   composes: sidebar from "../StaffSidebar/staffSidebar.module.css";
 }
 
+.sidebarOpen {
+  composes: sidebarOpen from "../StaffSidebar/staffSidebar.module.css";
+}
+
 .accentBar {
   composes: accentBar from "../StaffSidebar/staffSidebar.module.css";
 }
@@ -171,4 +175,21 @@
 
 .linkNested.linkActive .nestedDot {
   background: #93c5fd;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  display: none;
+  padding: 0;
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.45);
+  border: none;
+}
+
+@media (max-width: 1024px) {
+  .overlay {
+    display: block;
+  }
 }

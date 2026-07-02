@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faArrowLeft,
   faCheck,
   faFlag,
   faInbox,
@@ -95,6 +96,18 @@ function ReportsPage() {
   const deepLinkSyncedRef = useRef(false);
   const detailScrollRef = useRef(null);
   const urlReportId = searchParams.get("id");
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 959px)").matches : false,
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 959px)");
+    const handleChange = () => setIsMobile(mediaQuery.matches);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  const showMobileDetail = isMobile && Boolean(selectedId);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -622,8 +635,12 @@ function ReportsPage() {
         </div>
       ) : null}
 
-      <div className={styles.workspace}>
-        <div className={styles.queueCol}>
+      <div
+        className={`${styles.workspace} ${isMobile ? styles.workspaceMobile : ""} ${showMobileDetail ? styles.pageMobileDetail : ""}`}
+      >
+        <div
+          className={`${styles.queueCol} ${showMobileDetail ? styles.queueColMobileHidden : ""}`}
+        >
           <div className={styles.queueToolbar}>
             <div className={styles.queueToolbarHead}>
               <h2 className={styles.queueHeading}>Hàng chờ</h2>
@@ -743,7 +760,9 @@ function ReportsPage() {
           </div>
         </div>
 
-        <div className={styles.detailCol}>
+        <div
+          className={`${styles.detailCol} ${isMobile && !selectedId ? styles.detailColMobileHidden : ""}`}
+        >
           {isLoading ? (
             <div className={styles.detailEmpty} role="status" aria-live="polite">
               <FontAwesomeIcon icon={faSpinner} spin className={styles.loadingIcon} />
@@ -757,6 +776,16 @@ function ReportsPage() {
             </div>
           ) : (
             <>
+              {showMobileDetail ? (
+                <button
+                  type="button"
+                  className={styles.mobileBack}
+                  onClick={() => setSelectedId(null)}
+                >
+                  <FontAwesomeIcon icon={faArrowLeft} />
+                  Hàng chờ báo cáo
+                </button>
+              ) : null}
               <header className={styles.detailHead}>
                 <h3 className={styles.detailTitle}>Chi tiết báo cáo #{selected.code}</h3>
                 <p className={styles.detailSub}>

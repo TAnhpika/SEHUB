@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faClockRotateLeft, faFilePdf, faImage, faRotateRight, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faCheck, faClockRotateLeft, faFilePdf, faImage, faRotateRight, faXmark } from "@fortawesome/free-solid-svg-icons";
 import FilterDropdown from "@/common/FilterDropdown/FilterDropdown";
 import Pagination from "@/common/Pagination/Pagination";
 import { useToast } from "@/common/Toast/ToastProvider";
@@ -23,6 +23,18 @@ function ContentModerationPage() {
     const [pendingAction, setPendingAction] = useState(null);
     const acting = pendingAction !== null;
     const { item: focusedItem, loading: detailLoading } = useContentModerationDetail(focusedId);
+    const [isMobile, setIsMobile] = useState(() =>
+        typeof window !== "undefined" ? window.matchMedia("(max-width: 1023px)").matches : false,
+    );
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia("(max-width: 1023px)");
+        const handleChange = () => setIsMobile(mediaQuery.matches);
+        mediaQuery.addEventListener("change", handleChange);
+        return () => mediaQuery.removeEventListener("change", handleChange);
+    }, []);
+
+    const showMobileDetail = isMobile && Boolean(focusedId);
 
     const filtered = useMemo(() => filterContentQueue(items, { sort }), [items, sort]);
 
@@ -184,8 +196,12 @@ function ContentModerationPage() {
                     </div>
                 ) : null}
 
-                <div className={styles.workspace}>
-                    <div className={styles.listCol}>
+                <div
+                    className={`${styles.workspace} ${isMobile ? styles.workspaceMobile : ""} ${showMobileDetail ? styles.pageMobileDetail : ""}`}
+                >
+                    <div
+                        className={`${styles.listCol} ${showMobileDetail ? styles.listColMobileHidden : ""}`}
+                    >
                         <div className={styles.tableWrap}>
                             <table className={styles.table}>
                                 <thead>
@@ -308,7 +324,20 @@ function ContentModerationPage() {
                         </footer>
                     </div>
 
-                    <aside className={styles.detailCol} aria-label="Chi tiết bài viết">
+                    <aside
+                        className={`${styles.detailCol} ${isMobile && !focusedId ? styles.detailColMobileHidden : ""}`}
+                        aria-label="Chi tiết bài viết"
+                    >
+                        {showMobileDetail ? (
+                            <button
+                                type="button"
+                                className={styles.mobileBack}
+                                onClick={() => setFocusedId(null)}
+                            >
+                                <FontAwesomeIcon icon={faArrowLeft} />
+                                Danh sách chờ duyệt
+                            </button>
+                        ) : null}
                         {detailLoading && focusedId ? (
                             <div className={styles.empty}>Đang tải chi tiết bài viết...</div>
                         ) : (

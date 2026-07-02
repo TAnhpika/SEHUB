@@ -1,9 +1,12 @@
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faAward, faCommentDots, faHome, faUserGroup } from "@fortawesome/free-solid-svg-icons";
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { useAuth } from "@/context";
 import { useMainShell } from "@/common/context/MainShellContext";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import Button from "@/common/Button/Button";
 import SubjectNavSection from "@/common/Sidebar/SubjectNavSection/SubjectNavSection";
 import InteractionNavSection from "@/common/Sidebar/InteractionNavSection/InteractionNavSection";
@@ -19,6 +22,12 @@ function MainSidebar() {
   const { isPremium } = useAuth();
   const { sidebarOpen, closeSidebar } = useMainShell();
 
+  useLockBodyScroll(sidebarOpen);
+
+  useEffect(() => {
+    closeSidebar();
+  }, [pathname, closeSidebar]);
+
   function handleNavClick() {
     if (window.innerWidth <= 1024) {
       closeSidebar();
@@ -27,14 +36,17 @@ function MainSidebar() {
 
   return (
     <>
-      {sidebarOpen ? (
-        <button
-          type="button"
-          className={styles.overlay}
-          aria-label="Đóng menu"
-          onClick={closeSidebar}
-        />
-      ) : null}
+      {sidebarOpen
+        ? createPortal(
+            <button
+              type="button"
+              className="shell-drawer-overlay"
+              aria-label="Đóng menu"
+              onClick={closeSidebar}
+            />,
+            document.body,
+          )
+        : null}
 
       <div className={styles.root}>
         <aside

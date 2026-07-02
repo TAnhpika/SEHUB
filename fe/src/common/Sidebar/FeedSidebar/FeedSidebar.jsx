@@ -1,8 +1,11 @@
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHome, faUserGroup } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import { useMainShell } from "@/common/context/MainShellContext";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import SubjectNavSection from "@/common/Sidebar/SubjectNavSection/SubjectNavSection";
 import styles from "./FeedSidebar.module.css";
@@ -18,6 +21,12 @@ function FeedSidebar() {
   const { requireAuth } = useRequireAuth();
   const { sidebarOpen, closeSidebar } = useMainShell();
 
+  useLockBodyScroll(sidebarOpen);
+
+  useEffect(() => {
+    closeSidebar();
+  }, [pathname, closeSidebar]);
+
   function handleFindFriends() {
     requireAuth("Vui lòng đăng nhập để tìm kiếm bạn bè.");
   }
@@ -30,14 +39,17 @@ function FeedSidebar() {
 
   return (
     <>
-      {sidebarOpen ? (
-        <button
-          type="button"
-          className={styles.overlay}
-          aria-label="Đóng menu"
-          onClick={closeSidebar}
-        />
-      ) : null}
+      {sidebarOpen
+        ? createPortal(
+            <button
+              type="button"
+              className="shell-drawer-overlay"
+              aria-label="Đóng menu"
+              onClick={closeSidebar}
+            />,
+            document.body,
+          )
+        : null}
 
       <aside
         className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}

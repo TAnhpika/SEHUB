@@ -68,6 +68,7 @@ export function useChatHub({
           withCredentials: true,
         })
         .withAutomaticReconnect()
+        .configureLogging(signalR.LogLevel.Warning)
         .build();
 
       connection.on("ReceiveMessage", (message) => {

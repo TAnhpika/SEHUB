@@ -1,0 +1,52 @@
+/**
+ * Responsive utilities — breakpoint reference (use literal px in @media):
+ * --bp-shell: 1024px  sidebar drawer
+ * --bp-nav: 900px     search / split inbox
+ * --bp-tablet: 768px
+ * --bp-phone: 640px
+ * --bp-phone-sm: 480px
+ */
+
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.stackOnPhone {
+  display: grid;
+  gap: inherit;
+}
+
+.fluidPage {
+  min-width: 0;
+  padding-inline: var(--layout-gutter);
+}
+
+.hideOnPhone {
+  display: revert;
+}
+
+.showOnPhone {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .stackOnPhone {
+    grid-template-columns: 1fr !important;
+  }
+
+  .hideOnPhone {
+    display: none !important;
+  }
+
+  .showOnPhone {
+    display: revert !important;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --layout-gutter: 1rem;
+  }
+}

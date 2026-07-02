@@ -52,8 +52,15 @@ function MainHeader() {
           <button
             type="button"
             className={styles.menuBtn}
-            aria-label="Mở menu điều hướng"
-            onClick={() => mainShell.setSidebarOpen(true)}
+            aria-label={mainShell.sidebarOpen ? "Đóng menu điều hướng" : "Mở menu điều hướng"}
+            aria-expanded={mainShell.sidebarOpen}
+            onClick={() => {
+              if (mainShell.sidebarOpen) {
+                mainShell.closeSidebar();
+                return;
+              }
+              mainShell.setSidebarOpen(true);
+            }}
           >
             <FontAwesomeIcon icon={faBars} />
           </button>

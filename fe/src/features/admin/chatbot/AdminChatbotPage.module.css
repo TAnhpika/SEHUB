@@ -247,3 +247,46 @@
   color: var(--moderator-text-subtle);
   background: var(--moderator-bg);
 }
+
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  .tabs {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tab {
+    width: 100%;
+    text-align: center;
+    min-height: 2.75rem;
+  }
+
+  .panel {
+    min-width: 0;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions :global(.btn) {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .table {
+    min-width: 480px;
+  }
+
+  .messageList {
+    max-height: min(20rem, 50vh);
+  }
+}

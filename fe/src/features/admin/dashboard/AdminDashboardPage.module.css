@@ -539,6 +539,10 @@
   gap: var(--dash-gap);
 }
 
+.chartsRow > * {
+  min-width: 0;
+}
+
 @media (max-width: 900px) {
   .chartsRow {
     grid-template-columns: 1fr;
@@ -690,7 +694,6 @@
 
 .insightsRow > * {
   min-width: 0;
-  height: 100%;
   overflow: hidden;
 }
 

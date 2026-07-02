@@ -7,6 +7,7 @@ import {
   faChevronRight,
   faClock,
   faPaperPlane,
+  faTableCells,
 } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
 import RichTextContent from "@/common/RichTextEditor/RichTextContent";
@@ -24,6 +25,7 @@ import {
   formatDuration,
   getExamSession,
   getOrCreateExamSession,
+  resolveExamTimeRemainingLevel,
   saveExamAnswers,
   submitExamSession,
   usesApiAttempt,
@@ -47,7 +49,6 @@ import {
   toggleMultiSelectAnswer,
 } from "@/features/exams/examQuestionTypes";
 import {
-  getAnswerShortcutKey,
   resolveOptionKeyFromDigit,
   shouldIgnoreExamShortcut,
 } from "@/features/exams/examDoKeyboard";
@@ -55,6 +56,30 @@ import styles from "./ExamDoPage.module.css";
 
 /** §3.3 — Làm bài trực tuyến: 45 phút (mock; production có thể cấu hình theo đề) */
 const EXAM_DURATION_MS = 45 * 60 * 1000;
+
+const TIME_LEVEL_CLASS_KEYS = {
+  safe: "timeLevelSafe",
+  caution: "timeLevelCaution",
+  warning: "timeLevelWarning",
+  critical: "timeLevelCritical",
+};
+
+function ExamTimerDisplay({ timeRemainingMs, totalDurationMs, styles, className = "" }) {
+  const level = resolveExamTimeRemainingLevel(timeRemainingMs, totalDurationMs);
+  const levelClass = styles[TIME_LEVEL_CLASS_KEYS[level]] ?? "";
+
+  return (
+    <span
+      className={[styles.examTimer, levelClass, className].filter(Boolean).join(" ")}
+      role="timer"
+      aria-live="polite"
+      aria-label={`Thời gian còn lại ${formatDuration(timeRemainingMs)}`}
+    >
+      <FontAwesomeIcon icon={faClock} className={styles["time-icon"]} aria-hidden="true" />
+      {formatDuration(timeRemainingMs)}
+    </span>
+  );
+}
 
 function ExamDoPage({ page = "review" }) {
   const { courseCode, examId } = useParams();
@@ -84,6 +109,7 @@ function ExamDoPage({ page = "review" }) {
   const [sessionReady, setSessionReady] = useState(false);
   const [useApiFlow, setUseApiFlow] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -291,6 +317,7 @@ function ExamDoPage({ page = "review" }) {
   const goToQuestion = useCallback((index) => {
     if (index < 0 || index >= questions.length) return;
     setCurrentIndex(index);
+    setIsPaletteOpen(false);
   }, [questions.length]);
 
   const handleSelectAnswer = useCallback(
@@ -409,7 +436,6 @@ function ExamDoPage({ page = "review" }) {
   const requiredSelectCount =
     currentQuestion?.requiredSelectCount ?? currentQuestion?.correctAnswers?.length ?? 2;
   const typeLabel = EXAM_TYPE_LABELS[page] ?? exam.type;
-  const isTimeCritical = timeRemainingMs <= 5 * 60 * 1000;
 
   async function handleSubmitClick() {
     const unanswered = questions.length - answeredCount;
@@ -458,13 +484,29 @@ function ExamDoPage({ page = "review" }) {
   const exitControl = isFocusMode ? (
     <button type="button" className={styles.back} onClick={handleExitFocus}>
       <FontAwesomeIcon icon={faArrowLeft} />
-      Thoát bài thi
+      <span className={styles.backLabel}>Thoát bài thi</span>
     </button>
   ) : (
     <Link to={detailPath} className={styles.back} onClick={handleExitClick}>
       <FontAwesomeIcon icon={faArrowLeft} />
-      Thoát bài thi
+      <span className={styles.backLabel}>Thoát bài thi</span>
     </Link>
+  );
+
+  const questionNav = (
+    <div className={styles.pagination}>
+      <QuestionNavControls
+        currentIndex={currentIndex}
+        questionCount={exam.questionCount}
+        isFirstQuestion={isFirstQuestion}
+        isLastQuestion={isLastQuestion}
+        onPrev={() => goToQuestion(currentIndex - 1)}
+        onNext={() => goToQuestion(currentIndex + 1)}
+        isPaletteOpen={isPaletteOpen}
+        onPaletteToggle={() => setIsPaletteOpen((open) => !open)}
+        styles={styles}
+      />
+    </div>
   );
 
   return (
@@ -491,9 +533,12 @@ function ExamDoPage({ page = "review" }) {
             </div>
             <div className={styles["info-item"]}>
               <dt>Thời gian còn lại</dt>
-              <dd className={isTimeCritical ? styles["time-critical"] : ""}>
-                <FontAwesomeIcon icon={faClock} className={styles["time-icon"]} />
-                {formatDuration(timeRemainingMs)}
+              <dd>
+                <ExamTimerDisplay
+                  timeRemainingMs={timeRemainingMs}
+                  totalDurationMs={EXAM_DURATION_MS}
+                  styles={styles}
+                />
               </dd>
             </div>
           </dl>
@@ -514,10 +559,11 @@ function ExamDoPage({ page = "review" }) {
               <span>
                 {answeredCount}/{exam.questionCount} câu
               </span>
-              <span className={isTimeCritical ? styles["time-critical"] : ""}>
-                <FontAwesomeIcon icon={faClock} className={styles["time-icon"]} />
-                {formatDuration(timeRemainingMs)}
-              </span>
+              <ExamTimerDisplay
+                timeRemainingMs={timeRemainingMs}
+                totalDurationMs={EXAM_DURATION_MS}
+                styles={styles}
+              />
             </div>
             <button
               type="button"
@@ -554,11 +600,11 @@ function ExamDoPage({ page = "review" }) {
         <div className={styles.workspace}>
           <div className={styles["main-column"]}>
             <article className={styles["question-card"]}>
-              <p className={styles["question-label"]}>Câu {currentIndex + 1}</p>
               <RichTextContent
                 value={currentQuestion.text}
                 className={styles["question-text"]}
               />
+
               {isMultiQuestion ? (
                 <p className={styles["multi-hint"]}>
                   Chọn đúng {requiredSelectCount} đáp án ({selectedKeys.length}/{requiredSelectCount}).
@@ -566,18 +612,15 @@ function ExamDoPage({ page = "review" }) {
               ) : null}
 
               <ul className={styles.options}>
-                {currentQuestion.options.map((option, optionIndex) => {
+                {currentQuestion.options.map((option) => {
                   const isSelected = selectedKeys.includes(option.key);
-                  const shortcut = getAnswerShortcutKey(optionIndex);
 
                   return (
                     <li key={option.key}>
                       <button
                         type="button"
-                        className={`${styles.option} ${styles.hasShortcut} ${isSelected ? styles["option-selected"] : ""}`}
-                        data-shortcut={shortcut ?? undefined}
-                        aria-label={`Đáp án ${option.key}${shortcut ? `, phím ${shortcut}` : ""}`}
-                        title={shortcut ? `Phím ${shortcut}` : undefined}
+                        className={`${styles.option} ${isSelected ? styles["option-selected"] : ""}`}
+                        aria-label={`Đáp án ${option.key}`}
                         onClick={() => handleSelectAnswer(option.key)}
                       >
                         <span className={styles["option-key"]}>{option.key}</span>
@@ -590,41 +633,17 @@ function ExamDoPage({ page = "review" }) {
 
               <footer className={styles["question-toolbar"]}>
                 <div className={styles["toolbar-spacer"]} />
-
-                <div className={styles.pagination}>
-                  <button
-                    type="button"
-                    className={`${styles["page-btn"]} ${styles.hasShortcut}`}
-                    onClick={() => goToQuestion(currentIndex - 1)}
-                    disabled={isFirstQuestion}
-                    data-shortcut={isFirstQuestion ? undefined : "←"}
-                    aria-label="Câu trước (←)"
-                    title="←"
-                  >
-                    <FontAwesomeIcon icon={faChevronLeft} />
-                  </button>
-                  <span className={styles["page-indicator"]}>
-                    {currentIndex + 1} / {exam.questionCount}
-                  </span>
-                  <button
-                    type="button"
-                    className={`${styles["page-btn"]} ${styles.hasShortcut}`}
-                    onClick={() => goToQuestion(currentIndex + 1)}
-                    disabled={isLastQuestion}
-                    data-shortcut={isLastQuestion ? undefined : "→"}
-                    aria-label="Câu sau (→)"
-                    title="→"
-                  >
-                    <FontAwesomeIcon icon={faChevronRight} />
-                  </button>
-                </div>
-
+                {questionNav}
                 <div className={styles["toolbar-spacer"]} />
               </footer>
             </article>
           </div>
 
-          <aside className={styles.palette} aria-label="Bảng câu hỏi">
+          <aside
+            id="exam-question-palette"
+            className={`${styles.palette} ${isPaletteOpen ? styles.paletteExpanded : ""}`}
+            aria-label="Bảng câu hỏi"
+          >
             <header className={styles["palette-header"]}>
               <h3 className={styles["palette-title"]}>Bảng câu hỏi</h3>
               <p className={styles["palette-meta"]}>
@@ -671,8 +690,64 @@ function ExamDoPage({ page = "review" }) {
             </div>
           </aside>
         </div>
+
+        <nav className={styles.mobileExamNav} aria-label="Điều hướng câu hỏi">
+          {questionNav}
+        </nav>
       </section>
     </div>
+  );
+}
+
+function QuestionNavControls({
+  currentIndex,
+  questionCount,
+  isFirstQuestion,
+  isLastQuestion,
+  onPrev,
+  onNext,
+  isPaletteOpen,
+  onPaletteToggle,
+  styles,
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        className={`${styles["page-btn"]} ${styles["page-btn-text"]}`}
+        onClick={onPrev}
+        disabled={isFirstQuestion}
+        aria-label="Câu trước"
+      >
+        <FontAwesomeIcon icon={faChevronLeft} className={styles["page-btn-icon"]} />
+        <span className={styles["page-btn-label"]}>Trước</span>
+      </button>
+      <button
+        type="button"
+        className={`${styles.paletteToggle} ${isPaletteOpen ? styles.paletteToggleActive : ""}`}
+        onClick={onPaletteToggle}
+        aria-expanded={isPaletteOpen}
+        aria-controls="exam-question-palette"
+        aria-label={isPaletteOpen ? "Đóng bảng câu hỏi" : "Mở bảng câu hỏi"}
+      >
+        <FontAwesomeIcon icon={faTableCells} />
+      </button>
+      <span className={styles["page-indicator"]}>
+        <span className={styles["page-indicator-current"]}>{currentIndex + 1}</span>
+        <span className={styles["page-indicator-sep"]}>/</span>
+        <span className={styles["page-indicator-total"]}>{questionCount}</span>
+      </span>
+      <button
+        type="button"
+        className={`${styles["page-btn"]} ${styles["page-btn-text"]}`}
+        onClick={onNext}
+        disabled={isLastQuestion}
+        aria-label="Câu sau"
+      >
+        <span className={styles["page-btn-label"]}>Sau</span>
+        <FontAwesomeIcon icon={faChevronRight} className={styles["page-btn-icon"]} />
+      </button>
+    </>
   );
 }
 

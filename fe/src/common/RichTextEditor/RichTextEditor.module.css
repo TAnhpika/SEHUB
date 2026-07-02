@@ -296,3 +296,29 @@
   font-size: 0.875rem;
   color: var(--color-text-subtle);
 }
+
+@media (max-width: 640px) {
+  .toolbar,
+  .floatingToolbar {
+    gap: 0.25rem;
+    padding: 0.375rem 0.5rem;
+  }
+
+  .tool {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .floatingRoot .floatingToolbar {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .textarea,
+  .editor {
+    padding: 0.75rem;
+    font-size: 1rem;
+  }
+}

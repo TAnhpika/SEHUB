@@ -94,6 +94,12 @@
     height: 0;
     overflow: visible;
     z-index: 50;
+    pointer-events: none;
+  }
+
+  .col-left-drawer-open {
+    z-index: 99;
+    pointer-events: auto;
   }
 
   .col-right {

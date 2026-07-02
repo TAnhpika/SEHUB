@@ -2,12 +2,12 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import { useThemeOptional } from "@/hooks/useTheme";
+import ChartResponsiveContainer from "./ChartResponsiveContainer";
 import { getChartTheme } from "./chartTheme";
 import styles from "./recharts.module.css";
 
@@ -30,9 +30,14 @@ function RechartsBarChart({
   const chartData = data.map((d) => ({ name: d.label, value: d.value }));
 
   return (
-    <div className={styles.chartWrap} style={{ height }} key={theme}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData} margin={{ ...chartMargin, left: 4, bottom: 4 }}>
+    <ChartResponsiveContainer className={styles.chartWrap} style={{ height }} key={theme}>
+      {({ width, height: chartHeight }) => (
+        <BarChart
+          width={width}
+          height={chartHeight}
+          data={chartData}
+          margin={{ ...chartMargin, left: 4, bottom: 4 }}
+        >
           <CartesianGrid strokeDasharray="4 4" stroke={colors.grid} vertical={false} />
           <XAxis
             dataKey="name"
@@ -60,8 +65,8 @@ function RechartsBarChart({
             maxBarSize={48}
           />
         </BarChart>
-      </ResponsiveContainer>
-    </div>
+      )}
+    </ChartResponsiveContainer>
   );
 }
 
