@@ -67,6 +67,8 @@
   --bp-phone: 640px;
   --bp-phone-sm: 480px;
   /* Stacking — exam focus fullscreen must stay below global overlays */
+  --z-drawer-backdrop: 98;
+  --z-drawer-panel: 99;
   --z-exam-focus: 9999;
   --z-overlay: 10000;
   --z-toast: 10001;
