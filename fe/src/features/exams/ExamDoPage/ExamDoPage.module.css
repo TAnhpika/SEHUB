@@ -654,6 +654,28 @@
     gap: 0.625rem;
   }
 
+  .toolbar-spacer {
+    display: none;
+  }
+
+  .pagination {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .page-btn {
+    width: 2.75rem;
+    height: 2.75rem;
+    flex-shrink: 0;
+  }
+
+  .page-indicator {
+    min-width: 0;
+    flex: 1;
+    font-size: 0.9375rem;
+  }
+
   .grid {
     display: flex;
     flex-wrap: nowrap;
