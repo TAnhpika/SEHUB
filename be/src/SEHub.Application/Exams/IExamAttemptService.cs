@@ -10,8 +10,4 @@ public interface IExamAttemptService
     Task<ExamAttemptDto> SaveAnswersAsync(Guid examId, Guid attemptId, SaveAnswersRequest request, CancellationToken cancellationToken = default);
     Task<ExamResultDto> SubmitAsync(Guid examId, Guid attemptId, CancellationToken cancellationToken = default);
     Task<ExamResultDto> GetResultAsync(Guid examId, Guid attemptId, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<ExamAttemptHistoryItemDto>> ListAttemptHistoryAsync(
-        string subjectCode,
-        string? examType,
-        CancellationToken cancellationToken = default);
 }

@@ -5,18 +5,12 @@ import {
   faChevronDown,
   faChevronLeft,
   faChevronRight,
-  faClockRotateLeft,
   faFileLines,
 } from "@fortawesome/free-solid-svg-icons";
 import Pagination from "@/common/Pagination/Pagination";
 import { useAuth } from "@/context";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import {
-  getAttemptHistoryContinueHref,
-  getAttemptHistoryResultHref,
-  loadExamAttemptHistory,
-} from "@/features/exams/examAttemptHistory";
 import {
   EXAMS_PER_PAGE,
   filterExamPapers,
@@ -63,15 +57,6 @@ function SubjectDetailPage({ page }) {
   const exams = useMemo(
     () => filterExamPapers(allExams, yearFilter, termFilter),
     [allExams, yearFilter, termFilter],
-  );
-
-  const isReviewPage = page === "review";
-  const showAttemptHistory = isReviewPage && isAuthenticated && !guestOnCommunity;
-
-  const { data: attemptHistory, loading: historyLoading } = useAsyncData(
-    () => (showAttemptHistory ? loadExamAttemptHistory(code, page) : Promise.resolve([])),
-    [code, page, showAttemptHistory],
-    { initialData: [] },
   );
 
   const totalPages = Math.max(1, Math.ceil(exams.length / EXAMS_PER_PAGE));
@@ -178,94 +163,6 @@ function SubjectDetailPage({ page }) {
           <FontAwesomeIcon icon={faChevronDown} className={styles["filter-icon"]} />
         </label>
       </div>
-
-      {showAttemptHistory ? (
-        <section className={styles.historySection} aria-label={`Lịch sử làm bài ${code}`}>
-          <div className={styles.historyHead}>
-            <span className={styles.historyIcon} aria-hidden="true">
-              <FontAwesomeIcon icon={faClockRotateLeft} />
-            </span>
-            <div>
-              <h2 className={styles.historyTitle}>Lịch sử làm bài</h2>
-              <p className={styles.historySubtitle}>Các lần làm đề cuối kỳ môn {code}</p>
-            </div>
-          </div>
-
-          {historyLoading ? (
-            <p className={styles.historyEmpty}>Đang tải lịch sử...</p>
-          ) : attemptHistory.length === 0 ? (
-            <p className={styles.historyEmpty}>Chưa có lần làm bài nào cho môn này.</p>
-          ) : (
-            <div className={styles.historyTableWrap}>
-              <table className={styles.historyTable}>
-                <thead>
-                  <tr>
-                    <th scope="col">Mã đề</th>
-                    <th scope="col">Thời gian</th>
-                    <th scope="col">Điểm</th>
-                    <th scope="col">Trạng thái</th>
-                    <th scope="col">Hành động</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {attemptHistory.map((item) => (
-                    <tr key={item.attemptId}>
-                      <td data-label="Mã đề">
-                        <span className={styles.historyExamCode}>{item.examPaperCode}</span>
-                      </td>
-                      <td data-label="Thời gian">
-                        <time dateTime={item.submittedAt ?? item.startedAt}>
-                          {item.submittedAtLabel ?? item.startedAtLabel}
-                        </time>
-                      </td>
-                      <td data-label="Điểm">
-                        {item.isSubmitted && item.scorePercent != null ? (
-                          <span className={styles.historyScore}>{item.scorePercent}%</span>
-                        ) : (
-                          <span className={styles.historyScoreMuted}>—</span>
-                        )}
-                      </td>
-                      <td data-label="Trạng thái">
-                        <span
-                          className={`${styles.historyStatus} ${
-                            item.isSubmitted
-                              ? styles.historyStatusSubmitted
-                              : item.isInProgress
-                                ? styles.historyStatusProgress
-                                : ""
-                          }`}
-                        >
-                          {item.statusLabel}
-                        </span>
-                      </td>
-                      <td data-label="Hành động">
-                        {item.isSubmitted ? (
-                          <Link
-                            to={getAttemptHistoryResultHref(item, config, code)}
-                            className={styles.historyAction}
-                          >
-                            Xem kết quả
-                          </Link>
-                        ) : item.isInProgress ? (
-                          <Link
-                            to={getAttemptHistoryContinueHref(item, code)}
-                            state={{ scope, apiExamId: item.examId }}
-                            className={styles.historyAction}
-                          >
-                            Tiếp tục
-                          </Link>
-                        ) : (
-                          <span className={styles.historyScoreMuted}>—</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      ) : null}
 
       <section
         className={styles["table-wrap"]}

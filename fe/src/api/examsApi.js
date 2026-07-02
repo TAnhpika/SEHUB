@@ -105,10 +105,6 @@ export function getAttemptResult(examId, attemptId) {
   return apiRequest(`/api/v1/exams/${examId}/attempts/${attemptId}/result`);
 }
 
-export function listAttemptHistory(params = {}) {
-  return apiRequest(`/api/v1/exams/attempts/history${buildQuery(params)}`);
-}
-
 export function reportExamQuestion(examId, questionId, body) {
   return apiRequest(`/api/v1/exams/${examId}/questions/${questionId}/report`, {
     method: "POST",

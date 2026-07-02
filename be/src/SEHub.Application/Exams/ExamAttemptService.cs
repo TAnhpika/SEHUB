@@ -135,34 +135,6 @@ public sealed class ExamAttemptService : IExamAttemptService
         return _gradingService.Grade(exam, DeserializeAnswers(attempt.AnswersJson));
     }
 
-    public async Task<IReadOnlyList<ExamAttemptHistoryItemDto>> ListAttemptHistoryAsync(
-        string subjectCode,
-        string? examType,
-        CancellationToken cancellationToken = default)
-    {
-        var userId = RequireAuthenticatedUser();
-        var normalizedCode = subjectCode?.Trim();
-        if (string.IsNullOrWhiteSpace(normalizedCode))
-        {
-            return Array.Empty<ExamAttemptHistoryItemDto>();
-        }
-
-        ExamType? parsedType = null;
-        if (!string.IsNullOrWhiteSpace(examType) && Enum.TryParse<ExamType>(examType, true, out var examTypeValue))
-        {
-            parsedType = examTypeValue;
-        }
-
-        var attempts = await _attemptRepository.GetHistoryByUserAndSubjectCodeAsync(
-            userId,
-            normalizedCode,
-            parsedType,
-            limit: 50,
-            cancellationToken);
-
-        return attempts.Select(MapHistoryItem).ToList();
-    }
-
     private async Task<ExamAttempt> GetOwnedAttemptAsync(Guid examId, Guid attemptId, CancellationToken cancellationToken)
     {
         var userId = RequirePremiumUser();
@@ -177,19 +149,12 @@ public sealed class ExamAttemptService : IExamAttemptService
         return attempt;
     }
 
-    private Guid RequireAuthenticatedUser()
+    private Guid RequirePremiumUser()
     {
         if (_currentUser.UserId is not Guid userId)
         {
             throw new ForbiddenException("Authentication required.");
         }
-
-        return userId;
-    }
-
-    private Guid RequirePremiumUser()
-    {
-        var userId = RequireAuthenticatedUser();
 
         if (!_currentUser.IsPremium && !_currentUser.IsModeratorOrAdmin)
         {
@@ -218,32 +183,6 @@ public sealed class ExamAttemptService : IExamAttemptService
                 .ToDictionary(pair => pair.Key, pair => (IReadOnlyList<Guid>)pair.Value)
             : null
     };
-
-    private static ExamAttemptHistoryItemDto MapHistoryItem(ExamAttempt attempt)
-    {
-        var exam = attempt.Exam;
-        var totalQuestions = exam?.QuestionCount ?? 0;
-        int? correctCount = null;
-
-        if (attempt.Status == ExamAttemptStatus.Submitted && attempt.Score.HasValue && totalQuestions > 0)
-        {
-            correctCount = (int)Math.Round(totalQuestions * attempt.Score.Value / 100m, MidpointRounding.AwayFromZero);
-        }
-
-        return new ExamAttemptHistoryItemDto
-        {
-            AttemptId = attempt.Id,
-            ExamId = attempt.ExamId,
-            ExamPaperCode = exam?.Title ?? string.Empty,
-            SubjectCode = exam?.Code ?? string.Empty,
-            Status = attempt.Status.ToString(),
-            StartedAt = attempt.StartedAt,
-            SubmittedAt = attempt.SubmittedAt,
-            ScorePercent = attempt.Score,
-            TotalQuestions = totalQuestions,
-            CorrectCount = correctCount,
-        };
-    }
 
     private static Dictionary<Guid, List<Guid>> DeserializeAnswers(string json) =>
         ExamAttemptAnswersJson.Deserialize(json);

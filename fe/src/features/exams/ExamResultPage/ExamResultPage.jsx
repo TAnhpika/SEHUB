@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -26,9 +26,7 @@ import {
   getScoreGrade,
   getScoreOnTen,
 } from "@/features/exams/examResultInsights";
-import { buildExamQuestions, EXAM_USE_MOCK, loadExamMeta, loadReviewQuestions } from "@/features/exams/examDetailData";
-import { loadAttemptResult } from "@/features/exams/examApiSession";
-import * as examsApi from "@/api/examsApi";
+import { buildExamQuestions, EXAM_USE_MOCK, loadExamMeta } from "@/features/exams/examDetailData";
 import {
   clearExamSession,
   createExamSession,
@@ -360,8 +358,6 @@ function ExamResultPage({ page = "review" }) {
   const { courseCode, examId, questionIndex } = useParams();
   const navigate = useNavigate();
   const { pathname, state: locationState } = useLocation();
-  const [searchParams] = useSearchParams();
-  const attemptId = searchParams.get("attemptId");
   const { showToast } = useToast();
   const [showDetail, setShowDetail] = useState(false);
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
@@ -375,10 +371,6 @@ function ExamResultPage({ page = "review" }) {
 
   const [exam, setExam] = useState(null);
   const [examReady, setExamReady] = useState(false);
-  const [apiExamId, setApiExamId] = useState(locationState?.apiExamId ?? null);
-  const [questions, setQuestions] = useState([]);
-  const [historySession, setHistorySession] = useState(null);
-  const [historySessionReady, setHistorySessionReady] = useState(!attemptId);
 
   useEffect(() => {
     let cancelled = false;
@@ -400,7 +392,6 @@ function ExamResultPage({ page = "review" }) {
         const meta = await loadExamMeta(courseCode, decodedExamId, page, scope);
         if (!cancelled) {
           setExam(meta?.exam ?? null);
-          setApiExamId(meta?.apiExamId ?? locationState?.apiExamId ?? null);
         }
       } catch {
         if (!cancelled) {
@@ -417,116 +408,22 @@ function ExamResultPage({ page = "review" }) {
     return () => {
       cancelled = true;
     };
-  }, [courseCode, decodedExamId, page, scope, locationState?.apiExamId]);
+  }, [courseCode, decodedExamId, page, scope]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadQuestions() {
-      if (!exam) {
-        setQuestions([]);
-        return;
-      }
-
-      if (!EXAM_USE_MOCK && apiExamId && page === "review") {
-        const loaded = await loadReviewQuestions(apiExamId, exam.questionCount, page);
-        if (!cancelled) {
-          setQuestions(loaded.length > 0 ? loaded : buildExamQuestions(exam.questionCount, page));
-        }
-        return;
-      }
-
-      if (!cancelled) {
-        setQuestions(buildExamQuestions(exam.questionCount, page));
-      }
-    }
-
-    loadQuestions();
-    return () => {
-      cancelled = true;
-    };
-  }, [exam, apiExamId, page]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadHistorySession() {
-      if (!attemptId || !exam || isPracticeExam || EXAM_USE_MOCK) {
-        setHistorySession(null);
-        setHistorySessionReady(true);
-        return;
-      }
-
-      const resolvedApiExamId = apiExamId ?? exam.apiId ?? null;
-      if (!resolvedApiExamId) {
-        setHistorySession(null);
-        setHistorySessionReady(true);
-        return;
-      }
-
-      setHistorySessionReady(false);
-
-      try {
-        const [attempt, loadedQuestions] = await Promise.all([
-          examsApi.getAttempt(resolvedApiExamId, attemptId),
-          loadReviewQuestions(resolvedApiExamId, exam.questionCount, page),
-        ]);
-        const questionList =
-          loadedQuestions.length > 0 ? loadedQuestions : buildExamQuestions(exam.questionCount, page);
-        const result = await loadAttemptResult(resolvedApiExamId, attemptId, questionList);
-        const answers = {};
-
-        for (const item of result.items) {
-          if (item.selectedAnswers?.length) {
-            answers[String(item.questionId)] =
-              item.selectedAnswers.length > 1 ? item.selectedAnswers : item.selectedAnswers[0];
-          } else if (item.selectedAnswer) {
-            answers[String(item.questionId)] = item.selectedAnswer;
-          }
-        }
-
-        if (!cancelled) {
-          setQuestions(questionList);
-          setHistorySession({
-            submitted: true,
-            startedAt: new Date(attempt.startedAt).getTime(),
-            submittedAt: attempt.submittedAt
-              ? new Date(attempt.submittedAt).getTime()
-              : Date.now(),
-            answers,
-            result,
-          });
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setHistorySession(null);
-          showToast(error?.message ?? "Không tải được kết quả lần làm bài.");
-        }
-      } finally {
-        if (!cancelled) {
-          setHistorySessionReady(true);
-        }
-      }
-    }
-
-    loadHistorySession();
-    return () => {
-      cancelled = true;
-    };
-  }, [attemptId, exam, apiExamId, isPracticeExam, page, showToast]);
+  const questions = useMemo(
+    () => (exam ? buildExamQuestions(exam.questionCount, page) : []),
+    [exam, page],
+  );
 
   const question = isPracticeExam ? questions[questionNumber - 1] : null;
 
   const session = useMemo(() => {
     if (!exam) return null;
-    if (attemptId && historySession) {
-      return historySession;
-    }
     if (isPracticeExam) {
       return question ? getPracticeSession(exam.id, question.id) : null;
     }
     return getExamSession(exam.id);
-  }, [exam, attemptId, historySession, isPracticeExam, question]);
+  }, [exam, isPracticeExam, question]);
 
   useEffect(() => {
     if (!isReviewFocusMode || !exam) return;
@@ -540,7 +437,7 @@ function ExamResultPage({ page = "review" }) {
     return <Navigate to={`${config.detailBase}/${courseCode?.toUpperCase()}`} replace />;
   }
 
-  if (!examReady || !historySessionReady) {
+  if (!examReady) {
     return (
       <div
         className={isReviewFocusMode ? styles.loadingShellFocus : styles.loadingShell}
