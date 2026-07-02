@@ -1,4 +1,5 @@
 @import "./variables.css";
+@import "./breakpoints.css";
 
 html {
   scroll-behavior: smooth;

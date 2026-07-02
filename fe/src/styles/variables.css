@@ -60,6 +60,12 @@
   --layout-max-width: 1680px;
   --layout-gutter: 1.25rem;
   --header-height: 72px;
+  /* Breakpoint reference (literal px required in @media queries) */
+  --bp-shell: 1024px;
+  --bp-nav: 900px;
+  --bp-tablet: 768px;
+  --bp-phone: 640px;
+  --bp-phone-sm: 480px;
   /* Stacking — exam focus fullscreen must stay below global overlays */
   --z-exam-focus: 9999;
   --z-overlay: 10000;

@@ -376,6 +376,7 @@ function AdminChatbotPage() {
             ) : null}
           </div>
 
+          <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
@@ -440,6 +441,7 @@ function AdminChatbotPage() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
         )
       ) : null}
@@ -449,6 +451,7 @@ function AdminChatbotPage() {
           <ChatbotTableSkeleton />
         ) : (
         <div className={styles.panel}>
+          <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
@@ -480,6 +483,7 @@ function AdminChatbotPage() {
               ))}
             </tbody>
           </table>
+          </div>
 
           {selectedConversationId ? (
             <div className={styles.messageList} aria-busy={isLoadingMessages}>

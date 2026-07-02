@@ -797,3 +797,47 @@
         min-height: 360px;
     }
 }
+
+@media (max-width: 640px) {
+    .listCol {
+        max-height: none;
+    }
+
+    .tableWrap {
+        overflow-x: visible;
+    }
+
+    .table {
+        min-width: 0;
+    }
+
+    .table thead {
+        display: none;
+    }
+
+    .table tbody tr {
+        display: block;
+        margin-bottom: 0.625rem;
+        border: 1px solid var(--moderator-border-light);
+        border-radius: 10px;
+    }
+
+    .table tbody td {
+        display: block;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--moderator-border-light);
+    }
+
+    .table tbody td:last-child {
+        border-bottom: none;
+    }
+
+    .colCheck {
+        width: auto;
+        padding-bottom: 0.25rem;
+    }
+
+    .detailCol {
+        min-height: 280px;
+    }
+}

@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import logoSrc from "@/img/logo.png";
+import { useAdminPage } from "@/features/admin/context/AdminPageContext";
 import { getAdminNavSections } from "@/features/admin/adminNavData";
 import {
   getAdminNavBadgeCounts,
@@ -35,7 +36,7 @@ function isNavItemActive(item, pathname, searchParams) {
   return matchNavPath(pathname, item.to, item.end);
 }
 
-function NavItemLink({ item, nested = false, pathname, searchParams }) {
+function NavItemLink({ item, nested = false, pathname, searchParams, onNavigate }) {
   const active = isNavItemActive(item, pathname, searchParams);
   const to = item.search
     ? { pathname: item.to, search: item.search }
@@ -46,6 +47,7 @@ function NavItemLink({ item, nested = false, pathname, searchParams }) {
       <NavLink
         to={to}
         end={item.end}
+        onClick={onNavigate}
         className={() =>
           [nested ? styles.linkNested : styles.link, active ? styles.linkActive : ""]
             .filter(Boolean)
@@ -76,7 +78,7 @@ function NavItemLink({ item, nested = false, pathname, searchParams }) {
   );
 }
 
-function NavGroup({ group, pathname, searchParams }) {
+function NavGroup({ group, pathname, searchParams, onNavigate }) {
   const childActive = group.items.some((child) =>
     isNavItemActive(child, pathname, searchParams),
   );
@@ -126,6 +128,7 @@ function NavGroup({ group, pathname, searchParams }) {
               nested
               pathname={pathname}
               searchParams={searchParams}
+              onNavigate={onNavigate}
             />
           ))}
         </ul>
@@ -137,6 +140,7 @@ function NavGroup({ group, pathname, searchParams }) {
 function AdminSidebar() {
   const { pathname, search } = useLocation();
   const searchParams = new URLSearchParams(search);
+  const { sidebarOpen, setSidebarOpen } = useAdminPage();
   const [badgeCounts, setBadgeCounts] = useState(() => getAdminNavBadgeCounts());
   const navSections = getAdminNavSections(badgeCounts);
 
@@ -157,48 +161,70 @@ function AdminSidebar() {
     };
   }, []);
 
+  function handleNavClick() {
+    if (window.innerWidth <= 1024) {
+      setSidebarOpen(false);
+    }
+  }
+
   return (
-    <aside className={styles.sidebar}>
-      <div className={styles.accentBar} aria-hidden />
+    <>
+      {sidebarOpen ? (
+        <button
+          type="button"
+          className={styles.overlay}
+          aria-label="Đóng menu"
+          onClick={() => setSidebarOpen(false)}
+        />
+      ) : null}
 
-      <div className={styles.inner}>
-        <Link to="/admin" className={styles.brand}>
-          <img src={logoSrc} alt="" className={styles.logo} decoding="async" />
-          <span className={styles.brandText}>
-            <span className={styles.brandName}>SEHub</span>
-            <span className={styles.brandSub}>Admin</span>
-          </span>
-        </Link>
+      <aside
+        className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}
+        aria-label="Điều hướng quản trị"
+      >
+        <div className={styles.accentBar} aria-hidden />
 
-        <nav className={styles.nav} aria-label="Điều hướng quản trị">
-          {navSections.map((section, index) => (
-            <div key={section.title} className={styles.section}>
-              {index > 0 ? <div className={styles.divider} aria-hidden /> : null}
-              <p className={styles.sectionTitle}>{section.title}</p>
-              <ul className={styles.sectionLinks}>
-                {section.items.map((item) =>
-                  isNavGroup(item) ? (
-                    <NavGroup
-                      key={item.id}
-                      group={item}
-                      pathname={pathname}
-                      searchParams={searchParams}
-                    />
-                  ) : (
-                    <NavItemLink
-                      key={item.id}
-                      item={item}
-                      pathname={pathname}
-                      searchParams={searchParams}
-                    />
-                  ),
-                )}
-              </ul>
-            </div>
-          ))}
-        </nav>
-      </div>
-    </aside>
+        <div className={styles.inner}>
+          <Link to="/admin" className={styles.brand} onClick={handleNavClick}>
+            <img src={logoSrc} alt="" className={styles.logo} decoding="async" />
+            <span className={styles.brandText}>
+              <span className={styles.brandName}>SEHub</span>
+              <span className={styles.brandSub}>Admin</span>
+            </span>
+          </Link>
+
+          <nav className={styles.nav}>
+            {navSections.map((section, index) => (
+              <div key={section.title} className={styles.section}>
+                {index > 0 ? <div className={styles.divider} aria-hidden /> : null}
+                <p className={styles.sectionTitle}>{section.title}</p>
+                <ul className={styles.sectionLinks}>
+                  {section.items.map((item) =>
+                    isNavGroup(item) ? (
+                      <NavGroup
+                        key={item.id}
+                        group={item}
+                        pathname={pathname}
+                        searchParams={searchParams}
+                        onNavigate={handleNavClick}
+                      />
+                    ) : (
+                      <NavItemLink
+                        key={item.id}
+                        item={item}
+                        pathname={pathname}
+                        searchParams={searchParams}
+                        onNavigate={handleNavClick}
+                      />
+                    ),
+                  )}
+                </ul>
+              </div>
+            ))}
+          </nav>
+        </div>
+      </aside>
+    </>
   );
 }
 

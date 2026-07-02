@@ -1,6 +1,10 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBars, faHouse } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
+import { useAdminPage } from "@/features/admin/context/AdminPageContext";
+import { resolveAdminPageTitle } from "@/features/admin/adminNavData";
 import WorkspaceSwitcher from "@/common/WorkspaceSwitcher/WorkspaceSwitcher";
 import AdminNotificationDropdown from "./AdminNotificationDropdown";
 import AdminSettingsMenu from "./AdminSettingsMenu";
@@ -9,9 +13,16 @@ import HeaderProfileMenu, { HeaderProfileLogoutItem } from "@/common/Header/shar
 import styles from "./AdminHeader.module.css";
 
 function AdminHeader() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { setSidebarOpen } = useAdminPage();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const pageTitle = useMemo(
+    () => resolveAdminPageTitle(location.pathname),
+    [location.pathname],
+  );
 
   const displayName = user?.displayName ?? "Admin";
   const initial = user?.initial ?? displayName.charAt(0).toUpperCase();
@@ -25,6 +36,30 @@ function AdminHeader() {
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
+        <div className={styles.lead}>
+          <button
+            type="button"
+            className={styles.menuBtn}
+            aria-label="Mở menu"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <FontAwesomeIcon icon={faBars} />
+          </button>
+
+          <nav className={styles.breadcrumb} aria-label="Breadcrumb">
+            <Link to="/admin" className={styles.breadcrumbLink}>
+              <FontAwesomeIcon icon={faHouse} className={styles.breadcrumbIcon} />
+              Admin
+            </Link>
+            <span className={styles.breadcrumbSep} aria-hidden>
+              /
+            </span>
+            <span className={styles.breadcrumbCurrent}>{pageTitle}</span>
+          </nav>
+
+          <h1 className={styles.pageTitle}>{pageTitle}</h1>
+        </div>
+
         <div className={styles.actions}>
           <div className={styles.toolGroup} role="group" aria-label="Hành động nhanh">
             <AdminSettingsMenu />

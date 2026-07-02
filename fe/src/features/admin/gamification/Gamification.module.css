@@ -13,7 +13,15 @@
 
 @media (max-width: 640px) {
   .statsStrip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
+  }
+
+  .reconcilePanel {
+    padding: 1rem;
+  }
+
+  .fieldRow2 {
+    grid-template-columns: 1fr;
   }
 }
 

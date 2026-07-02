@@ -1210,4 +1210,12 @@
   .review-status-badge {
     align-self: flex-start;
   }
+
+  .review-options {
+    gap: 0.625rem;
+  }
+
+  .review-option {
+    width: 100%;
+  }
 }

@@ -193,3 +193,35 @@
   background: var(--color-surface-muted);
   border-color: var(--color-text-subtle);
 }
+
+@media (max-width: 960px) {
+  .page {
+    padding-inline: 0.25rem;
+  }
+
+  .card {
+    padding: 1.125rem 1.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .title {
+    font-size: 1.25rem;
+  }
+
+  .card {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions > *,
+  .cancel {
+    width: 100%;
+    justify-content: center;
+  }
+}

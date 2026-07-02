@@ -160,3 +160,21 @@ export function flattenAdminNavItems() {
   }
   return flat;
 }
+
+export function resolveAdminPageTitle(pathname) {
+  const flat = flattenAdminNavItems();
+  const sorted = [...flat].sort((a, b) => b.to.length - a.to.length);
+
+  for (const item of sorted) {
+    const basePath = item.to.split("?")[0];
+    if (item.end && pathname === basePath) return item.label;
+    if (!item.end && pathname.startsWith(basePath) && basePath !== "/admin") {
+      return item.label;
+    }
+  }
+
+  if (pathname === "/admin") return "Dashboard";
+  if (pathname.includes("/exams/new")) return "Tạo đề thi";
+  if (pathname.includes("/exams/edit")) return "Sửa đề thi";
+  return "Quản trị";
+}
