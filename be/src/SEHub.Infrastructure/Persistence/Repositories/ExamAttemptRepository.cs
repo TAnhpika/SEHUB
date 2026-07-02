@@ -36,6 +36,29 @@ public class ExamAttemptRepository : IExamAttemptRepository
         return await query.OrderByDescending(a => a.StartedAt).ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<ExamAttempt>> GetHistoryByUserAndSubjectCodeAsync(
+        Guid userId,
+        string subjectCode,
+        ExamType? examType,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedCode = subjectCode.Trim().ToLowerInvariant();
+        var query = _context.ExamAttempts
+            .Include(a => a.Exam)
+            .Where(a => a.UserId == userId && a.Exam.Code.ToLower() == normalizedCode);
+
+        if (examType.HasValue)
+        {
+            query = query.Where(a => a.Exam.ExamType == examType.Value);
+        }
+
+        return await query
+            .OrderByDescending(a => a.StartedAt)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<int> CountSubmittedByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) =>
         _context.ExamAttempts.CountAsync(
             a => a.UserId == userId && a.Status == ExamAttemptStatus.Submitted,

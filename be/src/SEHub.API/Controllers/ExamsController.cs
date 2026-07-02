@@ -104,6 +104,17 @@ public sealed class ExamsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("attempts/history")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> GetAttemptHistory(
+        [FromQuery] string code,
+        [FromQuery] string? type,
+        CancellationToken cancellationToken)
+    {
+        var result = await _examAttemptService.ListAttemptHistoryAsync(code, type, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpGet("{id:guid}/attempts/current")]
     [Authorize(Policy = PolicyNames.RequirePremium)]
     public async Task<IActionResult> GetCurrentAttempt(Guid id, CancellationToken cancellationToken)
