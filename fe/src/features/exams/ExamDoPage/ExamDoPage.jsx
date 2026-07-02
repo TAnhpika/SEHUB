@@ -56,6 +56,35 @@ import styles from "./ExamDoPage.module.css";
 /** §3.3 — Làm bài trực tuyến: 45 phút (mock; production có thể cấu hình theo đề) */
 const EXAM_DURATION_MS = 45 * 60 * 1000;
 
+function ExamTimeBar({ timeRemainingMs, totalDurationMs, isTimeCritical, styles }) {
+  const progressPercent = Math.max(
+    0,
+    Math.min(100, (timeRemainingMs / totalDurationMs) * 100),
+  );
+
+  return (
+    <div
+      className={styles.examTimeBar}
+      role="timer"
+      aria-live="polite"
+      aria-label={`Thời gian còn lại ${formatDuration(timeRemainingMs)}`}
+    >
+      <span className={styles.examTimeBarLabel}>Thời gian</span>
+      <div className={styles.examTimeBarTrack} aria-hidden="true">
+        <div
+          className={`${styles.examTimeBarFill} ${isTimeCritical ? styles.examTimeBarFillCritical : ""}`}
+          style={{ width: `${progressPercent}%` }}
+        />
+      </div>
+      <span
+        className={`${styles.examTimeBarValue} ${isTimeCritical ? styles.examTimeBarValueCritical : ""}`}
+      >
+        {formatDuration(timeRemainingMs)}
+      </span>
+    </div>
+  );
+}
+
 function ExamDoPage({ page = "review" }) {
   const { courseCode, examId } = useParams();
   const navigate = useNavigate();
@@ -577,6 +606,14 @@ function ExamDoPage({ page = "review" }) {
                 value={currentQuestion.text}
                 className={styles["question-text"]}
               />
+
+              <ExamTimeBar
+                timeRemainingMs={timeRemainingMs}
+                totalDurationMs={EXAM_DURATION_MS}
+                isTimeCritical={isTimeCritical}
+                styles={styles}
+              />
+
               {isMultiQuestion ? (
                 <p className={styles["multi-hint"]}>
                   Chọn đúng {requiredSelectCount} đáp án ({selectedKeys.length}/{requiredSelectCount}).
