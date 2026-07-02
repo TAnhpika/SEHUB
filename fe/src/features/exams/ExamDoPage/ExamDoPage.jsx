@@ -25,6 +25,7 @@ import {
   formatDuration,
   getExamSession,
   getOrCreateExamSession,
+  resolveExamTimeRemainingLevel,
   saveExamAnswers,
   submitExamSession,
   usesApiAttempt,
@@ -55,6 +56,30 @@ import styles from "./ExamDoPage.module.css";
 
 /** §3.3 — Làm bài trực tuyến: 45 phút (mock; production có thể cấu hình theo đề) */
 const EXAM_DURATION_MS = 45 * 60 * 1000;
+
+const TIME_LEVEL_CLASS_KEYS = {
+  safe: "timeLevelSafe",
+  caution: "timeLevelCaution",
+  warning: "timeLevelWarning",
+  critical: "timeLevelCritical",
+};
+
+function ExamTimerDisplay({ timeRemainingMs, totalDurationMs, styles, className = "" }) {
+  const level = resolveExamTimeRemainingLevel(timeRemainingMs, totalDurationMs);
+  const levelClass = styles[TIME_LEVEL_CLASS_KEYS[level]] ?? "";
+
+  return (
+    <span
+      className={[styles.examTimer, levelClass, className].filter(Boolean).join(" ")}
+      role="timer"
+      aria-live="polite"
+      aria-label={`Thời gian còn lại ${formatDuration(timeRemainingMs)}`}
+    >
+      <FontAwesomeIcon icon={faClock} className={styles["time-icon"]} aria-hidden="true" />
+      {formatDuration(timeRemainingMs)}
+    </span>
+  );
+}
 
 function ExamDoPage({ page = "review" }) {
   const { courseCode, examId } = useParams();
@@ -411,7 +436,6 @@ function ExamDoPage({ page = "review" }) {
   const requiredSelectCount =
     currentQuestion?.requiredSelectCount ?? currentQuestion?.correctAnswers?.length ?? 2;
   const typeLabel = EXAM_TYPE_LABELS[page] ?? exam.type;
-  const isTimeCritical = timeRemainingMs <= 5 * 60 * 1000;
 
   async function handleSubmitClick() {
     const unanswered = questions.length - answeredCount;
@@ -509,9 +533,12 @@ function ExamDoPage({ page = "review" }) {
             </div>
             <div className={styles["info-item"]}>
               <dt>Thời gian còn lại</dt>
-              <dd className={isTimeCritical ? styles["time-critical"] : ""}>
-                <FontAwesomeIcon icon={faClock} className={styles["time-icon"]} />
-                {formatDuration(timeRemainingMs)}
+              <dd>
+                <ExamTimerDisplay
+                  timeRemainingMs={timeRemainingMs}
+                  totalDurationMs={EXAM_DURATION_MS}
+                  styles={styles}
+                />
               </dd>
             </div>
           </dl>
@@ -532,10 +559,11 @@ function ExamDoPage({ page = "review" }) {
               <span>
                 {answeredCount}/{exam.questionCount} câu
               </span>
-              <span className={isTimeCritical ? styles["time-critical"] : ""}>
-                <FontAwesomeIcon icon={faClock} className={styles["time-icon"]} />
-                {formatDuration(timeRemainingMs)}
-              </span>
+              <ExamTimerDisplay
+                timeRemainingMs={timeRemainingMs}
+                totalDurationMs={EXAM_DURATION_MS}
+                styles={styles}
+              />
             </div>
             <button
               type="button"

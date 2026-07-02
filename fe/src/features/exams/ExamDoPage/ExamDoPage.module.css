@@ -505,8 +505,29 @@
   font-size: 0.875rem;
 }
 
-.time-critical {
-  color: var(--color-danger) !important;
+.examTimer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.35s ease;
+}
+
+.timeLevelSafe {
+  color: var(--color-success);
+}
+
+.timeLevelCaution {
+  color: #84cc16;
+}
+
+.timeLevelWarning {
+  color: var(--color-warning);
+}
+
+.timeLevelCritical {
+  color: var(--color-danger);
 }
 
 .exam-panel {

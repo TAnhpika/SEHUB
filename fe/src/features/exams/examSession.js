@@ -197,3 +197,15 @@ export function formatDuration(ms) {
   const seconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
+
+/** Mức màu đồng hồ theo % thời gian còn lại: >50 | 25–50 | 10–25 | ≤10 */
+export function resolveExamTimeRemainingLevel(remainingMs, totalMs) {
+  if (totalMs <= 0) return "critical";
+
+  const percentRemaining = (Math.max(0, remainingMs) / totalMs) * 100;
+
+  if (percentRemaining > 50) return "safe";
+  if (percentRemaining > 25) return "caution";
+  if (percentRemaining > 10) return "warning";
+  return "critical";
+}
