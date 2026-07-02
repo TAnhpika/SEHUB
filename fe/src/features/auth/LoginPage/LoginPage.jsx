@@ -163,8 +163,13 @@ function LoginPage() {
               </p>
             ) : null}
 
-            <button type="submit" className={styles["submit-btn"]} disabled={isSubmitting}>
-              Đăng nhập
+            <button
+              type="submit"
+              className={styles["submit-btn"]}
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
+            >
+              {isSubmitting ? "Đang đăng nhập..." : "Đăng nhập"}
             </button>
 
             <div className={styles.divider} role="separator">

@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import logoSrc from "@/img/logo.png";
 import { useModeratorPage } from "@/features/moderator/context/ModeratorPageContext";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import {
   getModeratorNavBadgeCounts,
   isModeratorNavActive,
@@ -50,6 +51,8 @@ function ModeratorSidebar() {
   const { pathname } = useLocation();
   const { sidebarOpen, setSidebarOpen } = useModeratorPage();
   const [badgeCounts, setBadgeCounts] = useState(() => getModeratorNavBadgeCounts());
+
+  useLockBodyScroll(sidebarOpen);
 
   useEffect(() => {
     let cancelled = false;

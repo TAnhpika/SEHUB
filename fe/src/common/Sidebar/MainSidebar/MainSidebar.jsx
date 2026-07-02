@@ -4,6 +4,7 @@ import { faAward, faCommentDots, faHome, faUserGroup } from "@fortawesome/free-s
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { useAuth } from "@/context";
 import { useMainShell } from "@/common/context/MainShellContext";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import Button from "@/common/Button/Button";
 import SubjectNavSection from "@/common/Sidebar/SubjectNavSection/SubjectNavSection";
 import InteractionNavSection from "@/common/Sidebar/InteractionNavSection/InteractionNavSection";
@@ -18,6 +19,8 @@ function MainSidebar() {
   const { pathname } = useLocation();
   const { isPremium } = useAuth();
   const { sidebarOpen, closeSidebar } = useMainShell();
+
+  useLockBodyScroll(sidebarOpen);
 
   function handleNavClick() {
     if (window.innerWidth <= 1024) {

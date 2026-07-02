@@ -1,5 +1,6 @@
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { Cell, Pie, PieChart, Tooltip } from "recharts";
 import { useThemeOptional } from "@/hooks/useTheme";
+import ChartResponsiveContainer from "./ChartResponsiveContainer";
 import { getChartTheme } from "./chartTheme";
 import styles from "./recharts.module.css";
 
@@ -25,33 +26,35 @@ function RechartsPieChart({ data, height = 220, centerLabel = "Tổng" }) {
   return (
     <div className={styles.pieWrap} key={theme}>
       <div className={styles.pieChartBox} style={{ height }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              innerRadius="58%"
-              outerRadius="82%"
-              paddingAngle={2}
-              stroke={colors.dotFill}
-              strokeWidth={2}
-            >
-              {data.map((entry) => (
-                <Cell key={entry.name} fill={entry.fill} />
-              ))}
-            </Pie>
-            <Tooltip
-              {...tooltipStyle}
-              formatter={(value, name) => [
-                `${Number(value).toLocaleString("vi-VN")} (${total ? Math.round((Number(value) / total) * 100) : 0}%)`,
-                name,
-              ]}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+        <ChartResponsiveContainer className={styles.pieChartInner}>
+          {({ width, height: chartHeight }) => (
+            <PieChart width={width} height={chartHeight}>
+              <Pie
+                data={data}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius="58%"
+                outerRadius="82%"
+                paddingAngle={2}
+                stroke={colors.dotFill}
+                strokeWidth={2}
+              >
+                {data.map((entry) => (
+                  <Cell key={entry.name} fill={entry.fill} />
+                ))}
+              </Pie>
+              <Tooltip
+                {...tooltipStyle}
+                formatter={(value, name) => [
+                  `${Number(value).toLocaleString("vi-VN")} (${total ? Math.round((Number(value) / total) * 100) : 0}%)`,
+                  name,
+                ]}
+              />
+            </PieChart>
+          )}
+        </ChartResponsiveContainer>
         <div className={styles.pieCenter} aria-hidden>
           <span className={styles.pieCenterValue}>{formatCenterTotal(total)}</span>
           <span className={styles.pieCenterLabel}>{centerLabel}</span>

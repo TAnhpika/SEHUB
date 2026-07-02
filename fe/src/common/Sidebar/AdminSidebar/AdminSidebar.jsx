@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import logoSrc from "@/img/logo.png";
 import { useAdminPage } from "@/features/admin/context/AdminPageContext";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { getAdminNavSections } from "@/features/admin/adminNavData";
 import {
   getAdminNavBadgeCounts,
@@ -143,6 +144,8 @@ function AdminSidebar() {
   const { sidebarOpen, setSidebarOpen } = useAdminPage();
   const [badgeCounts, setBadgeCounts] = useState(() => getAdminNavBadgeCounts());
   const navSections = getAdminNavSections(badgeCounts);
+
+  useLockBodyScroll(sidebarOpen);
 
   useEffect(() => {
     let cancelled = false;

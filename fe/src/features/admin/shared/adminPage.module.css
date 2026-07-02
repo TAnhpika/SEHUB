@@ -724,6 +724,23 @@
     flex-direction: column;
     align-items: stretch;
   }
+
+  .pageHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .headerCopy {
+    min-width: 0;
+  }
+
+  .headerActions {
+    width: 100%;
+  }
+
+  .headerActions > * {
+    flex: 1 1 auto;
+  }
 }
 
 .field {
