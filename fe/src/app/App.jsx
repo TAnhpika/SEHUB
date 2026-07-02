@@ -36,6 +36,9 @@ const AdminDashboardPage = lazy(() => import("@/features/admin/dashboard/AdminDa
 const AdminUserListPage = lazy(() => import("@/features/admin/users/AdminUserListPage"));
 const AdminUserDetailPage = lazy(() => import("@/features/admin/users/AdminUserDetailPage"));
 const AdminExamListPage = lazy(() => import("@/features/admin/exams/AdminExamListPage"));
+const AdminExamNewPage = lazy(() => import("@/features/admin/exams/AdminExamNewPage"));
+const AdminAddFinalExamWizard = lazy(() => import("@/features/admin/exams/AdminAddFinalExamWizard"));
+const AdminAddPracticeExamPage = lazy(() => import("@/features/admin/exams/AdminAddPracticeExamPage"));
 const AdminExamFormPage = lazy(() => import("@/features/admin/exams/AdminExamFormPage"));
 const AdminExamPendingPage = lazy(() => import("@/features/admin/exams/AdminExamPendingPage"));
 const AdminExamDetailPage = lazy(() => import("@/features/admin/exams/AdminExamDetailPage"));
@@ -261,7 +264,9 @@ function App() {
                 <Route path="users" element={<AdminUserListPage />} />
                 <Route path="users/:id" element={<AdminUserDetailPage />} />
                 <Route path="exams" element={<AdminExamListPage />} />
-                <Route path="exams/new" element={<AdminExamFormPage />} />
+                <Route path="exams/new" element={<AdminExamNewPage />} />
+                <Route path="exams/new/final/*" element={<AdminAddFinalExamWizard />} />
+                <Route path="exams/new/practice" element={<AdminAddPracticeExamPage />} />
                 <Route path="exams/pending" element={<AdminExamPendingPage />} />
                 <Route path="exams/submissions" element={<AdminPracticeSubmissionsPage />} />
                 <Route path="exams/:id/edit" element={<AdminExamFormPage />} />

@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { saveAdminFinalExamFromWizard } from "@/features/admin/exams/adminExamData";
+import { useExamFormFlow } from "@/features/exams/examFormFlow";
 import {
   ApiError,
   buildFinalExamContributionPayload,
@@ -19,6 +21,7 @@ function FinalExamReviewStep() {
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
   const { user } = useAuth();
+  const flow = useExamFormFlow();
   const moderator = user?.username ?? "mod_sehub";
   const {
     examInfo,
@@ -29,10 +32,14 @@ function FinalExamReviewStep() {
     isEditMode,
     isRevisionEdit,
     basePath,
+    publishesDirectly,
+    flowScope,
   } = useFinalExamWizard();
   const [submitting, setSubmitting] = useState(false);
+  const isAdminFlow = flowScope === "admin";
 
   function handleSaveDraft() {
+    if (isAdminFlow) return;
     recordExamDraft(
       buildFinalExamContributionPayload(moderator, examInfo, completeCount, "Bước 3: Xem lại"),
     );
@@ -41,7 +48,11 @@ function FinalExamReviewStep() {
 
   async function handlePublish() {
     if (completeCount < 1) {
-      showToast("Cần ít nhất một câu hỏi hoàn chỉnh trước khi gửi duyệt.");
+      showToast(
+        isAdminFlow
+          ? "Cần ít nhất một câu hỏi hoàn chỉnh trước khi xuất bản."
+          : "Cần ít nhất một câu hỏi hoàn chỉnh trước khi gửi duyệt.",
+      );
       return;
     }
 
@@ -62,12 +73,21 @@ function FinalExamReviewStep() {
             ? "Bản cập nhật đã gửi Admin duyệt. Đề đang public giữ nguyên cho đến khi được duyệt."
             : "Đề đã được sửa và gửi lại Admin duyệt.",
         );
-      } else {
-        await submitExamForApproval(payload, { examInfo, questions, confirmDuplicate });
-        showToast(
-          "Đề thi cuối kỳ đã được gửi. Trạng thái: chờ Admin duyệt trước khi public (theo nghiệp vụ).",
-        );
+        navigate("/moderator/exams/history?type=final");
+        return;
       }
+
+      if (publishesDirectly) {
+        await saveAdminFinalExamFromWizard(examInfo, questions, { confirmDuplicate });
+        showToast("Đề thi cuối kỳ đã được xuất bản.");
+        navigate(flow.examsListPath);
+        return;
+      }
+
+      await submitExamForApproval(payload, { examInfo, questions, confirmDuplicate });
+      showToast(
+        "Đề thi cuối kỳ đã được gửi. Trạng thái: chờ Admin duyệt trước khi public (theo nghiệp vụ).",
+      );
       navigate("/moderator/exams/history?type=final");
     }
 
@@ -78,8 +98,10 @@ function FinalExamReviewStep() {
       if (!isEditMode && error instanceof ApiError && error.status === 409) {
         const confirmed = await confirm({
           title: "Đề trùng nội dung",
-          description: "Đề trùng nội dung (SHA-256) với đề đã có. Gửi duyệt anyway?",
-          confirmLabel: "Gửi duyệt",
+          description: isAdminFlow
+            ? "Đề trùng nội dung (SHA-256) với đề đã có. Xuất bản anyway?"
+            : "Đề trùng nội dung (SHA-256) với đề đã có. Gửi duyệt anyway?",
+          confirmLabel: isAdminFlow ? "Xuất bản" : "Gửi duyệt",
         });
         if (confirmed) {
           try {
@@ -99,21 +121,29 @@ function FinalExamReviewStep() {
   }
 
   const submitLabel = submitting
-    ? "Đang gửi..."
+    ? isAdminFlow
+      ? "Đang xuất bản..."
+      : "Đang gửi..."
     : isEditMode
       ? isRevisionEdit
         ? "Gửi bản cập nhật"
         : "Gửi lại Admin duyệt"
-      : "Gửi duyệt";
+      : isAdminFlow
+        ? "Xuất bản"
+        : "Gửi duyệt";
 
   return (
     <div className={styles.step}>
       <header className={styles.header}>
-        <h1 className={styles.title}>{isEditMode ? "Xem lại & gửi lại" : "Xem lại & xuất bản"}</h1>
+        <h1 className={styles.title}>
+          {isEditMode ? "Xem lại & gửi lại" : isAdminFlow ? "Xem lại & xuất bản" : "Xem lại & gửi duyệt"}
+        </h1>
         <p className={styles.subtitle}>
           {isRevisionEdit
             ? "Kiểm tra bản cập nhật trước khi gửi Admin. Sinh viên vẫn làm đề public hiện tại cho đến khi Admin duyệt."
-            : "Kiểm tra thông tin trước khi gửi duyệt. Moderator không thể tự public — Admin sẽ duyệt theo quy trình SEHUB."}
+            : isAdminFlow
+              ? "Kiểm tra thông tin trước khi xuất bản. Đề sẽ hiển thị ngay cho sinh viên sau khi hoàn tất."
+              : "Kiểm tra thông tin trước khi gửi duyệt. Moderator không thể tự public — Admin sẽ duyệt theo quy trình SEHUB."}
         </p>
       </header>
 
@@ -181,6 +211,7 @@ function FinalExamReviewStep() {
         onContinue={handlePublish}
         continueLabel={submitLabel}
         continueDisabled={submitting}
+        showSaveDraft={!isAdminFlow}
       />
     </div>
   );

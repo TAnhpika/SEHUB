@@ -6,6 +6,7 @@ import {
   mapAdminExamFormToCreateRequest,
   mapAdminExamFormToUpdateRequest,
   mapAdminExamListItem,
+  mapFinalExamWizardToCreateRequest,
   mapMockOcrQuestionsToCreateItems,
   mapPendingExamFromCreate,
   mapPendingExamListItem,
@@ -426,6 +427,90 @@ export async function saveAdminExamViaApi(form, options = {}) {
     uploadWarning,
     listItem,
   };
+}
+
+/**
+ * Admin tạo đề cuối kỳ qua wizard Mod và xuất bản trực tiếp.
+ */
+export async function saveAdminFinalExamFromWizard(examInfo, questions, { confirmDuplicate = false } = {}) {
+  if (USE_MOCK) {
+    const form = {
+      typeKey: "final",
+      code: examInfo.subjectCode,
+      title: examInfo.examCode,
+      subjectName: examInfo.subjectName,
+      track: examInfo.major ?? "SE",
+      semester: String(examInfo.semesterLabel?.match(/\d+/)?.[0] ?? "5"),
+      description: `${examInfo.subjectName ?? examInfo.subjectCode} · ${examInfo.durationMinutes} phút`,
+      durationMinutes: examInfo.durationMinutes,
+      totalQuestions: questions.length,
+    };
+    const createItems = mapMockOcrQuestionsToCreateItems(questions);
+    return saveAdminExamViaApi(form, {
+      status: "published",
+      ocrQuestions: createItems,
+      questionsAreCreateItems: true,
+      confirmDuplicate,
+    });
+  }
+
+  const body = mapFinalExamWizardToCreateRequest(examInfo, questions);
+  const dto = await createExamViaApi(body, confirmDuplicate);
+  await adminApi.approveExam(dto.id);
+  const refreshed = await adminApi.getExam(dto.id);
+  const listItem = mapAdminExamListItem(refreshed);
+  upsertExamInStore(listItem);
+  return mapAdminExamDetail(refreshed);
+}
+
+/**
+ * Admin tạo đề thực hành qua form Mod và xuất bản trực tiếp.
+ */
+export async function saveAdminPracticeExamFromPayload(payload, { confirmDuplicate = false } = {}) {
+  const readyFiles = (payload.attachments ?? []).filter((file) => file.status === "done" && file.file);
+  const primaryFile = readyFiles[0];
+  const fileName =
+    primaryFile?.name ??
+    payload.attachments?.find((file) => file.name)?.name ??
+    `${payload.subjectCode}-practice-exam.pdf`;
+
+  if (USE_MOCK) {
+    const form = {
+      typeKey: "practice",
+      code: payload.subjectCode,
+      title: payload.title,
+      track: "SE",
+      semester: payload.semester,
+      description: payload.description,
+      githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
+      attachments: readyFiles.map((file) => ({
+        id: file.id,
+        name: file.name,
+        size: file.file?.size ?? 0,
+      })),
+    };
+    return saveAdminExamViaApi(form, { status: "published", confirmDuplicate });
+  }
+
+  const body = mapPracticeExamFormToCreateRequest({
+    subjectCode: payload.subjectCode,
+    semester: payload.semester,
+    title: payload.title,
+    description: payload.description,
+    githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
+  });
+
+  const dto = await createExamViaApi(body, confirmDuplicate);
+
+  for (const attachment of readyFiles) {
+    await adminApi.uploadExamAttachment(dto.id, attachment.file);
+  }
+
+  await adminApi.approveExam(dto.id);
+  const refreshed = await adminApi.getExam(dto.id);
+  const listItem = mapAdminExamListItem(refreshed);
+  upsertExamInStore(listItem);
+  return mapAdminExamDetail(refreshed);
 }
 
 /**

@@ -118,10 +118,15 @@ export const REVIEW_COURSES = [
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
+function normalizeCatalogSubjectKey(value) {
+  return (
+    normalizeCourseSubjectCode(value) ??
+    String(value ?? "").trim().toUpperCase()
+  );
+}
+
 function normalizeCatalogCourseCode(course) {
-  return String(normalizeCourseSubjectCode(course?.code ?? course?.Code) ?? course?.code ?? course?.Code ?? "")
-    .trim()
-    .toUpperCase();
+  return normalizeCatalogSubjectKey(course?.code ?? course?.Code);
 }
 
 function readCatalogCourseName(course) {
@@ -249,9 +254,7 @@ function collectSubjectCodesFromExamItems(items = []) {
   const codes = new Set();
 
   for (const item of items) {
-    const code =
-      normalizeCourseSubjectCode(item?.code) ??
-      String(item?.code ?? "").trim().toUpperCase();
+    const code = normalizeCatalogSubjectKey(item?.code);
     if (code) {
       codes.add(code);
     }

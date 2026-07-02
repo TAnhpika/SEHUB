@@ -1,16 +1,23 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faClockRotateLeft } from "@fortawesome/free-solid-svg-icons";
+import { useExamFormFlow } from "@/features/exams/examFormFlow";
 import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
 import styles from "./ExamWizardStepper.module.css";
 
 function ExamWizardStepper() {
   const location = useLocation();
   const navigate = useNavigate();
+  const flow = useExamFormFlow();
   const { wizardSteps, isRevisionEdit } = useFinalExamWizard();
 
   const currentStep =
     wizardSteps.find((step) => step.path === location.pathname)?.id ?? 1;
+
+  const historyLink =
+    flow.scope === "admin"
+      ? { to: flow.examsListPath, label: "Danh sách đề thi" }
+      : { to: "/moderator/exams/history?type=final", label: "Lịch sử đóng góp đề" };
 
   return (
     <aside className={styles.stepper}>
@@ -67,9 +74,9 @@ function ExamWizardStepper() {
           );
         })}
       </ol>
-      <Link to="/moderator/exams/history?type=final" className={styles.historyLink}>
+      <Link to={historyLink.to} className={styles.historyLink}>
         <FontAwesomeIcon icon={faClockRotateLeft} />
-        Lịch sử đóng góp đề
+        {historyLink.label}
       </Link>
     </aside>
   );

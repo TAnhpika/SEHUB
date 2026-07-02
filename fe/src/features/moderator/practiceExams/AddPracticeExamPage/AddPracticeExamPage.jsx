@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowUpFromBracket,
@@ -14,6 +14,9 @@ import RichTextEditor from "@/common/RichTextEditor/RichTextEditor";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { saveAdminPracticeExamFromPayload } from "@/features/admin/exams/adminExamData";
+import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
+import { useExamFormFlow } from "@/features/exams/examFormFlow";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import ExamContributionAuditList from "@/features/moderator/exams/components/ExamContributionAuditList/ExamContributionAuditList";
 import {
@@ -40,7 +43,7 @@ import {
 } from "@/features/moderator/practiceExams/practiceExamUpload";
 import styles from "./AddPracticeExamPage.module.css";
 
-const PRACTICE_CRUMBS = [
+const MOD_PRACTICE_CRUMBS = [
   { label: "Trang chủ", to: "/home" },
   { label: "Đóng góp" },
   { label: "Thêm đề thực hành" },
@@ -57,6 +60,9 @@ function FileTypeIcon({ type }) {
 }
 
 function AddPracticeExamPage() {
+  const navigate = useNavigate();
+  const flow = useExamFormFlow();
+  const isAdminFlow = flow.scope === "admin";
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
   const { user } = useAuth();
@@ -123,6 +129,8 @@ function AddPracticeExamPage() {
   }, [subject, existingPaperCodes]);
 
   useEffect(() => {
+    if (isAdminFlow) return undefined;
+
     let cancelled = false;
 
     Promise.all([
@@ -144,7 +152,7 @@ function AddPracticeExamPage() {
     return () => {
       cancelled = true;
     };
-  }, [moderator, refreshKey]);
+  }, [moderator, refreshKey, isAdminFlow]);
 
   function buildPayload() {
     return {
@@ -161,6 +169,7 @@ function AddPracticeExamPage() {
   }
 
   function handleSaveDraft() {
+    if (isAdminFlow) return;
     if (!subject || !semester || !title.trim()) {
       showToast("Điền môn, học kỳ và tiêu đề trước khi lưu nháp.");
       return;
@@ -188,6 +197,13 @@ function AddPracticeExamPage() {
     const payload = buildPayload();
 
     async function send(confirmDuplicate = false) {
+      if (isAdminFlow) {
+        await saveAdminPracticeExamFromPayload(payload, { confirmDuplicate });
+        showToast("Đề thi thực hành đã được xuất bản.");
+        navigate(flow.examsListPath);
+        return;
+      }
+
       await submitExamForApproval(payload, { confirmDuplicate });
       setRefreshKey((k) => k + 1);
       setActiveTab("audit");
@@ -201,8 +217,10 @@ function AddPracticeExamPage() {
       if (error instanceof ApiError && error.status === 409) {
         const confirmed = await confirm({
           title: "Đề trùng metadata",
-          description: "Đề trùng metadata với đề đã có. Gửi duyệt anyway?",
-          confirmLabel: "Gửi duyệt",
+          description: isAdminFlow
+            ? "Đề trùng metadata với đề đã có. Xuất bản anyway?"
+            : "Đề trùng metadata với đề đã có. Gửi duyệt anyway?",
+          confirmLabel: isAdminFlow ? "Xuất bản" : "Gửi duyệt",
         });
         if (confirmed) {
           try {
@@ -253,23 +271,34 @@ function AddPracticeExamPage() {
 
   const pageActions = (
     <div className={styles.actions}>
-      <button type="button" className={styles["btn-draft"]} onClick={handleSaveDraft}>
-        Lưu nháp
-      </button>
+      {!isAdminFlow ? (
+        <button type="button" className={styles["btn-draft"]} onClick={handleSaveDraft}>
+          Lưu nháp
+        </button>
+      ) : null}
       <Button type="button" className={styles["btn-publish"]} onClick={handlePublish} disabled={submitting}>
         <FontAwesomeIcon icon={faArrowUpFromBracket} />
-        {submitting ? "Đang gửi..." : "Lưu & Xuất bản"}
+        {submitting
+          ? isAdminFlow
+            ? "Đang xuất bản..."
+            : "Đang gửi..."
+          : isAdminFlow
+            ? "Xuất bản"
+            : "Lưu & Xuất bản"}
       </Button>
     </div>
   );
 
-  return (
-    <ModeratorPageShell
-      title="Thêm đề thi thực hành"
-      crumbs={PRACTICE_CRUMBS}
-      actions={pageActions}
-    >
-      <section className={styles.card}>
+  const adminCrumbs = [
+    { label: "Dashboard", to: "/admin" },
+    { label: "Quản lý đề thi", to: "/admin/exams" },
+    { label: "Thêm mới", to: flow.examsNewPath },
+    { label: "Đề thực hành" },
+  ];
+
+  const pageBody = (
+    <section className={styles.card}>
+      {!isAdminFlow ? (
         <div className={styles.tabs} role="tablist">
           <button
             type="button"
@@ -296,9 +325,24 @@ function AddPracticeExamPage() {
             Chấm bài nộp GitHub →
           </Link>
         </div>
+      ) : null}
 
-        {activeTab === "create" ? (
-          <form className={styles.form} onSubmit={handlePublish}>
+      {!isAdminFlow && activeTab === "audit" ? (
+        <div className={styles.auditPanel} key={refreshKey}>
+          <ExamContributionAuditList
+            items={auditLog}
+            title="Nhật ký đóng góp đề thực hành"
+            description="Mod lưu nháp hoặc gửi Admin duyệt trước khi public (§2.4). Bài nộp GitHub của sinh viên xem tại trang chấm bài riêng (§3.4)."
+            emptyMessage={
+              user?.role === "admin"
+                ? "Đăng nhập Moderator (moderator@sehub.local) để xem demo đóng góp, hoặc bấm Lưu & Xuất bản để tạo đề mới."
+                : "Chưa có bản ghi. Gửi đề mới hoặc xem Lịch sử đóng góp đề trên menu bên trái."
+            }
+            showHistoryLink
+          />
+        </div>
+      ) : (
+        <form className={styles.form} onSubmit={handlePublish}>
             <div className={styles.columns}>
               <div className={styles["col-left"]}>
                 <div className={styles.row}>
@@ -496,22 +540,30 @@ function AddPracticeExamPage() {
               </div>
             </div>
           </form>
-        ) : (
-          <div className={styles.auditPanel} key={refreshKey}>
-            <ExamContributionAuditList
-              items={auditLog}
-              title="Nhật ký đóng góp đề thực hành"
-              description="Mod lưu nháp hoặc gửi Admin duyệt trước khi public (§2.4). Bài nộp GitHub của sinh viên xem tại trang chấm bài riêng (§3.4)."
-              emptyMessage={
-                user?.role === "admin"
-                  ? "Đăng nhập Moderator (moderator@sehub.local) để xem demo đóng góp, hoặc bấm Lưu & Xuất bản để tạo đề mới."
-                  : "Chưa có bản ghi. Gửi đề mới hoặc xem Lịch sử đóng góp đề trên menu bên trái."
-              }
-              showHistoryLink
-            />
-          </div>
-        )}
-      </section>
+      )}
+    </section>
+  );
+
+  if (isAdminFlow) {
+    return (
+      <AdminPageLayout
+        title="Thêm đề thi thực hành"
+        subtitle="Upload file đề và xuất bản trực tiếp."
+        breadcrumbs={adminCrumbs}
+        actions={pageActions}
+      >
+        {pageBody}
+      </AdminPageLayout>
+    );
+  }
+
+  return (
+    <ModeratorPageShell
+      title="Thêm đề thi thực hành"
+      crumbs={MOD_PRACTICE_CRUMBS}
+      actions={pageActions}
+    >
+      {pageBody}
     </ModeratorPageShell>
   );
 }

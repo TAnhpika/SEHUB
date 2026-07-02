@@ -9,13 +9,18 @@ function WizardBottomActions({
   backLabel = "Quay lại",
   continueLabel = "Tiếp tục",
   showBack = true,
+  showSaveDraft = true,
   continueDisabled = false,
 }) {
   return (
     <div className={styles.bar}>
-      <button type="button" className={styles.draft} onClick={onSaveDraft}>
-        Lưu nháp
-      </button>
+      {showSaveDraft ? (
+        <button type="button" className={styles.draft} onClick={onSaveDraft}>
+          Lưu nháp
+        </button>
+      ) : (
+        <span />
+      )}
       <div className={styles.right}>
         {showBack && (
           <button type="button" className={styles.back} onClick={onBack}>

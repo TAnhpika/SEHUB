@@ -1,8 +1,13 @@
 import { useEffect } from "react";
-import { Outlet, useParams } from "react-router-dom";
+import { Outlet, Route, Routes, useParams } from "react-router-dom";
+import { useExamFormFlow } from "@/features/exams/examFormFlow";
+import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import { useModeratorPage } from "@/features/moderator/context/ModeratorPageContext";
 import { FinalExamWizardProvider, useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
 import ExamWizardStepper from "@/features/moderator/finalExams/components/ExamWizardStepper";
+import FinalExamInfoStep from "@/features/moderator/finalExams/steps/FinalExamInfoStep";
+import FinalExamQuestionsStep from "@/features/moderator/finalExams/steps/FinalExamQuestionsStep";
+import FinalExamReviewStep from "@/features/moderator/finalExams/steps/FinalExamReviewStep";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import styles from "./AddFinalExamWizard.module.css";
 
@@ -43,7 +48,58 @@ function WizardMetaSync({ isEditMode, isRevisionEdit }) {
   return null;
 }
 
+function WizardStepRoutes() {
+  const flow = useExamFormFlow();
+
+  if (flow.useInternalRoutes) {
+    return (
+      <Routes>
+        <Route index element={<FinalExamInfoStep />} />
+        <Route path="questions" element={<FinalExamQuestionsStep />} />
+        <Route path="review" element={<FinalExamReviewStep />} />
+      </Routes>
+    );
+  }
+
+  return <Outlet />;
+}
+
+function WizardShell({ children }) {
+  const flow = useExamFormFlow();
+
+  if (flow.scope === "admin") {
+    return (
+      <AdminPageLayout
+        title="Thêm đề cuối kỳ"
+        subtitle="Nhập thông tin, câu hỏi và xuất bản trực tiếp."
+        breadcrumbs={[
+          { label: "Dashboard", to: "/admin" },
+          { label: "Quản lý đề thi", to: "/admin/exams" },
+          { label: "Thêm mới", to: flow.examsNewPath },
+          { label: "Đề cuối kỳ" },
+        ]}
+        hidePageHeader={false}
+      >
+        <div className={styles.layout}>
+          <ExamWizardStepper />
+          <div className={styles.main}>{children}</div>
+        </div>
+      </AdminPageLayout>
+    );
+  }
+
+  return (
+    <ModeratorPageShell variant="wizard">
+      <div className={styles.layout}>
+        <ExamWizardStepper />
+        <div className={styles.main}>{children}</div>
+      </div>
+    </ModeratorPageShell>
+  );
+}
+
 function WizardContent() {
+  const flow = useExamFormFlow();
   const { examId } = useParams();
   const {
     loadExamForEdit,
@@ -75,15 +131,12 @@ function WizardContent() {
 
   return (
     <>
-      <WizardMetaSync isEditMode={isEditMode} isRevisionEdit={isRevisionEdit} />
-      <ModeratorPageShell variant="wizard">
-        <div className={styles.layout}>
-          <ExamWizardStepper />
-          <div className={styles.main}>
-            <Outlet />
-          </div>
-        </div>
-      </ModeratorPageShell>
+      {flow.scope === "moderator" ? (
+        <WizardMetaSync isEditMode={isEditMode} isRevisionEdit={isRevisionEdit} />
+      ) : null}
+      <WizardShell>
+        <WizardStepRoutes />
+      </WizardShell>
     </>
   );
 }

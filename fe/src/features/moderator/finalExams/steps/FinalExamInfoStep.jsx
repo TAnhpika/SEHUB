@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
+import { useExamFormFlow } from "@/features/exams/examFormFlow";
 import {
   buildFinalExamContributionPayload,
   recordExamDraft,
@@ -17,7 +18,8 @@ function FinalExamInfoStep() {
   const { showToast } = useToast();
   const { user } = useAuth();
   const moderator = user?.username ?? "mod_sehub";
-  const { examInfo, setExamInfo, ensureQuestionSlots, basePath, isEditMode } = useFinalExamWizard();
+  const { examInfo, setExamInfo, ensureQuestionSlots, basePath, isEditMode, flowScope } =
+    useFinalExamWizard();
   const [questionCountInput, setQuestionCountInput] = useState(() =>
     String(examInfo.totalQuestions ?? ""),
   );
@@ -52,7 +54,11 @@ function FinalExamInfoStep() {
     return true;
   }
 
+  const flow = useExamFormFlow();
+  const isAdminFlow = flowScope === "admin";
+
   function handleSaveDraft() {
+    if (isAdminFlow) return;
     if (!validateExamInfo()) return;
     recordExamDraft(
       buildFinalExamContributionPayload(moderator, examInfo, 0, "Bước 1: Thông tin đề"),
@@ -109,9 +115,10 @@ function FinalExamInfoStep() {
 
       <WizardBottomActions
         onSaveDraft={handleSaveDraft}
-        onBack={() => navigate("/moderator/practice-exams/add")}
+        onBack={() => navigate(flow.examsNewPath ?? flow.examsListPath)}
         onContinue={handleContinue}
         showBack={false}
+        showSaveDraft={!isAdminFlow}
         continueLabel="Tiếp tục"
       />
     </div>
