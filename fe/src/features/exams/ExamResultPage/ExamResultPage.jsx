@@ -12,6 +12,7 @@ import {
   faClock,
   faDownload,
   faRotateRight,
+  faTableCells,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
@@ -111,7 +112,7 @@ function getAllReviewEntries(items) {
   return items.map((item, index) => ({ item, index }));
 }
 
-function ReviewQuestionsSidebar({ entries, activeIndex, onSelect }) {
+function ReviewQuestionPaletteContent({ entries, activeIndex, onSelect, gridClassName = "" }) {
   if (entries.length === 0) {
     return null;
   }
@@ -127,7 +128,7 @@ function ReviewQuestionsSidebar({ entries, activeIndex, onSelect }) {
   };
 
   return (
-    <aside className={styles.reviewSidebar} aria-label="Danh sách câu hỏi">
+    <>
       <div className={styles.reviewSidebarHead}>
         <h2 className={styles.reviewSidebarTitle}>Danh sách câu</h2>
         <p className={styles.reviewSidebarMeta}>
@@ -140,24 +141,40 @@ function ReviewQuestionsSidebar({ entries, activeIndex, onSelect }) {
         <p className={styles.reviewSidebarHint}>Nhấn số câu để xem chi tiết</p>
       </div>
 
-      <div className={styles.reviewSidebarGrid}>
-        {entries.map(({ item, index }) => {
+      <div className={`${styles.reviewSidebarGrid} ${gridClassName}`.trim()}>
+        {entries.map(({ item, index: entryIndex }) => {
           const status = getQuestionReviewStatus(item);
           return (
             <button
               key={item.questionId}
               type="button"
               className={`${styles.reviewSidebarCell} ${styles[`reviewSidebarCell-${status}`]} ${
-                activeIndex === index ? styles.reviewSidebarCellActive : ""
+                activeIndex === entryIndex ? styles.reviewSidebarCellActive : ""
               }`}
-              title={`Câu ${index + 1}: ${statusLabel(status)}`}
-              onClick={() => onSelect(index)}
+              title={`Câu ${entryIndex + 1}: ${statusLabel(status)}`}
+              onClick={() => onSelect(entryIndex)}
             >
-              {index + 1}
+              {entryIndex + 1}
             </button>
           );
         })}
       </div>
+    </>
+  );
+}
+
+function ReviewQuestionsSidebar({ entries, activeIndex, onSelect }) {
+  if (entries.length === 0) {
+    return null;
+  }
+
+  return (
+    <aside className={styles.reviewSidebar} aria-label="Danh sách câu hỏi">
+      <ReviewQuestionPaletteContent
+        entries={entries}
+        activeIndex={activeIndex}
+        onSelect={onSelect}
+      />
     </aside>
   );
 }
@@ -168,10 +185,14 @@ function ReviewQuestionCard({
   examId,
   courseCode,
   total,
+  entries,
   isFirst,
   isLast,
   onPrevious,
   onNext,
+  onSelectQuestion,
+  isSidebarOpen,
+  onSidebarToggle,
 }) {
   const status = getQuestionReviewStatus(item);
   const isCorrect = item.isCorrect;
@@ -256,6 +277,16 @@ function ReviewQuestionCard({
             <FontAwesomeIcon icon={faChevronLeft} />
             <span>Câu trước</span>
           </button>
+          <button
+            type="button"
+            className={`${styles.reviewSidebarToggle} ${isSidebarOpen ? styles.reviewSidebarToggleActive : ""}`}
+            onClick={onSidebarToggle}
+            aria-expanded={isSidebarOpen}
+            aria-controls="exam-result-question-sidebar"
+            aria-label={isSidebarOpen ? "Đóng danh sách câu" : "Mở danh sách câu"}
+          >
+            <FontAwesomeIcon icon={faTableCells} />
+          </button>
           <span className={styles.reviewPageIndicator}>
             {index + 1} / {total}
           </span>
@@ -270,6 +301,21 @@ function ReviewQuestionCard({
             <FontAwesomeIcon icon={faChevronRight} />
           </button>
         </div>
+
+        {isSidebarOpen ? (
+          <div
+            id="exam-result-question-sidebar"
+            className={styles.reviewMobilePalette}
+            aria-label="Danh sách câu hỏi"
+          >
+            <ReviewQuestionPaletteContent
+              entries={entries}
+              activeIndex={index}
+              onSelect={onSelectQuestion}
+              gridClassName={styles.reviewMobilePaletteGrid}
+            />
+          </div>
+        ) : null}
 
         <ExamAiExplanation key={item.questionId} examId={examId} question={questionForAi} />
       </div>
@@ -315,6 +361,7 @@ function ExamResultPage({ page = "review" }) {
   const { showToast } = useToast();
   const [showDetail, setShowDetail] = useState(false);
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
+  const [isReviewSidebarOpen, setIsReviewSidebarOpen] = useState(false);
   const isReviewFocusMode = page === "review" && isExamFocusPath(pathname);
   const scope = resolveExamScope(pathname, locationState);
   const config = getSubjectDetailConfig(page, scope);
@@ -491,6 +538,7 @@ function ExamResultPage({ page = "review" }) {
 
   function handleSelectReviewQuestion(index) {
     setCurrentReviewIndex(index);
+    setIsReviewSidebarOpen(false);
   }
 
   function handlePreviousReviewQuestion() {
@@ -588,10 +636,14 @@ function ExamResultPage({ page = "review" }) {
               examId={exam.id}
               courseCode={exam.courseCode}
               total={result.total}
+              entries={reviewQuestionEntries}
               isFirst={currentReviewIndex === 0}
               isLast={currentReviewIndex === result.items.length - 1}
               onPrevious={handlePreviousReviewQuestion}
               onNext={handleNextReviewQuestion}
+              onSelectQuestion={handleSelectReviewQuestion}
+              isSidebarOpen={isReviewSidebarOpen}
+              onSidebarToggle={() => setIsReviewSidebarOpen((open) => !open)}
             />
           </section>
 
