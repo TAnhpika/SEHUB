@@ -1,20 +1,26 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBullseye,
-  faGem,
   faMedal,
 } from "@fortawesome/free-solid-svg-icons";
 import FollowButton from "@/features/social/FollowButton/FollowButton";
 import MessageUserButton from "@/features/social/MessageUserButton/MessageUserButton";
 import UserAvatar from "@/common/UserAvatar/UserAvatar";
+import { getRankBadgeStyleClass, getRankDisplay } from "@/utils/rankDisplay";
+import rankStyles from "@/utils/rankDisplay.module.css";
 import styles from "./FriendProfileCard.module.css";
 
 function FriendProfileCard({ profile, onFollowChange }) {
+  const rank = getRankDisplay(profile.level);
+
   return (
     <aside className={styles.card}>
       <div className={styles.hero}>
-        <span className={styles.badge} aria-hidden="true">
-          <FontAwesomeIcon icon={faGem} />
+        <span
+          className={`${styles.badge} ${getRankBadgeStyleClass(profile.level, rankStyles)}`}
+          aria-hidden="true"
+        >
+          <FontAwesomeIcon icon={rank.icon} />
         </span>
         <UserAvatar
           src={profile.avatarUrl}

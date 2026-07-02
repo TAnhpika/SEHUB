@@ -1,12 +1,12 @@
 .sidebar {
   width: 100%;
-  height: 100%;
+  height: auto;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   box-sizing: border-box;
   padding-bottom: 0.5rem;
-  overflow: hidden;
+  overflow: visible;
 }
 
 @media (min-width: 1025px) {
@@ -92,6 +92,17 @@
   line-height: 1.2;
 }
 
+.stat-value-level {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.stat-value-level svg {
+  font-size: 0.75rem;
+}
+
 .stat-label {
   display: block;
   font-size: 0.625rem;
@@ -124,23 +135,27 @@
 
 .progress-text svg {
   font-size: 0.5625rem;
+}
+
+.progress-trophy {
   color: var(--color-warning);
 }
 
+.progress-rank-icon {
+  flex-shrink: 0;
+}
+
 .featured {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   border-color: var(--color-primary);
 
-  --featured-max-visible: 3;
-  --featured-row-height: 3.5rem;
+  --featured-max-visible: 4;
+  --featured-row-height: 3rem;
   --featured-line-clamp: 2;
 }
 
 .promo {
   flex-shrink: 0;
-  margin-top: auto;
 }

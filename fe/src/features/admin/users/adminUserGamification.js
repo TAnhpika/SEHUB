@@ -98,12 +98,4 @@ export function getUserGamification(user) {
   };
 }
 
-/** @param {string} level */
-export function getRankBadgeClass(level) {
-  const key = level?.toLowerCase();
-  if (key === "bronze") return "rankBronze";
-  if (key === "silver") return "rankSilver";
-  if (key === "gold") return "rankGold";
-  if (key === "platinum") return "rankPlatinum";
-  return "badgeMuted";
-}
+export { getRankBadgeClass } from "@/utils/rankDisplay";
