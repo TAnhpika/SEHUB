@@ -290,16 +290,95 @@
 
 @media (max-width: 640px) {
   .dropdown {
-    right: -0.25rem;
-    width: min(20rem, calc(100vw - 1.5rem));
+    position: fixed;
+    top: calc(var(--header-height) + 0.375rem);
+    right: 0.625rem;
+    left: auto;
+    z-index: 110;
+    width: min(16.25rem, calc(100vw - 1.25rem));
+    border-radius: var(--radius-lg);
+    box-shadow: 0 10px 28px rgb(15 23 42 / 22%);
   }
 
   .header {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.75rem;
+  }
+
+  .header-text {
+    gap: 0.375rem;
+  }
+
+  .title {
+    font-size: 0.8125rem;
+  }
+
+  .unread-pill {
+    padding: 0.0625rem 0.375rem;
+    font-size: 0.625rem;
   }
 
   .mark-read-btn {
-    align-self: flex-start;
+    align-self: center;
+    font-size: 0.6875rem;
+  }
+
+  .list {
+    max-height: 13.5rem;
+    padding: 0.25rem;
+  }
+
+  .item {
+    gap: 0.5rem;
+    padding: 0.5rem 0.625rem;
+  }
+
+  .iconWrap {
+    width: 1.875rem;
+    height: 1.875rem;
+  }
+
+  .icon {
+    font-size: 0.75rem;
+  }
+
+  .category {
+    font-size: 0.625rem;
+  }
+
+  .item-title {
+    font-size: 0.75rem;
+    line-height: 1.35;
+  }
+
+  .item-time {
+    font-size: 0.625rem;
+  }
+
+  .dot {
+    width: 0.375rem;
+    height: 0.375rem;
+    margin-top: 0.3125rem;
+  }
+
+  .empty {
+    padding: 1.25rem 0.875rem 1.5rem;
+  }
+
+  .empty-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+  }
+
+  .empty-title {
+    font-size: 0.8125rem;
+  }
+
+  .empty-desc {
+    font-size: 0.75rem;
   }
 }
