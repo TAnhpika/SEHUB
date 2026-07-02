@@ -1,0 +1,35 @@
+.iconBronze {
+  color: #c2783a;
+}
+
+.iconSilver {
+  color: #94a3b8;
+}
+
+.iconGold {
+  color: #eab308;
+}
+
+.iconPlatinum {
+  color: #a855f7;
+}
+
+.badgeBronze {
+  color: #fff7ed;
+  background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+}
+
+.badgeSilver {
+  color: #f8fafc;
+  background: linear-gradient(135deg, #64748b 0%, #94a3b8 100%);
+}
+
+.badgeGold {
+  color: #fefce8;
+  background: linear-gradient(135deg, #ca8a04 0%, #eab308 100%);
+}
+
+.badgePlatinum {
+  color: #faf5ff;
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+}

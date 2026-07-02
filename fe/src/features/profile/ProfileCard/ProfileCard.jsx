@@ -5,12 +5,13 @@ import {
   faClock,
   faComment,
   faFileLines,
-  faGem,
   faMedal,
 } from "@fortawesome/free-solid-svg-icons";
 import ProfileCardMenu from "@/features/profile/ProfileCard/ProfileCardMenu";
 import ProfileInteractionActions from "@/features/social/ProfileInteractionActions/ProfileInteractionActions";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
+import { getRankBadgeStyleClass, getRankDisplay } from "@/utils/rankDisplay";
+import rankStyles from "@/utils/rankDisplay.module.css";
 import styles from "./ProfileCard.module.css";
 
 function ProfileCard({
@@ -19,13 +20,18 @@ function ProfileCard({
   isPremiumUsername = false,
   onFollowChange,
 }) {
+  const rank = getRankDisplay(profile.level);
+
   return (
     <aside className={styles.card}>
       {isOwner && <ProfileCardMenu username={profile.username} />}
 
       <div className={styles.hero}>
-        <span className={styles.badge} aria-hidden="true">
-          <FontAwesomeIcon icon={faGem} />
+        <span
+          className={`${styles.badge} ${getRankBadgeStyleClass(profile.level, rankStyles)}`}
+          aria-hidden="true"
+        >
+          <FontAwesomeIcon icon={rank.icon} />
         </span>
         <span className={styles.avatar} aria-hidden={Boolean(profile.avatarUrl)}>
           {profile.avatarUrl ? (

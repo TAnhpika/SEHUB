@@ -9,7 +9,7 @@ function deriveNextLevelLabel(levelName = "") {
   if (index >= 0 && index < LEVEL_TIERS.length - 1) {
     return LEVEL_TIERS[index + 1];
   }
-  return "Silver";
+  return null;
 }
 
 export function computeProgress(points, nextLevelPoints) {
@@ -153,10 +153,14 @@ export function mapProfileStatsToAuthUser(user, statsDto) {
         }
       : computeProgress(points, statsDto.nextLevelPoints);
 
+  const levelName = statsDto.levelName ?? user.level;
+  const nextLevel = statsDto.nextLevelName ?? deriveNextLevelLabel(levelName ?? "");
+
   return {
     ...user,
     points,
-    level: statsDto.levelName ?? user.level,
+    level: levelName ?? user.level,
+    nextLevel,
     streak: statsDto.streakCount ?? 0,
     highestStreak: statsDto.highestStreak ?? statsDto.streakCount ?? 0,
     levelProgress,
