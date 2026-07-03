@@ -35,10 +35,11 @@ export async function refreshPendingContentCount() {
   return cachedPendingCount;
 }
 
-export async function loadModerationQueue({ sort = "newest" } = {}) {
+export async function loadModerationQueue({ sort = "newest", search = "" } = {}) {
   const data = await adminApi.listModerationPosts({
     status: "Pending",
     sort,
+    search: search || undefined,
     page: 1,
     pageSize: ADMIN_API_PAGE_SIZE,
   });
@@ -49,11 +50,12 @@ export async function loadModerationQueue({ sort = "newest" } = {}) {
   return items;
 }
 
-export async function loadModerationHistory({ status = "all", sort = "newest" } = {}) {
+export async function loadModerationHistory({ status = "all", sort = "newest", search = "" } = {}) {
   const queryStatus = HISTORY_STATUS_QUERY[status];
   const data = await adminApi.listModerationPosts({
     status: queryStatus,
     sort,
+    search: search || undefined,
     page: 1,
     pageSize: ADMIN_API_PAGE_SIZE,
   });
