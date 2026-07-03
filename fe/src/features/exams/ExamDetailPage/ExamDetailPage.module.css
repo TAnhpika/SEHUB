@@ -556,6 +556,45 @@
     width: 100%;
     justify-content: center;
   }
+
+  .question-card {
+    padding: 1rem;
+  }
+
+  .question-toolbar {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding-top: 1rem;
+  }
+
+  .toolbar-left {
+    order: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .toolbar-muted {
+    display: none;
+  }
+
+  .pagination {
+    order: 2;
+    flex: 1 1 100%;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+
+  .page-indicator {
+    min-width: 3.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .tool-btn,
+  .page-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+    flex-shrink: 0;
+  }
 }
 
 @media (max-width: 480px) {

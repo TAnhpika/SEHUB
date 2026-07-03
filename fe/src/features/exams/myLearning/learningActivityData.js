@@ -38,8 +38,22 @@ export async function loadExamAttemptHistory(options = {}) {
   const page = options.page ?? 1;
   const pageSize = options.pageSize ?? EXAM_HISTORY_PAGE_SIZE;
 
-  const response = await learningActivityApi.getMyExamAttempts({ page, pageSize });
-  return mapExamAttemptHistoryPage(response);
+  try {
+    const response = await learningActivityApi.getMyExamAttempts({ page, pageSize });
+    return mapExamAttemptHistoryPage(response);
+  } catch (error) {
+    if (isApiNotReadyError(error)) {
+      return {
+        items: [],
+        page,
+        pageSize,
+        totalCount: 0,
+        hasNextPage: false,
+        source: "api-unavailable",
+      };
+    }
+    throw error;
+  }
 }
 
 /**

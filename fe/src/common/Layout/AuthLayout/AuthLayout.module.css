@@ -21,3 +21,14 @@
     overflow: visible;
   }
 }
+
+@media (max-width: 768px) {
+  .shell {
+    min-height: 100dvh;
+  }
+
+  .shell > * {
+    min-height: 100dvh;
+    max-height: none;
+  }
+}
