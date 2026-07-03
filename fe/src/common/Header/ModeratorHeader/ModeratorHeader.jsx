@@ -4,7 +4,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBars,
   faHouse,
-  faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import WorkspaceSwitcher from "@/common/WorkspaceSwitcher/WorkspaceSwitcher";
 import { useAuth } from "@/context";
@@ -108,18 +107,6 @@ function ModeratorHeader() {
           >
             <ThemeSwitcher variant="menu" />
             <div className={styles.menuDivider} />
-            <p className={styles.menuHeading}>Tài khoản</p>
-            <Link
-              to={MODERATOR_HOME_PATH}
-              className={styles.menuItem}
-              role="menuitem"
-              onClick={() => setMenuOpen(false)}
-            >
-              <span className={styles.menuIcon}>
-                <FontAwesomeIcon icon={faUser} />
-              </span>
-              Xử lý báo cáo
-            </Link>
             <div className={styles.menuWorkspace}>
               <WorkspaceSwitcher
                 variant="menu-compact"

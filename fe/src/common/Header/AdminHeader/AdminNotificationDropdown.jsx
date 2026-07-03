@@ -86,24 +86,28 @@ function AdminNotificationDropdown() {
       {open ? (
         <div
           id={panelId}
-          className={styles.toolPanel}
+          className={`${styles.toolPanel} ${styles.notifPanel}`}
           role="dialog"
           aria-label="Thông báo Admin"
         >
-          <header className={styles.toolPanelHead}>
-            <h2 className={styles.toolPanelTitle}>Thông báo</h2>
-            {unreadCount > 0 ? (
-              <span className={styles.toolPanelMeta}>{unreadCount} việc chờ</span>
-            ) : null}
+          <header className={styles.notifPanelHead}>
+            <div className={styles.notifPanelHeadText}>
+              <h2 className={styles.toolPanelTitle}>Thông báo</h2>
+              {unreadCount > 0 ? (
+                <span className={styles.notifPanelMeta}>{unreadCount} việc chờ</span>
+              ) : null}
+            </div>
           </header>
 
           {notifications.length === 0 ? (
-            <p className={styles.toolPanelEmpty}>Không có việc cần xử lý — hệ thống ổn định.</p>
+            <p className={styles.notifPanelEmpty}>Không có việc cần xử lý — hệ thống ổn định.</p>
           ) : (
-            <div className={styles.toolPanelBody}>
+            <div className={styles.notifPanelBody}>
               {actionItems.length > 0 ? (
-                <section>
-                  <p className={`${styles.toolPanelSection} ${styles.toolPanelSectionUrgent}`}>Cần xử lý</p>
+                <section className={styles.notifPanelSection}>
+                  <p className={`${styles.notifPanelSectionLabel} ${styles.notifPanelSectionUrgent}`}>
+                    Cần xử lý
+                  </p>
                   <ul className={styles.notifList}>
                     {actionItems.map((item) => (
                       <li key={item.id}>
@@ -115,7 +119,9 @@ function AdminNotificationDropdown() {
                           onClick={() => setOpen(false)}
                         >
                           <span className={styles.notifItemTitle}>{item.title}</span>
-                          <span className={styles.notifItemDesc}>{item.desc}</span>
+                          {item.desc ? (
+                            <span className={styles.notifItemDesc}>{item.desc}</span>
+                          ) : null}
                         </Link>
                       </li>
                     ))}
@@ -124,8 +130,8 @@ function AdminNotificationDropdown() {
               ) : null}
 
               {activityItems.length > 0 ? (
-                <section>
-                  <p className={styles.toolPanelSection}>Hoạt động gần đây</p>
+                <section className={styles.notifPanelSection}>
+                  <p className={styles.notifPanelSectionLabel}>Hoạt động gần đây</p>
                   <ul className={styles.notifList}>
                     {activityItems.map((item) => (
                       <li key={item.id}>
@@ -135,7 +141,9 @@ function AdminNotificationDropdown() {
                           onClick={() => setOpen(false)}
                         >
                           <span className={styles.notifItemTitle}>{item.title}</span>
-                          <span className={styles.notifItemTime}>{item.time}</span>
+                          {item.time ? (
+                            <span className={styles.notifItemTime}>{item.time}</span>
+                          ) : null}
                         </Link>
                       </li>
                     ))}
@@ -145,7 +153,7 @@ function AdminNotificationDropdown() {
             </div>
           )}
 
-          <footer className={styles.toolPanelFoot}>
+          <footer className={styles.notifPanelFoot}>
             <Link
               to="/admin/activity"
               className={styles.toolPanelLink}
