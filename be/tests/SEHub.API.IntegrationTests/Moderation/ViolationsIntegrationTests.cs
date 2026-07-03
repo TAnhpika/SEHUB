@@ -28,7 +28,7 @@ public sealed class ViolationsIntegrationTests : IClassFixture<CustomWebApplicat
 
         var warnResponse = await _client.PostAsJsonAsync(
             $"/api/v1/admin/moderation/users/{targetUserId}/warn",
-            new ModeratorWarnUserRequest { Reason = "" });
+            new ModeratorWarnUserRequest { Reason = "Integration test warning." });
         warnResponse.EnsureSuccessStatusCode();
 
         var listResponse = await _client.GetAsync(
