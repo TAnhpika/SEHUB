@@ -68,3 +68,13 @@ public sealed class DailyMissionProgressDto
     public int RewardPoints { get; init; }
     public bool IsCompleted { get; init; }
 }
+
+public sealed class LevelCatalogItemDto
+{
+    public Guid Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public int MinPoints { get; init; }
+    public int SortOrder { get; init; }
+    public int? VoucherPercent { get; init; }
+    public string? VoucherLabel { get; init; }
+}

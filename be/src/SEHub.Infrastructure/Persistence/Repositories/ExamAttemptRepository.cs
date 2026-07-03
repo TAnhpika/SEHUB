@@ -48,4 +48,28 @@ public class ExamAttemptRepository : IExamAttemptRepository
                  a.Score.HasValue &&
                  a.Score.Value >= minScore,
             cancellationToken);
+
+    public async Task<(IReadOnlyList<ExamAttempt> Items, int TotalCount)> GetSubmittedFinalPagedByUserIdAsync(
+        Guid userId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.ExamAttempts
+            .AsNoTracking()
+            .Include(a => a.Exam)
+            .Where(a =>
+                a.UserId == userId &&
+                a.Status == ExamAttemptStatus.Submitted &&
+                a.Exam.ExamType == ExamType.Final);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(a => a.SubmittedAt ?? a.StartedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
 }

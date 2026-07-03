@@ -1,18 +1,7 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faBell,
-  faCommentDots,
-  faFileLines,
-  faFire,
-  faUserPlus,
-  faUserGroup,
-  faRotateLeft,
-  faClipboardCheck,
-  faAt,
-  faClipboardList,
-} from "@fortawesome/free-solid-svg-icons";
+import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { faBell as faBellOutline } from "@fortawesome/free-regular-svg-icons";
 import {
   getNotifications,
@@ -28,60 +17,52 @@ import {
   isAccountPenaltyNotification,
   resolvePenaltyForNotification,
 } from "@/features/account/accountPenaltyUtils";
-import { NOTIFICATION_META } from "./notificationData";
+import NotificationListItem from "@/features/notifications/NotificationListItem";
+import NotificationsModal from "@/features/notifications/NotificationsModal";
+import {
+  DROPDOWN_PREVIEW_SIZE,
+  isVisibleNotification,
+} from "@/features/notifications/notificationTypes";
 import styles from "./NotificationDropdown.module.css";
-
-function isVisibleNotification(item) {
-  return item.type !== "message";
-}
-
-const TYPE_ICONS = {
-  comment: faCommentDots,
-  exam: faFileLines,
-  streak: faFire,
-  follow: faUserPlus,
-  friendrequest: faUserGroup,
-  friendaccepted: faUserGroup,
-  like: faCommentDots,
-  token: faBell,
-  badge: faBell,
-  refund: faRotateLeft,
-  moderation: faClipboardCheck,
-  examreview: faFileLines,
-  mention: faAt,
-  practiceresult: faClipboardList,
-};
 
 function NotificationDropdown() {
   const navigate = useNavigate();
-  const { open, setOpen, rootProps, handleTriggerClick } = useHoverDropdown();
+  const { open, setOpen, rootProps, handleTriggerClick, hide } = useHoverDropdown();
   const [items, setItems] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [allModalOpen, setAllModalOpen] = useState(false);
+  const [liveNotification, setLiveNotification] = useState(null);
   const [penaltyModalOpen, setPenaltyModalOpen] = useState(false);
   const [penaltyDetails, setPenaltyDetails] = useState(null);
   const [penaltyLoading, setPenaltyLoading] = useState(false);
   const rootRef = useRef(null);
   const panelId = useId();
 
-  const unreadItems = items.filter((item) => !item.read).length;
   const hasNotifications = items.length > 0;
-
-  const notifications = useMemo(() => items, [items]);
+  const showViewAll = totalCount > 0 || hasNotifications;
 
   async function refreshNotifications() {
     try {
       const [page, unread] = await Promise.all([
-        getNotifications({ page: 1, pageSize: 20 }),
+        getNotifications({ page: 1, pageSize: DROPDOWN_PREVIEW_SIZE }),
         getNotificationUnreadCount(),
       ]);
       const mapped = mapNotificationPage(page);
-      setItems(mapped.items.filter(isVisibleNotification));
+      const visible = mapped.items.filter(isVisibleNotification);
 
-      if (typeof unread?.totalUnread === "number" && unread.totalUnread !== mapped.items.filter((i) => !i.read).length) {
-        // keep badge in sync when server count differs from loaded page
-      }
+      setItems(visible);
+      setTotalCount(mapped.totalCount);
+      setUnreadCount(
+        typeof unread?.totalUnread === "number"
+          ? unread.totalUnread
+          : visible.filter((item) => !item.read).length,
+      );
     } catch {
       setItems([]);
+      setTotalCount(0);
+      setUnreadCount(0);
     } finally {
       setLoading(false);
     }
@@ -93,12 +74,18 @@ function NotificationDropdown() {
       if (!isVisibleNotification(mapped)) {
         return;
       }
+
+      setLiveNotification(mapped);
       setItems((current) => {
         if (current.some((item) => item.id === mapped.id)) {
           return current;
         }
-        return [mapped, ...current];
+        return [mapped, ...current].slice(0, DROPDOWN_PREVIEW_SIZE);
       });
+      setTotalCount((count) => count + 1);
+      if (!mapped.read) {
+        setUnreadCount((count) => count + 1);
+      }
     },
     onNotificationUnreadUpdated: () => {
       refreshNotifications();
@@ -135,12 +122,13 @@ function NotificationDropdown() {
     try {
       await markAllNotificationsRead();
       setItems((prev) => prev.map((item) => ({ ...item, read: true })));
+      setUnreadCount(0);
     } catch {
       /* ignore */
     }
   }
 
-  async function handleItemClick(item) {
+  async function handleItemClick(item, { closeDropdown = true, closeAllModal = false } = {}) {
     if (!item.read) {
       try {
         await markNotificationRead(item.id);
@@ -150,10 +138,17 @@ function NotificationDropdown() {
       setItems((prev) =>
         prev.map((entry) => (entry.id === item.id ? { ...entry, read: true } : entry)),
       );
+      setUnreadCount((count) => Math.max(0, count - 1));
     }
 
     if (isAccountPenaltyNotification(item)) {
-      setOpen(false);
+      if (closeDropdown) {
+        setOpen(false);
+        hide();
+      }
+      if (closeAllModal) {
+        setAllModalOpen(false);
+      }
       setPenaltyModalOpen(true);
       setPenaltyLoading(true);
       setPenaltyDetails(null);
@@ -167,9 +162,42 @@ function NotificationDropdown() {
     }
 
     if (item.linkUrl) {
-      setOpen(false);
+      if (closeDropdown) {
+        setOpen(false);
+        hide();
+      }
+      if (closeAllModal) {
+        setAllModalOpen(false);
+      }
       navigate(item.linkUrl);
     }
+  }
+
+  const handleModalItemsUpdated = useCallback((update) => {
+    if (!update) return;
+
+    if (update.markAllRead) {
+      setItems((prev) => prev.map((item) => ({ ...item, read: true })));
+      setUnreadCount(0);
+      return;
+    }
+
+    if (update.itemId) {
+      setItems((prev) =>
+        prev.map((entry) => (entry.id === update.itemId ? { ...entry, read: true } : entry)),
+      );
+      if (update.read) {
+        setUnreadCount((count) => Math.max(0, count - 1));
+      }
+    }
+  }, []);
+
+  const closeAllModal = useCallback(() => setAllModalOpen(false), []);
+
+  function openViewAllModal() {
+    setOpen(false);
+    hide();
+    setAllModalOpen(true);
   }
 
   function closePenaltyModal() {
@@ -186,17 +214,26 @@ function NotificationDropdown() {
         onClose={closePenaltyModal}
         variant={penaltyDetails?.penaltyType === "Temp" || penaltyDetails?.penaltyType === "Permanent" ? "ban" : "info"}
       />
+
+      <NotificationsModal
+        open={allModalOpen}
+        onClose={closeAllModal}
+        onItemClick={(item) => handleItemClick(item, { closeDropdown: false, closeAllModal: true })}
+        onItemsUpdated={handleModalItemsUpdated}
+        liveItem={liveNotification}
+      />
+
       <button
         type="button"
         className={`${styles.trigger} ${open ? styles["trigger-open"] : ""}`}
         onClick={handleTriggerClick}
-        aria-label={`Thông báo (${unreadItems} chưa đọc)`}
+        aria-label={`Thông báo (${unreadCount} chưa đọc)`}
         aria-haspopup="true"
         aria-expanded={open}
         aria-controls={panelId}
       >
         <FontAwesomeIcon icon={faBellOutline} className={styles["bell-icon"]} />
-        {unreadItems > 0 && <span className={styles.badge}>{unreadItems}</span>}
+        {unreadCount > 0 && <span className={styles.badge}>{unreadCount}</span>}
       </button>
 
       {open && (
@@ -204,11 +241,11 @@ function NotificationDropdown() {
           <header className={styles.header}>
             <div className={styles["header-text"]}>
               <h2 className={styles.title}>Thông báo</h2>
-              {unreadItems > 0 && (
-                <span className={styles["unread-pill"]}>{unreadItems} mới</span>
+              {unreadCount > 0 && (
+                <span className={styles["unread-pill"]}>{unreadCount} mới</span>
               )}
             </div>
-            {unreadItems > 0 && (
+            {unreadCount > 0 && (
               <button type="button" className={styles["mark-read-btn"]} onClick={handleMarkAllRead}>
                 Đánh dấu đã đọc
               </button>
@@ -219,36 +256,14 @@ function NotificationDropdown() {
 
           {!loading && hasNotifications ? (
             <ul className={styles.list}>
-              {notifications.map((item) => {
-                const meta = NOTIFICATION_META[item.type] ?? NOTIFICATION_META.comment;
-                const icon = TYPE_ICONS[item.type] ?? faBell;
-
-                return (
-                  <li key={item.id} role="none">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className={`${styles.item} ${item.read ? styles["item-read"] : styles["item-unread"]}`}
-                      onClick={() => handleItemClick(item)}
-                    >
-                      <span
-                        className={`${styles.iconWrap} ${styles[`icon-${meta.tone}`]}`}
-                        aria-hidden="true"
-                      >
-                        <FontAwesomeIcon icon={icon} className={styles.icon} />
-                      </span>
-
-                      <span className={styles.content}>
-                        <span className={styles.category}>{meta.label}</span>
-                        <span className={styles["item-title"]}>{item.title}</span>
-                        <span className={styles["item-time"]}>{item.time}</span>
-                      </span>
-
-                      {!item.read && <span className={styles.dot} aria-hidden="true" />}
-                    </button>
-                  </li>
-                );
-              })}
+              {items.map((item) => (
+                <li key={item.id} role="none">
+                  <NotificationListItem
+                    item={item}
+                    onClick={(entry) => handleItemClick(entry)}
+                  />
+                </li>
+              ))}
             </ul>
           ) : !loading ? (
             <div className={styles.empty}>
@@ -258,6 +273,18 @@ function NotificationDropdown() {
               <p className={styles["empty-title"]}>Chưa có thông báo</p>
               <p className={styles["empty-desc"]}>Cập nhật mới sẽ hiển thị tại đây.</p>
             </div>
+          ) : null}
+
+          {showViewAll && !loading ? (
+            <footer className={styles.footer}>
+              <button type="button" className={styles.viewAllBtn} onClick={openViewAllModal}>
+                Xem tất cả thông báo
+                {totalCount > items.length ? (
+                  <span className={styles.viewAllCount}>({totalCount})</span>
+                ) : null}
+                <FontAwesomeIcon icon={faChevronRight} />
+              </button>
+            </footer>
           ) : null}
         </div>
       )}

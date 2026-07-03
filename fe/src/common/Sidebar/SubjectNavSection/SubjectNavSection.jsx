@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBook,
   faCircleQuestion,
+  faClockRotateLeft,
   faFileLines,
 } from "@fortawesome/free-solid-svg-icons";
 import { getSubjectNavLinks } from "@/utils/subjectPaths";
@@ -11,13 +12,20 @@ const SUBJECT_ICONS = {
   review: faCircleQuestion,
   practice: faBook,
   documents: faFileLines,
+  history: faClockRotateLeft,
 };
 
 /**
  * @param {"community" | "home"} [scope="community"]
  */
-function SubjectNavSection({ pathname, styles, scope = "community", onNavigate }) {
-  const links = getSubjectNavLinks(scope).map((item) => ({
+function SubjectNavSection({
+  pathname,
+  styles,
+  scope = "community",
+  onNavigate,
+  isPremium = false,
+}) {
+  const links = getSubjectNavLinks(scope, { isPremium }).map((item) => ({
     ...item,
     icon: SUBJECT_ICONS[item.key],
   }));
@@ -34,7 +42,7 @@ function SubjectNavSection({ pathname, styles, scope = "community", onNavigate }
               pathname === item.to || pathname.startsWith(`${item.to}/`);
 
             return (
-              <li key={item.label}>
+              <li key={item.key}>
                 <Link
                   to={item.to}
                   className={`${styles["subject-link"]} ${isActive ? styles.active : ""}`}

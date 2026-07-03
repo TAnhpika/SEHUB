@@ -14,6 +14,7 @@ public sealed class ProfilesController : ControllerBase
 {
     private readonly IProfileService _profileService;
     private readonly IProfileStatsService _profileStatsService;
+    private readonly IExamAttemptHistoryService _examAttemptHistoryService;
     private readonly IProfileActivityService _profileActivityService;
     private readonly IAiTokenService _aiTokenService;
     private readonly ICurrentUserService _currentUserService;
@@ -21,12 +22,14 @@ public sealed class ProfilesController : ControllerBase
     public ProfilesController(
         IProfileService profileService,
         IProfileStatsService profileStatsService,
+        IExamAttemptHistoryService examAttemptHistoryService,
         IProfileActivityService profileActivityService,
         IAiTokenService aiTokenService,
         ICurrentUserService currentUserService)
     {
         _profileService = profileService;
         _profileStatsService = profileStatsService;
+        _examAttemptHistoryService = examAttemptHistoryService;
         _profileActivityService = profileActivityService;
         _aiTokenService = aiTokenService;
         _currentUserService = currentUserService;
@@ -114,6 +117,17 @@ public sealed class ProfilesController : ControllerBase
     public async Task<IActionResult> GetMyStats(CancellationToken cancellationToken)
     {
         var result = await _profileStatsService.GetMyStatsAsync(cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("me/exam-attempts")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> GetMyExamAttempts(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _examAttemptHistoryService.GetMyExamAttemptsAsync(page, pageSize, cancellationToken);
         return Ok(result);
     }
 }

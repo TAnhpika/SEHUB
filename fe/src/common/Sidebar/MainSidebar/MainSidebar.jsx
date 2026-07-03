@@ -73,7 +73,13 @@ function MainSidebar() {
                 })}
               </nav>
 
-              <SubjectNavSection pathname={pathname} styles={styles} scope="home" onNavigate={handleNavClick} />
+              <SubjectNavSection
+                pathname={pathname}
+                styles={styles}
+                scope="home"
+                isPremium={isPremium}
+                onNavigate={handleNavClick}
+              />
 
               <InteractionNavSection pathname={pathname} styles={styles} isPremium={isPremium} onNavigate={handleNavClick} />
             </div>

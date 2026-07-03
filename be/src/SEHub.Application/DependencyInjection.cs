@@ -105,6 +105,7 @@ public static class DependencyInjection
 
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IProfileStatsService, ProfileStatsService>();
+        services.AddScoped<IExamAttemptHistoryService, ExamAttemptHistoryService>();
         services.AddScoped<IProfileActivityService, ProfileActivityService>();
         services.AddScoped<IUserActivityService, UserActivityService>();
 
