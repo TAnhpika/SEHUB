@@ -39,7 +39,7 @@ function PaymentStatsStrip({ stats, activeFilter, onFilter, eligibleTokenCount }
   const items = [
     {
       id: "revenue",
-      label: "Doanh thu tháng 6",
+      label: stats.monthLabel ?? "Doanh thu tháng",
       value: stats.monthRevenueLabel,
       tone: "success",
       filter: null,

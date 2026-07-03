@@ -614,14 +614,35 @@ export function mapAdminDocumentListItem(dto) {
 }
 
 export function mapPaymentAuditLogItem(dto) {
+  const action = String(dto.action ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+
+  let targetUsername = "—";
+  if (dto.payloadJson) {
+    try {
+      const payload = JSON.parse(dto.payloadJson);
+      targetUsername =
+        payload.Username ??
+        payload.username ??
+        payload.UserName ??
+        payload.userName ??
+        "—";
+    } catch {
+      targetUsername = "—";
+    }
+  }
+
   return {
     id: dto.id,
     at: dto.createdAt,
     admin: dto.actorUsername ?? "admin",
-    action: String(dto.action ?? "").toLowerCase(),
-    username: dto.actorUsername ?? "—",
+    action,
+    username: targetUsername,
     detail: dto.detail ?? null,
     payloadJson: dto.payloadJson ?? null,
+    meta: { paymentId: dto.orderId, orderId: dto.orderId },
     sortKey: dto.createdAt,
     type: "payment",
   };

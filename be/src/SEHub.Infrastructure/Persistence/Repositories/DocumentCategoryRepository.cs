@@ -15,12 +15,15 @@ public class DocumentCategoryRepository : IDocumentCategoryRepository
 
     public Task<DocumentCategory?> FindBySubjectCodeAsync(string subjectCode, CancellationToken cancellationToken = default)
     {
-        var normalized = subjectCode.Trim();
+        var normalized = subjectCode.Trim().ToLowerInvariant();
+        var prefixWithSpace = normalized + " ";
+        var prefixWithDash = normalized + "-";
+
         return _context.DocumentCategories
             .FirstOrDefaultAsync(
-                c => (c.SubjectCode != null && c.SubjectCode.ToLower() == normalized.ToLower())
-                    || c.Name.StartsWith(normalized + " ", StringComparison.OrdinalIgnoreCase)
-                    || c.Name.StartsWith(normalized + "-", StringComparison.OrdinalIgnoreCase),
+                c => (c.SubjectCode != null && c.SubjectCode.ToLower() == normalized)
+                    || c.Name.ToLower().StartsWith(prefixWithSpace)
+                    || c.Name.ToLower().StartsWith(prefixWithDash),
                 cancellationToken);
     }
 

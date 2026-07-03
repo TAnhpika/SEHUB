@@ -49,38 +49,100 @@ const TYPE_META = {
 
 const STAT_TYPES = ["all", "exam", "report", "payment", "user"];
 
+const DEFAULT_PERIOD_FILTER = "week";
+
 const PERIOD_OPTIONS = [
-  { value: "all", label: "Mọi thời gian" },
   { value: "today", label: "Hôm nay" },
   { value: "week", label: "7 ngày qua" },
   { value: "month", label: "30 ngày qua" },
+  { value: "3months", label: "3 tháng vừa qua" },
+  { value: "6months", label: "6 tháng vừa qua" },
+  { value: "year", label: "1 năm vừa qua" },
+  { value: "all", label: "Mọi thời gian" },
 ];
 
-/** Mock “hôm nay” — đồng bộ dữ liệu demo */
-const MOCK_TODAY = new Date("2026-06-04T12:00:00");
+const PERIOD_MAX_DAYS = {
+  today: 0,
+  week: 6,
+  month: 29,
+  "3months": 89,
+  "6months": 179,
+  year: 364,
+};
 
-function getItemAgeDays(time) {
-  if (!time) return 999;
-  const trimmed = time.trim();
-  if (/^\d{1,2}:\d{2}$/.test(trimmed)) return 0;
-  if (trimmed.startsWith("Hôm qua")) return 1;
-  const relative = trimmed.match(/(\d+)\s*ngày trước/);
-  if (relative) return parseInt(relative[1], 10);
-  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
-    const parsed = new Date(trimmed.slice(0, 10) + "T12:00:00");
-    const diffMs = MOCK_TODAY.getTime() - parsed.getTime();
-    return Math.max(0, Math.floor(diffMs / 86400000));
-  }
-  return 999;
+function startOfLocalDay(date) {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
 }
 
-function matchesPeriodFilter(item, period) {
+function parseActivityLogTime(time) {
+  if (!time) return null;
+  const trimmed = time.trim();
+
+  const isoLike = trimmed.match(/^(\d{4}-\d{2}-\d{2})(?:\s+(\d{1,2}:\d{2}(?::\d{2})?))?/);
+  if (isoLike) {
+    const [, datePart, timePart] = isoLike;
+    const normalizedTime = timePart?.length === 5 ? `${timePart}:00` : (timePart ?? "12:00:00");
+    const parsed = new Date(`${datePart}T${normalizedTime}`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  const now = new Date();
+
+  if (/^\d{1,2}:\d{2}$/.test(trimmed)) {
+    const [hours, minutes] = trimmed.split(":");
+    const parsed = startOfLocalDay(now);
+    parsed.setHours(Number(hours), Number(minutes), 0, 0);
+    return parsed;
+  }
+
+  if (trimmed.startsWith("Hôm qua")) {
+    const parsed = startOfLocalDay(now);
+    parsed.setDate(parsed.getDate() - 1);
+    return parsed;
+  }
+
+  const relative = trimmed.match(/(\d+)\s*ngày trước/);
+  if (relative) {
+    const parsed = startOfLocalDay(now);
+    parsed.setDate(parsed.getDate() - Number(relative[1]));
+    return parsed;
+  }
+
+  return null;
+}
+
+function getItemTimestamp(item) {
+  if (item.sortKey) {
+    const fromSortKey = new Date(item.sortKey);
+    if (!Number.isNaN(fromSortKey.getTime())) {
+      return fromSortKey;
+    }
+  }
+
+  return parseActivityLogTime(item.time);
+}
+
+function getItemAgeDays(item, referenceDate = new Date()) {
+  const itemDate = getItemTimestamp(item);
+  if (!itemDate) return null;
+
+  const todayStart = startOfLocalDay(referenceDate);
+  const itemDayStart = startOfLocalDay(itemDate);
+  return Math.floor((todayStart.getTime() - itemDayStart.getTime()) / 86400000);
+}
+
+function matchesPeriodFilter(item, period, referenceDate = new Date()) {
   if (period === "all") return true;
-  const days = getItemAgeDays(item.time);
-  if (period === "today") return days === 0;
-  if (period === "week") return days <= 7;
-  if (period === "month") return days <= 30;
-  return true;
+
+  const maxDays = PERIOD_MAX_DAYS[period];
+  if (maxDays == null) return true;
+
+  const ageDays = getItemAgeDays(item, referenceDate);
+  if (ageDays == null) return false;
+
+  return ageDays >= 0 && ageDays <= maxDays;
 }
 
 function resolveTimeGroup(time) {
@@ -117,13 +179,13 @@ function groupTimelineItems(items) {
 function AdminActivityLogPage() {
   const [page, setPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState("all");
-  const [periodFilter, setPeriodFilter] = useState("all");
+  const [periodFilter, setPeriodFilter] = useState(DEFAULT_PERIOD_FILTER);
   const [query, setQuery] = useState("");
   const [activityLog, setActivityLog] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
-    loadAdminActivityLog().then((items) => {
+    loadAdminActivityLog().then(({ items }) => {
       if (!cancelled) setActivityLog(items);
     });
     return () => {
@@ -132,12 +194,16 @@ function AdminActivityLogPage() {
   }, []);
 
   const stats = useMemo(() => {
-    const counts = { all: activityLog.length, exam: 0, report: 0, payment: 0, user: 0 };
-    for (const item of activityLog) {
+    const counts = { all: 0, exam: 0, report: 0, payment: 0, user: 0 };
+    const periodItems = activityLog.filter((item) => matchesPeriodFilter(item, periodFilter));
+
+    counts.all = periodItems.length;
+    for (const item of periodItems) {
       if (counts[item.type] != null) counts[item.type] += 1;
     }
+
     return counts;
-  }, [activityLog]);
+  }, [activityLog, periodFilter]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -167,7 +233,9 @@ function AdminActivityLogPage() {
   const rangeEnd = Math.min(safePage * ADMIN_ACTIVITY_PAGE_SIZE, filtered.length);
 
   const hasActiveFilters =
-    query.trim() !== "" || typeFilter !== "all" || periodFilter !== "all";
+    query.trim() !== "" ||
+    typeFilter !== "all" ||
+    periodFilter !== DEFAULT_PERIOD_FILTER;
 
   useEffect(() => {
     setPage(1);
@@ -181,7 +249,7 @@ function AdminActivityLogPage() {
   function resetFilters() {
     setQuery("");
     setTypeFilter("all");
-    setPeriodFilter("all");
+    setPeriodFilter(DEFAULT_PERIOD_FILTER);
   }
 
   return (
@@ -200,7 +268,17 @@ function AdminActivityLogPage() {
             return (
               <div
                 key={type}
+                role="button"
+                tabIndex={0}
                 className={`${logStyles.statCard} ${logStyles[`statCard-${type}`]} ${highlight ? logStyles.statCardHighlight : ""}`}
+                onClick={() => setTypeFilter(type)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setTypeFilter(type);
+                  }
+                }}
+                aria-pressed={highlight}
               >
                 <span className={logStyles.statIcon}>
                   <FontAwesomeIcon icon={meta.icon} />

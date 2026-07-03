@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadAdminModerationReports } from "@/features/admin/moderation/adminReportData";
 import { getExamQuestionReports } from "@/features/exams/examQuestionReportStore";
 import { getConversationReports } from "@/features/moderator/reports/conversationReportStore";
@@ -11,6 +11,11 @@ export function useModerationReportsQueue({ onLoadError } = {}) {
   const [communityPage, setCommunityPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  const onLoadErrorRef = useRef(onLoadError);
+
+  useEffect(() => {
+    onLoadErrorRef.current = onLoadError;
+  }, [onLoadError]);
 
   const applyLoadResult = useCallback((data) => {
     setCommunityReports(data.communityReports ?? []);
@@ -20,9 +25,9 @@ export function useModerationReportsQueue({ onLoadError } = {}) {
     setCommunityPage(data.communityPage ?? 1);
     setLoadError(data.errors?.length ? data.errors.join(" · ") : null);
     if (data.errors?.length) {
-      onLoadError?.(data.errors.join(" · "));
+      onLoadErrorRef.current?.(data.errors.join(" · "));
     }
-  }, [onLoadError]);
+  }, []);
 
   const refreshAllReports = useCallback(async () => {
     const data = await loadAdminModerationReports();
@@ -42,7 +47,7 @@ export function useModerationReportsQueue({ onLoadError } = {}) {
         if (!cancelled) {
           const message = err.message ?? "Không tải được báo cáo.";
           setLoadError(message);
-          onLoadError?.(message);
+          onLoadErrorRef.current?.(message);
         }
       })
       .finally(() => {
@@ -52,7 +57,7 @@ export function useModerationReportsQueue({ onLoadError } = {}) {
     return () => {
       cancelled = true;
     };
-  }, [applyLoadResult, onLoadError]);
+  }, [applyLoadResult]);
 
   useEffect(() => {
     let cancelled = false;

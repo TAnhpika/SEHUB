@@ -31,6 +31,12 @@
   background: var(--moderator-surface);
   border: 1px solid var(--moderator-border);
   border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.statCard:hover {
+  border-color: var(--moderator-accent, #3b82f6);
 }
 
 .statCardHighlight {
