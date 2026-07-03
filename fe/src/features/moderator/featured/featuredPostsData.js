@@ -1,6 +1,5 @@
 import * as postsApi from "@/api/postsApi";
 import * as adminApi from "@/api/adminApi";
-import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 import { FEATURED_POSTS_UPDATED_EVENT } from "@/features/feed/feedData";
 import { formatRelativeTimeFromApi } from "@/utils/dateTime";
 
@@ -341,7 +340,7 @@ function mapModeratorFeaturedItem(dto) {
   };
 }
 
-export async function loadFeaturedPostsState() {
+export async function loadFeaturedPostsState({ search = "" } = {}) {
   if (USE_MOCK) {
     return {
       pinned: PINNED_POSTS_INITIAL,
@@ -349,7 +348,10 @@ export async function loadFeaturedPostsState() {
     };
   }
 
-  const state = await adminApi.getPinnedPosts({ pageSize: ADMIN_API_PAGE_SIZE });
+  const state = await adminApi.getFeaturedPosts({
+    search: search.trim() || undefined,
+    pageSize: 50,
+  });
   const pinned = (state.pinned ?? []).map(mapModeratorFeaturedItem);
   const searchPool = (state.candidates ?? []).map(mapModeratorFeaturedItem);
 
