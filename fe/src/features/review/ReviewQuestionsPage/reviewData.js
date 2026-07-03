@@ -118,10 +118,16 @@ export const REVIEW_COURSES = [
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
-function normalizeCatalogCourseCode(course) {
-  return String(normalizeCourseSubjectCode(course?.code ?? course?.Code) ?? course?.code ?? course?.Code ?? "")
+function canonicalCatalogSubjectCode(value) {
+  return String(
+    normalizeCourseSubjectCode(value) ?? String(value ?? "").trim(),
+  )
     .trim()
     .toUpperCase();
+}
+
+function normalizeCatalogCourseCode(course) {
+  return canonicalCatalogSubjectCode(course?.code ?? course?.Code ?? course);
 }
 
 function readCatalogCourseName(course) {
@@ -249,9 +255,7 @@ function collectSubjectCodesFromExamItems(items = []) {
   const codes = new Set();
 
   for (const item of items) {
-    const code =
-      normalizeCourseSubjectCode(item?.code) ??
-      String(item?.code ?? "").trim().toUpperCase();
+    const code = canonicalCatalogSubjectCode(item?.code);
     if (code) {
       codes.add(code);
     }
@@ -295,7 +299,7 @@ async function loadSubjectCodesWithDocuments() {
     totalCount = Number(result?.totalCount ?? 0);
 
     for (const item of result?.items ?? []) {
-      const code = extractDocumentSubjectCode(item);
+      const code = canonicalCatalogSubjectCode(extractDocumentSubjectCode(item));
       if (code) {
         codes.add(code);
       }

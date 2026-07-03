@@ -110,6 +110,7 @@ function AdminExamFormPage() {
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [importingMarkdown, setImportingMarkdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [questionCountInput, setQuestionCountInput] = useState(() =>
     String(FINAL_EXAM_DEFAULTS.maxQuestions),
   );
@@ -453,6 +454,7 @@ function AdminExamFormPage() {
       return;
     }
 
+    setIsPublishing(true);
     setIsSubmitting(true);
     try {
       const result = await persist("published");
@@ -466,6 +468,7 @@ function AdminExamFormPage() {
     } catch (err) {
       showToast(err.message ?? "Không xuất bản được đề thi.");
     } finally {
+      setIsPublishing(false);
       setIsSubmitting(false);
     }
   }
@@ -970,19 +973,27 @@ function AdminExamFormPage() {
             ) : null}
 
             <div className={formStyles.formActions}>
-              <Button type="button" look="outline" onClick={handleDraft} disabled={blockSave}>
+              <Button
+                type="button"
+                look="outline"
+                onClick={handleDraft}
+                disabled={blockSave || isSubmitting}
+              >
                 Lưu nháp
               </Button>
               <div className={formStyles.formActionsRight}>
-                <Button type="button" look="outline" onClick={() => setStep(1)}>
+                <Button type="button" look="outline" onClick={() => setStep(1)} disabled={isSubmitting}>
                   Quay lại
                 </Button>
                 <Button
                   type="submit"
                   disabled={
                     blockSave ||
+                    isSubmitting ||
                     (isFinal && (!ocrDone || !ocrConfirmed || questionCompleteCount < 1))
                   }
+                  loading={isPublishing}
+                  loadingLabel="Đang publish..."
                 >
                   {isEdit ? "Lưu & xuất bản" : "Publish đề thi"}
                 </Button>
