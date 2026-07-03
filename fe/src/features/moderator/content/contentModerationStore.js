@@ -96,8 +96,9 @@ export function useContentModerationQueue() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sort, setSort] = useState("newest");
+  const [search, setSearch] = useState("");
 
-  const refresh = useCallback(async (nextSort = sort) => {
+  const refresh = useCallback(async (nextSort = sort, nextSearch = search) => {
     setLoading(true);
     setError(null);
     try {
@@ -108,7 +109,7 @@ export function useContentModerationQueue() {
         return mockItems;
       }
 
-      const data = await loadModerationQueue({ sort: nextSort });
+      const data = await loadModerationQueue({ sort: nextSort, search: nextSearch });
       setItems(data);
       return data;
     } catch (err) {
@@ -118,11 +119,11 @@ export function useContentModerationQueue() {
     } finally {
       setLoading(false);
     }
-  }, [sort]);
+  }, [sort, search]);
 
   useEffect(() => {
-    refresh(sort);
-  }, [sort, refresh]);
+    refresh(sort, search);
+  }, [sort, search, refresh]);
 
   useEffect(() => {
     if (CONTENT_MODERATION_USE_MOCK) {
@@ -153,9 +154,9 @@ export function useContentModerationQueue() {
       }
 
       await approveModerationPosts(ids);
-      await refresh(sort);
+      await refresh(sort, search);
     },
-    [refresh, sort],
+    [refresh, sort, search],
   );
 
   const rejectItems = useCallback(
@@ -169,9 +170,9 @@ export function useContentModerationQueue() {
       }
 
       await rejectModerationPosts(ids, reason);
-      await refresh(sort);
+      await refresh(sort, search);
     },
-    [refresh, sort],
+    [refresh, sort, search],
   );
 
   const resetItems = useCallback(async () => {
@@ -183,8 +184,8 @@ export function useContentModerationQueue() {
       return;
     }
 
-    await refresh(sort);
-  }, [refresh, sort]);
+    await refresh(sort, search);
+  }, [refresh, sort, search]);
 
   return {
     items,
@@ -192,6 +193,8 @@ export function useContentModerationQueue() {
     error,
     sort,
     setSort,
+    search,
+    setSearch,
     refresh,
     approveItems,
     rejectItems,
@@ -199,7 +202,7 @@ export function useContentModerationQueue() {
   };
 }
 
-export function useContentModerationHistory({ status = "all", sort = "newest" } = {}) {
+export function useContentModerationHistory({ status = "all", sort = "newest", search = "" } = {}) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -213,7 +216,7 @@ export function useContentModerationHistory({ status = "all", sort = "newest" } 
         return;
       }
 
-      const data = await loadModerationHistory({ status, sort });
+      const data = await loadModerationHistory({ status, sort, search });
       setItems(data);
     } catch (err) {
       setError(err.message ?? "Không tải được lịch sử duyệt bài.");
@@ -221,7 +224,7 @@ export function useContentModerationHistory({ status = "all", sort = "newest" } 
     } finally {
       setLoading(false);
     }
-  }, [status, sort]);
+  }, [status, sort, search]);
 
   useEffect(() => {
     refresh();
