@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { useExamFormFlow } from "@/features/exams/examFormFlow";
 import {
   ANSWER_KEYS,
   EMPTY_FINAL_EXAM_INFO,
@@ -13,6 +14,7 @@ import { loadExamForWizardEdit } from "@/features/moderator/exams/moderatorExamS
 const FinalExamWizardContext = createContext(null);
 
 export function FinalExamWizardProvider({ children }) {
+  const flow = useExamFormFlow();
   const [examInfo, setExamInfo] = useState(EMPTY_FINAL_EXAM_INFO);
   const [questions, setQuestions] = useState([]);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
@@ -22,8 +24,8 @@ export function FinalExamWizardProvider({ children }) {
   const [loadExamError, setLoadExamError] = useState(null);
 
   const basePath = editingExamId
-    ? `/moderator/final-exams/edit/${editingExamId}`
-    : "/moderator/final-exams/add";
+    ? `${flow.finalExamEditPathPrefix}/${editingExamId}`
+    : flow.finalExamPath;
   const wizardSteps = useMemo(() => getWizardSteps(basePath), [basePath]);
   const isEditMode = Boolean(editingExamId);
   const isRevisionEdit = Boolean(revisionOfExamId);
@@ -114,6 +116,8 @@ export function FinalExamWizardProvider({ children }) {
       loadExamError,
       loadExamForEdit,
       resetWizard,
+      publishesDirectly: flow.publishesDirectly,
+      flowScope: flow.scope,
       updateActiveQuestion(patch) {
         setQuestions((prev) =>
           prev.map((item, index) =>
@@ -148,6 +152,8 @@ export function FinalExamWizardProvider({ children }) {
       loadExamError,
       loadExamForEdit,
       resetWizard,
+      flow.publishesDirectly,
+      flow.scope,
     ],
   );
 

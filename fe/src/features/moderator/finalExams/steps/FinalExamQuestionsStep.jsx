@@ -40,6 +40,7 @@ function FinalExamQuestionsStep() {
     setQuestions,
     setExamInfo,
     basePath,
+    flowScope,
   } = useFinalExamWizard();
 
   const [markdownText, setMarkdownText] = useState("");
@@ -57,7 +58,10 @@ function FinalExamQuestionsStep() {
   const questionNumber = activeQuestionIndex + 1;
   const examSubtitle = `Cấu trúc đề thi ${examInfo.subjectName} (${examInfo.subjectCode}) - ${examInfo.semesterLabel}`;
 
+  const isAdminFlow = flowScope === "admin";
+
   function handleSaveDraft() {
+    if (isAdminFlow) return;
     recordExamDraft(
       buildFinalExamContributionPayload(
         moderator,
@@ -259,6 +263,7 @@ function FinalExamQuestionsStep() {
         onSaveDraft={handleSaveDraft}
         onBack={() => navigate(basePath)}
         onContinue={handleContinue}
+        showSaveDraft={!isAdminFlow}
       />
     </div>
   );

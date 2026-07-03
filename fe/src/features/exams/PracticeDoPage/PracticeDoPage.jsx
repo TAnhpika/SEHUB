@@ -80,7 +80,9 @@ function PracticeDoPage() {
       }
 
       try {
-        const meta = await loadExamMeta(courseCode, decodedExamId, "practice", scope);
+        const meta = await loadExamMeta(courseCode, decodedExamId, "practice", scope, {
+          apiExamId: locationState?.apiExamId,
+        });
         if (!cancelled) {
           setExam(meta?.exam ?? null);
           setApiExamId(meta?.apiExamId ?? null);
@@ -100,7 +102,7 @@ function PracticeDoPage() {
     return () => {
       cancelled = true;
     };
-  }, [courseCode, decodedExamId, scope]);
+  }, [courseCode, decodedExamId, scope, locationState?.apiExamId]);
 
   const questions = useMemo(
     () => (exam ? buildExamQuestions(exam.questionCount, "practice") : []),

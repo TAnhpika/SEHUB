@@ -159,7 +159,7 @@ export function buildExamQuestions(count, pageKey) {
   }
 
   if (pageKey === "practice") {
-    return buildPracticeItems(count);
+    return buildPracticeItems(resolvePracticeQuestionCount(count));
   }
 
   return buildDocumentItems(count);
@@ -191,8 +191,16 @@ export async function resolveExamApiId(examIdOrCode) {
   return match?.id ?? null;
 }
 
+export function resolvePracticeQuestionCount(count) {
+  const parsed = Number(count);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return 1;
+  }
+  return parsed;
+}
+
 async function resolveExamApiIdFromPaperList(courseCode, examId, pageKey) {
-  if (!courseCode || !examId || pageKey !== "review") {
+  if (!courseCode || !examId || (pageKey !== "review" && pageKey !== "practice")) {
     return null;
   }
 

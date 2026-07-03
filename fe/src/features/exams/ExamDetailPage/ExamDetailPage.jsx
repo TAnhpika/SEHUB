@@ -472,12 +472,16 @@ function ExamDetailPage({ page }) {
       return;
     }
 
-    navigate(getPracticeDoPath(exam.courseCode, exam.id, currentIndex + 1, scope));
+    navigate(getPracticeDoPath(exam.courseCode, exam.id, currentIndex + 1, scope), {
+      state: { scope, apiExamId: resolvedApiExamId },
+    });
   }
 
   function handleViewResult() {
     if (isPracticeExam) {
-      navigate(getPracticeResultPath(exam.courseCode, exam.id, currentIndex + 1, scope));
+      navigate(getPracticeResultPath(exam.courseCode, exam.id, currentIndex + 1, scope), {
+        state: { scope, apiExamId: resolvedApiExamId },
+      });
       return;
     }
     navigate(getExamResultPath(exam.courseCode, exam.id, scope));
