@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -33,12 +33,24 @@ function StudentDocumentViewer({ document: doc }) {
   const [overview, setOverview] = useState(() => getDocumentOverview(doc));
   const [currentPage, setCurrentPage] = useState(1);
   const [pageContent, setPageContent] = useState(null);
+  const [pageLoadError, setPageLoadError] = useState(null);
   const [downloading, setDownloading] = useState(false);
+  const contentUrlRef = useRef(null);
+
+  function revokeContentUrl() {
+    if (contentUrlRef.current?.startsWith("blob:")) {
+      URL.revokeObjectURL(contentUrlRef.current);
+      contentUrlRef.current = null;
+    }
+  }
 
   useEffect(() => {
     setEnrichedDoc(doc);
     setOverview(getDocumentOverview(doc));
     setCurrentPage(1);
+    revokeContentUrl();
+    setPageContent(null);
+    setPageLoadError(null);
   }, [doc]);
 
   useEffect(() => {
@@ -81,23 +93,36 @@ function StudentDocumentViewer({ document: doc }) {
     }
 
     let cancelled = false;
+    setPageLoadError(null);
 
     loadDocumentPageContent(enrichedDoc, currentPage)
       .then((content) => {
         if (!cancelled) {
+          revokeContentUrl();
+          if (content?.contentUrl?.startsWith("blob:")) {
+            contentUrlRef.current = content.contentUrl;
+          }
+          if (content?.totalPages && content.totalPages !== enrichedDoc.pages) {
+            setEnrichedDoc((prev) => ({ ...prev, pages: content.totalPages }));
+          }
           setPageContent(content);
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (!cancelled) {
+          revokeContentUrl();
           setPageContent(null);
+          setPageLoadError(error?.message ?? "Không tải được trang này.");
         }
       });
 
     return () => {
       cancelled = true;
+      revokeContentUrl();
     };
   }, [access.canView, canShowCurrentPage, currentPage, enrichedDoc]);
+
+  useEffect(() => () => revokeContentUrl(), []);
 
   async function handleDownload() {
     if (!access.canDownload || downloading) return;
@@ -112,6 +137,11 @@ function StudentDocumentViewer({ document: doc }) {
       setDownloading(false);
     }
   }
+
+  const pageIndicatorTotal = access.limited ? access.visiblePages : access.totalPages;
+  const previewFrameSrc = pageContent?.contentUrl
+    ? `${pageContent.contentUrl}#page=1&toolbar=0&navpanes=0`
+    : null;
 
   function goToPage(nextPage) {
     const label = pageLabels[nextPage - 1];
@@ -196,12 +226,16 @@ function StudentDocumentViewer({ document: doc }) {
           {canShowCurrentPage ? (
             <div className={styles.pageView}>
               <h4 className={styles.pageTitle}>{pageContent?.title ?? "Đang tải trang..."}</h4>
-              {pageContent?.contentUrl ? (
+              {previewFrameSrc ? (
                 <iframe
                   title={`${enrichedDoc.name} trang ${currentPage}`}
-                  src={pageContent.contentUrl}
+                  src={previewFrameSrc}
                   className={styles.previewFrame}
                 />
+              ) : pageLoadError ? (
+                <div className={styles.pageBody}>
+                  <p>{pageLoadError}</p>
+                </div>
               ) : (
                 <div className={styles.pageBody}>
                   {(pageContent?.lines ?? []).map((line) => (
@@ -221,13 +255,13 @@ function StudentDocumentViewer({ document: doc }) {
                   <FontAwesomeIcon icon={faChevronLeft} />
                 </button>
                 <span className={styles.pageIndicator}>
-                  {isSlide ? "Slide" : "Trang"} {currentPage} / {access.totalPages}
+                  {isSlide ? "Slide" : "Trang"} {currentPage} / {pageIndicatorTotal}
                 </span>
                 <button
                   type="button"
                   className={styles.navBtn}
                   disabled={
-                    currentPage >= access.totalPages ||
+                    currentPage >= pageIndicatorTotal ||
                     !pageLabels[currentPage]?.visible
                   }
                   onClick={() => goToPage(currentPage + 1)}

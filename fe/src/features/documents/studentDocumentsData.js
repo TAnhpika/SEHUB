@@ -183,11 +183,12 @@ export async function loadDocumentPreviewPage(doc, pageNum) {
 
   if (documentsApi.isAuthenticatedDocumentContentUrl(preview.contentUrl)) {
     const blobUrl = await documentsApi.fetchDocumentContentBlobUrl(apiId, pageNum);
-    return { ...preview, contentUrl: blobUrl };
+    return { ...preview, pageLimit: preview.pageLimit ?? doc.pageLimit, contentUrl: blobUrl };
   }
 
   return {
     ...preview,
+    pageLimit: preview.pageLimit ?? doc.pageLimit,
     contentUrl: resolveAssetUrl(preview.contentUrl),
   };
 }

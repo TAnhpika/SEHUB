@@ -10,6 +10,7 @@ public sealed class CreateExamRequest
     public string? Description { get; init; }
     public string? AssetUrl { get; init; }
     public IReadOnlyList<CreateExamQuestionItem> Questions { get; init; } = [];
+    public bool IsPinned { get; init; }
 }
 
 public sealed class CreateExamQuestionItem

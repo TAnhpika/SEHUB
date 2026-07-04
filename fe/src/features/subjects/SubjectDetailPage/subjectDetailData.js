@@ -203,6 +203,7 @@ function mapApiExamListItemToPaper(dto, courseCode, typeLabel) {
     uploadedAt: formatExamUploadedAt(createdAt),
     type: typeLabel,
     questionCount: dto.questionCount ?? 0,
+    isPinned: Boolean(dto.isPinned),
   };
 }
 
@@ -236,6 +237,9 @@ export async function loadExamPapersForCourse(courseCode, pageKey) {
   return (page.items ?? [])
     .map((dto) => mapApiExamListItemToPaper(dto, courseCode, meta.typeLabel))
     .sort((a, b) => {
+      if (Boolean(b.isPinned) !== Boolean(a.isPinned)) {
+        return Number(b.isPinned) - Number(a.isPinned);
+      }
       if (b.year !== a.year) {
         return Number(b.year) - Number(a.year);
       }

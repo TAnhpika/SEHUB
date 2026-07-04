@@ -550,6 +550,7 @@ export function mapPracticeExamFormToCreateRequest(form) {
     description: [form.description, githubGuide].filter(Boolean).join("\n\n"),
     assetUrl: form.assetUrl ?? null,
     questions: [],
+    isPinned: Boolean(form.pinExam),
   };
 }
 
@@ -570,7 +571,6 @@ export function mapPendingExamListItem(dto, meta = {}) {
     fileName,
     assetUrl: base.assetUrl ?? primaryAttachment?.viewUrl ?? primaryAttachment?.viewPath ?? null,
     githubGuide: meta.githubGuide ?? (base.typeKey === "practice" ? githubGuideFromDescription(base.description) : ""),
-    allowDiscussion: meta.allowDiscussion ?? false,
     pinExam: meta.pinExam ?? false,
   };
 }
@@ -585,7 +585,6 @@ export function mapPendingExamFromCreate(dto, payload = {}) {
     submittedBy: payload.submittedBy,
     fileName: payload.fileName,
     githubGuide: payload.githubGuide,
-    allowDiscussion: payload.allowDiscussion,
     pinExam: payload.pinExam,
   });
 }

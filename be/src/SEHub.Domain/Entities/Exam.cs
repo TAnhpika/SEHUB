@@ -21,6 +21,8 @@ public class Exam : BaseEntity
     public string? RejectionReasonDetail { get; set; }
     public DateTime? RejectedAt { get; set; }
     public Guid? RejectedById { get; set; }
+    public bool IsPinned { get; set; }
+    public DateTime? PinnedAt { get; set; }
 
     public Subject? Subject { get; set; }
     public Exam? RevisionOfExam { get; set; }

@@ -17,4 +17,5 @@ public interface IExamRepository
     Task<int> CountPublishedAsync(CancellationToken cancellationToken = default);
     Task<Exam?> GetPendingRevisionOfAsync(Guid publishedExamId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SubjectSourceEntryDto>> GetDistinctPublishedSubjectsAsync(CancellationToken cancellationToken = default);
+    Task UnpinPracticeExamsByCodeAsync(string code, Guid? exceptExamId, CancellationToken cancellationToken = default);
 }

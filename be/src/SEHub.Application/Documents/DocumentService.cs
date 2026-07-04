@@ -24,6 +24,7 @@ public sealed class DocumentService : IDocumentService
     private readonly IClientContext _clientContext;
     private readonly IMapper _mapper;
     private readonly IGamificationEventPublisher _gamificationPublisher;
+    private readonly IPdfPageExtractor _pdfPageExtractor;
     private readonly string _apiBaseUrl;
 
     public DocumentService(
@@ -36,6 +37,7 @@ public sealed class DocumentService : IDocumentService
         IClientContext clientContext,
         IMapper mapper,
         IGamificationEventPublisher gamificationPublisher,
+        IPdfPageExtractor pdfPageExtractor,
         IConfiguration configuration)
     {
         _documentRepository = documentRepository;
@@ -47,6 +49,7 @@ public sealed class DocumentService : IDocumentService
         _clientContext = clientContext;
         _mapper = mapper;
         _gamificationPublisher = gamificationPublisher;
+        _pdfPageExtractor = pdfPageExtractor;
         _apiBaseUrl = configuration["FileStorage:ApiBaseUrl"]?.TrimEnd('/')
             ?? "http://localhost:5006";
     }
@@ -73,18 +76,19 @@ public sealed class DocumentService : IDocumentService
 
         var dto = _mapper.Map<DocumentDetailDto>(document);
         var decision = _accessService.Evaluate(document);
+        var pageCount = await ResolveEffectivePageCountAsync(document, cancellationToken);
 
         return new DocumentDetailDto
         {
             Id = dto.Id,
             Title = dto.Title,
             Category = dto.Category,
-            PageCount = dto.PageCount,
+            PageCount = pageCount,
             AccessTier = dto.AccessTier,
             MimeType = dto.MimeType,
             CreatedAt = dto.CreatedAt,
             CanDownload = decision.CanDownload,
-            PageLimit = decision.PageLimit
+            PageLimit = Math.Min(decision.PageLimit, pageCount)
         };
     }
 
@@ -94,7 +98,9 @@ public sealed class DocumentService : IDocumentService
         var document = await _documentRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException("Document", id);
 
-        if (page < 1 || page > document.PageCount)
+        var effectivePageCount = await ResolveEffectivePageCountAsync(document, cancellationToken);
+
+        if (page < 1 || page > effectivePageCount)
         {
             throw new NotFoundException($"Page {page} is out of range.");
         }
@@ -109,8 +115,8 @@ public sealed class DocumentService : IDocumentService
         return new DocumentPreviewDto
         {
             Page = page,
-            TotalPages = document.PageCount,
-            PageLimit = decision.PageLimit,
+            TotalPages = effectivePageCount,
+            PageLimit = Math.Min(decision.PageLimit, effectivePageCount),
             ContentUrl = contentUrl
         };
     }
@@ -135,6 +141,12 @@ public sealed class DocumentService : IDocumentService
 
         if (page is >= 1)
         {
+            var effectivePageCount = await ResolveEffectivePageCountAsync(document, cancellationToken);
+            if (page.Value > effectivePageCount)
+            {
+                throw new NotFoundException($"Page {page.Value} is out of range.");
+            }
+
             _accessService.EnsureCanPreview(document, page.Value);
             await LogAccessAsync(document.Id, "Content", cancellationToken);
         }
@@ -145,12 +157,45 @@ public sealed class DocumentService : IDocumentService
         }
 
         var stream = await DocumentFileAccess.OpenReadAsync(document, _cloudStorage, cancellationToken);
+
+        if (page is >= 1 && IsPdf(document.MimeType))
+        {
+            stream = await _pdfPageExtractor.ExtractSinglePageAsync(stream, page.Value, cancellationToken);
+        }
+
         return new DocumentContentResult
         {
             Stream = stream,
             ContentType = document.MimeType,
             FileName = DocumentFileAccess.ResolveDownloadFileName(document)
         };
+    }
+
+    private static bool IsPdf(string? mimeType) =>
+        string.Equals(mimeType, "application/pdf", StringComparison.OrdinalIgnoreCase);
+
+    private async Task<int> ResolveEffectivePageCountAsync(Document document, CancellationToken cancellationToken)
+    {
+        if (!IsPdf(document.MimeType))
+        {
+            return document.PageCount;
+        }
+
+        await using var stream = await DocumentFileAccess.OpenReadAsync(document, _cloudStorage, cancellationToken);
+        var actualPageCount = _pdfPageExtractor.GetPageCount(stream);
+        if (actualPageCount <= 0)
+        {
+            return document.PageCount;
+        }
+
+        if (actualPageCount != document.PageCount)
+        {
+            document.PageCount = actualPageCount;
+            await _documentRepository.UpdateAsync(document, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        return actualPageCount;
     }
 
     private string BuildContentApiUrl(Guid documentId, int? page)
