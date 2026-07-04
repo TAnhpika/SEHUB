@@ -47,6 +47,8 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
 
         var uniquePaper = $"INT-MOD-MINE-{Guid.NewGuid():N}"[..24];
+        var optionAId = Guid.NewGuid();
+        var optionBId = Guid.NewGuid();
         var createResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
         {
             Code = "MAE101",
@@ -60,19 +62,19 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
                 new CreateExamQuestionItem
                 {
                     OrderIndex = 1,
-                    Content = "2 + 2 = ?",
-                    CorrectOptionId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
+                    Content = $"2 + 2 = ? ({uniquePaper})",
+                    CorrectOptionId = optionAId,
                     Options =
                     [
                         new CreateExamOptionItem
                         {
-                            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
+                            Id = optionAId,
                             Label = "A",
                             Text = "4"
                         },
                         new CreateExamOptionItem
                         {
-                            Id = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1"),
+                            Id = optionBId,
                             Label = "B",
                             Text = "5"
                         }
@@ -362,24 +364,26 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
     private static IReadOnlyList<CreateExamQuestionItem> BuildFinalExamQuestionItems(string? uniqueSeed = null)
     {
         var seed = uniqueSeed ?? Guid.NewGuid().ToString("N");
+        var optionAId = Guid.NewGuid();
+        var optionBId = Guid.NewGuid();
         return
         [
             new CreateExamQuestionItem
             {
                 OrderIndex = 1,
                 Content = $"2 + 2 = ? ({seed})",
-                CorrectOptionId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
+                CorrectOptionId = optionAId,
                 Options =
                 [
                     new CreateExamOptionItem
                     {
-                        Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
+                        Id = optionAId,
                         Label = "A",
                         Text = "4"
                     },
                     new CreateExamOptionItem
                     {
-                        Id = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1"),
+                        Id = optionBId,
                         Label = "B",
                         Text = "5"
                     }
