@@ -6,6 +6,8 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "@/common/Modal/Modal";
+import SkeletonList from "@/common/Skeleton/SkeletonList";
+import { SKELETON_MODAL_ROWS } from "@/common/Skeleton/skeletonConstants";
 import FollowListItem from "@/features/social/FollowListItem/FollowListItem";
 import {
   loadFollowersPage,
@@ -123,11 +125,7 @@ function FollowListModal({
 
       <div className={styles.body}>
         {loading ? (
-          <div className={styles.loading} aria-busy="true" aria-label={`Đang tải ${copy.title}`}>
-            <div className={styles.skeletonRow} />
-            <div className={styles.skeletonRow} />
-            <div className={styles.skeletonRow} />
-          </div>
+          <SkeletonList count={SKELETON_MODAL_ROWS} variant="compact" aria-label={`Đang tải ${copy.title}`} />
         ) : error ? (
           <p className={styles.error} role="alert">
             {error}
