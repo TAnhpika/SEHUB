@@ -11,6 +11,9 @@ import BadgesSection from "@/features/profile/BadgesSection/BadgesSection";
 import ProfileCard from "@/features/profile/ProfileCard/ProfileCard";
 
 import RankLadderModal from "@/features/profile/RankLadderModal/RankLadderModal";
+import ProfilePostsModal from "@/features/profile/ProfilePostsModal/ProfilePostsModal";
+import FollowListModal from "@/features/social/FollowListModal/FollowListModal";
+import { useProfileFollowLists } from "@/features/social/useProfileFollowLists";
 
 import RecentPosts from "@/features/profile/RecentPosts/RecentPosts";
 
@@ -54,6 +57,10 @@ function ProfilePage() {
 
   const [recentPosts, setRecentPosts] = useState([]);
 
+  const [postsTotalCount, setPostsTotalCount] = useState(0);
+
+  const [postsModalOpen, setPostsModalOpen] = useState(false);
+
   const [activity, setActivity] = useState({ heatmap: null, totalActivities: 0 });
 
   const [loading, setLoading] = useState(true);
@@ -62,11 +69,31 @@ function ProfilePage() {
 
   const [rankModalOpen, setRankModalOpen] = useState(false);
 
-
-
   const isOwner = Boolean(user?.username && user.username === username);
 
+  const {
+    canLoadFollowLists,
+    followModalOpen,
+    followModalMode,
+    openFollowersModal,
+    openFollowingModal,
+    closeFollowModal,
+  } = useProfileFollowLists(profile?.userId, Boolean(profile));
 
+  const handleModalItemFollowChange = useCallback(
+    (_targetUserId, state) => {
+      if (!isOwner) return;
+      setProfile((current) =>
+        current
+          ? {
+              ...current,
+              following: Math.max(0, current.following + (state.isFollowing ? 1 : -1)),
+            }
+          : current,
+      );
+    },
+    [isOwner],
+  );
 
   const openRankModal = useCallback(() => {
 
@@ -134,7 +161,7 @@ function ProfilePage() {
 
 
 
-        const [posts, badgeList, activityData] = await Promise.all([
+        const [postsResult, badgeList, activityData] = await Promise.all([
 
           loadRecentPostsByUsername(username),
 
@@ -156,7 +183,9 @@ function ProfilePage() {
 
           setBadges(badgeList);
 
-          setRecentPosts(posts);
+          setRecentPosts(postsResult.items);
+
+          setPostsTotalCount(postsResult.totalCount);
 
           setActivity(activityData);
 
@@ -282,6 +311,10 @@ function ProfilePage() {
 
           examHistoryTo={isOwner && isPremium ? getMyLearningPath("exams") : undefined}
 
+          onOpenFollowers={canLoadFollowLists ? openFollowersModal : undefined}
+
+          onOpenFollowing={canLoadFollowLists ? openFollowingModal : undefined}
+
         />
 
       </div>
@@ -304,7 +337,11 @@ function ProfilePage() {
 
         <BadgesSection badges={badges} />
 
-        <RecentPosts posts={recentPosts} />
+        <RecentPosts
+          posts={recentPosts}
+          totalCount={postsTotalCount}
+          onViewAll={() => setPostsModalOpen(true)}
+        />
 
       </div>
 
@@ -319,6 +356,33 @@ function ProfilePage() {
         profile={profile}
 
         isOwner={isOwner}
+
+      />
+
+      <ProfilePostsModal
+        open={postsModalOpen}
+        onClose={() => setPostsModalOpen(false)}
+        username={username}
+        totalCount={postsTotalCount}
+      />
+
+      <FollowListModal
+
+        open={followModalOpen}
+
+        onClose={closeFollowModal}
+
+        userId={profile.userId}
+
+        mode={followModalMode}
+
+        totalCount={
+          followModalMode === "following" ? profile.following : profile.followers
+        }
+
+        currentUserId={user?.id}
+
+        onItemFollowChange={handleModalItemFollowChange}
 
       />
 

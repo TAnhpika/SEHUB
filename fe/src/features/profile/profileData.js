@@ -12,6 +12,10 @@ import {
   getProfileFormData,
   saveProfileFormData,
 } from "@/features/profile/profileFormData";
+import {
+  PROFILE_POSTS_PAGE_SIZE,
+  PROFILE_POSTS_PREVIEW_LIMIT,
+} from "@/features/profile/profilePostsConstants";
 import { buildHeatmapGrid, HEATMAP_LOCALE } from "@/utils/heatmapCalendar";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
@@ -210,11 +214,17 @@ export async function loadProfileActivity(username, { months = 6 } = {}) {
   }
 }
 
-export async function loadRecentPostsByUsername(username, { limit = 5 } = {}) {
+export async function loadRecentPostsByUsername(
+  username,
+  { limit = PROFILE_POSTS_PREVIEW_LIMIT } = {},
+) {
   const resolvedUsername = (username || PROFILE_MOCK.username).trim();
 
   if (USE_MOCK) {
-    return RECENT_POSTS;
+    return {
+      items: RECENT_POSTS.slice(0, limit),
+      totalCount: RECENT_POSTS.length,
+    };
   }
 
   try {
@@ -222,10 +232,47 @@ export async function loadRecentPostsByUsername(username, { limit = 5 } = {}) {
       page: 1,
       pageSize: limit,
     });
-    return (result.items ?? []).map(mapProfileRecentPost);
+    return {
+      items: (result.items ?? []).map(mapProfileRecentPost),
+      totalCount: result.totalCount ?? 0,
+    };
   } catch {
-    return [];
+    return { items: [], totalCount: 0 };
   }
+}
+
+function mapProfilePostsPage(page) {
+  const items = (page.items ?? []).map(mapProfileRecentPost);
+  return {
+    items,
+    page: page.page ?? 1,
+    pageSize: page.pageSize ?? items.length,
+    totalCount: page.totalCount ?? items.length,
+    hasNextPage: Boolean(page.hasNextPage),
+  };
+}
+
+export function loadProfilePostsPage(username, page = 1) {
+  const resolvedUsername = (username || PROFILE_MOCK.username).trim();
+
+  if (USE_MOCK) {
+    const start = (page - 1) * PROFILE_POSTS_PAGE_SIZE;
+    const slice = RECENT_POSTS.slice(start, start + PROFILE_POSTS_PAGE_SIZE);
+    return Promise.resolve({
+      items: slice,
+      page,
+      pageSize: PROFILE_POSTS_PAGE_SIZE,
+      totalCount: RECENT_POSTS.length,
+      hasNextPage: start + PROFILE_POSTS_PAGE_SIZE < RECENT_POSTS.length,
+    });
+  }
+
+  return profilesApi
+    .getProfilePostsByUsername(resolvedUsername, {
+      page,
+      pageSize: PROFILE_POSTS_PAGE_SIZE,
+    })
+    .then(mapProfilePostsPage);
 }
 
 export async function loadProfileByUsername(username, { profileDto = null } = {}) {

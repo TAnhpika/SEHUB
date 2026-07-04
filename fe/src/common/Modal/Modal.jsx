@@ -47,10 +47,11 @@ export function Modal({
     previousFocusRef.current = document.activeElement;
     const panel = panelRef.current;
     const focusables = panel ? getFocusableElements(panel) : [];
-    (focusables[0] ?? panel)?.focus?.();
+    const focusTarget = focusables[0] ?? panel;
+    focusTarget?.focus?.({ preventScroll: true });
 
     return () => {
-      previousFocusRef.current?.focus?.();
+      previousFocusRef.current?.focus?.({ preventScroll: true });
     };
   }, [open]);
 
@@ -98,6 +99,7 @@ export function Modal({
     <div
       className={[styles.overlay, className].filter(Boolean).join(" ")}
       role="presentation"
+      data-scroll-lock-scrollable
       onClick={closeOnOverlay ? onClose : undefined}
     >
       <div
@@ -107,6 +109,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={title ? resolvedTitleId : undefined}
         tabIndex={-1}
+        data-scroll-lock-scrollable
         onClick={(event) => event.stopPropagation()}
       >
         {title ? (

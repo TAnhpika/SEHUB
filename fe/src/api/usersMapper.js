@@ -1,3 +1,5 @@
+import { resolveAssetUrl } from "@/api/assetUrl";
+
 export function mapUserSearchResult(dto) {
   const displayName = dto.fullName?.trim() || dto.username || "User";
 
@@ -7,7 +9,7 @@ export function mapUserSearchResult(dto) {
     username: dto.username,
     displayName,
     fullName: displayName,
-    avatarUrl: dto.avatarUrl ?? null,
+    avatarUrl: resolveAssetUrl(dto.avatarUrl) ?? null,
     level: (dto.levelName ?? "Bronze").toUpperCase(),
     initial: displayName.charAt(0).toUpperCase(),
     isFollowing: Boolean(dto.isFollowing),

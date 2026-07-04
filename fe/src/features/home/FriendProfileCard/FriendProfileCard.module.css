@@ -87,6 +87,33 @@
   min-width: 88px;
 }
 
+.socialButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+  min-width: 88px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.socialButton:hover .social-value,
+.socialButton:focus-visible .social-value {
+  color: var(--color-primary);
+}
+
+.socialButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.followSections {
+  padding: 0 1.25rem;
+}
+
 .social-value {
   font-size: 1rem;
   font-weight: 700;

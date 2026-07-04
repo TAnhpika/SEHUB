@@ -23,6 +23,8 @@ function ProfileCard({
   onFollowChange,
   onOpenRankLadder,
   examHistoryTo,
+  onOpenFollowers,
+  onOpenFollowing,
 }) {
   const rank = getRankDisplay(profile.level);
   const hasNextLevel = Boolean(profile.nextLevel);
@@ -69,15 +71,39 @@ function ProfileCard({
       </div>
 
       <div className={styles.social}>
-        <div className={styles["social-item"]}>
-          <span className={styles["social-value"]}>{profile.followers}</span>
-          <span className={styles["social-label"]}>Người theo dõi</span>
-        </div>
+        {onOpenFollowers ? (
+          <button
+            type="button"
+            className={styles.socialButton}
+            onClick={onOpenFollowers}
+            aria-label={`${profile.followers} người theo dõi, xem danh sách`}
+          >
+            <span className={styles["social-value"]}>{profile.followers}</span>
+            <span className={styles["social-label"]}>Người theo dõi</span>
+          </button>
+        ) : (
+          <div className={styles["social-item"]}>
+            <span className={styles["social-value"]}>{profile.followers}</span>
+            <span className={styles["social-label"]}>Người theo dõi</span>
+          </div>
+        )}
         <span className={styles.divider} aria-hidden="true" />
-        <div className={styles["social-item"]}>
-          <span className={styles["social-value"]}>{profile.following}</span>
-          <span className={styles["social-label"]}>Đang theo dõi</span>
-        </div>
+        {onOpenFollowing ? (
+          <button
+            type="button"
+            className={styles.socialButton}
+            onClick={onOpenFollowing}
+            aria-label={`${profile.following} đang theo dõi, xem danh sách`}
+          >
+            <span className={styles["social-value"]}>{profile.following}</span>
+            <span className={styles["social-label"]}>Đang theo dõi</span>
+          </button>
+        ) : (
+          <div className={styles["social-item"]}>
+            <span className={styles["social-value"]}>{profile.following}</span>
+            <span className={styles["social-label"]}>Đang theo dõi</span>
+          </div>
+        )}
       </div>
 
       {onOpenRankLadder ? (
