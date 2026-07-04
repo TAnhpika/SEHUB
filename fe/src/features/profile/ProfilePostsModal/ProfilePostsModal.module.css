@@ -48,12 +48,6 @@
   min-height: 10rem;
 }
 
-.loading {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
 .list {
   display: flex;
   flex-direction: column;
@@ -142,27 +136,4 @@
 .loadMoreBtn:disabled {
   opacity: 0.7;
   cursor: wait;
-}
-
-.skeletonRow {
-  height: 3.75rem;
-  border-radius: var(--radius-md);
-  background: linear-gradient(
-    90deg,
-    var(--color-border-light) 25%,
-    var(--color-surface-muted, #f3f4f6) 50%,
-    var(--color-border-light) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.2s infinite;
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-
-  100% {
-    background-position: -200% 0;
-  }
 }

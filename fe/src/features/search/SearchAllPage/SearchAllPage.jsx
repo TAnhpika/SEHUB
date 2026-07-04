@@ -4,6 +4,11 @@ import PostCard from "@/features/feed/PostCard/PostCard";
 import SearchResourceCard from "@/features/search/SearchResourceCard/SearchResourceCard";
 import SearchUserCard from "@/features/search/SearchUserCard/SearchUserCard";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import SkeletonList from "@/common/Skeleton/SkeletonList";
+import {
+  SKELETON_PAGE_ROWS,
+  SKELETON_SECTION_ROWS,
+} from "@/common/Skeleton/skeletonConstants";
 import {
   SEARCH_TABS,
   searchPosts,
@@ -171,9 +176,17 @@ function SearchAllPage() {
     );
   }
 
+  function renderLoadingSkeleton(label, count = SKELETON_SECTION_ROWS) {
+    return (
+      <div className={styles.loadingState}>
+        <SkeletonList count={count} variant="wide" aria-label={label} />
+      </div>
+    );
+  }
+
   function renderPosts(posts, { showLoading = false, showError = null } = {}) {
     if (showLoading) {
-      return <p className={styles.empty}>Đang tải blogs...</p>;
+      return renderLoadingSkeleton("Đang tải blogs");
     }
 
     if (showError) {
@@ -204,7 +217,7 @@ function SearchAllPage() {
 
   function renderUsers(users, { showLoading = false, showError = null } = {}) {
     if (showLoading) {
-      return <p className={styles.empty}>Đang tải người dùng...</p>;
+      return renderLoadingSkeleton("Đang tải người dùng");
     }
 
     if (showError) {
@@ -254,7 +267,7 @@ function SearchAllPage() {
 
   function renderLocalLoadingOrError() {
     if (localLoading) {
-      return <p className={styles.empty}>Đang tải tài liệu và đề thi...</p>;
+      return renderLoadingSkeleton("Đang tải tài liệu và đề thi");
     }
 
     if (localError) {
@@ -338,6 +351,10 @@ function SearchAllPage() {
 
     if (counts.all === 0 && !usersLoading && !blogsLoading && !localLoading) {
       return <p className={styles.empty}>Không tìm thấy kết quả phù hợp.</p>;
+    }
+
+    if (blogsLoading && localLoading && usersLoading) {
+      return renderLoadingSkeleton("Đang tìm kiếm", SKELETON_PAGE_ROWS);
     }
 
     return (

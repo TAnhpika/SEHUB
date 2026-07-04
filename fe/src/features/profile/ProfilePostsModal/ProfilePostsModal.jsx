@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileLines, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "@/common/Modal/Modal";
+import SkeletonList from "@/common/Skeleton/SkeletonList";
+import { SKELETON_MODAL_ROWS } from "@/common/Skeleton/skeletonConstants";
 import ProfilePostListItem from "@/features/profile/ProfilePostListItem/ProfilePostListItem";
 import { loadProfilePostsPage } from "@/features/profile/profileData";
 import styles from "./ProfilePostsModal.module.css";
@@ -77,11 +79,7 @@ function ProfilePostsModal({ open, onClose, username, totalCount = 0 }) {
 
       <div className={styles.body}>
         {loading ? (
-          <div className={styles.loading} aria-busy="true" aria-label="Đang tải bài viết">
-            <div className={styles.skeletonRow} />
-            <div className={styles.skeletonRow} />
-            <div className={styles.skeletonRow} />
-          </div>
+          <SkeletonList count={SKELETON_MODAL_ROWS} variant="compact" aria-label="Đang tải bài viết" />
         ) : error ? (
           <p className={styles.error} role="alert">
             {error}
