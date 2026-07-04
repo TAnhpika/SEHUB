@@ -1,11 +1,9 @@
 using SEHub.Contracts.Admin;
-using SEHub.Contracts.Common;
 
 namespace SEHub.Application.Admin;
-
 public interface IAdminAuditLogService
 {
-    Task<PagedResult<AdminAuditLogItemDto>> GetAuditLogsAsync(
+    Task<AdminActivityLogPageDto> GetAuditLogsAsync(
         string? type,
         int page,
         int pageSize,

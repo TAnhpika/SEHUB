@@ -6,14 +6,20 @@ const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 export async function loadAdminActivityLog() {
   if (USE_MOCK) {
-    return getMergedActivityLog();
+    return {
+      items: getMergedActivityLog(),
+      stats: null,
+    };
   }
 
-  const page = await adminApi.listAuditLogs({ pageSize: 50 });
-  return (page.items ?? []).map(mapAdminAuditLogItem);
+  const page = await adminApi.listAuditLogs({ pageSize: 200 });
+  return {
+    items: (page.items ?? []).map(mapAdminAuditLogItem),
+    stats: page.stats ?? null,
+  };
 }
 
 export async function loadAdminActivityPreview(limit = 4) {
-  const items = await loadAdminActivityLog();
+  const { items } = await loadAdminActivityLog();
   return items.slice(0, limit).map(({ id, time, text, type }) => ({ id, time, text, type }));
 }

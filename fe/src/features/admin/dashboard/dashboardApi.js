@@ -9,7 +9,7 @@ import { loadAdminActivityPreview } from "@/features/admin/activity/adminActivit
 import { getAdminDocuments } from "@/features/admin/documents/adminDocumentData";
 import { getAdminExams } from "@/features/admin/exams/adminExamData";
 import { getAdminReports } from "@/features/admin/moderation/adminReportData";
-import { getAdminPayments, getPaymentStats } from "@/features/admin/payments/adminPaymentData";
+import { getAdminPayments, getPaymentStatsFromList } from "@/features/admin/payments/adminPaymentData";
 import { getAdminUsers } from "@/features/admin/users/adminUserStore";
 
 const CHART_MONTH_KEYS = ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"];
@@ -53,7 +53,7 @@ function buildLiveKpis() {
     : 0;
   const pendingReports = getAdminReports().filter((r) => r.status === "pending");
   const urgentReports = pendingReports.filter((r) => r.urgent).length;
-  const paymentStats = getPaymentStats();
+  const paymentStats = getPaymentStatsFromList(getAdminPayments());
   const revenueM = Math.round(paymentStats.monthRevenue / 1_000_000 * 10) / 10;
 
   return {

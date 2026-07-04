@@ -13,7 +13,7 @@ import {
 import { grantVoucherFromPayment } from "@/features/admin/vouchers/adminVoucherData";
 import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 import * as adminApi from "@/api/adminApi";
-import { mapAdminPaymentListItem } from "@/api/adminMapper";
+import { mapAdminPaymentListItem, mapPaymentAuditLogItem } from "@/api/adminMapper";
 import { isValidGuid } from "@/features/feed/postUtils";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
@@ -142,13 +142,6 @@ export function getAdminPayments() {
   return paymentsStore.map(enrichPayment);
 }
 
-export function getRefundedPayments() {
-  return paymentsStore
-    .filter((p) => p.status === "refunded")
-    .map(enrichPayment)
-    .sort((a, b) => (a.refundedAt ?? "") < (b.refundedAt ?? "") ? 1 : -1);
-}
-
 export function getPaymentStatsFromList(list = []) {
   const now = new Date();
   const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -168,6 +161,7 @@ export function getPaymentStatsFromList(list = []) {
   return {
     monthRevenue,
     monthRevenueLabel: formatVnd(monthRevenue),
+    monthLabel: `Doanh thu tháng ${now.getMonth() + 1}`,
     awaitingConfirm: list.filter((p) => p.status === "waiting_confirmation" || p.status === "webhook_ok").length,
     pendingPay: list.filter((p) => p.status === "pending_payment").length,
     pendingRefund: list.filter((p) => p.status === "refund_requested").length,
@@ -216,12 +210,12 @@ export function getUserBonusTokens(username) {
 }
 
 /** SV đã chuyển khoản đủ (webhook PayOS OK hoặc đã kích hoạt Premium) */
-export function getPaidStudentsForTokenGrant() {
-  const paidStatuses = new Set(["webhook_ok", "activated"]);
+export function getPaidStudentsForTokenGrant(list = paymentsStore) {
+  const paidStatuses = new Set(["webhook_ok", "waiting_confirmation", "activated"]);
   /** @type {Map<string, object>} */
   const byUser = new Map();
 
-  for (const payment of paymentsStore) {
+  for (const payment of list) {
     if (!paidStatuses.has(payment.status)) continue;
     const enriched = enrichPayment(payment);
     const existing = byUser.get(payment.username);
@@ -235,7 +229,9 @@ export function getPaidStudentsForTokenGrant() {
         amountLabel: enriched.amountLabel,
         paymentStatus: payment.status,
         paymentStatusLabel:
-          payment.status === "activated" ? "Đã kích hoạt Premium" : "Đã CK — chờ xác nhận",
+          payment.status === "activated"
+            ? "Đã kích hoạt Premium"
+            : "Đã CK — chờ xác nhận",
       });
     }
   }
@@ -247,6 +243,15 @@ export function getPaidStudentsForTokenGrant() {
 
 export function getPaymentAuditLog() {
   return [...auditStore].sort((a, b) => (a.at < b.at ? 1 : -1));
+}
+
+export async function loadPaymentAuditLog() {
+  if (USE_MOCK) {
+    return getPaymentAuditLog();
+  }
+
+  const page = await adminApi.listPaymentAudit({ page: 1, pageSize: ADMIN_API_PAGE_SIZE });
+  return (page.items ?? []).map(mapPaymentAuditLogItem);
 }
 
 export function confirmPayOsPayment(paymentId, adminUsername = "admin_sehub") {
@@ -460,10 +465,124 @@ export async function loadAdminPayments() {
   }
 
   const page = await adminApi.listPayments({ page: 1, pageSize: ADMIN_API_PAGE_SIZE });
-  return (page.items ?? []).map((item) => enrichPayment(mapAdminPaymentListItem(item)));
+  const items = (page.items ?? []).map((item) => enrichPayment(mapAdminPaymentListItem(item)));
+  paymentsStore = items.map((item) => ({ ...item }));
+  return items;
 }
 
-export async function approveRefundViaApi(paymentId, note = "") {
+function approveRefundMock(paymentId, note = "", adminUsername = "admin_sehub") {
+  const index = paymentsStore.findIndex((p) => p.id === paymentId);
+  if (index < 0) return { ok: false, message: "Không tìm thấy giao dịch." };
+
+  const payment = paymentsStore[index];
+  if (payment.status !== "refund_requested") {
+    return { ok: false, message: "Đơn này không ở trạng thái chờ duyệt hoàn tiền." };
+  }
+
+  const now = new Date().toISOString();
+  paymentsStore = paymentsStore.map((p, i) =>
+    i === index ? { ...p, status: "processing_refund", note: note || p.note } : p,
+  );
+
+  const revokeResult = revokePremiumFromPayment(payment.username);
+  const entry = {
+    id: `aud-${Date.now()}`,
+    at: now,
+    admin: adminUsername,
+    action: "payos_refund",
+    username: payment.username,
+    detail: `Duyệt hoàn tiền PayOS #${payment.payosOrderId} — ${note || payment.refundReason || "Admin duyệt"}`,
+    meta: { paymentId: payment.id, amount: payment.amount },
+  };
+  auditStore = [entry, ...auditStore];
+
+  return {
+    ok: true,
+    message: revokeResult.ok
+      ? `Đã duyệt hoàn tiền ${payment.payosOrderId}. ${revokeResult.message}`
+      : `Đã duyệt hoàn tiền ${payment.payosOrderId}. Lưu ý: ${revokeResult.message}`,
+    audit: entry,
+  };
+}
+
+function completeRefundMock(paymentId, note = "", adminUsername = "admin_sehub") {
+  const index = paymentsStore.findIndex((p) => p.id === paymentId);
+  if (index < 0) return { ok: false, message: "Không tìm thấy giao dịch." };
+
+  const payment = paymentsStore[index];
+  if (payment.status !== "processing_refund") {
+    return { ok: false, message: "Đơn này không ở trạng thái đang xử lý hoàn tiền." };
+  }
+
+  const now = new Date().toISOString();
+  const refundReason = note || payment.refundReason || "Admin xác nhận đã chuyển khoản hoàn tiền";
+
+  paymentsStore = paymentsStore.map((p, i) =>
+    i === index
+      ? {
+          ...p,
+          status: "refunded",
+          refundedAt: now,
+          refundReason,
+          note: `Hoàn ${formatVnd(payment.amount)} qua PayOS`,
+        }
+      : p,
+  );
+
+  const entry = {
+    id: `aud-${Date.now()}`,
+    at: now,
+    admin: adminUsername,
+    action: "payos_refund",
+    username: payment.username,
+    detail: `Hoàn tiền PayOS #${payment.payosOrderId} — ${formatVnd(payment.amount)} — ${refundReason}`,
+    meta: { paymentId: payment.id, amount: payment.amount, premiumRevoked: true },
+  };
+  auditStore = [entry, ...auditStore];
+
+  return {
+    ok: true,
+    message: `Đã xác nhận hoàn ${formatVnd(payment.amount)} cho @${payment.username} (${payment.payosOrderId}).`,
+    audit: entry,
+  };
+}
+
+export async function submitPaymentRefundAction({
+  paymentId,
+  reason,
+  adminUsername = "admin_sehub",
+}) {
+  const payment = await loadPaymentById(paymentId);
+  if (!payment) {
+    return { ok: false, message: "Không tìm thấy giao dịch." };
+  }
+
+  const trimmedReason = reason?.trim() ?? "";
+
+  if (payment.status === "refund_requested") {
+    return approveRefundViaApi(paymentId, trimmedReason || payment.refundReason || "", adminUsername);
+  }
+
+  if (payment.status === "processing_refund") {
+    return completeRefundViaApi(paymentId, trimmedReason || payment.refundReason || "", adminUsername);
+  }
+
+  if (payment.status === "activated") {
+    if (USE_MOCK) {
+      return processPayOsRefund({ paymentId, reason: trimmedReason, adminUsername });
+    }
+
+    return {
+      ok: false,
+      message:
+        "Chế độ API: sinh viên cần gửi yêu cầu hoàn tiền trước. Admin duyệt tại trạng thái「Chờ duyệt hoàn tiền」.",
+    };
+  }
+
+  return { ok: false, message: "Đơn này không thể hoàn tiền ở trạng thái hiện tại." };
+}
+
+export async function approveRefundViaApi(paymentId, note = "", adminUsername = "admin_sehub") {
   const payment = await loadPaymentById(paymentId);
   if (!payment) {
     return { ok: false, message: "Không tìm thấy giao dịch." };
@@ -474,11 +593,7 @@ export async function approveRefundViaApi(paymentId, note = "") {
   }
 
   if (USE_MOCK || !isValidGuid(String(payment.apiId ?? payment.id ?? ""))) {
-    return processPayOsRefund({
-      paymentId,
-      reason: payment.refundReason ?? note ?? "Admin duyệt yêu cầu hoàn tiền",
-      adminUsername: "admin_sehub",
-    });
+    return approveRefundMock(paymentId, note || payment.refundReason, adminUsername);
   }
 
   try {
@@ -492,7 +607,7 @@ export async function approveRefundViaApi(paymentId, note = "") {
   }
 }
 
-export async function completeRefundViaApi(paymentId, note = "") {
+export async function completeRefundViaApi(paymentId, note = "", adminUsername = "admin_sehub") {
   const payment = await loadPaymentById(paymentId);
   if (!payment) {
     return { ok: false, message: "Không tìm thấy giao dịch." };
@@ -503,11 +618,7 @@ export async function completeRefundViaApi(paymentId, note = "") {
   }
 
   if (USE_MOCK || !isValidGuid(String(payment.apiId ?? payment.id ?? ""))) {
-    return processPayOsRefund({
-      paymentId,
-      reason: note || payment.refundReason || "Admin xác nhận đã chuyển khoản hoàn tiền",
-      adminUsername: "admin_sehub",
-    });
+    return completeRefundMock(paymentId, note || payment.refundReason, adminUsername);
   }
 
   try {
@@ -522,16 +633,15 @@ export async function completeRefundViaApi(paymentId, note = "") {
 }
 
 export async function loadPaymentById(id) {
-  const mockPayment = getPaymentById(id);
   if (USE_MOCK || !isValidGuid(String(id ?? ""))) {
-    return mockPayment;
+    return getPaymentById(id);
   }
 
   try {
     const dto = await adminApi.getPayment(id);
     return enrichPayment(mapAdminPaymentListItem(dto));
   } catch {
-    return mockPayment;
+    return null;
   }
 }
 

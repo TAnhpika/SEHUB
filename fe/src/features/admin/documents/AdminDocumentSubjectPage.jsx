@@ -40,14 +40,25 @@ function AdminDocumentSubjectPage() {
   const [uploadFileName, setUploadFileName] = useState("");
   const [uploading, setUploading] = useState(false);
   const [editingDoc, setEditingDoc] = useState(null);
+  const [storeVersion, setStoreVersion] = useState(0);
 
   useEffect(() => {
-    loadAdminDocuments();
-  }, [refreshKey]);
+    let active = true;
+    loadAdminDocuments()
+      .then(() => {
+        if (active) setStoreVersion((v) => v + 1);
+      })
+      .catch(() => {
+        if (active) setStoreVersion((v) => v + 1);
+      });
+    return () => {
+      active = false;
+    };
+  }, [refreshKey, code]);
 
   const documents = useMemo(
     () => getAdminDocumentsBySubject(code, semester),
-    [code, semester, refreshKey],
+    [code, semester, refreshKey, storeVersion],
   );
 
   const docPage = useAdminPagination(documents, ADMIN_PAGE_SIZES.documents, [
