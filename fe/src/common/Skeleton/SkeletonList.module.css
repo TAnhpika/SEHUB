@@ -1,0 +1,30 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.listCard {
+  gap: 0.875rem;
+}
+
+.row {
+  display: block;
+  width: 100%;
+  height: 3.75rem;
+  border-radius: var(--radius-lg);
+}
+
+.rowCompact {
+  height: 3rem;
+  border-radius: var(--radius-md);
+}
+
+.rowWide {
+  height: 4.5rem;
+}
+
+.rowCard {
+  height: 5rem;
+  border-radius: var(--radius-xl);
+}

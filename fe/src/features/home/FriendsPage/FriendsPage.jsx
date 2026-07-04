@@ -3,6 +3,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import FriendResultCard from "@/features/home/FriendResultCard/FriendResultCard";
 import { searchMembers } from "@/features/home/friendsData";
+import SkeletonList from "@/common/Skeleton/SkeletonList";
+import { SKELETON_FRIENDS_ROWS } from "@/common/Skeleton/skeletonConstants";
 import styles from "./FriendsPage.module.css";
 
 function FriendsPage() {
@@ -74,9 +76,13 @@ function FriendsPage() {
       </header>
 
       {loading && (
-        <p className={styles.empty} aria-live="polite">
-          Đang tìm kiếm...
-        </p>
+        <div className={styles.loadingState} aria-live="polite">
+          <SkeletonList
+            count={SKELETON_FRIENDS_ROWS}
+            variant="card"
+            aria-label="Đang tìm kiếm bạn bè"
+          />
+        </div>
       )}
 
       {error && !loading && (
