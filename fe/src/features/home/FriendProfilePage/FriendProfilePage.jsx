@@ -4,8 +4,11 @@ import { useAuth } from "@/context";
 import ActivityHeatmap from "@/features/profile/ActivityHeatmap/ActivityHeatmap";
 import BadgesSection from "@/features/profile/BadgesSection/BadgesSection";
 import RecentPosts from "@/features/profile/RecentPosts/RecentPosts";
+import ProfilePostsModal from "@/features/profile/ProfilePostsModal/ProfilePostsModal";
 import FriendProfileCard from "@/features/home/FriendProfileCard/FriendProfileCard";
 import IntroductionSection from "@/features/home/IntroductionSection/IntroductionSection";
+import FollowListModal from "@/features/social/FollowListModal/FollowListModal";
+import { useProfileFollowLists } from "@/features/social/useProfileFollowLists";
 import {
   loadProfileBadges,
   loadProfileByUsername,
@@ -24,10 +27,21 @@ function FriendProfilePage() {
   const [profile, setProfile] = useState(null);
   const [badges, setBadges] = useState([]);
   const [recentPosts, setRecentPosts] = useState([]);
+  const [postsTotalCount, setPostsTotalCount] = useState(0);
+  const [postsModalOpen, setPostsModalOpen] = useState(false);
   const [activity, setActivity] = useState({ heatmap: null, totalActivities: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notFound, setNotFound] = useState(false);
+
+  const {
+    canLoadFollowLists,
+    followModalOpen,
+    followModalMode,
+    openFollowersModal,
+    openFollowingModal,
+    closeFollowModal,
+  } = useProfileFollowLists(profile?.userId, Boolean(profile));
 
   const isOwner = Boolean(user?.username && user.username === username);
 
@@ -50,7 +64,7 @@ function FriendProfilePage() {
           profileDto = await profilesApi.getProfileByUsername(username);
         }
 
-        const [posts, badgeList, activityData] = await Promise.all([
+        const [postsResult, badgeList, activityData] = await Promise.all([
           loadRecentPostsByUsername(username),
           loadProfileBadges(profileDto ?? { badges: [] }),
           loadProfileActivity(username),
@@ -61,7 +75,8 @@ function FriendProfilePage() {
         if (!cancelled) {
           setProfile(card);
           setBadges(badgeList);
-          setRecentPosts(posts);
+          setRecentPosts(postsResult.items);
+          setPostsTotalCount(postsResult.totalCount);
           setActivity(activityData);
         }
       } catch (err) {
@@ -122,7 +137,12 @@ function FriendProfilePage() {
   return (
     <div className={styles.page}>
       <div className={styles.sidebar}>
-        <FriendProfileCard profile={profile} onFollowChange={handleFollowChange} />
+        <FriendProfileCard
+          profile={profile}
+          onFollowChange={handleFollowChange}
+          onOpenFollowers={canLoadFollowLists ? openFollowersModal : undefined}
+          onOpenFollowing={canLoadFollowLists ? openFollowingModal : undefined}
+        />
       </div>
 
       <div className={styles.main}>
@@ -134,8 +154,30 @@ function FriendProfilePage() {
           heatmapData={activity.heatmap}
         />
         <BadgesSection badges={badges} />
-        <RecentPosts posts={recentPosts} />
+        <RecentPosts
+          posts={recentPosts}
+          totalCount={postsTotalCount}
+          onViewAll={() => setPostsModalOpen(true)}
+        />
       </div>
+
+      <ProfilePostsModal
+        open={postsModalOpen}
+        onClose={() => setPostsModalOpen(false)}
+        username={username}
+        totalCount={postsTotalCount}
+      />
+
+      <FollowListModal
+        open={followModalOpen}
+        onClose={closeFollowModal}
+        userId={profile.userId}
+        mode={followModalMode}
+        totalCount={
+          followModalMode === "following" ? profile.following : profile.followers
+        }
+        currentUserId={user?.id}
+      />
     </div>
   );
 }

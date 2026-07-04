@@ -1,0 +1,2 @@
+export const PROFILE_POSTS_PREVIEW_LIMIT = 5;
+export const PROFILE_POSTS_PAGE_SIZE = 20;

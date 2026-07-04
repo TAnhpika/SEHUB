@@ -10,7 +10,12 @@ import { getRankBadgeStyleClass, getRankDisplay } from "@/utils/rankDisplay";
 import rankStyles from "@/utils/rankDisplay.module.css";
 import styles from "./FriendProfileCard.module.css";
 
-function FriendProfileCard({ profile, onFollowChange }) {
+function FriendProfileCard({
+  profile,
+  onFollowChange,
+  onOpenFollowers,
+  onOpenFollowing,
+}) {
   const rank = getRankDisplay(profile.level);
 
   return (
@@ -31,15 +36,39 @@ function FriendProfileCard({ profile, onFollowChange }) {
       </div>
 
       <div className={styles.social}>
-        <div className={styles["social-item"]}>
-          <span className={styles["social-value"]}>{profile.followers}</span>
-          <span className={styles["social-label"]}>Người theo dõi</span>
-        </div>
+        {onOpenFollowers ? (
+          <button
+            type="button"
+            className={styles.socialButton}
+            onClick={onOpenFollowers}
+            aria-label={`${profile.followers} người theo dõi, xem danh sách`}
+          >
+            <span className={styles["social-value"]}>{profile.followers}</span>
+            <span className={styles["social-label"]}>Người theo dõi</span>
+          </button>
+        ) : (
+          <div className={styles["social-item"]}>
+            <span className={styles["social-value"]}>{profile.followers}</span>
+            <span className={styles["social-label"]}>Người theo dõi</span>
+          </div>
+        )}
         <span className={styles.divider} aria-hidden="true" />
-        <div className={styles["social-item"]}>
-          <span className={styles["social-value"]}>{profile.following}</span>
-          <span className={styles["social-label"]}>Đang theo dõi</span>
-        </div>
+        {onOpenFollowing ? (
+          <button
+            type="button"
+            className={styles.socialButton}
+            onClick={onOpenFollowing}
+            aria-label={`${profile.following} đang theo dõi, xem danh sách`}
+          >
+            <span className={styles["social-value"]}>{profile.following}</span>
+            <span className={styles["social-label"]}>Đang theo dõi</span>
+          </button>
+        ) : (
+          <div className={styles["social-item"]}>
+            <span className={styles["social-value"]}>{profile.following}</span>
+            <span className={styles["social-label"]}>Đang theo dõi</span>
+          </div>
+        )}
       </div>
 
       <div className={styles.actions}>
