@@ -12,6 +12,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { faGithub } from "@fortawesome/free-brands-svg-icons";
 import Button from "@/common/Button/Button";
+import RichTextContent from "@/common/RichTextEditor/RichTextContent";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
@@ -350,11 +351,19 @@ function PracticeDoPage() {
 
         <div className={styles.body}>
           <article className={styles.question}>
-            <p className={styles["question-label"]}>Bài thực hành {questionNumber}</p>
-            <p className={styles["question-text"]}>{question.text}</p>
+            {!hasApiAttachments ? (
+              <>
+                <p className={styles["question-label"]}>Bài thực hành {questionNumber}</p>
+                <p className={styles["question-text"]}>{question.text}</p>
+              </>
+            ) : null}
 
             {hasApiAttachments ? (
               <ExamAttachmentViewer examApiId={apiExamId} attachments={exam.attachments} />
+            ) : null}
+
+            {hasApiAttachments && exam.description ? (
+              <RichTextContent value={exam.description} className={styles["question-text"]} />
             ) : null}
 
             {practiceBrief ? (

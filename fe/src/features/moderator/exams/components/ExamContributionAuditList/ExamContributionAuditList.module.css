@@ -138,6 +138,11 @@
   background: var(--color-surface-muted);
 }
 
+.status-revision_draft {
+  color: var(--moderator-primary);
+  background: var(--moderator-primary-soft);
+}
+
 .status-pending_admin {
   color: var(--color-warning);
   background: var(--color-warning-bg);

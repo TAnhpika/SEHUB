@@ -24,4 +24,6 @@ public sealed class ExamListItemDto
     public bool IsContentLocked { get; init; }
     public string? RevisionSourceCode { get; init; }
     public string? RevisionSourceTitle { get; init; }
+    public string? SubmittedByUsername { get; init; }
+    public string? SubmittedByDisplayName { get; init; }
 }

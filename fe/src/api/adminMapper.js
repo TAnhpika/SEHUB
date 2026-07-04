@@ -561,10 +561,15 @@ export function mapPendingExamListItem(dto, meta = {}) {
     primaryAttachment?.name ??
     (base.assetUrl ? getExamAssetFileName(base.assetUrl) : null) ??
     "Chưa có file đính kèm";
+  const submittedBy =
+    meta.submittedBy ??
+    dto.submittedByUsername ??
+    dto.submittedByDisplayName ??
+    "—";
 
   return {
     ...base,
-    submittedBy: meta.submittedBy ?? "—",
+    submittedBy,
     submittedAt: base.createdAt,
     urgent: Boolean(meta.urgent),
     fileName,
@@ -572,6 +577,88 @@ export function mapPendingExamListItem(dto, meta = {}) {
     githubGuide: meta.githubGuide ?? (base.typeKey === "practice" ? githubGuideFromDescription(base.description) : ""),
     allowDiscussion: meta.allowDiscussion ?? false,
     pinExam: meta.pinExam ?? false,
+  };
+}
+
+const EXAM_REJECT_REASON_LOOKUP = {
+  ocr_error: "OCR sai / thiếu câu hỏi hoặc đáp án",
+  duplicate: "Trùng đề đã publish (SHA / nội dung)",
+  wrong_meta: "Sai mã môn, kỳ học hoặc loại đề",
+  low_quality: "Chất lượng đề không đạt (mơ hồ, lỗi format)",
+  policy: "Vi phạm quy định / nội dung không phù hợp",
+  other: "Lý do khác",
+};
+
+export function mapRejectedExamFromApi(dto) {
+  const base = mapPendingExamListItem(dto);
+  const reasonCode = dto.rejectionReasonCode ?? "";
+  const reasonLabel = EXAM_REJECT_REASON_LOOKUP[reasonCode] ?? (reasonCode || "—");
+  const detail = dto.rejectionReasonDetail?.trim() ?? "";
+
+  return {
+    ...base,
+    rejectedAt: formatAdminDate(dto.rejectedAt ?? dto.updatedAt),
+    rejectReasonId: reasonCode,
+    rejectReasonLabel: reasonLabel,
+    rejectReasonDetail: detail,
+    rejectReasonFull: detail ? `${reasonLabel} — ${detail}` : reasonLabel,
+  };
+}
+
+export function mapApprovedExamFromApi(dto) {
+  const base = mapPendingExamListItem(dto);
+  return {
+    ...base,
+    approvedAt: formatAdminDate(dto.updatedAt ?? dto.createdAt),
+    publishedExamId: dto.id,
+  };
+}
+
+export function mapPracticeExamFormToResubmitRequest(payload, { isRevision = false } = {}) {
+  const title = isRevision
+    ? resolvePublicExamName({
+        revisionSourceCode: payload.revisionSourceCode,
+        revisionSourceTitle: payload.revisionSourceTitle,
+        code: payload.title,
+        title: payload.title,
+      })
+    : payload.title?.trim() ?? "";
+
+  return {
+    title,
+    description: payload.description?.trim() ?? "",
+    questions: [],
+  };
+}
+
+export function mapPracticeExamDetailToForm(dto) {
+  const subjectCode = isBareSubjectCode(dto.code)
+    ? (normalizeCourseSubjectCode(dto.code) ?? dto.code)
+    : (extractCourseSubjectCode(dto.code, dto.revisionSourceCode, dto.title) ?? dto.code);
+  const paperCode = isExamPaperCode(dto.title)
+    ? stripRevisionLabel(dto.title)
+    : resolvePublicExamName(dto);
+  const description = String(dto.description ?? "").split("\n\n")[0]?.trim() ?? dto.description ?? "";
+
+  return {
+    examId: dto.id,
+    revisionOfExamId: dto.revisionOfExamId ?? null,
+    revisionSourceCode: dto.revisionSourceCode ?? null,
+    revisionSourceTitle: dto.revisionSourceTitle ?? null,
+    subjectCode,
+    semester: dto.semester ? `Học kỳ ${dto.semester}` : "",
+    title: paperCode,
+    description,
+    attachments: (dto.attachments ?? []).map((attachment) => ({
+      id: attachment.id,
+      name: attachment.originalFileName,
+      status: "done",
+      existing: true,
+      sizeLabel: attachment.fileSize ? `${(attachment.fileSize / (1024 * 1024)).toFixed(1)} MB` : "",
+      type: String(attachment.contentType ?? "").includes("pdf") ? "pdf" : "zip",
+      contentType: attachment.contentType ?? "",
+      fileSize: attachment.fileSize ?? 0,
+    })),
   };
 }
 

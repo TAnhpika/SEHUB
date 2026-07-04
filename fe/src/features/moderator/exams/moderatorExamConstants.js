@@ -9,6 +9,7 @@ export const EXAM_CONTRIBUTION_TYPE_LABELS = {
 
 export const CONTRIBUTION_STATUS_LABELS = {
   draft_saved: "Lưu nháp",
+  revision_draft: "Đang sửa bản cập nhật",
   pending_admin: "Chờ Admin duyệt",
   approved: "Admin đã duyệt",
   rejected: "Admin từ chối",
@@ -23,6 +24,7 @@ export const CONTRIBUTION_TYPE_FILTERS = [
 export const CONTRIBUTION_STATUS_FILTERS = [
   { id: "all", label: "Mọi trạng thái" },
   { id: "draft_saved", label: "Lưu nháp" },
+  { id: "revision_draft", label: "Đang sửa cập nhật" },
   { id: "pending_admin", label: "Chờ Admin duyệt" },
   { id: "approved", label: "Đã duyệt" },
   { id: "rejected", label: "Từ chối" },

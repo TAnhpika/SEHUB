@@ -532,6 +532,34 @@
   letter-spacing: -0.02em;
 }
 
+.revisionBanner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  margin: -0.35rem 0 0.85rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--pending-text);
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  border-radius: 8px;
+}
+
+.revisionBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #1d4ed8;
+  background: rgba(59, 130, 246, 0.14);
+  border-radius: 999px;
+}
+
 .detailMetaGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

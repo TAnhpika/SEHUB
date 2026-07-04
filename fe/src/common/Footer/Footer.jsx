@@ -62,7 +62,13 @@ function Footer() {
                 <Link to="/community">Diễn đàn</Link>
               </li>
               <li>
-                <span>Discord</span>
+                <a
+                  href="https://discord.gg/BBeTyn6Heh"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Discord
+                </a>
               </li>
             </ul>
           </div>

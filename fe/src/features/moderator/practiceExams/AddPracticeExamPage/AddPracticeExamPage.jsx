@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowUpFromBracket,
@@ -27,11 +27,14 @@ import {
   submitExamForApproval,
 } from "@/features/moderator/exams/moderatorExamContributionStore";
 import {
+  loadPracticeExamForEdit,
+  resubmitPracticeExamViaApi,
+} from "@/features/moderator/exams/moderatorExamService";
+import {
   DEMO_DRAFT,
   getSubjectOptionsForSemester,
   PRACTICE_SEMESTER_OPTIONS,
 } from "@/features/moderator/practiceExams/practiceExamData";
-import { loadReviewCourses, REVIEW_COURSES } from "@/features/review/ReviewQuestionsPage/reviewData";
 import {
   generateExamPaperCode,
   loadExistingExamPaperIdentifiers,
@@ -41,12 +44,20 @@ import {
   PRACTICE_UPLOAD_ACCEPT,
   validatePracticeUploadFile,
 } from "@/features/moderator/practiceExams/practiceExamUpload";
+import { loadReviewCourses, REVIEW_COURSES } from "@/features/review/ReviewQuestionsPage/reviewData";
 import styles from "./AddPracticeExamPage.module.css";
 
 const MOD_PRACTICE_CRUMBS = [
   { label: "Trang chủ", to: "/home" },
   { label: "Đóng góp" },
   { label: "Thêm đề thực hành" },
+];
+
+const EDIT_PRACTICE_CRUMBS = [
+  { label: "Trang chủ", to: "/home" },
+  { label: "Đóng góp" },
+  { label: "Lịch sử đóng góp đề", to: "/moderator/exams/history?type=practice" },
+  { label: "Sửa đề thực hành" },
 ];
 
 const ACCEPTED_TYPES = PRACTICE_UPLOAD_ACCEPT;
@@ -61,13 +72,23 @@ function FileTypeIcon({ type }) {
 
 function AddPracticeExamPage() {
   const navigate = useNavigate();
+  const { examId: routeExamId } = useParams();
   const flow = useExamFormFlow();
   const isAdminFlow = flow.scope === "admin";
+  const isEditMode = Boolean(routeExamId) && !isAdminFlow;
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
   const { user } = useAuth();
   const fileInputRef = useRef(null);
   const moderator = user?.username ?? "mod_sehub";
+
+  const [editingExamId, setEditingExamId] = useState(routeExamId ?? null);
+  const [revisionOfExamId, setRevisionOfExamId] = useState(null);
+  const [revisionSourceCode, setRevisionSourceCode] = useState(null);
+  const [revisionSourceTitle, setRevisionSourceTitle] = useState(null);
+  const isRevisionEdit = Boolean(revisionOfExamId);
+  const [loadingExam, setLoadingExam] = useState(isEditMode);
+  const [loadExamError, setLoadExamError] = useState(null);
 
   const [activeTab, setActiveTab] = useState("create");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -120,13 +141,48 @@ function AddPracticeExamPage() {
   }, []);
 
   useEffect(() => {
+    if (!isEditMode || !routeExamId) return undefined;
+
+    let cancelled = false;
+    setLoadingExam(true);
+    setLoadExamError(null);
+
+    loadPracticeExamForEdit(routeExamId)
+      .then((loaded) => {
+        if (cancelled) return;
+        setEditingExamId(loaded.examId);
+        setRevisionOfExamId(loaded.revisionOfExamId);
+        setRevisionSourceCode(loaded.revisionSourceCode);
+        setRevisionSourceTitle(loaded.revisionSourceTitle);
+        setSubject(loaded.subjectCode);
+        setSemester(loaded.semester);
+        setTitle(loaded.title);
+        setDescription(loaded.description);
+        setAttachments(loaded.attachments ?? []);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setLoadExamError(error?.message ?? "Không tải được đề để chỉnh sửa.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingExam(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isEditMode, routeExamId]);
+
+  useEffect(() => {
+    if (isEditMode) return;
     if (!subject.trim()) {
       setTitle("");
       return;
     }
     const nextTitle = generateExamPaperCode("practice", subject, existingPaperCodes);
     setTitle((prev) => (prev === nextTitle ? prev : nextTitle));
-  }, [subject, existingPaperCodes]);
+  }, [subject, existingPaperCodes, isEditMode]);
 
   useEffect(() => {
     if (isAdminFlow) return undefined;
@@ -165,7 +221,15 @@ function AddPracticeExamPage() {
       attachments,
       allowDiscussion,
       pinExam,
+      revisionSourceCode,
+      revisionSourceTitle,
     };
+  }
+
+  function hasReadyAttachments() {
+    return attachments.some(
+      (file) => file.status === "done" && (file.file instanceof File || file.existing),
+    );
   }
 
   function handleSaveDraft() {
@@ -189,7 +253,7 @@ function AddPracticeExamPage() {
       showToast("Đợi file đính kèm xử lý xong trước khi gửi.");
       return;
     }
-    if (!attachments.some((file) => file.status === "done" && file.file)) {
+    if (!hasReadyAttachments()) {
       showToast("Chọn ít nhất một file đề (PDF/ZIP/RAR/DOCX).");
       return;
     }
@@ -201,6 +265,17 @@ function AddPracticeExamPage() {
         await saveAdminPracticeExamFromPayload(payload, { confirmDuplicate });
         showToast("Đề thi thực hành đã được xuất bản.");
         navigate(flow.examsListPath);
+        return;
+      }
+
+      if (isEditMode && editingExamId) {
+        await resubmitPracticeExamViaApi(editingExamId, payload, { isRevision: isRevisionEdit });
+        showToast(
+          isRevisionEdit
+            ? "Bản cập nhật đã gửi Admin duyệt. Đề đang public giữ nguyên."
+            : "Đề đã được sửa và gửi lại Admin duyệt.",
+        );
+        navigate("/moderator/exams/history?type=practice");
         return;
       }
 
@@ -269,22 +344,33 @@ function AddPracticeExamPage() {
     addFiles(event.dataTransfer.files);
   }
 
+  const submitLabel = submitting
+    ? isAdminFlow
+      ? "Đang xuất bản..."
+      : "Đang gửi..."
+    : isEditMode
+      ? isRevisionEdit
+        ? "Lưu & gửi bản cập nhật"
+        : "Lưu & gửi lại Admin duyệt"
+      : isAdminFlow
+        ? "Xuất bản"
+        : "Lưu & Xuất bản";
+
   const pageActions = (
     <div className={styles.actions}>
-      {!isAdminFlow ? (
+      {!isAdminFlow && !isEditMode ? (
         <button type="button" className={styles["btn-draft"]} onClick={handleSaveDraft}>
           Lưu nháp
         </button>
       ) : null}
-      <Button type="button" className={styles["btn-publish"]} onClick={handlePublish} disabled={submitting}>
+      <Button
+        type="button"
+        className={styles["btn-publish"]}
+        onClick={handlePublish}
+        disabled={submitting || loadingExam || Boolean(loadExamError)}
+      >
         <FontAwesomeIcon icon={faArrowUpFromBracket} />
-        {submitting
-          ? isAdminFlow
-            ? "Đang xuất bản..."
-            : "Đang gửi..."
-          : isAdminFlow
-            ? "Xuất bản"
-            : "Lưu & Xuất bản"}
+        {submitting ? (isAdminFlow ? "Đang xuất bản..." : "Đang gửi...") : submitLabel}
       </Button>
     </div>
   );
@@ -296,9 +382,13 @@ function AddPracticeExamPage() {
     { label: "Đề thực hành" },
   ];
 
-  const pageBody = (
+  const pageBody = loadingExam ? (
+    <p className={styles.hint}>Đang tải đề...</p>
+  ) : loadExamError ? (
+    <p className={styles.hint}>{loadExamError}</p>
+  ) : (
     <section className={styles.card}>
-      {!isAdminFlow ? (
+      {!isAdminFlow && !isEditMode ? (
         <div className={styles.tabs} role="tablist">
           <button
             type="button"
@@ -343,6 +433,11 @@ function AddPracticeExamPage() {
         </div>
       ) : (
         <form className={styles.form} onSubmit={handlePublish}>
+            {isRevisionEdit ? (
+              <p className={styles.hint}>
+                Chỉnh sửa bản cập nhật. Đề đang public giữ nguyên cho đến khi Admin duyệt.
+              </p>
+            ) : null}
             <div className={styles.columns}>
               <div className={styles["col-left"]}>
                 <div className={styles.row}>
@@ -355,10 +450,13 @@ function AddPracticeExamPage() {
                       value={semester}
                       onChange={(event) => {
                         setSemester(event.target.value);
-                        setSubject("");
-                        setTitle("");
+                        if (!isEditMode) {
+                          setSubject("");
+                          setTitle("");
+                        }
                       }}
                       required
+                      disabled={isEditMode}
                     >
                       <option value="">Chọn học kỳ</option>
                       {PRACTICE_SEMESTER_OPTIONS.map((item) => (
@@ -377,7 +475,7 @@ function AddPracticeExamPage() {
                       className={styles.select}
                       value={subject}
                       onChange={(event) => setSubject(event.target.value)}
-                      disabled={!semester}
+                      disabled={!semester || isEditMode}
                       required
                     >
                       <option value="">{semester ? "Chọn môn học" : "Chọn học kỳ trước"}</option>
@@ -472,7 +570,9 @@ function AddPracticeExamPage() {
                           <p className={styles["file-status"]}>
                             {file.sizeLabel}
                             {file.status === "done"
-                              ? " • Tải lên xong"
+                              ? file.existing
+                                ? " • File hiện có"
+                                : " • Tải lên xong"
                               : file.status === "error"
                                 ? ` • ${file.error ?? "Lỗi tải lên"}`
                                 : ` • Đang tải... ${file.progress}%`}
@@ -569,8 +669,14 @@ function AddPracticeExamPage() {
 
   return (
     <ModeratorPageShell
-      title="Thêm đề thi thực hành"
-      crumbs={MOD_PRACTICE_CRUMBS}
+      title={
+        isEditMode
+          ? isRevisionEdit
+            ? "Cập nhật đề thực hành đã xuất bản"
+            : "Sửa & gửi lại đề thực hành"
+          : "Thêm đề thi thực hành"
+      }
+      crumbs={isEditMode ? EDIT_PRACTICE_CRUMBS : MOD_PRACTICE_CRUMBS}
       actions={pageActions}
     >
       {pageBody}

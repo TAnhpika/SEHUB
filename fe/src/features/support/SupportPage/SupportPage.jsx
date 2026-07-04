@@ -145,7 +145,14 @@ function SupportPage() {
                 </span>
                 <div>
                   <p className={styles["contact-label"]}>Discord Server</p>
-                  <span className={styles["contact-value"]}>discord.gg/sehub</span>
+                  <a
+                    href="https://discord.gg/BBeTyn6Heh"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles["contact-value"]}
+                  >
+                    discord.gg/BBeTyn6Heh
+                  </a>
                 </div>
               </div>
 

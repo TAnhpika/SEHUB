@@ -31,6 +31,7 @@ import {
   getTrackLabel,
   loadAdminExamById,
   loadAdminPendingExams,
+  loadAdminExamReviewHistory,
   rejectPendingExam,
 } from "@/features/admin/exams/adminExamData";
 import { getAdminDocumentsSubjectUrl } from "@/features/admin/documents/adminDocumentPaths";
@@ -94,10 +95,12 @@ function AdminExamPendingPage() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    loadAdminPendingExams()
-      .then((items) => {
+    Promise.all([loadAdminPendingExams(), loadAdminExamReviewHistory()])
+      .then(([items, history]) => {
         if (cancelled) return;
         setPending(items);
+        setApproved(history.approved);
+        setRejected(history.rejected);
         if (items.length === 0) {
           setSelectedId(null);
           return;
@@ -198,9 +201,10 @@ function AdminExamPendingPage() {
 
   async function refresh() {
     const nextPending = await loadAdminPendingExams();
+    const history = await loadAdminExamReviewHistory();
     setPending(nextPending);
-    setApproved(getAdminApprovedExams());
-    setRejected(getAdminRejectedExams());
+    setApproved(history.approved);
+    setRejected(history.rejected);
     if (selectedId && !nextPending.some((p) => p.id === selectedId)) {
       setSelectedId(nextPending[0]?.id ?? null);
     }
@@ -435,7 +439,12 @@ function AdminExamPendingPage() {
                             <span className={pendingStyles.radio} aria-hidden />
                             <div className={pendingStyles.queueCardBody}>
                               <p className={pendingStyles.queueCode}>{getExamSubjectCode(item)}</p>
-                              <p className={pendingStyles.queueName}>{getExamDisplayTitle(item)}</p>
+                              <p className={pendingStyles.queueName}>
+                                {item.revisionOfExamId ? (
+                                  <span className={pendingStyles.revisionBadge}>Rev · </span>
+                                ) : null}
+                                {getExamDisplayTitle(item)}
+                              </p>
                               <div className={pendingStyles.tagRow}>
                                 <span
                                   className={`${pendingStyles.tag} ${
@@ -502,6 +511,15 @@ function AdminExamPendingPage() {
                     Chờ duyệt
                   </div>
                   <h3 className={pendingStyles.detailTitle}>{getExamDisplayTitle(selected)}</h3>
+                  {selected.revisionOfExamId ? (
+                    <div className={pendingStyles.revisionBanner}>
+                      <span className={pendingStyles.revisionBadge}>Bản cập nhật</span>
+                      <span>
+                        Thay thế đề public: {selected.revisionSourceTitle ?? selected.revisionSourceCode ?? "—"}
+                        . Duyệt sẽ archive bản cũ và publish nội dung mới.
+                      </span>
+                    </div>
+                  ) : null}
                   <dl className={pendingStyles.detailMetaGrid}>
                     <div className={pendingStyles.metaItem}>
                       <dt>Mã môn</dt>
@@ -656,7 +674,7 @@ function AdminExamPendingPage() {
           >
             <div>
               <p className={pendingStyles.historyTitle}>
-                Lịch sử xử lý trong phiên
+                {USE_MOCK ? "Lịch sử xử lý trong phiên" : "Lịch sử duyệt đề"}
               </p>
               <p className={pendingStyles.historyMeta}>
                 {historyTotal} đề đã xử lý · {approved.length} duyệt · {rejected.length}{" "}

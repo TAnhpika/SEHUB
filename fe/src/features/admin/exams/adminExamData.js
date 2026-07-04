@@ -11,6 +11,8 @@ import {
   mapPendingExamFromCreate,
   mapPendingExamListItem,
   mapPracticeExamFormToCreateRequest,
+  mapRejectedExamFromApi,
+  mapApprovedExamFromApi,
 } from "@/api/adminMapper";
 import { addAdminDocumentFromApprovedExam } from "@/features/admin/documents/adminDocumentData";
 import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
@@ -253,6 +255,8 @@ let pendingStore = [
 
 /** Cache đề chờ duyệt từ API (API mode) */
 let apiPendingCache = [];
+let apiRejectedCache = [];
+let apiApprovedHistoryCache = [];
 
 export const MOCK_OCR_QUESTIONS = [
   {
@@ -319,6 +323,40 @@ export async function loadAdminPendingExams() {
     (page.items ?? []).map((dto) => mapPendingExamListItem(dto)),
   );
   return apiPendingCache;
+}
+
+export async function loadAdminRejectedExams() {
+  if (USE_MOCK) {
+    return getAdminRejectedExams();
+  }
+
+  const page = await adminApi.listExams({ status: "Rejected", pageSize: ADMIN_API_PAGE_SIZE });
+  apiRejectedCache = enrichRevisionExamEntries(
+    (page.items ?? []).map((dto) => mapRejectedExamFromApi(dto)),
+  );
+  return apiRejectedCache;
+}
+
+export async function loadAdminApprovedHistory() {
+  if (USE_MOCK) {
+    return getAdminApprovedExams();
+  }
+
+  const page = await adminApi.listExams({ status: "Published", pageSize: ADMIN_API_PAGE_SIZE });
+  apiApprovedHistoryCache = enrichRevisionExamEntries(
+    (page.items ?? [])
+      .filter((dto) => dto.submittedByUsername || dto.submittedByDisplayName)
+      .map((dto) => mapApprovedExamFromApi(dto)),
+  );
+  return apiApprovedHistoryCache;
+}
+
+export async function loadAdminExamReviewHistory() {
+  const [approved, rejected] = await Promise.all([
+    loadAdminApprovedHistory(),
+    loadAdminRejectedExams(),
+  ]);
+  return { approved, rejected };
 }
 
 async function createExamViaApi(body, confirmDuplicate = false) {
@@ -852,11 +890,17 @@ export async function approvePendingExam(pendingId) {
 }
 
 export function getAdminApprovedExams() {
-  return [...approvedStore];
+  if (USE_MOCK) {
+    return [...approvedStore];
+  }
+  return [...apiApprovedHistoryCache];
 }
 
 export function getAdminRejectedExams() {
-  return [...rejectedStore];
+  if (USE_MOCK) {
+    return [...rejectedStore];
+  }
+  return [...apiRejectedCache];
 }
 
 export async function rejectPendingExam(pendingId, reasonPayload) {

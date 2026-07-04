@@ -47,6 +47,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     public static readonly Guid ModeratorUserId = Guid.Parse("88888888-8888-8888-8888-888888888888");
     public const string ModeratorEmail = "moderator@test.local";
     public const string ModeratorPassword = "Mod@Test123";
+    public static readonly Guid AdminUserId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+    public const string AdminEmail = "admin@test.local";
+    public const string AdminPassword = "Admin@Test123";
     public const string TaggedPostTitle = "CSharp Tagged Post";
     public const string RejectedPostTitle = "Rejected Post For Resubmit";
 
@@ -341,6 +344,22 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             await userManager.AddToRoleAsync(moderator, RoleNames.Moderator);
         }
 
+        if (await userManager.FindByEmailAsync(AdminEmail) is null)
+        {
+            var admin = new ApplicationUser
+            {
+                Id = AdminUserId,
+                UserName = "admin",
+                Email = AdminEmail,
+                EmailConfirmed = true,
+                DisplayName = "Test Admin",
+                LevelId = bronzeLevel.Id
+            };
+
+            await userManager.CreateAsync(admin, AdminPassword);
+            await userManager.AddToRoleAsync(admin, RoleNames.Admin);
+        }
+
         if (!await context.Comments.AnyAsync(c => c.Id == ReportSeedCommentId))
         {
             context.Comments.Add(new Comment
@@ -543,6 +562,28 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         {
             emailOrUsername = ModeratorEmail,
             password = ModeratorPassword
+        });
+
+        using var response = await client.PostAsync(
+            "/api/v1/auth/login",
+            new StringContent(payload, Encoding.UTF8, "application/json"));
+
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync();
+        using var document = await JsonDocument.ParseAsync(stream);
+        return document.RootElement
+            .GetProperty("data")
+            .GetProperty("accessToken")
+            .GetString()!;
+    }
+
+    public async Task<string> LoginAdminAndGetTokenAsync(HttpClient client)
+    {
+        var payload = JsonSerializer.Serialize(new
+        {
+            emailOrUsername = AdminEmail,
+            password = AdminPassword
         });
 
         using var response = await client.PostAsync(

@@ -4,6 +4,14 @@ import { useToast } from "@/common/Toast/ToastProvider";
 import { createExamRevisionViaApi } from "@/features/moderator/exams/moderatorExamService";
 import styles from "./ExamContributionAuditList.module.css";
 
+function practiceEditPath(examId) {
+  return `/moderator/practice-exams/edit/${examId}`;
+}
+
+function finalEditPath(examId) {
+  return `/moderator/final-exams/edit/${examId}`;
+}
+
 /**
  * @param {{
  *   items: Array<object>;
@@ -30,11 +38,35 @@ function ExamContributionAuditList({
     const examId = item.examApiId ?? item.pendingId ?? item.id;
     if (!examId) return;
 
+    const existingRevision = items.find(
+      (entry) =>
+        entry.revisionOfExamId === examId
+        && (entry.status === "revision_draft" || entry.status === "pending_admin"),
+    );
+    if (existingRevision) {
+      const editPath =
+        item.examType === "practice"
+          ? practiceEditPath(existingRevision.examApiId ?? existingRevision.id)
+          : finalEditPath(existingRevision.examApiId ?? existingRevision.id);
+      navigate(editPath);
+      return;
+    }
+
     setRevisionLoadingId(examId);
     try {
       const revision = await createExamRevisionViaApi(examId);
-      showToast("Đã tạo bản cập nhật. Chỉnh sửa và gửi Admin duyệt — đề public giữ nguyên.");
-      navigate(`/moderator/final-exams/edit/${revision.id}`);
+      const revisionId = revision?.id;
+      if (!revisionId) {
+        showToast("Không tạo được bản cập nhật.");
+        return;
+      }
+
+      const editPath =
+        item.examType === "practice"
+          ? practiceEditPath(revisionId)
+          : finalEditPath(revisionId);
+      navigate(editPath);
+      showToast("Mở bản cập nhật để chỉnh sửa. Đề public chưa thay đổi cho đến khi bạn gửi Admin duyệt.");
     } catch (error) {
       showToast(error?.message ?? "Không tạo được bản cập nhật.");
     } finally {
@@ -43,27 +75,25 @@ function ExamContributionAuditList({
   }
 
   function renderActions(item) {
-    if (item.examType !== "final") {
-      return null;
-    }
-
     const examId = item.examApiId ?? item.pendingId ?? item.id;
+    const editPath =
+      item.examType === "practice" ? practiceEditPath(examId) : finalEditPath(examId);
 
     if (item.status === "rejected" && item.canResubmit) {
       return (
-        <Link to={`/moderator/final-exams/edit/${examId}`} className={styles.actionBtn}>
+        <Link to={editPath} className={styles.actionBtn}>
           Sửa & gửi lại
         </Link>
       );
     }
 
     if (
-      item.status === "pending_admin" &&
-      item.canResubmit &&
-      item.revisionOfExamId
+      (item.status === "revision_draft"
+        || (item.status === "pending_admin" && item.revisionOfExamId))
+      && item.canResubmit
     ) {
       return (
-        <Link to={`/moderator/final-exams/edit/${examId}`} className={styles.actionBtn}>
+        <Link to={editPath} className={styles.actionBtn}>
           Tiếp tục sửa bản cập nhật
         </Link>
       );
