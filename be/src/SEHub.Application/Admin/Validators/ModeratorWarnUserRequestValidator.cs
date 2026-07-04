@@ -8,7 +8,7 @@ public sealed class ModeratorWarnUserRequestValidator : AbstractValidator<Modera
     public ModeratorWarnUserRequestValidator()
     {
         RuleFor(x => x.Reason)
-            .MaximumLength(500)
-            .When(x => !string.IsNullOrWhiteSpace(x.Reason));
+            .NotEmpty()
+            .MaximumLength(500);
     }
 }

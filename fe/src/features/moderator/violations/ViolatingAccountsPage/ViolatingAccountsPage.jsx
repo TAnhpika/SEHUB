@@ -111,6 +111,7 @@ function ViolatingAccountsPage() {
   const [lockDays, setLockDays] = useState(7);
   const [lockReason, setLockReason] = useState(DEFAULT_BAN_REASON);
   const [warnTarget, setWarnTarget] = useState(null);
+  const [warnReason, setWarnReason] = useState("");
   const [detailId, setDetailId] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -277,10 +278,12 @@ function ViolatingAccountsPage() {
 
   function openWarnModal(account) {
     setWarnTarget(account);
+    setWarnReason("");
   }
 
   function closeWarnModal() {
     setWarnTarget(null);
+    setWarnReason("");
   }
 
   async function confirmLock() {
@@ -308,9 +311,15 @@ function ViolatingAccountsPage() {
   async function confirmWarn() {
     if (!warnTarget || actionLoading) return;
 
+    const reason = warnReason.trim();
+    if (!reason) {
+      showToast("Vui lòng nhập lý do cảnh báo.");
+      return;
+    }
+
     setActionLoading(true);
     try {
-      await submitViolatingAccountWarning(warnTarget.id);
+      await submitViolatingAccountWarning(warnTarget.id, reason);
       showToast(`Đã gửi cảnh báo cho tài khoản ${warnTarget.username}.`);
       closeWarnModal();
       await refreshList();
@@ -593,7 +602,20 @@ function ViolatingAccountsPage() {
         variant="primary"
         onConfirm={confirmWarn}
         onCancel={closeWarnModal}
-      />
+      >
+        <label className={styles.reasonField}>
+          <span className={styles.reasonLabel}>
+            Lý do cảnh báo <span className={styles.required}>*</span>
+          </span>
+          <textarea
+            className={styles.reasonInput}
+            rows={3}
+            value={warnReason}
+            onChange={(event) => setWarnReason(event.target.value)}
+            placeholder="Mô tả vi phạm (bắt buộc)..."
+          />
+        </label>
+      </ConfirmDialog>
 
       <EscalatedReportDetailModal
         open={reportModalOpen}

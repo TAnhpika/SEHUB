@@ -507,32 +507,42 @@ function AddPracticeExamPage() {
                     Tùy chọn đề thi
                   </h3>
 
-                  <label className={styles.checkbox}>
+                  <label className={`${styles.checkbox} ${styles.checkboxDisabled}`}>
                     <input
                       type="checkbox"
                       checked={allowDiscussion}
-                      onChange={(event) => setAllowDiscussion(event.target.checked)}
+                      disabled
+                      readOnly
+                      aria-describedby="allow-discussion-hint"
                     />
                     <span className={styles["checkbox-box"]} aria-hidden />
                     <span>
-                      <span className={styles["checkbox-label"]}>Cho phép thảo luận</span>
-                      <span className={styles["checkbox-hint"]}>
-                        Sinh viên có thể bình luận dưới đề thi này
+                      <span className={styles["checkbox-label"]}>
+                        Cho phép thảo luận
+                        <span className={styles.checkboxComingSoon}>Sắp ra mắt</span>
+                      </span>
+                      <span id="allow-discussion-hint" className={styles["checkbox-hint"]}>
+                        Tính năng đang phát triển — chưa áp dụng khi xuất bản đề thi.
                       </span>
                     </span>
                   </label>
 
-                  <label className={styles.checkbox}>
+                  <label className={`${styles.checkbox} ${styles.checkboxDisabled}`}>
                     <input
                       type="checkbox"
                       checked={pinExam}
-                      onChange={(event) => setPinExam(event.target.checked)}
+                      disabled
+                      readOnly
+                      aria-describedby="pin-exam-hint"
                     />
                     <span className={styles["checkbox-box"]} aria-hidden />
                     <span>
-                      <span className={styles["checkbox-label"]}>Ghim đề thi</span>
-                      <span className={styles["checkbox-hint"]}>
-                        Hiển thị nổi bật trên trang chủ môn học
+                      <span className={styles["checkbox-label"]}>
+                        Ghim đề thi
+                        <span className={styles.checkboxComingSoon}>Sắp ra mắt</span>
+                      </span>
+                      <span id="pin-exam-hint" className={styles["checkbox-hint"]}>
+                        Tính năng đang phát triển — chưa ghim đề lên trang môn học.
                       </span>
                     </span>
                   </label>

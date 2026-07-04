@@ -39,6 +39,8 @@ const HISTORY_CRUMBS = [
   { label: "Lịch sử duyệt bài" },
 ];
 
+const SEARCH_DEBOUNCE_MS = 350;
+
 function StatusBadge({ status }) {
   const meta = STATUS_META[status] ?? STATUS_META.pending;
   return <ModeratorBadge label={meta.label} tone={meta.tone} dot />;
@@ -48,6 +50,8 @@ function ContentModerationHistoryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState("all");
   const [sort, setSort] = useState("newest");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [focusedId, setFocusedId] = useState(null);
   const [metricCounts, setMetricCounts] = useState({
@@ -57,8 +61,16 @@ function ContentModerationHistoryPage() {
     all: 0,
   });
 
-  const { items, loading, error } = useContentModerationHistory({ status: tab, sort });
+  const { items, loading, error } = useContentModerationHistory({ status: tab, sort, search });
   const { item: focusedItem, loading: detailLoading } = useContentModerationDetail(focusedId);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
 
   const counts = useMemo(() => {
     if (CONTENT_MODERATION_USE_MOCK) {
@@ -83,8 +95,11 @@ function ContentModerationHistoryPage() {
   }, [items]);
 
   const filtered = useMemo(
-    () => (CONTENT_MODERATION_USE_MOCK ? filterContentItems(items, { status: tab, sort }) : items),
-    [items, tab, sort],
+    () =>
+      CONTENT_MODERATION_USE_MOCK
+        ? filterContentItems(items, { status: tab, sort, query: search })
+        : items,
+    [items, tab, sort, search],
   );
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / CONTENT_HISTORY_PAGE_SIZE));
@@ -226,6 +241,9 @@ function ContentModerationHistoryPage() {
 
         <div className={styles.toolbarBlock}>
           <ModeratorToolbar
+            searchValue={searchInput}
+            onSearchChange={setSearchInput}
+            searchPlaceholder="Tìm tiêu đề, tác giả..."
             end={
               <Link to="/moderator/content" className={styles.queueLink}>
                 <FontAwesomeIcon icon={faClipboardList} />

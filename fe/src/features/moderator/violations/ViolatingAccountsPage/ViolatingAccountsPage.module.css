@@ -88,6 +88,10 @@
   color: var(--moderator-text-muted);
 }
 
+.required {
+  color: var(--moderator-badge-bg);
+}
+
 .reasonInput {
   width: 100%;
   padding: 0.625rem 0.75rem;

@@ -11,7 +11,6 @@ import { useToast } from "@/common/Toast/ToastProvider";
 import ContentPostDetailPanel from "@/features/moderator/content/components/ContentPostDetailPanel/ContentPostDetailPanel";
 import ModeratorEmptyState from "@/features/moderator/components/ModeratorEmptyState/ModeratorEmptyState";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
-import Pagination from "@/common/Pagination/Pagination";
 import {
   enrichFeaturedPost,
   FEATURE_SEARCH_SORT_OPTIONS,
@@ -29,7 +28,7 @@ import styles from "./FeaturedPostsPage.module.css";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 const STATS_EVENT = "sehub-moderator-stats-updated";
-const SEARCH_PAGE_SIZE = 5;
+const SEARCH_DEBOUNCE_MS = 350;
 
 const FEATURED_CRUMBS = [
   { label: "Trang chủ", to: "/home" },
@@ -149,7 +148,6 @@ function FeaturedPostsPage() {
   const [loading, setLoading] = useState(!USE_MOCK);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("newest");
-  const [searchPage, setSearchPage] = useState(1);
   const [selectedId, setSelectedId] = useState(null);
   const [selectedPost, setSelectedPost] = useState(null);
 
@@ -178,6 +176,24 @@ function FeaturedPostsPage() {
       cancelled = true;
     };
   }, [showToast]);
+
+  useEffect(() => {
+    if (USE_MOCK) return undefined;
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      loadFeaturedPostsState({ search: query })
+        .then(({ searchPool: nextPool }) => {
+          if (!cancelled) setSearchPool(nextPool);
+        })
+        .catch(() => {});
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -214,23 +230,9 @@ function FeaturedPostsPage() {
     [searchPool, query, sort, pinnedIds],
   );
 
-  const searchTotalPages = Math.max(1, Math.ceil(searchResults.length / SEARCH_PAGE_SIZE));
-  const safeSearchPage = Math.min(searchPage, searchTotalPages);
-
-  const paginatedSearchResults = useMemo(() => {
-    const start = (safeSearchPage - 1) * SEARCH_PAGE_SIZE;
-    return searchResults.slice(start, start + SEARCH_PAGE_SIZE);
-  }, [searchResults, safeSearchPage]);
-
   useEffect(() => {
-    setSearchPage(1);
+    setSelectedId(null);
   }, [query, sort]);
-
-  useEffect(() => {
-    if (searchPage > searchTotalPages) {
-      setSearchPage(searchTotalPages);
-    }
-  }, [searchPage, searchTotalPages]);
 
   function handleUnpin(id) {
     const post = pinned.find((item) => item.id === id);
@@ -361,22 +363,7 @@ function FeaturedPostsPage() {
               </div>
 
               {searchResults.length > 0 ? (
-                <div className={styles.searchToolbar}>
-                  <p className={styles.searchSummary}>
-                    {searchResults.length} bài
-                    {searchTotalPages > 1
-                      ? ` · Trang ${safeSearchPage}/${searchTotalPages}`
-                      : ""}
-                  </p>
-                  <Pagination
-                    currentPage={safeSearchPage}
-                    totalPages={searchTotalPages}
-                    onPageChange={setSearchPage}
-                    ariaLabel="Phân trang kết quả tìm bài ghim"
-                    alwaysShow={searchTotalPages > 1}
-                    flush
-                  />
-                </div>
+                <p className={styles.searchSummary}>{searchResults.length} bài</p>
               ) : null}
             </div>
 
@@ -384,7 +371,7 @@ function FeaturedPostsPage() {
               {searchResults.length === 0 ? (
                 <ModeratorEmptyState message="Không tìm thấy bài viết phù hợp hoặc tất cả đã được ghim." />
               ) : (
-                paginatedSearchResults.map((post) => (
+                searchResults.map((post) => (
                   <SearchResultCard
                     key={post.id}
                     post={post}

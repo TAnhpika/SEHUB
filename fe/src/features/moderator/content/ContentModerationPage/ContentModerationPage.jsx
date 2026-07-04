@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faCheck, faClockRotateLeft, faFilePdf, faImage, faRotateRight, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faCheck, faFilePdf, faImage, faRotateRight, faXmark } from "@fortawesome/free-solid-svg-icons";
 import FilterDropdown from "@/common/FilterDropdown/FilterDropdown";
 import Pagination from "@/common/Pagination/Pagination";
 import { useToast } from "@/common/Toast/ToastProvider";
@@ -14,10 +13,13 @@ import styles from "./ContentModerationPage.module.css";
 
 const CONTENT_CRUMBS = [{ label: "Trang chủ", to: "/home" }, { label: "Kiểm duyệt", to: "/moderator/content" }, { label: "Duyệt bài viết" }];
 
+const SEARCH_DEBOUNCE_MS = 350;
+
 function ContentModerationPage() {
     const { showToast } = useToast();
-    const { items, loading, error, sort, setSort, refresh, approveItems, rejectItems } = useContentModerationQueue();
+    const { items, loading, error, sort, setSort, search, setSearch, refresh, approveItems, rejectItems } = useContentModerationQueue();
     const [page, setPage] = useState(1);
+    const [searchInput, setSearchInput] = useState("");
     const [selectedIds, setSelectedIds] = useState(() => new Set());
     const [focusedId, setFocusedId] = useState(null);
     const [pendingAction, setPendingAction] = useState(null);
@@ -34,9 +36,17 @@ function ContentModerationPage() {
         return () => mediaQuery.removeEventListener("change", handleChange);
     }, []);
 
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            setSearch(searchInput.trim());
+            setPage(1);
+        }, SEARCH_DEBOUNCE_MS);
+        return () => window.clearTimeout(timer);
+    }, [searchInput, setSearch]);
+
     const showMobileDetail = isMobile && Boolean(focusedId);
 
-    const filtered = useMemo(() => filterContentQueue(items, { sort }), [items, sort]);
+    const filtered = useMemo(() => filterContentQueue(items, { sort, query: search }), [items, sort, search]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / CONTENT_QUEUE_PAGE_SIZE));
     const safePage = Math.min(page, totalPages);
@@ -158,17 +168,14 @@ function ContentModerationPage() {
             <section className={styles.card}>
                 <div className={styles.toolbarBlock}>
                     <ModeratorToolbar
+                        searchValue={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder="Tìm tiêu đề, tác giả..."
                         end={
-                            <>
-                                <Link to="/moderator/content/history" className={styles.historyLink}>
-                                    <FontAwesomeIcon icon={faClockRotateLeft} />
-                                    Lịch sử duyệt
-                                </Link>
-                                <button type="button" className={styles.refreshBtn} onClick={handleRefresh}>
-                                    <FontAwesomeIcon icon={faRotateRight} />
-                                    Làm mới
-                                </button>
-                            </>
+                            <button type="button" className={styles.refreshBtn} onClick={handleRefresh}>
+                                <FontAwesomeIcon icon={faRotateRight} />
+                                Làm mới
+                            </button>
                         }
                     >
                         <FilterDropdown options={SORT_OPTIONS} value={sort} onChange={handleFilterChange(setSort)} ariaLabel="Sắp xếp" />
@@ -239,7 +246,7 @@ function ContentModerationPage() {
                                     ) : pageItems.length === 0 ? (
                                         <tr>
                                             <td colSpan={4} className={styles.empty}>
-                                                Không có bài viết chờ duyệt. <Link to="/moderator/content/history">Xem lịch sử duyệt</Link>
+                                                Không có bài viết chờ duyệt.
                                             </td>
                                         </tr>
                                     ) : (
