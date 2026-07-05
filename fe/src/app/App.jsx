@@ -296,6 +296,7 @@ function App() {
                 <Route path="practice-submissions" element={<ModeratorPracticeSubmissionsPage />} />
                 <Route path="exams/history" element={<ModeratorExamContributionHistoryPage />} />
                 <Route path="practice-exams/add" element={<AddPracticeExamPage />} />
+                <Route path="practice-exams/edit/:examId" element={<AddPracticeExamPage />} />
                 <Route path="final-exams/add" element={<AddFinalExamWizard />}>
                   <Route index element={<FinalExamInfoStep />} />
                   <Route path="questions" element={<FinalExamQuestionsStep />} />

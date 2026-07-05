@@ -22,6 +22,7 @@ public sealed class AdminExamService : IAdminExamService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IWorkflowNotificationService _workflowNotifications;
+    private readonly IUserRepository _userRepository;
     private readonly IMapper _mapper;
 
     public AdminExamService(
@@ -31,6 +32,7 @@ public sealed class AdminExamService : IAdminExamService
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         IWorkflowNotificationService workflowNotifications,
+        IUserRepository userRepository,
         IMapper mapper)
     {
         _examRepository = examRepository;
@@ -39,6 +41,7 @@ public sealed class AdminExamService : IAdminExamService
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _workflowNotifications = workflowNotifications;
+        _userRepository = userRepository;
         _mapper = mapper;
     }
 
@@ -59,7 +62,7 @@ public sealed class AdminExamService : IAdminExamService
         var (items, total) = await _examRepository.GetPagedAsync(adminQuery, cancellationToken);
         return new PagedResult<ExamListItemDto>
         {
-            Items = items.Select(MapExamListItem).ToList(),
+            Items = await MapExamListItemsAsync(items, cancellationToken),
             Page = query.Page,
             PageSize = query.PageSize,
             TotalCount = total
@@ -254,8 +257,7 @@ public sealed class AdminExamService : IAdminExamService
 
         EnsureModeratorOwnsExamInstance(exam);
 
-        if (exam.Status != ExamStatus.Rejected
-            && !(exam.Status == ExamStatus.PendingApproval && exam.RevisionOfExamId is not null))
+        if (exam.Status != ExamStatus.Rejected && !IsEditableRevision(exam))
         {
             throw new DomainException("Chỉ sửa được đề bị từ chối hoặc bản revision đang chờ duyệt.");
         }
@@ -309,8 +311,8 @@ public sealed class AdminExamService : IAdminExamService
 
         var revision = await CloneExamAsRevisionAsync(published, cancellationToken);
         await _examRepository.AddAsync(revision, cancellationToken);
+        await CloneExamAttachmentsAsync(published.Id, revision.Id, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        await NotifyAdminsIfModeratorSubmittedAsync(revision, cancellationToken);
 
         return await MapAdminExamAsync(revision, cancellationToken);
     }
@@ -477,7 +479,7 @@ public sealed class AdminExamService : IAdminExamService
             AssetUrl = published.AssetUrl,
             SubmittedById = published.SubmittedById,
             RevisionOfExamId = published.Id,
-            Status = ExamStatus.PendingApproval,
+            Status = ExamStatus.Draft,
             ContentHash = published.ContentHash,
             QuestionCount = published.QuestionCount,
             CreatedAt = DateTime.UtcNow,
@@ -610,6 +612,10 @@ public sealed class AdminExamService : IAdminExamService
         }
     }
 
+    private static bool IsEditableRevision(Exam exam) =>
+        exam.RevisionOfExamId is not null
+        && (exam.Status == ExamStatus.Draft || exam.Status == ExamStatus.PendingApproval);
+
     private async Task ApplyPracticeExamPinAsync(Exam exam, CancellationToken cancellationToken)
     {
         if (exam.ExamType != ExamType.Practice || !exam.IsPinned)
@@ -622,8 +628,7 @@ public sealed class AdminExamService : IAdminExamService
     }
 
     private static bool CanModeratorResubmit(Exam exam) =>
-        exam.Status == ExamStatus.Rejected
-        || (exam.Status == ExamStatus.PendingApproval && exam.RevisionOfExamId is not null);
+        exam.Status == ExamStatus.Rejected || IsEditableRevision(exam);
 
     private static bool IsContentLocked(Exam exam) =>
         exam.Status == ExamStatus.Published;
@@ -631,6 +636,9 @@ public sealed class AdminExamService : IAdminExamService
     private async Task<AdminExamDto> MapAdminExamAsync(Exam exam, CancellationToken cancellationToken)
     {
         var attachments = await _attachmentRepository.GetByExamIdAsync(exam.Id, cancellationToken);
+        var submitter = exam.SubmittedById is Guid submittedById
+            ? await _userRepository.GetByIdAsync(submittedById, cancellationToken)
+            : null;
 
         return new AdminExamDto
         {
@@ -656,8 +664,9 @@ public sealed class AdminExamService : IAdminExamService
             IsContentLocked = IsContentLocked(exam),
             RevisionSourceCode = exam.RevisionOfExam?.Code,
             RevisionSourceTitle = exam.RevisionOfExam?.Title,
-            IsPinned = exam.IsPinned,
-            Attachments = attachments.Select(a => ExamAttachmentService.MapDto(exam.Id, a)).ToList(),
+            SubmittedByUsername = submitter?.Username,
+            SubmittedByDisplayName = submitter?.DisplayName,
+            IsPinned = exam.IsPinned,            Attachments = attachments.Select(a => ExamAttachmentService.MapDto(exam.Id, a)).ToList(),
             Questions = exam.Questions.OrderBy(q => q.OrderIndex).Select(q => new AdminExamQuestionDto
             {
                 Id = q.Id,
@@ -677,11 +686,40 @@ public sealed class AdminExamService : IAdminExamService
         };
     }
 
-    private static ExamListItemDto MapExamListItem(Exam exam) => new()
+    private async Task<IReadOnlyList<ExamListItemDto>> MapExamListItemsAsync(
+        IReadOnlyList<Exam> exams,
+        CancellationToken cancellationToken)
+    {
+        var submitterIds = exams
+            .Where(exam => exam.SubmittedById is Guid)
+            .Select(exam => exam.SubmittedById!.Value)
+            .Distinct()
+            .ToList();
+
+        var submitters = submitterIds.Count == 0
+            ? []
+            : await _userRepository.GetByIdsAsync(submitterIds, cancellationToken);
+
+        var submitterLookup = submitters.ToDictionary(user => user.Id);
+
+        return exams
+            .Select(exam =>
+            {
+                submitterLookup.TryGetValue(exam.SubmittedById ?? Guid.Empty, out var submitter);
+                return MapExamListItem(exam, submitter?.Username, submitter?.DisplayName);
+            })
+            .ToList();
+    }
+
+    private static ExamListItemDto MapExamListItem(
+        Exam exam,
+        string? submittedByUsername = null,
+        string? submittedByDisplayName = null) => new()
     {
         Id = exam.Id,
         Code = exam.Code,
         Title = exam.Title,
+        SubjectName = exam.Subject?.Name ?? string.Empty,
         ExamType = exam.ExamType.ToString(),
         Semester = exam.Semester.ToString(),
         Major = exam.Major,
@@ -700,6 +738,28 @@ public sealed class AdminExamService : IAdminExamService
         IsContentLocked = IsContentLocked(exam),
         RevisionSourceCode = exam.RevisionOfExam?.Code,
         RevisionSourceTitle = exam.RevisionOfExam?.Title,
-        IsPinned = exam.IsPinned,
-    };
+        SubmittedByUsername = submittedByUsername,
+        SubmittedByDisplayName = submittedByDisplayName,
+        IsPinned = exam.IsPinned,    };
+
+    private async Task CloneExamAttachmentsAsync(
+        Guid sourceExamId,
+        Guid targetExamId,
+        CancellationToken cancellationToken)
+    {
+        var attachments = await _attachmentRepository.GetByExamIdAsync(sourceExamId, cancellationToken);
+        foreach (var attachment in attachments)
+        {
+            await _attachmentRepository.AddAsync(new ExamAttachment
+            {
+                Id = Guid.NewGuid(),
+                ExamId = targetExamId,
+                DriveFileId = attachment.DriveFileId,
+                OriginalFileName = attachment.OriginalFileName,
+                ContentType = attachment.ContentType,
+                FileSize = attachment.FileSize,
+                CreatedAt = DateTime.UtcNow,
+            }, cancellationToken);
+        }
+    }
 }

@@ -192,7 +192,8 @@ public class ExamRepository : IExamRepository
             .Include(e => e.Questions)
             .ThenInclude(q => q.Options)
             .FirstOrDefaultAsync(
-                e => e.RevisionOfExamId == publishedExamId && e.Status == ExamStatus.PendingApproval,
+                e => e.RevisionOfExamId == publishedExamId
+                    && (e.Status == ExamStatus.PendingApproval || e.Status == ExamStatus.Draft),
                 cancellationToken);
 
     public Task<IReadOnlyList<SubjectSourceEntryDto>> GetDistinctPublishedSubjectsAsync(

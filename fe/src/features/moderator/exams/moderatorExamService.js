@@ -3,6 +3,8 @@ import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationCons
 import {
   mapExamDetailToWizard,
   mapFinalExamWizardToResubmitRequest,
+  mapPracticeExamDetailToForm,
+  mapPracticeExamFormToResubmitRequest,
   mapWizardQuestionsToCreateItems,
 } from "@/api/adminMapper";
 import {
@@ -31,10 +33,12 @@ function mapApiStatusToContribution(status, revisionOfExamId) {
   if (value === "pendingapproval") {
     return revisionOfExamId ? "pending_admin" : "pending_admin";
   }
+  if (value === "draft") {
+    return revisionOfExamId ? "revision_draft" : "draft_saved";
+  }
   if (value === "published") return "approved";
   if (value === "rejected") return "rejected";
   if (value === "archived") return "rejected";
-  if (value === "draft") return "draft_saved";
   return "pending_admin";
 }
 
@@ -165,6 +169,26 @@ export async function fetchModeratorExamContributions(moderatorUsername, filters
   }
 
   return entries.sort((a, b) => (a.at < b.at ? 1 : -1));
+}
+
+export async function loadPracticeExamForEdit(examId) {
+  const dto = await adminApi.getExam(examId);
+  return mapPracticeExamDetailToForm(dto);
+}
+
+export async function resubmitPracticeExamViaApi(examId, payload, { isRevision = false } = {}) {
+  const body = mapPracticeExamFormToResubmitRequest(payload, { isRevision });
+  const dto = await adminApi.resubmitExam(examId, body);
+
+  const newFiles = (payload.attachments ?? []).filter(
+    (file) => file.status === "done" && file.file instanceof File,
+  );
+  for (const attachment of newFiles) {
+    await adminApi.uploadExamAttachment(examId, attachment.file);
+  }
+
+  invalidateExamPaperCodeCache();
+  return newFiles.length > 0 ? adminApi.getExam(examId) : dto;
 }
 
 export async function createFinalExamViaApi(examInfo, questions, confirmDuplicate = false) {

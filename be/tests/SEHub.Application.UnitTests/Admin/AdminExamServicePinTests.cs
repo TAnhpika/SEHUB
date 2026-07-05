@@ -19,6 +19,7 @@ public sealed class AdminExamServicePinTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IWorkflowNotificationService> _workflowNotifications = new();
+    private readonly Mock<IUserRepository> _userRepository = new();
     private readonly IMapper _mapper;
 
     private static readonly Guid SubmitterId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
@@ -35,6 +36,7 @@ public sealed class AdminExamServicePinTests
         _unitOfWork.Object,
         _currentUser.Object,
         _workflowNotifications.Object,
+        _userRepository.Object,
         _mapper);
 
     [Fact]

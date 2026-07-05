@@ -416,10 +416,15 @@ function ExamDetailPage({ page }) {
   const hasSubmittedResult = isPracticeExam
     ? Boolean(practiceSession?.submitted)
     : Boolean(submittedSession?.submitted);
-  const practiceBrief = isPracticeExam && currentQuestion
-    ? getPracticeBrief(exam.id, currentIndex + 1, exam.courseCode, currentQuestion.text)
-    : null;
   const resolvedApiExamId = apiExamId ?? exam.apiId ?? null;
+  const hasApiAttachments = Boolean(
+    resolvedApiExamId && (exam.attachments?.length ?? 0) > 0,
+  );
+  const showPracticeMockContent = isPracticeExam && !hasApiAttachments;
+  const practiceBrief =
+    isPracticeExam && currentQuestion && showPracticeMockContent
+      ? getPracticeBrief(exam.id, currentIndex + 1, exam.courseCode, currentQuestion.text)
+      : null;
 
   function bumpReviewSession() {
     setSessionTick((tick) => tick + 1);
@@ -601,21 +606,29 @@ function ExamDetailPage({ page }) {
         <div className={styles.workspace}>
           <div className={styles["main-column"]}>
             <article className={styles["question-card"]}>
-              {!isReviewExam && currentQuestion && (
+              {!isReviewExam && currentQuestion && showPracticeMockContent ? (
                 <p className={styles["preview-label"]}>
                   {previewLabel} {currentIndex + 1}
                 </p>
-              )}
+              ) : null}
               {isReviewExam && currentQuestion && (
                 <p className={styles["preview-label"]}>
                   Câu {currentIndex + 1} / {orderedQuestions.length}
                   {correctAnswerRevealed ? " · Đáp án đã hiện" : ""}
                 </p>
               )}
-              <RichTextContent
-                value={currentQuestion?.text}
-                className={styles["question-text"]}
-              />
+              {showPracticeMockContent ? (
+                <RichTextContent
+                  value={currentQuestion?.text}
+                  className={styles["question-text"]}
+                />
+              ) : null}
+              {isPracticeExam && hasApiAttachments && exam.description ? (
+                <RichTextContent
+                  value={exam.description}
+                  className={styles["question-text"]}
+                />
+              ) : null}
               {currentQuestion?.questionType === "MultiSelect" && currentQuestion?.requiredSelectCount ? (
                 <p className={styles["multi-hint"]}>
                   Chọn đúng {currentQuestion.requiredSelectCount} đáp án.

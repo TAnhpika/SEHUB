@@ -47,6 +47,8 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
 
         var uniquePaper = $"INT-MOD-MINE-{Guid.NewGuid():N}"[..24];
+        var optionAId = Guid.NewGuid();
+        var optionBId = Guid.NewGuid();
         var createResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
         {
             Code = "MAE101",
@@ -60,19 +62,19 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
                 new CreateExamQuestionItem
                 {
                     OrderIndex = 1,
-                    Content = "2 + 2 = ?",
-                    CorrectOptionId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
+                    Content = $"2 + 2 = ? ({uniquePaper})",
+                    CorrectOptionId = optionAId,
                     Options =
                     [
                         new CreateExamOptionItem
                         {
-                            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
+                            Id = optionAId,
                             Label = "A",
                             Text = "4"
                         },
                         new CreateExamOptionItem
                         {
-                            Id = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1"),
+                            Id = optionBId,
                             Label = "B",
                             Text = "5"
                         }
@@ -193,5 +195,200 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
         body!.Data!.QuestionCount.Should().Be(1);
         body.Data.Questions[0].OrderIndex.Should().Be(30);
         body.Data.Questions[0].Options.Should().Contain(o => o.Label == "C" && o.Text == "コンビニ");
+    }
+
+    [Fact]
+    public async Task Admin_PendingList_IncludesSubmittedByUsername()
+    {
+        var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
+
+        var uniquePaper = $"INT-SUBMITTER-{Guid.NewGuid():N}"[..24];
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
+        {
+            Code = "PRF192",
+            Title = uniquePaper,
+            ExamType = nameof(ExamType.Practice),
+            Semester = "3",
+            Major = "SE",
+            Description = "Pending list submitter username test."
+        });
+        createResponse.EnsureSuccessStatusCode();
+
+        var listResponse = await _client.GetAsync("/api/v1/admin/exams?status=PendingApproval&pageSize=50");
+        listResponse.EnsureSuccessStatusCode();
+        var list = await listResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResult<ExamListItemDto>>>();
+        var item = list!.Data!.Items.Should().ContainSingle(e => e.Title == uniquePaper).Subject;
+        item.SubmittedByUsername.Should().Be("moderator");
+        item.SubmittedByDisplayName.Should().Be("Test Moderator");
+    }
+
+    [Fact]
+    public async Task FinalExam_RevisionApprove_ReplacesPublishedExam_AndArchivesParent()
+    {
+        var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
+
+        var liveTitle = $"INT-FINAL-REV-{Guid.NewGuid():N}"[..24];
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", BuildFinalExamRequest(liveTitle));
+        createResponse.EnsureSuccessStatusCode();
+        var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
+        var examId = created!.Data!.Id;
+
+        var adminToken = await _factory.LoginAdminAndGetTokenAsync(_client);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+
+        var approveResponse = await _client.PostAsync($"/api/v1/admin/exams/{examId}/approve", null);
+        approveResponse.EnsureSuccessStatusCode();
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
+
+        var revisionResponse = await _client.PostAsync($"/api/v1/admin/exams/{examId}/revision", null);
+        revisionResponse.EnsureSuccessStatusCode();
+        var revision = await revisionResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
+        revision!.Data!.Status.Should().Be(nameof(ExamStatus.Draft));
+        revision.Data.RevisionOfExamId.Should().Be(examId);
+
+        const string updatedDescription = "Final revision resubmit description.";
+        var resubmitResponse = await _client.PutAsJsonAsync(
+            $"/api/v1/admin/exams/{revision.Data.Id}/resubmit",
+            new ResubmitExamRequest
+            {
+                Title = revision.Data.Title,
+                Description = updatedDescription,
+                Questions = []
+            });
+        resubmitResponse.EnsureSuccessStatusCode();
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+
+        var approveRevisionResponse = await _client.PostAsync($"/api/v1/admin/exams/{revision.Data.Id}/approve", null);
+        approveRevisionResponse.EnsureSuccessStatusCode();
+        var approvedRevision = await approveRevisionResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
+        approvedRevision!.Data!.Status.Should().Be(nameof(ExamStatus.Published));
+        approvedRevision.Data.Title.Should().Be(liveTitle);
+        approvedRevision.Data.Description.Should().Be(updatedDescription);
+
+        var parentResponse = await _client.GetAsync($"/api/v1/admin/exams/{examId}");
+        parentResponse.EnsureSuccessStatusCode();
+        var parent = await parentResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
+        parent!.Data!.Status.Should().Be(nameof(ExamStatus.Archived));
+        parent.Data.Title.Should().StartWith($"{liveTitle}-ARCH-");
+    }
+
+    [Fact]
+    public async Task PracticeExam_RevisionApprove_ClonesAttachments_AndReplacesPublishedExam()
+    {
+        var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
+
+        var liveTitle = $"INT-PRAC-REV-{Guid.NewGuid():N}"[..24];
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
+        {
+            Code = "PRF192",
+            Title = liveTitle,
+            ExamType = nameof(ExamType.Practice),
+            Semester = "4",
+            Major = "SE",
+            Description = "Practice revision integration test."
+        });
+        createResponse.EnsureSuccessStatusCode();
+        var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
+        var examId = created!.Data!.Id;
+
+        using var uploadContent = new MultipartFormDataContent();
+        var pdfBytes = "%PDF-1.4\n%%EOF"u8.ToArray();
+        var fileContent = new ByteArrayContent(pdfBytes);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        uploadContent.Add(fileContent, "file", "revision-source-brief.pdf");
+
+        var uploadResponse = await _client.PostAsync($"/api/v1/admin/exams/{examId}/attachments", uploadContent);
+        uploadResponse.EnsureSuccessStatusCode();
+
+        var adminToken = await _factory.LoginAdminAndGetTokenAsync(_client);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+
+        var approveResponse = await _client.PostAsync($"/api/v1/admin/exams/{examId}/approve", null);
+        approveResponse.EnsureSuccessStatusCode();
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
+
+        var revisionResponse = await _client.PostAsync($"/api/v1/admin/exams/{examId}/revision", null);
+        revisionResponse.EnsureSuccessStatusCode();
+        var revision = await revisionResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
+        var revisionId = revision!.Data!.Id;
+
+        var revisionDetailResponse = await _client.GetAsync($"/api/v1/admin/exams/{revisionId}");
+        revisionDetailResponse.EnsureSuccessStatusCode();
+        var revisionDetail = await revisionDetailResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
+        revisionDetail!.Data!.Attachments.Should().ContainSingle(a => a.OriginalFileName == "revision-source-brief.pdf");
+
+        const string updatedDescription = "Practice revision resubmit description.";
+        var resubmitResponse = await _client.PutAsJsonAsync(
+            $"/api/v1/admin/exams/{revisionId}/resubmit",
+            new ResubmitExamRequest
+            {
+                Title = revision.Data.Title,
+                Description = updatedDescription,
+                Questions = []
+            });
+        resubmitResponse.EnsureSuccessStatusCode();
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+
+        var approveRevisionResponse = await _client.PostAsync($"/api/v1/admin/exams/{revisionId}/approve", null);
+        approveRevisionResponse.EnsureSuccessStatusCode();
+        var approvedRevision = await approveRevisionResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
+        approvedRevision!.Data!.Status.Should().Be(nameof(ExamStatus.Published));
+        approvedRevision.Data.Title.Should().Be(liveTitle);
+        approvedRevision.Data.Description.Should().Be(updatedDescription);
+        approvedRevision.Data.Attachments.Should().ContainSingle(a => a.OriginalFileName == "revision-source-brief.pdf");
+
+        var parentResponse = await _client.GetAsync($"/api/v1/admin/exams/{examId}");
+        parentResponse.EnsureSuccessStatusCode();
+        var parent = await parentResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
+        parent!.Data!.Status.Should().Be(nameof(ExamStatus.Archived));
+    }
+
+    private static CreateExamRequest BuildFinalExamRequest(string title) => new()
+    {
+        Code = "MAE101",
+        Title = title,
+        ExamType = nameof(ExamType.Final),
+        Semester = "2",
+        Major = "SE",
+        Description = $"Final exam revision integration test. {title}",
+        Questions = BuildFinalExamQuestionItems(title)
+    };
+
+    private static IReadOnlyList<CreateExamQuestionItem> BuildFinalExamQuestionItems(string? uniqueSeed = null)
+    {
+        var seed = uniqueSeed ?? Guid.NewGuid().ToString("N");
+        var optionAId = Guid.NewGuid();
+        var optionBId = Guid.NewGuid();
+        return
+        [
+            new CreateExamQuestionItem
+            {
+                OrderIndex = 1,
+                Content = $"2 + 2 = ? ({seed})",
+                CorrectOptionId = optionAId,
+                Options =
+                [
+                    new CreateExamOptionItem
+                    {
+                        Id = optionAId,
+                        Label = "A",
+                        Text = "4"
+                    },
+                    new CreateExamOptionItem
+                    {
+                        Id = optionBId,
+                        Label = "B",
+                        Text = "5"
+                    }
+                ]
+            }
+        ];
     }
 }

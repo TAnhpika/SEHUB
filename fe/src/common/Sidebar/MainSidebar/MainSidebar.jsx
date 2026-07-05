@@ -107,7 +107,7 @@ function MainSidebar() {
               </div>
 
               <a
-                href="https://discord.gg/sehub"
+                href="https://discord.gg/BBeTyn6Heh"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles["subject-link"]}
