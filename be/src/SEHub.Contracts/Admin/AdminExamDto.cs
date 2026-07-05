@@ -27,6 +27,7 @@ public sealed class AdminExamDto
     public bool IsContentLocked { get; init; }
     public string? RevisionSourceCode { get; init; }
     public string? RevisionSourceTitle { get; init; }
+    public bool IsPinned { get; init; }
     public IReadOnlyList<AdminExamQuestionDto> Questions { get; init; } = [];
 }
 

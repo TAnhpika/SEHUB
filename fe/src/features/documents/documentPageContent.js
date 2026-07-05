@@ -1,6 +1,6 @@
 /** Nội dung mock từng trang tài liệu — hiển thị khi SV xem online */
 
-import { loadDocumentPreviewPage } from "@/features/documents/studentDocumentsData";
+import { loadDocumentPreviewPage, resolveDocumentApiId } from "@/features/documents/studentDocumentsData";
 
 const PAGE_CONTENT = {
   "doc-prf192-free-lecture": {
@@ -148,17 +148,20 @@ export async function loadDocumentOverview(doc) {
  * @param {number} pageNum
  */
 export async function loadDocumentPageContent(doc, pageNum) {
-  try {
+  const apiId = resolveDocumentApiId(doc);
+
+  if (apiId) {
     const preview = await loadDocumentPreviewPage(doc, pageNum);
-    if (preview?.contentUrl) {
-      return {
-        title: `${doc.name} · Trang ${preview.page}/${preview.totalPages}`,
-        lines: [`Nội dung trang ${preview.page}.`],
-        contentUrl: preview.contentUrl,
-      };
+    if (!preview?.contentUrl) {
+      throw new Error("Không tải được nội dung trang tài liệu.");
     }
-  } catch {
-    /* fallback below */
+
+    return {
+      title: `${doc.name} · Trang ${preview.page}/${preview.totalPages}`,
+      lines: [],
+      contentUrl: preview.contentUrl,
+      totalPages: preview.totalPages,
+    };
   }
 
   return getDocumentPageContent(doc, pageNum);

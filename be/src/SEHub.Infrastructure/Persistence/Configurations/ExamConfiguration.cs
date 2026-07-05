@@ -12,6 +12,7 @@ public class ExamConfiguration : IEntityTypeConfiguration<Exam>
         builder.HasKey(e => e.Id);
         builder.HasIndex(e => e.Title).IsUnique();
         builder.HasIndex(e => new { e.Code, e.Status, e.ExamType });
+        builder.HasIndex(e => new { e.Code, e.ExamType, e.IsPinned });
         builder.HasIndex(e => e.ContentHash);
         builder.Property(e => e.Code).HasMaxLength(20).IsRequired();
         builder.Property(e => e.Title).HasMaxLength(100).IsRequired();

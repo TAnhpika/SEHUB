@@ -34,7 +34,6 @@ export const PRACTICE_EXAM_DRAFT_MOCK = {
   title: "Đề thi giữa kỳ môn Lập trình Web",
   description:
     "Sinh viên nộp bài qua GitHub (public repo).\n\nYêu cầu:\n- Frontend: React hoặc Vue\n- Backend: Node.js hoặc .NET\n- Có README mô tả cách chạy dự án\n- Deadline: 23:59 Chủ nhật tuần 12",
-  allowDiscussion: true,
   pinExam: false,
   attachments: [
     {

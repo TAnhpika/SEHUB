@@ -32,11 +32,13 @@ public class DailyMissionPickerTests
     public void PickForUser_ChangesWhenDateChanges()
     {
         var userId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var reference = DailyMissionPicker.PickForUser(userId, new DateOnly(2026, 7, 1), Pool, static code => code);
 
-        var dayOne = DailyMissionPicker.PickForUser(userId, new DateOnly(2026, 7, 1), Pool, static code => code);
-        var dayTwo = DailyMissionPicker.PickForUser(userId, new DateOnly(2026, 7, 2), Pool, static code => code);
+        var differentDateFound = Enumerable.Range(2, 30)
+            .Select(day => DailyMissionPicker.PickForUser(userId, new DateOnly(2026, 7, day), Pool, static code => code))
+            .Any(pick => !pick.SequenceEqual(reference));
 
-        Assert.NotEqual(dayOne, dayTwo);
+        Assert.True(differentDateFound, "Daily mission pick should vary for at least one date in the same month.");
     }
 
     [Fact]

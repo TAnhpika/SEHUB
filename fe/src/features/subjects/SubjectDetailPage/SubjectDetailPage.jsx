@@ -43,6 +43,7 @@ function SubjectDetailPage({ page }) {
       : config.backTo;
   const code = courseCode?.toUpperCase() ?? "";
   const isDocumentsPage = page === "documents";
+  const isPracticePage = page === "practice";
 
   const { data: allExams, loading: listLoading } = useAsyncData(
     () =>
@@ -198,6 +199,9 @@ function SubjectDetailPage({ page }) {
                       <span className={styles["exam-code"]}>
                         {isDocumentsPage ? exam.name ?? exam.id : exam.id}
                       </span>
+                      {isPracticePage && exam.isPinned ? (
+                        <span className={styles.pinBadge}>Ghim</span>
+                      ) : null}
                       <FontAwesomeIcon icon={faChevronRight} className={styles.chevron} />
                     </button>
                   ) : (
@@ -205,6 +209,9 @@ function SubjectDetailPage({ page }) {
                       <span className={styles["exam-code"]}>
                         {isDocumentsPage ? exam.name ?? exam.id : exam.id}
                       </span>
+                      {isPracticePage && exam.isPinned ? (
+                        <span className={styles.pinBadge}>Ghim</span>
+                      ) : null}
                       <FontAwesomeIcon icon={faChevronRight} className={styles.chevron} />
                     </Link>
                   )}

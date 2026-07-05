@@ -206,7 +206,6 @@ export async function submitExamForApproval(payload, options = {}) {
             description: payload.description ?? "",
             submittedBy: payload.moderator,
             attachments: payload.attachments,
-            allowDiscussion: payload.allowDiscussion,
             pinExam: payload.pinExam,
           },
           mapPracticeExamFormToCreateRequest({
@@ -214,6 +213,7 @@ export async function submitExamForApproval(payload, options = {}) {
             semester: payload.semester,
             title: payload.title,
             description: payload.description,
+            pinExam: payload.pinExam,
           }),
           { confirmDuplicate },
         );
