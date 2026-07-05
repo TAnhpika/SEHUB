@@ -47,7 +47,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     public static readonly Guid ModeratorUserId = Guid.Parse("88888888-8888-8888-8888-888888888888");
     public const string ModeratorEmail = "moderator@test.local";
     public const string ModeratorPassword = "Mod@Test123";
-    public static readonly Guid AdminUserId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+    public static readonly Guid AdminUserId = Guid.Parse("99999999-9999-9999-9999-99999999999a");
     public const string AdminEmail = "admin@test.local";
     public const string AdminPassword = "Admin@Test123";
     public const string TaggedPostTitle = "CSharp Tagged Post";
