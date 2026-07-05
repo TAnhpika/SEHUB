@@ -21,6 +21,7 @@ public sealed class AdminDocumentService : IAdminDocumentService
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+    private readonly IPdfPageExtractor _pdfPageExtractor;
 
     public AdminDocumentService(
         IDocumentRepository documentRepository,
@@ -29,7 +30,8 @@ public sealed class AdminDocumentService : IAdminDocumentService
         ICloudFileStorageService cloudStorage,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork,
-        IMapper mapper)
+        IMapper mapper,
+        IPdfPageExtractor pdfPageExtractor)
     {
         _documentRepository = documentRepository;
         _categoryRepository = categoryRepository;
@@ -38,6 +40,7 @@ public sealed class AdminDocumentService : IAdminDocumentService
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _pdfPageExtractor = pdfPageExtractor;
     }
 
     public async Task<PagedResult<AdminDocumentDto>> GetDocumentsAsync(int page, int pageSize, CancellationToken cancellationToken = default)
@@ -75,9 +78,16 @@ public sealed class AdminDocumentService : IAdminDocumentService
     {
         var category = await ResolveCategoryAsync(request, cancellationToken);
 
+        await using var bufferedContent = new MemoryStream();
+        await fileContent.CopyToAsync(bufferedContent, cancellationToken);
+        bufferedContent.Position = 0;
+
+        var detectedPageCount = _pdfPageExtractor.GetPageCount(bufferedContent);
+        bufferedContent.Position = 0;
+
         var upload = await DocumentFileAccess.UploadPdfAsync(
             _cloudStorage,
-            fileContent,
+            bufferedContent,
             fileName,
             mimeType,
             fileSizeBytes,
@@ -85,7 +95,11 @@ public sealed class AdminDocumentService : IAdminDocumentService
 
         Enum.TryParse<AccessTier>(request.AccessTier, true, out var accessTier);
 
-        var pageCount = request.PageCount > 0 ? request.PageCount : 1;
+        var pageCount = detectedPageCount > 0
+            ? detectedPageCount
+            : request.PageCount > 0
+                ? request.PageCount
+                : 1;
         var title = string.IsNullOrWhiteSpace(request.Title) ? fileName : request.Title.Trim();
 
         var document = new Document

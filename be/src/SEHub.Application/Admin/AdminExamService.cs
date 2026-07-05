@@ -105,6 +105,7 @@ public sealed class AdminExamService : IAdminExamService
         }
 
         var exam = BuildExamFromRequest(request, subject, contentHash, _currentUser.UserId);
+        await ApplyPracticeExamPinAsync(exam, cancellationToken);
         await _examRepository.AddAsync(exam, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         await NotifyAdminsIfModeratorSubmittedAsync(exam, cancellationToken);
@@ -199,6 +200,7 @@ public sealed class AdminExamService : IAdminExamService
             _subjectRepository,
             cancellationToken);
         ExamSubjectBinder.ApplySubject(exam, publishedSubject);
+        await ApplyPracticeExamPinAsync(exam, cancellationToken);
         exam.UpdatedAt = DateTime.UtcNow;
         await _examRepository.UpdateAsync(exam, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -388,6 +390,8 @@ public sealed class AdminExamService : IAdminExamService
             Status = ExamStatus.PendingApproval,
             ContentHash = contentHash,
             QuestionCount = request.Questions.Count,
+            IsPinned = request.IsPinned && examType == ExamType.Practice,
+            PinnedAt = request.IsPinned && examType == ExamType.Practice ? DateTime.UtcNow : null,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -612,6 +616,17 @@ public sealed class AdminExamService : IAdminExamService
         exam.RevisionOfExamId is not null
         && (exam.Status == ExamStatus.Draft || exam.Status == ExamStatus.PendingApproval);
 
+    private async Task ApplyPracticeExamPinAsync(Exam exam, CancellationToken cancellationToken)
+    {
+        if (exam.ExamType != ExamType.Practice || !exam.IsPinned)
+        {
+            return;
+        }
+
+        await _examRepository.UnpinPracticeExamsByCodeAsync(exam.Code, exam.Id, cancellationToken);
+        exam.PinnedAt = DateTime.UtcNow;
+    }
+
     private static bool CanModeratorResubmit(Exam exam) =>
         exam.Status == ExamStatus.Rejected || IsEditableRevision(exam);
 
@@ -651,7 +666,7 @@ public sealed class AdminExamService : IAdminExamService
             RevisionSourceTitle = exam.RevisionOfExam?.Title,
             SubmittedByUsername = submitter?.Username,
             SubmittedByDisplayName = submitter?.DisplayName,
-            Attachments = attachments.Select(a => ExamAttachmentService.MapDto(exam.Id, a)).ToList(),
+            IsPinned = exam.IsPinned,            Attachments = attachments.Select(a => ExamAttachmentService.MapDto(exam.Id, a)).ToList(),
             Questions = exam.Questions.OrderBy(q => q.OrderIndex).Select(q => new AdminExamQuestionDto
             {
                 Id = q.Id,
@@ -725,7 +740,7 @@ public sealed class AdminExamService : IAdminExamService
         RevisionSourceTitle = exam.RevisionOfExam?.Title,
         SubmittedByUsername = submittedByUsername,
         SubmittedByDisplayName = submittedByDisplayName,
-    };
+        IsPinned = exam.IsPinned,    };
 
     private async Task CloneExamAttachmentsAsync(
         Guid sourceExamId,

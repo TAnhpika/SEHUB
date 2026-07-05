@@ -536,6 +536,7 @@ export async function saveAdminPracticeExamFromPayload(payload, { confirmDuplica
     title: payload.title,
     description: payload.description,
     githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
+    pinExam: payload.pinExam,
   });
 
   const dto = await createExamViaApi(body, confirmDuplicate);
@@ -702,7 +703,6 @@ let rejectedStore = [];
  *   description: string;
  *   submittedBy: string;
  *   attachments?: Array<{ name?: string }>;
- *   allowDiscussion?: boolean;
  *   pinExam?: boolean;
  * }} payload
  */
@@ -729,7 +729,6 @@ export async function submitModeratorPracticeExam(payload, createRequest, { conf
         : null,
       description: payload.description?.trim() ?? "",
       githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
-      allowDiscussion: payload.allowDiscussion ?? false,
       pinExam: payload.pinExam ?? false,
     };
 
@@ -745,6 +744,7 @@ export async function submitModeratorPracticeExam(payload, createRequest, { conf
       title: payload.title,
       description: payload.description,
       githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
+      pinExam: payload.pinExam,
     });
 
   const dto = await createExamViaApi(body, confirmDuplicate);
@@ -758,7 +758,6 @@ export async function submitModeratorPracticeExam(payload, createRequest, { conf
     submittedBy: payload.submittedBy,
     fileName,
     githubGuide: PRACTICE_EXAM_DEFAULTS.githubGuide,
-    allowDiscussion: payload.allowDiscussion,
     pinExam: payload.pinExam,
   });
   apiPendingCache = [entry, ...apiPendingCache.filter((item) => item.id !== entry.id)];

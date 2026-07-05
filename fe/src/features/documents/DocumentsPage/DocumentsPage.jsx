@@ -16,6 +16,7 @@ function DocumentsPage({ scope = "community" }) {
       subtitle="Bài giảng, slide và giáo trình theo môn — Basic xem 3 trang, Premium xem & tải full"
       courses={courses}
       detailBasePath={getSubjectCatalogPath("documents", scope)}
+      showSubjectName={false}
     />
   );
 }

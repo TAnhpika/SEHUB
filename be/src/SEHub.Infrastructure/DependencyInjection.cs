@@ -15,6 +15,7 @@ using SEHub.Infrastructure.Payments;
 using SEHub.Infrastructure.Persistence;
 using SEHub.Infrastructure.Persistence.Interceptors;
 using SEHub.Infrastructure.Caching;
+using SEHub.Infrastructure.Documents;
 using SEHub.Infrastructure.Persistence.Repositories;
 using SEHub.Infrastructure.Sms;
 using SEHub.Infrastructure.Storage;
@@ -119,6 +120,7 @@ public static class DependencyInjection
 
         services.Configure<GoogleDriveOptions>(configuration.GetSection(GoogleDriveOptions.SectionName));
         services.AddScoped<ICloudFileStorageService, GoogleDriveStorageService>();
+        services.AddScoped<IPdfPageExtractor, PdfPageExtractor>();
 
         services.Configure<CloudinaryOptions>(configuration.GetSection(CloudinaryOptions.SectionName));
         services.AddSingleton<ICdnFolderSettings, CdnFolderSettings>();

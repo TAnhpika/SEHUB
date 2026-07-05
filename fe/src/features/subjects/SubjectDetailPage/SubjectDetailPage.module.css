@@ -199,6 +199,17 @@
   color: var(--color-primary);
 }
 
+.pinBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border-radius: 9999px;
+}
+
 .exam-link:hover .exam-code {
   color: var(--color-primary-hover);
 }

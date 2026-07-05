@@ -29,7 +29,7 @@ public sealed class AdminExamDto
     public string? RevisionSourceTitle { get; init; }
     public string? SubmittedByUsername { get; init; }
     public string? SubmittedByDisplayName { get; init; }
-    public IReadOnlyList<AdminExamQuestionDto> Questions { get; init; } = [];
+    public bool IsPinned { get; init; }    public IReadOnlyList<AdminExamQuestionDto> Questions { get; init; } = [];
 }
 
 public sealed class AdminExamQuestionDto

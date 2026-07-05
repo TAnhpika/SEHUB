@@ -108,12 +108,45 @@ public class ExamRepository : IExamRepository
 
         var total = await dbQuery.CountAsync(cancellationToken);
         var items = await dbQuery
-            .OrderByDescending(e => e.CreatedAt)
+            .OrderByDescending(e => e.IsPinned)
+            .ThenByDescending(e => e.PinnedAt)
+            .ThenByDescending(e => e.CreatedAt)
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
             .ToListAsync(cancellationToken);
 
         return (items, total);
+    }
+
+    public async Task UnpinPracticeExamsByCodeAsync(
+        string code,
+        Guid? exceptExamId,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedCode = code.Trim();
+        var query = _context.Exams.Where(e =>
+            e.Code.ToLower() == normalizedCode.ToLower()
+            && e.ExamType == ExamType.Practice
+            && e.IsPinned);
+
+        if (exceptExamId is Guid examId)
+        {
+            query = query.Where(e => e.Id != examId);
+        }
+
+        var pinnedExams = await query.ToListAsync(cancellationToken);
+        if (pinnedExams.Count == 0)
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        foreach (var exam in pinnedExams)
+        {
+            exam.IsPinned = false;
+            exam.PinnedAt = null;
+            exam.UpdatedAt = now;
+        }
     }
 
     public async Task AddAsync(Exam exam, CancellationToken cancellationToken = default) =>

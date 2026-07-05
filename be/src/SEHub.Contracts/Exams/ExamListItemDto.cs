@@ -26,4 +26,4 @@ public sealed class ExamListItemDto
     public string? RevisionSourceTitle { get; init; }
     public string? SubmittedByUsername { get; init; }
     public string? SubmittedByDisplayName { get; init; }
-}
+    public bool IsPinned { get; init; }}
