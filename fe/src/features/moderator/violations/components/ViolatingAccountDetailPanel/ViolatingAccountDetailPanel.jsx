@@ -2,6 +2,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLockOpen, faTriangleExclamation, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "@/common/Modal/Modal";
 import ModeratorBadge from "@/features/moderator/components/ModeratorBadge/ModeratorBadge";
+import { ModeratorModalDetailSkeleton } from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
 import { STATUS_META } from "@/features/moderator/violations/violationsData";
 import styles from "./ViolatingAccountDetailPanel.module.css";
 
@@ -35,14 +36,12 @@ function ViolatingAccountDetailPanel({ open, detail, loading, onClose, onUnban, 
             <p className={styles.subtitle}>
               {detail.displayName} · @{detail.username}
             </p>
-          ) : (
-            <p className={styles.subtitle}>Đang tải thông tin tài khoản...</p>
-          )}
+          ) : null}
         </div>
       </header>
 
       {loading ? (
-        <p className={styles.loading}>Đang tải chi tiết...</p>
+        <ModeratorModalDetailSkeleton aria-label="Đang tải chi tiết vi phạm" />
       ) : detail ? (
         <div className={styles.body}>
           <dl className={styles.summary}>
