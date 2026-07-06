@@ -6,6 +6,7 @@ import { useAuth } from "@/context";
 import PracticeSubmissionGrader from "@/features/exams/PracticeSubmissionGrader/PracticeSubmissionGrader";
 import { getSubmissionStatusLabel } from "@/features/exams/practiceExamSubmissions";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
+import { StaffDetailSkeleton } from "@/common/Skeleton/StaffSkeleton";
 import StatusBadge from "@/features/admin/shared/StatusBadge";
 import {
   EXAM_STATUS_LABELS,
@@ -62,7 +63,7 @@ function AdminExamDetailPage() {
           { label: "Chi tiết" },
         ]}
       >
-        <p className={styles.hint}>Đang tải đề thi...</p>
+        <StaffDetailSkeleton aria-label="Đang tải đề thi" />
       </AdminPageLayout>
     );
   }

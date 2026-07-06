@@ -5,6 +5,7 @@ import Pagination from "@/common/Pagination/Pagination";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
+import { StaffModalDetailSkeleton } from "@/common/Skeleton/StaffSkeleton";
 import StatusBadge from "@/features/admin/shared/StatusBadge";
 import DashboardBadge from "@/features/admin/dashboard/DashboardBadge";
 import { ACTIVITY_BADGE_VARIANT } from "@/features/admin/dashboard/dashboardConstants";
@@ -99,7 +100,7 @@ function AdminUserDetailPage() {
           { label: "Quản lý tài khoản", to: "/admin/users" },
         ]}
       >
-        <p className={styles.empty}>Đang tải thông tin tài khoản...</p>
+        <StaffModalDetailSkeleton aria-label="Đang tải thông tin tài khoản" />
       </AdminPageLayout>
     );
   }

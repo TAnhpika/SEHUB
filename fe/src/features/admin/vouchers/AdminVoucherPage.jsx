@@ -21,6 +21,7 @@ import {
   VOUCHER_TEMPLATES,
 } from "@/features/admin/vouchers/adminVoucherPolicy";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
+import { StaffGenericTableSkeleton } from "@/common/Skeleton/StaffSkeleton";
 import AdminTableFooter from "@/features/admin/shared/AdminTableFooter";
 import { ADMIN_PAGE_SIZES } from "@/features/admin/shared/adminPaginationConstants";
 import { useAdminPagination } from "@/features/admin/shared/useAdminPagination";
@@ -255,7 +256,26 @@ function AdminVoucherPage() {
         </div>
 
         {loading ? (
-          <p className={styles.empty}>Đang tải voucher…</p>
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Sinh viên</th>
+                  <th>{USE_MOCK ? "Loại voucher" : "Level / Giảm giá"}</th>
+                  {USE_MOCK ? <th>Mã</th> : null}
+                  {USE_MOCK ? <th>Nguồn</th> : null}
+                  <th>Trạng thái</th>
+                  <th>Cấp lúc</th>
+                  <th>Hết hạn</th>
+                  <th />
+                </tr>
+              </thead>
+              <StaffGenericTableSkeleton
+                columns={USE_MOCK ? 8 : 6}
+                aria-label="Đang tải danh sách voucher"
+              />
+            </table>
+          </div>
         ) : (
           <>
             <div className={styles.tableWrap}>

@@ -16,6 +16,10 @@ import {
   revokeModeratorViaApi,
 } from "@/features/admin/permissions/adminPermissionsData";
 import PermissionConfirmModal from "@/features/admin/permissions/PermissionConfirmModal";
+import {
+  StaffAuditListSkeleton,
+  StaffStatsStripSkeleton,
+} from "@/common/Skeleton/StaffSkeleton";
 import permStyles from "@/features/admin/permissions/AdminPermissions.module.css";
 import AdminTableFooter from "@/features/admin/shared/AdminTableFooter";
 import { ADMIN_PAGE_SIZES } from "@/features/admin/shared/adminPaginationConstants";
@@ -136,12 +140,26 @@ function AdminPermissionsPage() {
       });
   }
 
+  if (loading) {
+    return (
+      <AdminPageLayout
+        title="Phân quyền Mod"
+        breadcrumbs={[{ label: "Dashboard", to: "/admin" }, { label: "Phân quyền Mod" }]}
+      >
+        <StaffStatsStripSkeleton count={4} aria-label="Đang tải thống kê phân quyền" />
+        <div className={permStyles.layout}>
+          <StaffAuditListSkeleton aria-label="Đang tải danh sách moderator" />
+          <StaffAuditListSkeleton aria-label="Đang tải danh sách ứng viên" />
+        </div>
+      </AdminPageLayout>
+    );
+  }
+
   return (
     <AdminPageLayout
       title="Phân quyền Mod"
       breadcrumbs={[{ label: "Dashboard", to: "/admin" }, { label: "Phân quyền Mod" }]}
     >
-      {loading ? <p>Đang tải dữ liệu phân quyền…</p> : null}
       <div className={permStyles.statsStrip}>
         <div className={permStyles.statCard}>
           <span className={permStyles.statIcon} aria-hidden>
