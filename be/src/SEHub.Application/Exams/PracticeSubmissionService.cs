@@ -10,6 +10,7 @@ using SEHub.Contracts.Exams;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
+using SEHub.Shared.Constants;
 
 namespace SEHub.Application.Exams;
 
@@ -177,6 +178,17 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
             request.ReviewerComment,
             _currentUser.UserId,
             cancellationToken);
+
+        if (_currentUser.Role == RoleNames.Moderator && _currentUser.UserId is Guid reviewerId)
+        {
+            await _workflowNotifications.NotifyAdminsPracticeReviewedByModeratorAsync(
+                submission,
+                exam,
+                status,
+                request.ReviewerComment,
+                reviewerId,
+                cancellationToken);
+        }
 
         return _mapper.Map<PracticeSubmissionDto>(submission);
     }

@@ -1,10 +1,18 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using SEHub.API.IntegrationTests.Social;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Feed;
 using SEHub.Contracts.Users;
+using SEHub.Domain.Enums;
+using SEHub.Infrastructure.Identity;
+using SEHub.Infrastructure.Persistence;
+using SEHub.Shared.Constants;
 
 namespace SEHub.API.IntegrationTests.Moderation;
 
@@ -87,17 +95,20 @@ public sealed class ReportIntegrationTests : IClassFixture<CustomWebApplicationF
     [Fact]
     public async Task EscalateUserReport_AddsUserToViolationsQueue()
     {
+        await SeedEscalationTargetUserAsync();
+
         var token = await _factory.LoginAndGetTokenAsync(_client);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        await _client.PostAsJsonAsync(
-            $"/api/v1/users/{CustomWebApplicationFactory.ModeratorUserId}/report",
+        var reportResponse = await _client.PostAsJsonAsync(
+            $"/api/v1/users/{SocialPhase3EndpointsTests.TargetUserId}/report",
             new ReportUserRequest
             {
-                Source = "chat",
+                Source = "profile",
                 Reason = "spam",
                 Detail = "Repeated spam messages in chat during integration test."
             });
+        reportResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
@@ -105,7 +116,7 @@ public sealed class ReportIntegrationTests : IClassFixture<CustomWebApplicationF
         var queueResponse = await _client.GetAsync("/api/v1/admin/moderation/user-reports?status=Pending&page=1&pageSize=20");
         queueResponse.EnsureSuccessStatusCode();
         var queue = await queueResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResult<UserReportDto>>>();
-        var report = queue!.Data!.Items.First(r => r.ReportedUserId == CustomWebApplicationFactory.ModeratorUserId);
+        var report = queue!.Data!.Items.First(r => r.ReportedUserId == SocialPhase3EndpointsTests.TargetUserId);
 
         var escalateResponse = await _client.PostAsJsonAsync(
             $"/api/v1/admin/moderation/reports/{report.Id}/escalate-violations",
@@ -116,6 +127,32 @@ public sealed class ReportIntegrationTests : IClassFixture<CustomWebApplicationF
             "/api/v1/admin/moderation/violations?status=all&page=1&pageSize=20");
         violationsResponse.EnsureSuccessStatusCode();
         var violations = await violationsResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResult<ViolatingUserDto>>>();
-        violations!.Data!.Items.Should().Contain(u => u.Id == CustomWebApplicationFactory.ModeratorUserId);
+        violations!.Data!.Items.Should().Contain(u => u.Id == SocialPhase3EndpointsTests.TargetUserId);
+    }
+
+    private async Task SeedEscalationTargetUserAsync()
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<SEHubDbContext>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+        if (await userManager.FindByIdAsync(SocialPhase3EndpointsTests.TargetUserId.ToString()) is not null)
+        {
+            return;
+        }
+
+        var bronzeLevel = await context.LevelConfigs.OrderBy(l => l.MinPoints).FirstAsync();
+        var user = new ApplicationUser
+        {
+            Id = SocialPhase3EndpointsTests.TargetUserId,
+            UserName = SocialPhase3EndpointsTests.TargetUsername,
+            Email = "phase3target@test.local",
+            EmailConfirmed = true,
+            DisplayName = "Phase3 Target",
+            LevelId = bronzeLevel.Id
+        };
+
+        await userManager.CreateAsync(user, SocialPhase3EndpointsTests.TargetPassword);
+        await userManager.AddToRoleAsync(user, RoleNames.Student);
     }
 }

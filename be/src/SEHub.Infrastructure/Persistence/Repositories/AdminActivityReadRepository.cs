@@ -4,6 +4,7 @@ using SEHub.Application.Admin;
 using SEHub.Contracts.Admin;
 using SEHub.Domain.Enums;
 using SEHub.Infrastructure.Persistence;
+using SEHub.Shared.Constants;
 
 namespace SEHub.Infrastructure.Persistence.Repositories;
 
@@ -22,6 +23,7 @@ public sealed class AdminActivityReadRepository : IAdminActivityReadRepository
 
         events.AddRange(await LoadPaymentEventsAsync(limit, cancellationToken));
         events.AddRange(await LoadExamEventsAsync(limit, cancellationToken));
+        events.AddRange(await LoadPracticeReviewEventsAsync(limit, cancellationToken));
         events.AddRange(await LoadReportEventsAsync(limit, cancellationToken));
         events.AddRange(await LoadUserRegistrationEventsAsync(limit, cancellationToken));
 
@@ -155,6 +157,77 @@ public sealed class AdminActivityReadRepository : IAdminActivityReadRepository
                     Text = $"EXAM_PUBLISHED — admin: Phê duyệt đề {label} — public",
                     CreatedAt = exam.UpdatedAt ?? exam.CreatedAt,
                 },
+            };
+        }).ToList();
+    }
+
+    private async Task<IReadOnlyList<AdminAuditLogItemDto>> LoadPracticeReviewEventsAsync(
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        var submissions = await _context.PracticeSubmissions
+            .AsNoTracking()
+            .Include(s => s.Exam)
+            .Where(s => s.ReviewedAt != null)
+            .OrderByDescending(s => s.ReviewedAt)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        if (submissions.Count == 0)
+        {
+            return [];
+        }
+
+        var userIds = submissions
+            .Select(s => s.UserId)
+            .Concat(submissions.Where(s => s.ReviewedById.HasValue).Select(s => s.ReviewedById!.Value))
+            .Distinct()
+            .ToList();
+
+        var userMap = await _context.Users
+            .AsNoTracking()
+            .Where(u => userIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.UserName ?? u.Email ?? "user", cancellationToken);
+
+        var adminRoleId = await _context.Roles
+            .AsNoTracking()
+            .Where(r => r.Name == RoleNames.Admin)
+            .Select(r => r.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var adminUserIds = adminRoleId == Guid.Empty
+            ? new HashSet<Guid>()
+            : (await _context.UserRoles
+                .AsNoTracking()
+                .Where(ur => ur.RoleId == adminRoleId)
+                .Select(ur => ur.UserId)
+                .ToListAsync(cancellationToken))
+            .ToHashSet();
+
+        return submissions.Select(submission =>
+        {
+            userMap.TryGetValue(submission.UserId, out var studentUsername);
+            var reviewerUsername = submission.ReviewedById is Guid reviewerId
+                && userMap.TryGetValue(reviewerId, out var reviewerLabel)
+                ? reviewerLabel
+                : "mod";
+            var reviewerRoleLabel = submission.ReviewedById is Guid reviewedById && adminUserIds.Contains(reviewedById)
+                ? "admin"
+                : "mod";
+            var exam = submission.Exam;
+            var paper = string.IsNullOrWhiteSpace(exam?.Title) ? exam?.Code ?? "—" : exam.Title;
+            var code = exam?.Code ?? "—";
+            var statusLabel = FormatPracticeReviewStatus(submission.Status);
+            var detail = $"Chấm bài TH {paper} ({code}) — SV @{studentUsername ?? "unknown"}: {statusLabel}";
+
+            return new AdminAuditLogItemDto
+            {
+                Id = submission.Id,
+                Type = "exam",
+                Action = "PRACTICE_REVIEWED",
+                Detail = detail,
+                Text = $"PRACTICE_REVIEWED — {reviewerRoleLabel} (@{reviewerUsername}): {detail}",
+                CreatedAt = submission.ReviewedAt ?? submission.UpdatedAt ?? submission.CreatedAt,
             };
         }).ToList();
     }
@@ -299,6 +372,15 @@ public sealed class AdminActivityReadRepository : IAdminActivityReadRepository
             CreatedAt = row.CreatedAt,
         }).ToList();
     }
+
+    private static string FormatPracticeReviewStatus(PracticeSubmissionStatus status) =>
+        status switch
+        {
+            PracticeSubmissionStatus.Passed => "Đạt",
+            PracticeSubmissionStatus.Failed => "Chưa đạt",
+            PracticeSubmissionStatus.Reviewed => "Đã xem",
+            _ => status.ToString(),
+        };
 
     private static AdminAuditLogItemDto MapReportEvent(
         Guid id,
