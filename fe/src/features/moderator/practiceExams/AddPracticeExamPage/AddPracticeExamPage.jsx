@@ -18,6 +18,7 @@ import { saveAdminPracticeExamFromPayload } from "@/features/admin/exams/adminEx
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import { useExamFormFlow } from "@/features/exams/examFormFlow";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
+import { ModeratorFormSkeleton } from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
 import ExamContributionAuditList from "@/features/moderator/exams/components/ExamContributionAuditList/ExamContributionAuditList";
 import {
   ApiError,
@@ -381,7 +382,7 @@ function AddPracticeExamPage() {
   ];
 
   const pageBody = loadingExam ? (
-    <p className={styles.hint}>Đang tải đề...</p>
+    <ModeratorFormSkeleton aria-label="Đang tải đề thực hành" />
   ) : loadExamError ? (
     <p className={styles.hint}>{loadExamError}</p>
   ) : (

@@ -7,6 +7,10 @@ import { useToast } from "@/common/Toast/ToastProvider";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import ModeratorToolbar from "@/features/moderator/components/ModeratorToolbar/ModeratorToolbar";
 import ContentPostDetailPanel from "@/features/moderator/content/components/ContentPostDetailPanel/ContentPostDetailPanel";
+import {
+    ModeratorContentQueueTableSkeleton,
+    ModeratorDetailSkeleton,
+} from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
 import { CONTENT_QUEUE_PAGE_SIZE, filterContentQueue, SORT_OPTIONS } from "@/features/moderator/content/contentModerationData";
 import { useContentModerationDetail, useContentModerationQueue } from "@/features/moderator/content/contentModerationStore";
 import styles from "./ContentModerationPage.module.css";
@@ -230,14 +234,11 @@ function ContentModerationPage() {
                                         <th>Thời gian</th>
                                     </tr>
                                 </thead>
+                                {loading ? (
+                                    <ModeratorContentQueueTableSkeleton />
+                                ) : (
                                 <tbody>
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan={4} className={styles.empty}>
-                                                Đang tải hàng đợi duyệt...
-                                            </td>
-                                        </tr>
-                                    ) : error ? (
+                                    {error ? (
                                         <tr>
                                             <td colSpan={4} className={styles.empty} role="alert">
                                                 {error}
@@ -316,6 +317,7 @@ function ContentModerationPage() {
                                         })
                                     )}
                                 </tbody>
+                                )}
                             </table>
                         </div>
 
@@ -346,7 +348,7 @@ function ContentModerationPage() {
                             </button>
                         ) : null}
                         {detailLoading && focusedId ? (
-                            <div className={styles.empty}>Đang tải chi tiết bài viết...</div>
+                            <ModeratorDetailSkeleton aria-label="Đang tải chi tiết bài viết" />
                         ) : (
                             <ContentPostDetailPanel
                                 item={focusedItem}

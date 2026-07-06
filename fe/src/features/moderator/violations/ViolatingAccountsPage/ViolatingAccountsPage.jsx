@@ -19,6 +19,7 @@ import ConfirmDialog from "@/common/ConfirmDialog/ConfirmDialog";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import ModeratorToolbar from "@/features/moderator/components/ModeratorToolbar/ModeratorToolbar";
 import ViolatingAccountDetailPanel from "@/features/moderator/violations/components/ViolatingAccountDetailPanel/ViolatingAccountDetailPanel";
+import { ModeratorAccountsTableSkeleton } from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
 import EscalatedReportDetailModal from "@/features/moderator/violations/components/EscalatedReportDetailModal/EscalatedReportDetailModal";
 import {
   DEFAULT_BAN_REASON,
@@ -412,14 +413,11 @@ function ViolatingAccountsPage() {
                   <th aria-label="Thao tác khác" />
                 </tr>
               </thead>
+              {loading ? (
+                <ModeratorAccountsTableSkeleton />
+              ) : (
               <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={7} className={styles.empty}>
-                      Đang tải danh sách...
-                    </td>
-                  </tr>
-                ) : accounts.length === 0 ? (
+                {accounts.length === 0 ? (
                   <tr>
                     <td colSpan={7} className={styles.empty}>
                       {focusUserId
@@ -502,6 +500,7 @@ function ViolatingAccountsPage() {
                   })
                 )}
               </tbody>
+              )}
             </table>
           </div>
 

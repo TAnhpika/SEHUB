@@ -9,6 +9,7 @@ import FinalExamInfoStep from "@/features/moderator/finalExams/steps/FinalExamIn
 import FinalExamQuestionsStep from "@/features/moderator/finalExams/steps/FinalExamQuestionsStep";
 import FinalExamReviewStep from "@/features/moderator/finalExams/steps/FinalExamReviewStep";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
+import { ModeratorFormSkeleton } from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
 import styles from "./AddFinalExamWizard.module.css";
 
 const ADD_CRUMBS = [
@@ -122,7 +123,7 @@ function WizardContent() {
   }, [examId, loadExamForEdit, resetWizard]);
 
   if (examId && loadingExam) {
-    return <p className={styles.loading}>Đang tải đề để chỉnh sửa...</p>;
+    return <ModeratorFormSkeleton aria-label="Đang tải đề để chỉnh sửa" />;
   }
 
   if (examId && loadExamError) {

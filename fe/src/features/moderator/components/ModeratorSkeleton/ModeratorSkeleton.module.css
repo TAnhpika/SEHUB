@@ -1,0 +1,237 @@
+.checkShimmer {
+  display: block;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 4px;
+}
+
+.lineLg {
+  display: block;
+  width: 72%;
+  height: 0.875rem;
+  margin-bottom: 0.5rem;
+  border-radius: 6px;
+}
+
+.lineMd {
+  display: block;
+  width: 55%;
+  height: 0.8125rem;
+  border-radius: 6px;
+}
+
+.lineSm {
+  display: block;
+  width: 40%;
+  height: 0.75rem;
+  border-radius: 6px;
+}
+
+.tableRow td {
+  padding: 0.875rem 1rem;
+  vertical-align: middle;
+}
+
+.accountsCell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.avatarShimmer {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.accountsLines {
+  flex: 1;
+  min-width: 0;
+}
+
+.cellShimmer {
+  display: block;
+  width: 4.5rem;
+  height: 0.75rem;
+  border-radius: 6px;
+}
+
+.cellShimmerWide {
+  width: 6rem;
+}
+
+.queueList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.5rem;
+}
+
+.queueCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: var(--moderator-surface, var(--color-surface));
+  border: 1px solid var(--moderator-border-light, var(--color-border-light));
+  border-radius: 10px;
+}
+
+.queueAvatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.queueBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.detailPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  height: 100%;
+  padding: 1.25rem;
+}
+
+.detailHead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detailTitle {
+  width: 65%;
+  height: 1.25rem;
+  border-radius: 8px;
+}
+
+.detailMeta {
+  width: 45%;
+  height: 0.8125rem;
+  border-radius: 6px;
+}
+
+.detailBlock {
+  width: 100%;
+  height: 5rem;
+  border-radius: 10px;
+}
+
+.detailBlockTall {
+  flex: 1;
+  min-height: 10rem;
+}
+
+.detailActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.actionShimmer {
+  width: 6rem;
+  height: 2.25rem;
+  border-radius: var(--radius-full);
+}
+
+.formPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  background: var(--moderator-surface, var(--color-surface));
+  border: 1px solid var(--moderator-border-light, var(--color-border-light));
+  border-radius: 12px;
+}
+
+.formStepper {
+  width: 100%;
+  height: 2.5rem;
+  border-radius: 8px;
+}
+
+.formField {
+  width: 100%;
+  height: 2.75rem;
+  border-radius: 8px;
+}
+
+.formFieldTall {
+  height: 6rem;
+}
+
+.featuredWorkspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.featuredColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--moderator-surface, var(--color-surface));
+  border: 1px solid var(--moderator-border-light, var(--color-border-light));
+  border-radius: 12px;
+  min-height: 20rem;
+}
+
+.featuredHeading {
+  width: 40%;
+  height: 1rem;
+  border-radius: 6px;
+}
+
+.featuredCard {
+  width: 100%;
+  height: 4.5rem;
+  border-radius: 10px;
+}
+
+.listPanel {
+  padding: 1rem 1.25rem;
+  background: var(--moderator-surface, var(--color-surface));
+  border: 1px solid var(--moderator-border-light, var(--color-border-light));
+  border-radius: 12px;
+}
+
+.listRows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.listRow {
+  width: 100%;
+  height: 4rem;
+  border-radius: 10px;
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0 0.25rem;
+}
+
+.modalSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.modalField {
+  height: 2.5rem;
+  border-radius: 8px;
+}
+
+.modalHistory {
+  height: 8rem;
+  border-radius: 10px;
+}
