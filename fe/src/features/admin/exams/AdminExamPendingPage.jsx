@@ -19,6 +19,7 @@ import { useToast } from "@/common/Toast/ToastProvider";
 import { ACTION_LOADING } from "@/utils/actionLoadingLabels";
 import { useScrollBoundaryChain } from "@/hooks/useScrollBoundaryChain";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
+import { StaffQueueSkeleton } from "@/common/Skeleton/StaffSkeleton";
 import AdminExamRejectModal from "@/features/admin/exams/AdminExamRejectModal";
 import {
   EXAM_STATUS_LABELS,
@@ -409,9 +410,7 @@ function AdminExamPendingPage() {
 
             <div className={pendingStyles.queueScroll}>
               {loading ? (
-                <div className={pendingStyles.emptyQueue}>
-                  <p className={pendingStyles.emptyDesc}>Đang tải hàng chờ...</p>
-                </div>
+                <StaffQueueSkeleton aria-label="Đang tải hàng chờ đề thi" />
               ) : filteredPending.length === 0 ? (
                 <div className={pendingStyles.emptyQueue}>
                   <FontAwesomeIcon icon={faInbox} className={pendingStyles.emptyIcon} />

@@ -5,6 +5,7 @@ import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { extractCourseSubjectCode } from "@/utils/examDisplay";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
+import { StaffFormSkeleton } from "@/common/Skeleton/StaffSkeleton";
 import FinalExamInfoFields from "@/features/exams/finalExam/FinalExamInfoFields";
 import FinalExamMarkdownImportPanel from "@/features/exams/finalExam/FinalExamMarkdownImportPanel";
 import QuestionEditorCard from "@/features/moderator/finalExams/components/QuestionEditorCard";
@@ -547,7 +548,7 @@ function AdminExamFormPage() {
           { label: "Quản lý đề thi", to: "/admin/exams" },
         ]}
       >
-        <p className={styles.hint}>Đang tải thông tin đề thi.</p>
+        <StaffFormSkeleton aria-label="Đang tải thông tin đề thi" />
       </AdminPageLayout>
     );
   }

@@ -6,7 +6,6 @@ import {
   faFlag,
   faInbox,
   faMousePointer,
-  faSpinner,
   faTriangleExclamation,
   faUserSlash,
   faXmark,
@@ -15,6 +14,7 @@ import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { ACTION_LOADING } from "@/utils/actionLoadingLabels";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
+import { StaffQueueSkeleton } from "@/common/Skeleton/StaffSkeleton";
 import StatusBadge from "@/features/admin/shared/StatusBadge";
 import { getAdminUserDetailUrl } from "@/features/admin/adminMockData";
 import {
@@ -473,10 +473,7 @@ function AdminModerationPage() {
 
             <div className={modStyles.queueScroll}>
               {isLoading ? (
-                <div className={modStyles.emptyQueue} role="status" aria-live="polite">
-                  <FontAwesomeIcon icon={faSpinner} spin className={modStyles.emptyIcon} />
-                  <p className={modStyles.emptyTitle}>Đang tải báo cáo…</p>
-                </div>
+                <StaffQueueSkeleton aria-label="Đang tải báo cáo" />
               ) : filtered.length === 0 ? (
                 <div className={modStyles.emptyQueue}>
                   <FontAwesomeIcon icon={faInbox} className={modStyles.emptyIcon} />
