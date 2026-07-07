@@ -10,6 +10,7 @@ import {
   loadPendingContributionCount,
 } from "@/features/moderator/exams/moderatorExamContributionStore";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
+import { ModeratorAuditListSkeleton } from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
 import styles from "./ModeratorExamContributionHistoryPage.module.css";
 
 const PAGE_SIZE = 8;
@@ -153,7 +154,7 @@ function ModeratorExamContributionHistoryPage() {
 
         <section className={styles.panel}>
           {loading ? (
-            <p className={styles.loading}>Đang tải lịch sử đóng góp...</p>
+            <ModeratorAuditListSkeleton aria-label="Đang tải lịch sử đóng góp" />
           ) : loadError ? (
             <p className={styles.error}>{loadError}</p>
           ) : (

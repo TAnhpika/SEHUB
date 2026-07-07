@@ -16,6 +16,10 @@ import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShe
 import ModeratorToolbar from "@/features/moderator/components/ModeratorToolbar/ModeratorToolbar";
 import ContentPostDetailPanel from "@/features/moderator/content/components/ContentPostDetailPanel/ContentPostDetailPanel";
 import {
+  ModeratorContentHistoryTableSkeleton,
+  ModeratorDetailSkeleton,
+} from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
+import {
   CONTENT_HISTORY_PAGE_SIZE,
   countContentByStatus,
   filterContentItems,
@@ -272,14 +276,11 @@ function ContentModerationHistoryPage() {
                     <th>Thời gian</th>
                   </tr>
                 </thead>
+                {loading ? (
+                  <ModeratorContentHistoryTableSkeleton />
+                ) : (
                 <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={4} className={styles.empty}>
-                        Đang tải lịch sử duyệt...
-                      </td>
-                    </tr>
-                  ) : error ? (
+                  {error ? (
                     <tr>
                       <td colSpan={4} className={styles.empty} role="alert">
                         {error}
@@ -341,6 +342,7 @@ function ContentModerationHistoryPage() {
                     })
                   )}
                 </tbody>
+                )}
               </table>
             </div>
 
@@ -361,7 +363,7 @@ function ContentModerationHistoryPage() {
 
           <aside className={styles.detailCol} aria-label="Chi tiết bài viết">
             {detailLoading && focusedId ? (
-              <div className={styles.empty}>Đang tải chi tiết bài viết...</div>
+              <ModeratorDetailSkeleton aria-label="Đang tải chi tiết bài viết" />
             ) : (
               <ContentPostDetailPanel item={focusedItemResolved} mode="history" />
             )}

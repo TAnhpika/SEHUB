@@ -7,11 +7,14 @@ import {
   faFlag,
   faInbox,
   faMousePointer,
-  faSpinner,
   faTrash,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
+import {
+  ModeratorDetailSkeleton,
+  ModeratorQueueSkeleton,
+} from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { ACTION_LOADING } from "@/utils/actionLoadingLabels";
 import {
@@ -683,11 +686,7 @@ function ReportsPage() {
 
           <div className={styles.queueScroll}>
             {isLoading ? (
-              <div className={styles.loadingQueue} role="status" aria-live="polite">
-                <FontAwesomeIcon icon={faSpinner} spin className={styles.loadingIcon} />
-                <p className={styles.emptyTitle}>Đang tải báo cáo…</p>
-                <p className={styles.emptyDesc}>Đồng bộ từ máy chủ.</p>
-              </div>
+              <ModeratorQueueSkeleton aria-label="Đang tải báo cáo" />
             ) : filtered.length === 0 ? (
               <div className={styles.emptyQueue}>
                 <FontAwesomeIcon icon={faInbox} className={styles.emptyIcon} />
@@ -764,10 +763,7 @@ function ReportsPage() {
           className={`${styles.detailCol} ${isMobile && !selectedId ? styles.detailColMobileHidden : ""}`}
         >
           {isLoading ? (
-            <div className={styles.detailEmpty} role="status" aria-live="polite">
-              <FontAwesomeIcon icon={faSpinner} spin className={styles.loadingIcon} />
-              <p className={styles.emptyTitle}>Đang tải…</p>
-            </div>
+            <ModeratorDetailSkeleton aria-label="Đang tải chi tiết báo cáo" />
           ) : !selected ? (
             <div className={styles.detailEmpty}>
               <FontAwesomeIcon icon={faMousePointer} className={styles.emptyIcon} />

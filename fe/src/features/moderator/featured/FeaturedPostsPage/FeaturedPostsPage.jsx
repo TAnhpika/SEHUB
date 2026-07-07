@@ -10,6 +10,7 @@ import {
 import { useToast } from "@/common/Toast/ToastProvider";
 import ContentPostDetailPanel from "@/features/moderator/content/components/ContentPostDetailPanel/ContentPostDetailPanel";
 import ModeratorEmptyState from "@/features/moderator/components/ModeratorEmptyState/ModeratorEmptyState";
+import { ModeratorFeaturedWorkspaceSkeleton } from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import {
   enrichFeaturedPost,
@@ -298,7 +299,7 @@ function FeaturedPostsPage() {
       description="Ghim các tài liệu và thông báo quan trọng lên đầu bảng tin cộng đồng. Nhấp bài viết để xem chi tiết trước khi ghim."
       crumbs={FEATURED_CRUMBS}
     >
-      {loading ? <p>Đang tải bài viết…</p> : null}
+      {loading ? <ModeratorFeaturedWorkspaceSkeleton /> : (
       <div className={styles.workspace}>
         <div className={styles.mainGrid}>
           <section className={styles.pinnedColumn} aria-labelledby="pinned-heading">
@@ -397,6 +398,7 @@ function FeaturedPostsPage() {
           />
         </aside>
       </div>
+      )}
     </ModeratorPageShell>
   );
 }
