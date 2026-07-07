@@ -95,6 +95,14 @@ public interface IWorkflowNotificationService
         Guid? reviewerUserId,
         CancellationToken cancellationToken = default);
 
+    Task NotifyAdminsPracticeReviewedByModeratorAsync(
+        PracticeSubmission submission,
+        Exam exam,
+        PracticeSubmissionStatus status,
+        string? reviewerComment,
+        Guid moderatorUserId,
+        CancellationToken cancellationToken = default);
+
     Task NotifyMentionedInCommentAsync(
         Post post,
         Comment comment,
@@ -480,12 +488,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         Guid? reviewerUserId,
         CancellationToken cancellationToken = default)
     {
-        var statusLabel = status switch
-        {
-            PracticeSubmissionStatus.Passed => "Đạt",
-            PracticeSubmissionStatus.Failed => "Chưa đạt",
-            _ => "Đã chấm",
-        };
+        var statusLabel = BuildPracticeReviewStatusLabel(status);
 
         var body = !string.IsNullOrWhiteSpace(reviewerComment)
             ? Truncate(reviewerComment, 160)
@@ -498,6 +501,34 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             body,
             ExamFrontendPaths.BuildPracticeExamDetailPath(exam.Code, exam.Title),
             reviewerUserId,
+            submission.Id,
+            cancellationToken);
+    }
+
+    public async Task NotifyAdminsPracticeReviewedByModeratorAsync(
+        PracticeSubmission submission,
+        Exam exam,
+        PracticeSubmissionStatus status,
+        string? reviewerComment,
+        Guid moderatorUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var actorName = await ResolveActorNameAsync(moderatorUserId, cancellationToken);
+        var student = await _userRepository.GetByIdAsync(submission.UserId, cancellationToken);
+        var studentLabel = student?.Username ?? student?.DisplayName ?? "sinh viên";
+        var statusLabel = BuildPracticeReviewStatusLabel(status);
+        var paper = string.IsNullOrWhiteSpace(exam.Title) ? exam.Code : exam.Title;
+        var body = !string.IsNullOrWhiteSpace(reviewerComment)
+            ? $"@{studentLabel} — {paper} ({exam.Code}): {statusLabel} — {Truncate(reviewerComment, 120)}"
+            : $"@{studentLabel} — {paper} ({exam.Code}): {statusLabel}";
+
+        await NotifyRoleMembersAsync(
+            [RoleNames.Admin],
+            NotificationType.Moderation,
+            $"{actorName} đã chấm bài thực hành",
+            body,
+            $"/admin/exams/submissions?highlight={submission.Id}",
+            moderatorUserId,
             submission.Id,
             cancellationToken);
     }
@@ -712,6 +743,14 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
 
         return Truncate(post.Content, 120);
     }
+
+    private static string BuildPracticeReviewStatusLabel(PracticeSubmissionStatus status) =>
+        status switch
+        {
+            PracticeSubmissionStatus.Passed => "Đạt",
+            PracticeSubmissionStatus.Failed => "Chưa đạt",
+            _ => "Đã chấm",
+        };
 
     private static string Truncate(string? value, int maxLength)
     {

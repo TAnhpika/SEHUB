@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import Pagination from "@/common/Pagination/Pagination";
 import { useAuth } from "@/context";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
@@ -25,6 +25,9 @@ function resolveAdminExamLink(courseCode) {
 
 function AdminPracticeSubmissionsPage() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get("highlight");
+  const highlightRef = useRef(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const {
@@ -52,6 +55,19 @@ function AdminPracticeSubmissionsPage() {
   function handleGraded() {
     setRefreshKey((k) => k + 1);
   }
+
+  useEffect(() => {
+    if (!highlightId || !highlightRef.current) {
+      return undefined;
+    }
+
+    highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    const timer = window.setTimeout(() => {
+      highlightRef.current?.classList.remove(pageStyles.itemHighlight);
+    }, 4000);
+
+    return () => window.clearTimeout(timer);
+  }, [highlightId, pageSubmissions]);
 
   return (
     <AdminPageLayout
@@ -145,8 +161,13 @@ function AdminPracticeSubmissionsPage() {
             <ul className={pageStyles.list}>
               {pageSubmissions.map((sub) => {
                 const adminExam = getAdminExams().find((e) => e.code === sub.courseCode);
+                const isHighlighted = highlightId === sub.id;
                 return (
-                  <li key={sub.id} className={pageStyles.item}>
+                  <li
+                    key={sub.id}
+                    ref={isHighlighted ? highlightRef : null}
+                    className={`${pageStyles.item} ${isHighlighted ? pageStyles.itemHighlight : ""}`}
+                  >
                     <div className={pageStyles.itemMain}>
                       <div className={pageStyles.itemHead}>
                         <h2 className={pageStyles.studentName}>{sub.displayName}</h2>
