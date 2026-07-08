@@ -350,7 +350,7 @@ export async function loadFeaturedPostsState({ search = "" } = {}) {
 
   const state = await adminApi.getFeaturedPosts({
     search: search.trim() || undefined,
-    pageSize: 50,
+    pageSize: 20,
   });
   const pinned = (state.pinned ?? []).map(mapModeratorFeaturedItem);
   const searchPool = (state.candidates ?? []).map(mapModeratorFeaturedItem);

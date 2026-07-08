@@ -235,18 +235,18 @@ async function withAuthRetry(path, { auth = true, retryOnUnauthorized = true, ex
 }
 
 export async function apiFormRequest(path, { method = "POST", formData, auth = true, retryOnUnauthorized = true } = {}) {
-  const headers = {
-    Accept: "application/json",
-  };
-
-  if (auth) {
-    const token = getAccessToken();
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-  }
-
   async function executeRequest() {
+    const headers = {
+      Accept: "application/json",
+    };
+
+    if (auth) {
+      const token = getAccessToken();
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+    }
+
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
@@ -317,22 +317,22 @@ export async function refreshSession() {
 }
 
 export async function apiRequest(path, { method = "GET", body, auth = true, retryOnUnauthorized = true, signal, cache } = {}) {
-  const headers = {
-    Accept: "application/json",
-  };
-
-  if (body !== undefined) {
-    headers["Content-Type"] = "application/json";
-  }
-
-  if (auth) {
-    const token = getAccessToken();
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-  }
-
   async function executeRequest() {
+    const headers = {
+      Accept: "application/json",
+    };
+
+    if (body !== undefined) {
+      headers["Content-Type"] = "application/json";
+    }
+
+    if (auth) {
+      const token = getAccessToken();
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+    }
+
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
@@ -347,18 +347,18 @@ export async function apiRequest(path, { method = "GET", body, auth = true, retr
 }
 
 export async function apiUploadRequest(path, formData, { auth = true, retryOnUnauthorized = true } = {}) {
-  const headers = {
-    Accept: "application/json",
-  };
-
-  if (auth) {
-    const token = getAccessToken();
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-  }
-
   async function executeRequest() {
+    const headers = {
+      Accept: "application/json",
+    };
+
+    if (auth) {
+      const token = getAccessToken();
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+    }
+
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method: "POST",
       headers,
@@ -371,18 +371,18 @@ export async function apiUploadRequest(path, formData, { auth = true, retryOnUna
 }
 
 export async function downloadCsv(path, { auth = true, retryOnUnauthorized = true } = {}) {
-  const headers = {
-    Accept: "text/csv",
-  };
-
-  if (auth) {
-    const token = getAccessToken();
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-  }
-
   async function executeRequest() {
+    const headers = {
+      Accept: "text/csv",
+    };
+
+    if (auth) {
+      const token = getAccessToken();
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+    }
+
     const response = await fetch(`${API_BASE_URL}${path}`, { method: "GET", headers });
     if (!response.ok) {
       throw new ApiError("Không tải được file xuất.", { status: response.status });

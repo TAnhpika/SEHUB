@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useRef } from "react";
-import { getAccessToken } from "@/api/httpClient";
+import { getAccessToken, getRefreshToken, refreshSession } from "@/api/httpClient";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5006";
 const PRESENCE_PING_MS = 60_000;
+
+function isUnauthorizedHubError(error) {
+  const message = String(error?.message ?? error ?? "");
+  return /401|unauthorized/i.test(message);
+}
 
 export function useChatHub({
   onReceiveMessage,
@@ -64,8 +69,11 @@ export function useChatHub({
       if (cancelled) return;
 
       connection = new signalR.HubConnectionBuilder()
-        .withUrl(`${API_BASE_URL}/hubs/chat?access_token=${encodeURIComponent(token)}`, {
+        .withUrl(`${API_BASE_URL}/hubs/chat`, {
           withCredentials: true,
+          // Read token on each negotiate/reconnect so an expired token after
+          // httpClient refreshSession() does not stick forever in the query string.
+          accessTokenFactory: () => getAccessToken() ?? "",
         })
         .withAutomaticReconnect()
         .configureLogging(signalR.LogLevel.Warning)
@@ -95,13 +103,27 @@ export function useChatHub({
 
       try {
         await connection.start();
-        if (!cancelled) {
-          pingTimer = window.setInterval(() => {
-            pingPresence();
-          }, PRESENCE_PING_MS);
+      } catch (error) {
+        if (!cancelled && isUnauthorizedHubError(error) && getRefreshToken()) {
+          try {
+            await refreshSession();
+            if (!cancelled) {
+              await connection.start();
+            }
+          } catch {
+            /* hub optional when offline / refresh failed */
+            return;
+          }
+        } else {
+          /* hub optional when offline */
+          return;
         }
-      } catch {
-        /* hub optional when offline */
+      }
+
+      if (!cancelled) {
+        pingTimer = window.setInterval(() => {
+          pingPresence();
+        }, PRESENCE_PING_MS);
       }
     }
 

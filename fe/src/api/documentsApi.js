@@ -1,4 +1,11 @@
-import { apiRequest, buildQuery, getAccessToken } from "./httpClient";
+import {
+  ApiError,
+  apiRequest,
+  buildQuery,
+  getAccessToken,
+  getRefreshToken,
+  refreshSession,
+} from "./httpClient";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5006";
 
@@ -22,7 +29,7 @@ export function isAuthenticatedDocumentContentUrl(url) {
   return typeof url === "string" && url.includes("/api/v1/documents/") && url.includes("/content");
 }
 
-export async function fetchDocumentContentBlobUrl(id, page = null) {
+async function requestDocumentContent(id, page = null) {
   const token = getAccessToken();
   const query = page != null ? buildQuery({ page }) : "";
   const response = await fetch(`${API_BASE_URL}/api/v1/documents/${id}/content${query}`, {
@@ -30,11 +37,31 @@ export async function fetchDocumentContentBlobUrl(id, page = null) {
   });
 
   if (!response.ok) {
-    throw new Error("Không tải được nội dung tài liệu.");
+    throw new ApiError("Không tải được nội dung tài liệu.", { status: response.status });
   }
 
-  const blob = await response.blob();
-  return URL.createObjectURL(blob);
+  return response.blob();
+}
+
+export async function fetchDocumentContentBlobUrl(id, page = null) {
+  try {
+    const blob = await requestDocumentContent(id, page);
+    return URL.createObjectURL(blob);
+  } catch (error) {
+    if (
+      error instanceof ApiError
+      && error.status === 401
+      && getRefreshToken()
+    ) {
+      await refreshSession();
+      const blob = await requestDocumentContent(id, page);
+      return URL.createObjectURL(blob);
+    }
+
+    throw error instanceof Error
+      ? error
+      : new Error("Không tải được nội dung tài liệu.");
+  }
 }
 
 export async function downloadDocumentContent(id, fileName) {

@@ -155,45 +155,39 @@ function FeaturedPostsPage() {
     if (USE_MOCK) return undefined;
 
     let cancelled = false;
-    setLoading(true);
-    loadFeaturedPostsState()
-      .then(({ pinned: nextPinned, searchPool: nextPool }) => {
-        if (!cancelled) {
-          setPinned(nextPinned);
-          setSearchPool(nextPool);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          showToast(err.message ?? "Không tải được bài viết nổi bật.", "error");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    const searchTerm = query.trim();
+    const delay = searchTerm ? SEARCH_DEBOUNCE_MS : 0;
 
-    return () => {
-      cancelled = true;
-    };
-  }, [showToast]);
-
-  useEffect(() => {
-    if (USE_MOCK) return undefined;
-
-    let cancelled = false;
     const timer = window.setTimeout(() => {
-      loadFeaturedPostsState({ search: query })
-        .then(({ searchPool: nextPool }) => {
-          if (!cancelled) setSearchPool(nextPool);
+      if (!searchTerm) {
+        setLoading(true);
+      }
+
+      loadFeaturedPostsState({ search: searchTerm || undefined })
+        .then(({ pinned: nextPinned, searchPool: nextPool }) => {
+          if (cancelled) return;
+          if (searchTerm) {
+            setSearchPool(nextPool);
+          } else {
+            setPinned(nextPinned);
+            setSearchPool(nextPool);
+          }
         })
-        .catch(() => {});
-    }, SEARCH_DEBOUNCE_MS);
+        .catch((err) => {
+          if (!cancelled && !searchTerm) {
+            showToast(err.message ?? "Không tải được bài viết nổi bật.", "error");
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }, delay);
 
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, showToast]);
 
   useEffect(() => {
     if (!selectedId) {

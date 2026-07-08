@@ -95,14 +95,8 @@ public sealed class AdminExamService : IAdminExamService
             throw new ConflictException("Mã đề đã tồn tại. Vui lòng dùng mã khác.");
         }
 
-        var contentHash = OcrExamService.ComputeSha256Hash(
-            OcrExamService.NormalizeText(BuildContentHashSource(request)));
-
-        var duplicate = await _examRepository.GetByContentHashAsync(contentHash, cancellationToken);
-        if (duplicate is not null && !confirmDuplicate)
-        {
-            throw new ConflictException(ErrorCodes.DuplicateExam);
-        }
+        var contentHash = ExamContentFingerprint.ComputeHashFromCreateRequest(request);
+        await EnsureNoDuplicateHashAsync(contentHash, currentExam: null, confirmDuplicate, cancellationToken);
 
         var exam = BuildExamFromRequest(request, subject, contentHash, _currentUser.UserId);
         await ApplyPracticeExamPinAsync(exam, cancellationToken);
@@ -113,7 +107,11 @@ public sealed class AdminExamService : IAdminExamService
         return await MapAdminExamAsync(exam, cancellationToken);
     }
 
-    public async Task<AdminExamDto> UpdateExamAsync(Guid id, UpdateExamRequest request, CancellationToken cancellationToken = default)
+    public async Task<AdminExamDto> UpdateExamAsync(
+        Guid id,
+        UpdateExamRequest request,
+        bool confirmDuplicate = false,
+        CancellationToken cancellationToken = default)
     {
         var exam = await _examRepository.GetByIdAsync(id, includeQuestions: true, cancellationToken: cancellationToken)
             ?? throw new NotFoundException("Exam", id);
@@ -155,7 +153,7 @@ public sealed class AdminExamService : IAdminExamService
 
         if (request.Questions is not null)
         {
-            await ReplaceExamQuestionsAsync(exam, request.Questions, cancellationToken);
+            await ReplaceExamQuestionsAsync(exam, request.Questions, confirmDuplicate, cancellationToken);
         }
 
         exam.UpdatedAt = DateTime.UtcNow;
@@ -249,6 +247,7 @@ public sealed class AdminExamService : IAdminExamService
     public async Task<AdminExamDto> ResubmitExamAsync(
         Guid id,
         ResubmitExamRequest request,
+        bool confirmDuplicate = false,
         CancellationToken cancellationToken = default)
     {
         RequireModeratorUserId();
@@ -266,7 +265,12 @@ public sealed class AdminExamService : IAdminExamService
 
         if (request.Questions.Count > 0)
         {
-            await ReplaceExamQuestionsAsync(exam, request.Questions, cancellationToken);
+            await ReplaceExamQuestionsAsync(exam, request.Questions, confirmDuplicate, cancellationToken);
+        }
+        else if (exam.ExamType == ExamType.Practice)
+        {
+            ApplyPracticeMetadataHash(exam);
+            await EnsureNoDuplicateHashAsync(exam.ContentHash, exam, confirmDuplicate, cancellationToken);
         }
 
         if (exam.Status == ExamStatus.Rejected)
@@ -359,14 +363,62 @@ public sealed class AdminExamService : IAdminExamService
             cancellationToken);
     }
 
-    private static string BuildContentHashSource(CreateExamRequest request)
+    private async Task EnsureNoDuplicateHashAsync(
+        string contentHash,
+        Exam? currentExam,
+        bool confirmDuplicate,
+        CancellationToken cancellationToken)
     {
-        if (request.Questions.Count > 0)
+        if (confirmDuplicate)
         {
-            return string.Join('|', request.Questions.Select(q => q.Content));
+            return;
         }
 
-        return $"{request.Code}|{request.Title}|{request.Description}|{request.AssetUrl}";
+        var duplicate = await _examRepository.GetByContentHashAsync(contentHash, cancellationToken);
+        if (duplicate is null)
+        {
+            return;
+        }
+
+        if (currentExam is not null && IsSameExamLineage(duplicate, currentExam))
+        {
+            return;
+        }
+
+        throw new ConflictException(ErrorCodes.DuplicateExam);
+    }
+
+    private static bool IsSameExamLineage(Exam duplicate, Exam currentExam)
+    {
+        if (duplicate.Id == currentExam.Id)
+        {
+            return true;
+        }
+
+        if (currentExam.RevisionOfExamId == duplicate.Id)
+        {
+            return true;
+        }
+
+        if (duplicate.RevisionOfExamId == currentExam.Id)
+        {
+            return true;
+        }
+
+        if (currentExam.RevisionOfExamId is Guid parentId
+            && duplicate.RevisionOfExamId == parentId)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static void ApplyPracticeMetadataHash(Exam exam)
+    {
+        exam.ContentHash = ExamContentFingerprint.ComputeHash(
+            ExamContentFingerprint.NormalizeText(
+                ExamContentFingerprint.BuildPracticeMetadata(exam.Code, exam.Title, exam.Description)));
     }
 
     private static Exam BuildExamFromRequest(
@@ -568,13 +620,17 @@ public sealed class AdminExamService : IAdminExamService
     private async Task ReplaceExamQuestionsAsync(
         Exam exam,
         IEnumerable<CreateExamQuestionItem> items,
+        bool confirmDuplicate,
         CancellationToken cancellationToken)
     {
-        var newQuestions = items.Select(q => BuildQuestion(q, exam.Id)).ToList();
+        var itemList = items.ToList();
+        var contentHash = ExamContentFingerprint.ComputeHashFromQuestions(itemList);
+        await EnsureNoDuplicateHashAsync(contentHash, exam, confirmDuplicate, cancellationToken);
+
+        var newQuestions = itemList.Select(q => BuildQuestion(q, exam.Id)).ToList();
         await _examRepository.ReplaceQuestionsAsync(exam.Id, newQuestions, cancellationToken);
         exam.QuestionCount = newQuestions.Count;
-        exam.ContentHash = OcrExamService.ComputeSha256Hash(
-            OcrExamService.NormalizeText(string.Join('|', newQuestions.Select(q => q.Content))));
+        exam.ContentHash = contentHash;
     }
 
     private static void ApplyResubmitContent(Exam exam, ResubmitExamRequest request)
@@ -595,8 +651,7 @@ public sealed class AdminExamService : IAdminExamService
         }
         else if (exam.ExamType == ExamType.Practice && request.Questions.Count == 0)
         {
-            exam.ContentHash = OcrExamService.ComputeSha256Hash(
-                OcrExamService.NormalizeText($"{exam.Code}|{exam.Title}|{exam.Description}|{exam.AssetUrl}"));
+            ApplyPracticeMetadataHash(exam);
         }
     }
 

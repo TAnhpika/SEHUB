@@ -384,6 +384,45 @@ export async function importExamQuestionsFromMarkdown(markdown) {
   return adminApi.importExamMarkdown({ markdown });
 }
 
+async function readFileAsBase64(file) {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 1) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+export async function runOcrExamFromFile(file) {
+  if (USE_MOCK) {
+    const isDupDemo = file?.name?.toLowerCase().includes("dup");
+    return {
+      text: file?.name ?? "",
+      contentHash: isDupDemo ? DEMO_DUPLICATE_SHA : mockComputeSha256Unique(),
+      duplicateWarning: isDupDemo,
+      duplicateExamId: null,
+      questions: buildMockOcrImportQuestions(),
+    };
+  }
+
+  const base64Image = await readFileAsBase64(file);
+  return adminApi.ocrExam({ base64Image });
+}
+
+export async function loadDuplicateExamSummary(duplicateExamId) {
+  if (!duplicateExamId || USE_MOCK) {
+    return null;
+  }
+
+  const exam = await adminApi.getExam(duplicateExamId);
+  return {
+    id: exam.id ?? exam.Id,
+    code: exam.code ?? exam.Code ?? "",
+    title: exam.title ?? exam.Title ?? "",
+  };
+}
+
 function pickExamUploadFile(form, pdfFile) {
   if (pdfFile instanceof File) {
     return pdfFile;
@@ -581,7 +620,7 @@ export async function updateAdminExamViaApi(examId, form, options = {}) {
       : null;
   const body = mapAdminExamFormToUpdateRequest(form, { questions });
 
-  await adminApi.updateExam(examId, body);
+  await adminApi.updateExam(examId, body, confirmDuplicate);
 
   if (status === "published") {
     await adminApi.approveExam(examId);

@@ -22,19 +22,16 @@ import {
   parseTermFromExamCode,
 } from "@/features/exams/finalExam/examTermOptions";
 import {
-  DEMO_DUPLICATE_SHA,
   EXAM_TYPE_OPTIONS,
   FINAL_EXAM_DEFAULTS,
   PRACTICE_EXAM_DEFAULTS,
-  buildMockOcrImportQuestions,
-  findDuplicateBySha,
   getSemesterLabel,
   getTrackLabel,
   importExamQuestionsFromMarkdown,
   loadAdminExamById,
   loadAdminExams,
-  mockComputeSha256,
-  mockComputeSha256Unique,
+  loadDuplicateExamSummary,
+  runOcrExamFromFile,
   saveAdminExamViaApi,
   updateAdminExamViaApi,
 } from "@/features/admin/exams/adminExamData";
@@ -102,8 +99,10 @@ function AdminExamFormPage() {
   const [fileName, setFileName] = useState("");
   const [pdfFile, setPdfFile] = useState(null);
   const [sha256, setSha256] = useState("");
+  const [duplicateExam, setDuplicateExam] = useState(null);
   const [ocrDone, setOcrDone] = useState(false);
   const [ocrConfirmed, setOcrConfirmed] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(false);
   const [forceUniqueSha, setForceUniqueSha] = useState(false);
   const [markdownText, setMarkdownText] = useState("");
   const [editableQuestions, setEditableQuestions] = useState([]);
@@ -150,10 +149,8 @@ function AdminExamFormPage() {
   const isPractice = form.typeKey === "practice";
   const steps = isFinal ? STEPS_FINAL : STEPS_PRACTICE;
 
-  const duplicate = sha256
-    ? findDuplicateBySha(sha256, isEdit ? id : undefined)
-    : null;
-  const blockSave = duplicate && !forceUniqueSha;
+  const duplicate = duplicateExam;
+  const blockSave = Boolean(duplicate) && !forceUniqueSha;
 
   function patchForm(updates) {
     setForm((prev) => ({ ...prev, ...updates }));
@@ -177,6 +174,8 @@ function AdminExamFormPage() {
     setStep(0);
     setFileName("");
     setPdfFile(null);
+    setSha256("");
+    setDuplicateExam(null);
     setSha256("");
     setOcrDone(false);
     setOcrConfirmed(false);
@@ -284,8 +283,8 @@ function AdminExamFormPage() {
     const file = fileList[0];
     setFileName(file.name);
     setPdfFile(file);
-    const isDupDemo = file.name.toLowerCase().includes("dup");
-    setSha256(isDupDemo ? DEMO_DUPLICATE_SHA : mockComputeSha256Unique());
+    setSha256("");
+    setDuplicateExam(null);
     setForceUniqueSha(false);
     setOcrDone(false);
     setOcrConfirmed(false);
@@ -295,16 +294,48 @@ function AdminExamFormPage() {
     patchForm({ attachments: form.attachments.filter((f) => f.id !== fileId) });
   }
 
-  function runOcr() {
-    if (!fileName) {
-      showToast("Chọn file PDF/ảnh trước khi OCR.");
+  async function runOcr() {
+    if (!pdfFile) {
+      showToast("Chọn file markdown/text trước khi OCR.");
       return;
     }
-    if (!sha256) setSha256(mockComputeSha256());
-    applyImportedQuestions(buildMockOcrImportQuestions());
-    setForceUniqueSha(false);
-    setStep(2);
-    showToast("OCR hoàn tất — rà soát đáp án trước khi lưu.");
+
+    setOcrLoading(true);
+    try {
+      const result = await runOcrExamFromFile(pdfFile);
+      const contentHash = result?.contentHash ?? result?.ContentHash ?? "";
+      const questions = result?.questions ?? result?.Questions ?? [];
+      const duplicateWarning = Boolean(result?.duplicateWarning ?? result?.DuplicateWarning);
+      const duplicateExamId = result?.duplicateExamId ?? result?.DuplicateExamId ?? null;
+
+      setSha256(contentHash);
+      if (duplicateWarning) {
+        const summary = await loadDuplicateExamSummary(duplicateExamId);
+        setDuplicateExam(
+          summary ?? {
+            id: duplicateExamId,
+            code: "?",
+            title: "Đề trùng nội dung trong hệ thống",
+          },
+        );
+      } else {
+        setDuplicateExam(null);
+      }
+
+      if (!questions.length) {
+        showToast("OCR không trả về câu hỏi — dùng file markdown đề thi.");
+        return;
+      }
+
+      applyImportedQuestions(questions);
+      setForceUniqueSha(false);
+      setStep(2);
+      showToast("OCR hoàn tất — rà soát đáp án trước khi lưu.");
+    } catch (err) {
+      showToast(err.message ?? "OCR thất bại.");
+    } finally {
+      setOcrLoading(false);
+    }
   }
 
   async function handleImportMarkdown() {
@@ -744,6 +775,7 @@ function AdminExamFormPage() {
               fileName={fileName}
               onFileChange={handleFileChange}
               onRunOcr={runOcr}
+              ocrRunning={ocrLoading}
               ocrLabel="Chạy OCR & sang bước xác nhận"
               maxQuestions={FINAL_EXAM_DEFAULTS.maxQuestions}
             />

@@ -136,23 +136,14 @@ public sealed class PostService : IPostService
         CancellationToken cancellationToken = default)
     {
         var pinnedPosts = await _postRepository.GetFeaturedAsync(GamificationConstants.MaxFeaturedPosts, cancellationToken);
-        var (candidatePosts, _) = await _postRepository.GetPublishedCandidatesForFeaturingAsync(
+        var candidatePosts = await _postRepository.GetPublishedCandidatesForFeaturingAsync(
             search,
             1,
             Math.Clamp(candidatePageSize, 1, 100),
             cancellationToken);
 
-        var pinned = new List<FeaturedPostModeratorItemDto>();
-        foreach (var post in pinnedPosts)
-        {
-            pinned.Add(await MapFeaturedModeratorItemAsync(post, cancellationToken));
-        }
-
-        var candidates = new List<FeaturedPostModeratorItemDto>();
-        foreach (var post in candidatePosts)
-        {
-            candidates.Add(await MapFeaturedModeratorItemAsync(post, cancellationToken));
-        }
+        var pinned = await MapFeaturedModeratorItemsAsync(pinnedPosts, cancellationToken);
+        var candidates = await MapFeaturedModeratorItemsAsync(candidatePosts, cancellationToken);
 
         return new FeaturedPostsStateDto
         {
@@ -168,23 +159,14 @@ public sealed class PostService : IPostService
         CancellationToken cancellationToken = default)
     {
         var pinnedPosts = await _postRepository.GetPinnedAsync(GamificationConstants.MaxPinnedFeedPosts, cancellationToken);
-        var (candidatePosts, _) = await _postRepository.GetPublishedCandidatesForPinningAsync(
+        var candidatePosts = await _postRepository.GetPublishedCandidatesForPinningAsync(
             search,
             1,
             Math.Clamp(candidatePageSize, 1, 100),
             cancellationToken);
 
-        var pinned = new List<FeaturedPostModeratorItemDto>();
-        foreach (var post in pinnedPosts)
-        {
-            pinned.Add(await MapFeaturedModeratorItemAsync(post, cancellationToken));
-        }
-
-        var candidates = new List<FeaturedPostModeratorItemDto>();
-        foreach (var post in candidatePosts)
-        {
-            candidates.Add(await MapFeaturedModeratorItemAsync(post, cancellationToken));
-        }
+        var pinned = await MapFeaturedModeratorItemsAsync(pinnedPosts, cancellationToken);
+        var candidates = await MapFeaturedModeratorItemsAsync(candidatePosts, cancellationToken);
 
         return new PinnedPostsStateDto
         {
@@ -391,24 +373,46 @@ public sealed class PostService : IPostService
         return new PostCoverUploadDto { CoverImageUrl = upload.Url };
     }
 
-    private async Task<FeaturedPostModeratorItemDto> MapFeaturedModeratorItemAsync(
-        Post post,
+    private async Task<IReadOnlyList<FeaturedPostModeratorItemDto>> MapFeaturedModeratorItemsAsync(
+        IReadOnlyList<Post> posts,
         CancellationToken cancellationToken)
     {
-        var author = await BuildAuthorAsync(post.AuthorId, cancellationToken);
-        return new FeaturedPostModeratorItemDto
+        if (posts.Count == 0)
         {
-            Id = post.Id,
-            Title = post.Title,
-            Excerpt = BuildExcerpt(post.Content),
-            AuthorUsername = author.Username,
-            AuthorDisplayName = author.DisplayName,
-            IsFeatured = post.IsFeatured,
-            IsPinned = post.IsPinned,
-            LikeCount = await _likeRepository.CountByPostIdAsync(post.Id, cancellationToken),
-            CommentCount = await _commentRepository.CountByPostIdAsync(post.Id, cancellationToken),
-            CreatedAt = post.CreatedAt,
-        };
+            return [];
+        }
+
+        var postIds = posts.Select(p => p.Id).ToList();
+        var authorIds = posts.Select(p => p.AuthorId).Distinct().ToList();
+
+        var likeCounts = await _likeRepository.CountByPostIdsAsync(postIds, cancellationToken);
+        var commentCounts = await _commentRepository.CountByPostIdsAsync(postIds, cancellationToken);
+        var authors = await _userRepository.GetByIdsAsync(authorIds, cancellationToken);
+        var profiles = await _profileRepository.GetByUserIdsAsync(authorIds, cancellationToken);
+
+        var authorsById = authors.ToDictionary(a => a.Id);
+        var profilesByUserId = profiles.ToDictionary(p => p.UserId);
+
+        return posts.Select(post =>
+        {
+            authorsById.TryGetValue(post.AuthorId, out var authorUser);
+            profilesByUserId.TryGetValue(post.AuthorId, out var profile);
+            var author = BuildAuthorSummary(post.AuthorId, authorUser, profile);
+
+            return new FeaturedPostModeratorItemDto
+            {
+                Id = post.Id,
+                Title = post.Title,
+                Excerpt = BuildExcerpt(post.Content),
+                AuthorUsername = author.Username,
+                AuthorDisplayName = author.DisplayName,
+                IsFeatured = post.IsFeatured,
+                IsPinned = post.IsPinned,
+                LikeCount = likeCounts.GetValueOrDefault(post.Id),
+                CommentCount = commentCounts.GetValueOrDefault(post.Id),
+                CreatedAt = post.CreatedAt,
+            };
+        }).ToList();
     }
 
     private async Task<IReadOnlyList<PostListItemDto>> MapListItemsAsync(
