@@ -271,7 +271,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             [RoleNames.Admin],
             NotificationType.ExamReview,
             $"{actorName} gửi đề chờ duyệt",
-            $"{exam.Title} ({exam.Code})",
+            $"{exam.PaperCode} ({exam.SubjectCode})",
             $"/admin/exams/{exam.Id}",
             actorUserId,
             exam.Id,
@@ -290,11 +290,11 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         }
 
         var title = approved
-            ? $"Đề {exam.Title} đã được Admin duyệt"
-            : $"Đề {exam.Title} bị Admin từ chối";
+            ? $"Đề {exam.PaperCode} đã được Admin duyệt"
+            : $"Đề {exam.PaperCode} bị Admin từ chối";
 
         var body = approved
-            ? exam.Title
+            ? exam.PaperCode
             : exam.RejectionReasonDetail ?? "Vui lòng xem chi tiết và chỉnh sửa.";
 
         await _notificationService.CreateAsync(
@@ -415,7 +415,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         await NotifyRoleMembersAsync(
             [RoleNames.Moderator, RoleNames.Admin],
             NotificationType.Moderation,
-            $"{actorName} báo cáo câu hỏi đề {exam.Title}",
+            $"{actorName} báo cáo câu hỏi đề {exam.PaperCode}",
             $"Lý do: {reasonLabel} — {preview}",
             "/moderator/reports",
             reporterUserId,
@@ -492,14 +492,14 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
 
         var body = !string.IsNullOrWhiteSpace(reviewerComment)
             ? Truncate(reviewerComment, 160)
-            : exam.Title;
+            : exam.PaperCode;
 
         await _notificationService.CreateAsync(
             submission.UserId,
             NotificationType.PracticeResult,
             $"Kết quả thực hành: {statusLabel}",
             body,
-            ExamFrontendPaths.BuildPracticeExamDetailPath(exam.Code, exam.Title),
+            ExamFrontendPaths.BuildPracticeExamDetailPath(exam.SubjectCode, exam.PaperCode),
             reviewerUserId,
             submission.Id,
             cancellationToken);
@@ -517,10 +517,10 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         var student = await _userRepository.GetByIdAsync(submission.UserId, cancellationToken);
         var studentLabel = student?.Username ?? student?.DisplayName ?? "sinh viên";
         var statusLabel = BuildPracticeReviewStatusLabel(status);
-        var paper = string.IsNullOrWhiteSpace(exam.Title) ? exam.Code : exam.Title;
+        var paper = string.IsNullOrWhiteSpace(exam.PaperCode) ? exam.SubjectCode : exam.PaperCode;
         var body = !string.IsNullOrWhiteSpace(reviewerComment)
-            ? $"@{studentLabel} — {paper} ({exam.Code}): {statusLabel} — {Truncate(reviewerComment, 120)}"
-            : $"@{studentLabel} — {paper} ({exam.Code}): {statusLabel}";
+            ? $"@{studentLabel} — {paper} ({exam.SubjectCode}): {statusLabel} — {Truncate(reviewerComment, 120)}"
+            : $"@{studentLabel} — {paper} ({exam.SubjectCode}): {statusLabel}";
 
         await NotifyRoleMembersAsync(
             [RoleNames.Admin],
@@ -564,7 +564,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             [RoleNames.Moderator, RoleNames.Admin],
             NotificationType.Moderation,
             $"{actorName} nộp bài thực hành",
-            $"{exam.Title} ({exam.Code})",
+            $"{exam.PaperCode} ({exam.SubjectCode})",
             "/admin/exams/submissions",
             studentUserId,
             submission.Id,

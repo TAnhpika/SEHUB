@@ -5,16 +5,12 @@ namespace SEHub.Domain.Entities;
 
 public class Exam : BaseEntity
 {
-    public string Code { get; set; } = string.Empty;
-    public string Title { get; set; } = string.Empty;
+    public string SubjectCode { get; set; } = string.Empty;
+    public string PaperCode { get; set; } = string.Empty;
     public ExamType ExamType { get; set; }
-    public int Semester { get; set; }
-    public string Major { get; set; } = string.Empty;
-    public int QuestionCount { get; set; }
     public ExamStatus Status { get; set; }
     public string ContentHash { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public string? AssetUrl { get; set; }
     public Guid? SubmittedById { get; set; }
     public Guid? RevisionOfExamId { get; set; }
     public string? RejectionReasonCode { get; set; }

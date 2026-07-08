@@ -44,7 +44,7 @@ public static class ExamContentFingerprint
     {
         var source = request.Questions.Count > 0
             ? BuildFromQuestions(request.Questions)
-            : BuildPracticeMetadata(request.Code, request.Title, request.Description);
+            : BuildPracticeMetadata(request.SubjectCode, request.PaperCode, request.Description);
 
         return ComputeHash(NormalizeText(source));
     }
@@ -64,7 +64,7 @@ public static class ExamContentFingerprint
             return ComputeHashFromQuestions(items);
         }
 
-        return ComputeHash(NormalizeText(BuildPracticeMetadata(exam.Code, exam.Title, exam.Description)));
+        return ComputeHash(NormalizeText(BuildPracticeMetadata(exam.SubjectCode, exam.PaperCode, exam.Description)));
     }
 
     public static string BuildFromQuestions(IEnumerable<CreateExamQuestionItem> questions)
@@ -77,12 +77,12 @@ public static class ExamContentFingerprint
         return string.Join("||", segments);
     }
 
-    public static string BuildPracticeMetadata(string code, string title, string? description)
+    public static string BuildPracticeMetadata(string subjectCode, string paperCode, string? description)
     {
-        var normalizedCode = NormalizeText(code);
-        var normalizedTitle = NormalizeText(title);
+        var normalizedSubjectCode = NormalizeText(subjectCode);
+        var normalizedPaperCode = NormalizeText(paperCode);
         var normalizedDescription = NormalizeText(description ?? string.Empty);
-        return $"{normalizedCode}|{normalizedTitle}|{normalizedDescription}";
+        return $"{normalizedSubjectCode}|{normalizedPaperCode}|{normalizedDescription}";
     }
 
     private static string BuildQuestionSegment(CreateExamQuestionItem item)

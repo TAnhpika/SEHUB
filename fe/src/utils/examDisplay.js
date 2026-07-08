@@ -123,10 +123,14 @@ export function buildExamPaperCode(subjectCode, options = {}) {
 
 function collectNameCandidates(dto) {
   return [
+    dto.revisionSourcePaperCode,
     dto.revisionSourceTitle,
+    dto.paperCode,
     dto.title,
+    dto.revisionSourceSubjectCode,
     dto.revisionSourceCode,
     dto.description,
+    dto.subjectCode,
     dto.code,
   ]
     .map(stripRevisionLabel)
@@ -169,24 +173,26 @@ export function resolvePublicExamName(dto) {
 
 export function buildExamDisplayFields(dto) {
   const isRevision = Boolean(dto.revisionOfExamId);
-  const paperCode = isExamPaperCode(dto.title) ? stripRevisionLabel(dto.title) : null;
+  const paperCodeRaw = dto.paperCode ?? dto.title ?? "";
+  const subjectCodeRaw = dto.subjectCode ?? dto.code ?? "";
+  const paperCode = isExamPaperCode(paperCodeRaw) ? stripRevisionLabel(paperCodeRaw) : null;
   const publicName = paperCode
     ? formatExamPaperDisplayCode(paperCode)
-    : resolvePublicExamName(dto);
+    : resolvePublicExamName({ ...dto, code: subjectCodeRaw, title: paperCodeRaw });
   const subjectCode =
-    (isBareSubjectCode(dto.code) ? normalizeCourseSubjectCode(dto.code) : null)
+    (isBareSubjectCode(subjectCodeRaw) ? normalizeCourseSubjectCode(subjectCodeRaw) : null)
     ?? extractCourseSubjectCode(
-      dto.code,
-      dto.revisionSourceCode,
-      dto.title,
-      dto.revisionSourceTitle,
+      subjectCodeRaw,
+      dto.revisionSourceSubjectCode ?? dto.revisionSourceCode,
+      paperCodeRaw,
+      dto.revisionSourcePaperCode ?? dto.revisionSourceTitle,
       dto.major,
       dto.description,
     )
     ?? "—";
 
   const primaryTitle =
-    /^Môn\s/i.test(dto.title ?? "") && isExamPaperCode(publicName) ? publicName : dto.title ?? publicName;
+    /^Môn\s/i.test(paperCodeRaw) && isExamPaperCode(publicName) ? publicName : paperCodeRaw || publicName;
 
   return {
     subjectCode,
@@ -213,8 +219,8 @@ export function enrichRevisionExamEntries(entries) {
     const merged = entry.revisionOfExamId
       ? {
           ...entry,
-          revisionSourceCode: entry.revisionSourceCode ?? parent?.code ?? null,
-          revisionSourceTitle: entry.revisionSourceTitle ?? parent?.title ?? null,
+          revisionSourceCode: entry.revisionSourceCode ?? entry.revisionSourceSubjectCode ?? parent?.code ?? parent?.subjectCode ?? null,
+          revisionSourceTitle: entry.revisionSourceTitle ?? entry.revisionSourcePaperCode ?? parent?.title ?? parent?.paperCode ?? null,
         }
       : entry;
 

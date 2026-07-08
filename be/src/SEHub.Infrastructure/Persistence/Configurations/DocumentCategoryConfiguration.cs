@@ -10,14 +10,13 @@ public class DocumentCategoryConfiguration : IEntityTypeConfiguration<DocumentCa
     {
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Name).HasMaxLength(200).IsRequired();
-        builder.Property(c => c.Major).HasMaxLength(100).IsRequired();
-        builder.Property(c => c.SubjectCode).HasMaxLength(20);
-        builder.HasIndex(c => new { c.Semester, c.Major });
-        builder.HasIndex(c => c.SubjectCode);
+        builder.Property(c => c.SubjectCode).HasMaxLength(20).IsRequired();
+        builder.HasIndex(c => c.SubjectCode).IsUnique();
 
         builder.HasOne(c => c.Subject)
             .WithMany()
             .HasForeignKey(c => c.SubjectCode)
+            .HasPrincipalKey(s => s.Code)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -392,12 +392,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             context.Exams.Add(new Exam
             {
                 Id = PublishedExamId,
-                Code = "PRF192",
-                Title = "INT-FINAL-001",
+                SubjectCode = "PRF192",
+                PaperCode = "INT-FINAL-001",
                 ExamType = ExamType.Final,
-                Semester = 1,
-                Major = "SE",
-                QuestionCount = 0,
                 Status = ExamStatus.Published,
                 ContentHash = "integration-exam-hash",
                 Description = "Exam for integration tests",
@@ -410,12 +407,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             context.Exams.Add(new Exam
             {
                 Id = PracticeExamId,
-                Code = "PRF192",
-                Title = "INT-PRAC-01",
+                SubjectCode = "PRF192",
+                PaperCode = "INT-PRAC-01",
                 ExamType = ExamType.Practice,
-                Semester = 1,
-                Major = "SE",
-                QuestionCount = 0,
                 Status = ExamStatus.Published,
                 ContentHash = "integration-practice-exam-hash",
                 Description = "Practice exam for integration tests",

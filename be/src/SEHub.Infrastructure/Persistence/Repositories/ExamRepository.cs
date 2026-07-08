@@ -4,6 +4,7 @@ using SEHub.Contracts.Exams;
 using SEHub.Contracts.Subjects;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
+using SEHub.Shared.Subjects;
 
 namespace SEHub.Infrastructure.Persistence.Repositories;
 
@@ -43,13 +44,13 @@ public class ExamRepository : IExamRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<Exam?> GetByTitleAsync(string paperCode, CancellationToken cancellationToken = default)
+    public Task<Exam?> GetByPaperCodeAsync(string paperCode, CancellationToken cancellationToken = default)
     {
         var normalized = paperCode.Trim();
         return _context.Exams
             .Include(e => e.Subject)
             .FirstOrDefaultAsync(
-                e => e.Title.ToLower() == normalized.ToLower(),
+                e => e.PaperCode.ToLower() == normalized.ToLower(),
                 cancellationToken);
     }
 
@@ -92,18 +93,18 @@ public class ExamRepository : IExamRepository
 
         if (!string.IsNullOrWhiteSpace(query.Semester) && int.TryParse(query.Semester, out var semester))
         {
-            dbQuery = dbQuery.Where(e => e.Semester == semester);
+            dbQuery = dbQuery.Where(e => e.Subject != null && e.Subject.Semester == semester);
         }
 
-        if (!string.IsNullOrWhiteSpace(query.Code))
+        if (!string.IsNullOrWhiteSpace(query.SubjectCode))
         {
-            var subjectCode = query.Code.Trim();
-            dbQuery = dbQuery.Where(e => e.Code.ToLower() == subjectCode.ToLower());
+            var subjectCode = query.SubjectCode.Trim();
+            dbQuery = dbQuery.Where(e => e.SubjectCode.ToLower() == subjectCode.ToLower());
         }
 
         if (!string.IsNullOrWhiteSpace(query.Major))
         {
-            dbQuery = dbQuery.Where(e => e.Major == query.Major);
+            dbQuery = ApplyMajorFilter(dbQuery, query.Major.Trim());
         }
 
         var total = await dbQuery.CountAsync(cancellationToken);
@@ -118,14 +119,30 @@ public class ExamRepository : IExamRepository
         return (items, total);
     }
 
-    public async Task UnpinPracticeExamsByCodeAsync(
-        string code,
+    public async Task<IReadOnlyDictionary<Guid, int>> GetQuestionCountsAsync(
+        IReadOnlyList<Guid> examIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (examIds.Count == 0)
+        {
+            return new Dictionary<Guid, int>();
+        }
+
+        return await _context.Questions
+            .Where(q => examIds.Contains(q.ExamId))
+            .GroupBy(q => q.ExamId)
+            .Select(g => new { ExamId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.ExamId, x => x.Count, cancellationToken);
+    }
+
+    public async Task UnpinPracticeExamsBySubjectCodeAsync(
+        string subjectCode,
         Guid? exceptExamId,
         CancellationToken cancellationToken = default)
     {
-        var normalizedCode = code.Trim();
+        var normalizedCode = subjectCode.Trim();
         var query = _context.Exams.Where(e =>
-            e.Code.ToLower() == normalizedCode.ToLower()
+            e.SubjectCode.ToLower() == normalizedCode.ToLower()
             && e.ExamType == ExamType.Practice
             && e.IsPinned);
 
@@ -199,4 +216,26 @@ public class ExamRepository : IExamRepository
     public Task<IReadOnlyList<SubjectSourceEntryDto>> GetDistinctPublishedSubjectsAsync(
         CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<SubjectSourceEntryDto>>([]);
+
+    private static IQueryable<Exam> ApplyMajorFilter(IQueryable<Exam> query, string major)
+    {
+        var normalized = major.ToUpperInvariant();
+        if (normalized == "AI")
+        {
+            return query.Where(e =>
+                e.SubjectCode.StartsWith("CSI")
+                || e.SubjectCode.StartsWith("CSD")
+                || e.SubjectCode.StartsWith("AIG"));
+        }
+
+        if (normalized == "SE")
+        {
+            return query.Where(e =>
+                !e.SubjectCode.StartsWith("CSI")
+                && !e.SubjectCode.StartsWith("CSD")
+                && !e.SubjectCode.StartsWith("AIG"));
+        }
+
+        return query;
+    }
 }

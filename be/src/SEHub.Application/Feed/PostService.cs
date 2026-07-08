@@ -200,7 +200,6 @@ public sealed class PostService : IPostService
             AuthorId = userId,
             Title = request.Title,
             Content = request.Content,
-            CoverImageUrl = NormalizeCoverImageUrl(request.CoverImageUrl),
             Status = PostStatus.Pending,
             CreatedAt = DateTime.UtcNow
         };
@@ -226,10 +225,6 @@ public sealed class PostService : IPostService
 
         post.Title = request.Title;
         post.Content = request.Content;
-        if (request.CoverImageUrl is not null)
-        {
-            post.CoverImageUrl = NormalizeCoverImageUrl(request.CoverImageUrl);
-        }
         var resubmittedForReview = post.Status == PostStatus.Rejected;
         if (resubmittedForReview)
         {
@@ -259,7 +254,6 @@ public sealed class PostService : IPostService
             ?? throw new NotFoundException("Post", id);
 
         EnsureAuthorOrModerator(post.AuthorId);
-        await CdnAssetCleanup.TryDeleteAsync(_cdnStorage, publicId: null, post.CoverImageUrl, cancellationToken: cancellationToken);
         await _postImageService.DeleteImagesForPostAsync(id, cancellationToken);
         await _postRepository.SoftDeleteAsync(post, RequireUserId(), cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -459,7 +453,7 @@ public sealed class PostService : IPostService
                 CreatedAt = post.CreatedAt,
                 IsPinned = post.IsPinned,
                 IsFeatured = post.IsFeatured,
-                CoverImageUrl = ResolveListCoverImageUrl(post.CoverImageUrl),
+                CoverImageUrl = ResolveListCoverImageUrl(images?.OrderBy(i => i.SortOrder).FirstOrDefault()?.Url),
                 IsLiked = _currentUser.UserId is null ? null : likedPostIds.Contains(post.Id),
                 Images = (images ?? []).Select(PostImageService.MapDto).ToList()
             });
@@ -494,6 +488,10 @@ public sealed class PostService : IPostService
             isLiked = await _likeRepository.GetAsync(post.Id, userId, cancellationToken) is not null;
         }
 
+        var images = (await _imageRepository.GetByPostIdAsync(post.Id, cancellationToken))
+            .Select(PostImageService.MapDto)
+            .ToList();
+
         return new PostDetailDto
         {
             Id = post.Id,
@@ -507,13 +505,13 @@ public sealed class PostService : IPostService
             ViewCount = post.ViewCount,
             IsPinned = post.IsPinned,
             IsFeatured = post.IsFeatured,
-            CoverImageUrl = await ResolveCoverImageUrlAsync(post.CoverImageUrl, cancellationToken),
+            CoverImageUrl = await ResolveCoverImageUrlAsync(
+                images.FirstOrDefault()?.ImagePath,
+                cancellationToken),
             IsLiked = isLiked,
             CreatedAt = post.CreatedAt,
             UpdatedAt = post.UpdatedAt,
-            Images = (await _imageRepository.GetByPostIdAsync(post.Id, cancellationToken))
-                .Select(PostImageService.MapDto)
-                .ToList()
+            Images = images
         };
     }
 

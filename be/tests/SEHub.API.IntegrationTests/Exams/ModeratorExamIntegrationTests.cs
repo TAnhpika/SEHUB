@@ -27,11 +27,9 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
 
         var response = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
         {
-            Code = "PRF192",
-            Title = $"INT-MOD-PRAC-{Guid.NewGuid():N}"[..24],
+            SubjectCode = "PRF192",
+            PaperCode = $"INT-MOD-PRAC-{Guid.NewGuid():N}"[..24],
             ExamType = nameof(ExamType.Practice),
-            Semester = "3",
-            Major = "SE",
             Description = "Integration test practice exam from moderator."
         });
 
@@ -51,11 +49,9 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
         var optionBId = Guid.NewGuid();
         var createResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
         {
-            Code = "MAE101",
-            Title = uniquePaper,
+            SubjectCode = "MAE101",
+            PaperCode = uniquePaper,
             ExamType = nameof(ExamType.Final),
-            Semester = "2",
-            Major = "SE",
             Description = "Final exam pending approval.",
             Questions =
             [
@@ -87,7 +83,7 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
         var listResponse = await _client.GetAsync("/api/v1/admin/exams?mine=true&status=PendingApproval&pageSize=50");
         listResponse.EnsureSuccessStatusCode();
         var list = await listResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResult<ExamListItemDto>>>();
-        list!.Data!.Items.Should().Contain(e => e.Title == uniquePaper);
+        list!.Data!.Items.Should().Contain(e => e.PaperCode == uniquePaper);
         list.Data.Items.Should().OnlyContain(e => e.Status == nameof(ExamStatus.PendingApproval));
     }
 
@@ -102,11 +98,9 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
 
         var createResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
         {
-            Code = "PRF192",
-            Title = uniquePaper,
+            SubjectCode = "PRF192",
+            PaperCode = uniquePaper,
             ExamType = nameof(ExamType.Practice),
-            Semester = "5",
-            Major = "SE",
             Description = description,
         });
         createResponse.EnsureSuccessStatusCode();
@@ -130,9 +124,8 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
         var listResponse = await _client.GetAsync("/api/v1/admin/exams?status=PendingApproval&pageSize=50");
         listResponse.EnsureSuccessStatusCode();
         var list = await listResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResult<ExamListItemDto>>>();
-        var item = list!.Data!.Items.Should().ContainSingle(e => e.Title == uniquePaper).Subject;
+        var item = list!.Data!.Items.Should().ContainSingle(e => e.PaperCode == uniquePaper).Subject;
         item.Description.Should().Be(description);
-        item.AssetUrl.Should().BeNull();
     }
 
     [Fact]
@@ -206,11 +199,9 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
         var uniquePaper = $"INT-SUBMITTER-{Guid.NewGuid():N}"[..24];
         var createResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
         {
-            Code = "PRF192",
-            Title = uniquePaper,
+            SubjectCode = "PRF192",
+            PaperCode = uniquePaper,
             ExamType = nameof(ExamType.Practice),
-            Semester = "3",
-            Major = "SE",
             Description = "Pending list submitter username test."
         });
         createResponse.EnsureSuccessStatusCode();
@@ -218,7 +209,7 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
         var listResponse = await _client.GetAsync("/api/v1/admin/exams?status=PendingApproval&pageSize=50");
         listResponse.EnsureSuccessStatusCode();
         var list = await listResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResult<ExamListItemDto>>>();
-        var item = list!.Data!.Items.Should().ContainSingle(e => e.Title == uniquePaper).Subject;
+        var item = list!.Data!.Items.Should().ContainSingle(e => e.PaperCode == uniquePaper).Subject;
         item.SubmittedByUsername.Should().Be("moderator");
         item.SubmittedByDisplayName.Should().Be("Test Moderator");
     }
@@ -254,7 +245,7 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
             $"/api/v1/admin/exams/{revision.Data.Id}/resubmit",
             new ResubmitExamRequest
             {
-                Title = revision.Data.Title,
+                PaperCode = revision.Data.PaperCode,
                 Description = updatedDescription,
                 Questions = []
             });
@@ -266,14 +257,14 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
         approveRevisionResponse.EnsureSuccessStatusCode();
         var approvedRevision = await approveRevisionResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
         approvedRevision!.Data!.Status.Should().Be(nameof(ExamStatus.Published));
-        approvedRevision.Data.Title.Should().Be(liveTitle);
+        approvedRevision.Data.PaperCode.Should().Be(liveTitle);
         approvedRevision.Data.Description.Should().Be(updatedDescription);
 
         var parentResponse = await _client.GetAsync($"/api/v1/admin/exams/{examId}");
         parentResponse.EnsureSuccessStatusCode();
         var parent = await parentResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
         parent!.Data!.Status.Should().Be(nameof(ExamStatus.Archived));
-        parent.Data.Title.Should().StartWith($"{liveTitle}-ARCH-");
+        parent.Data.PaperCode.Should().StartWith($"{liveTitle}-ARCH-");
     }
 
     [Fact]
@@ -285,11 +276,9 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
         var liveTitle = $"INT-PRAC-REV-{Guid.NewGuid():N}"[..24];
         var createResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
         {
-            Code = "PRF192",
-            Title = liveTitle,
+            SubjectCode = "PRF192",
+            PaperCode = liveTitle,
             ExamType = nameof(ExamType.Practice),
-            Semester = "4",
-            Major = "SE",
             Description = "Practice revision integration test."
         });
         createResponse.EnsureSuccessStatusCode();
@@ -328,7 +317,7 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
             $"/api/v1/admin/exams/{revisionId}/resubmit",
             new ResubmitExamRequest
             {
-                Title = revision.Data.Title,
+                PaperCode = revision.Data.PaperCode,
                 Description = updatedDescription,
                 Questions = []
             });
@@ -340,7 +329,7 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
         approveRevisionResponse.EnsureSuccessStatusCode();
         var approvedRevision = await approveRevisionResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
         approvedRevision!.Data!.Status.Should().Be(nameof(ExamStatus.Published));
-        approvedRevision.Data.Title.Should().Be(liveTitle);
+        approvedRevision.Data.PaperCode.Should().Be(liveTitle);
         approvedRevision.Data.Description.Should().Be(updatedDescription);
         approvedRevision.Data.Attachments.Should().ContainSingle(a => a.OriginalFileName == "revision-source-brief.pdf");
 
@@ -352,11 +341,9 @@ public sealed class ModeratorExamIntegrationTests : IClassFixture<CustomWebAppli
 
     private static CreateExamRequest BuildFinalExamRequest(string title) => new()
     {
-        Code = "MAE101",
-        Title = title,
+        SubjectCode = "MAE101",
+        PaperCode = title,
         ExamType = nameof(ExamType.Final),
-        Semester = "2",
-        Major = "SE",
         Description = $"Final exam revision integration test. {title}",
         Questions = BuildFinalExamQuestionItems(title)
     };

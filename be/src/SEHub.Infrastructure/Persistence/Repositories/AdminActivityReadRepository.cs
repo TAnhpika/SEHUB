@@ -123,8 +123,8 @@ public sealed class AdminActivityReadRepository : IAdminActivityReadRepository
 
         return exams.Select(exam =>
         {
-            var paper = string.IsNullOrWhiteSpace(exam.Title) ? exam.Code : exam.Title;
-            var subjectCode = exam.Subject?.Code ?? exam.Code;
+            var paper = string.IsNullOrWhiteSpace(exam.PaperCode) ? exam.SubjectCode : exam.PaperCode;
+            var subjectCode = exam.Subject?.Code ?? exam.SubjectCode;
             var label = string.IsNullOrWhiteSpace(paper) ? subjectCode : paper;
             submitterMap.TryGetValue(exam.SubmittedById ?? Guid.Empty, out var submitter);
 
@@ -215,8 +215,8 @@ public sealed class AdminActivityReadRepository : IAdminActivityReadRepository
                 ? "admin"
                 : "mod";
             var exam = submission.Exam;
-            var paper = string.IsNullOrWhiteSpace(exam?.Title) ? exam?.Code ?? "—" : exam.Title;
-            var code = exam?.Code ?? "—";
+            var paper = string.IsNullOrWhiteSpace(exam?.PaperCode) ? exam?.SubjectCode ?? "—" : exam.PaperCode;
+            var code = exam?.SubjectCode ?? "—";
             var statusLabel = FormatPracticeReviewStatus(submission.Status);
             var detail = $"Chấm bài TH {paper} ({code}) — SV @{studentUsername ?? "unknown"}: {statusLabel}";
 

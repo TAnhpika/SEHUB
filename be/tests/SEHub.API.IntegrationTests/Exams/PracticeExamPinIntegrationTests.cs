@@ -35,11 +35,9 @@ public sealed class PracticeExamPinIntegrationTests : IClassFixture<CustomWebApp
         var uniquePaper = $"INT-PIN-B-{Guid.NewGuid():N}"[..24];
         var createResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
         {
-            Code = "MAE101",
-            Title = uniquePaper,
+            SubjectCode = "MAE101",
+            PaperCode = uniquePaper,
             ExamType = nameof(ExamType.Practice),
-            Semester = "2",
-            Major = "SE",
             Description = "Second pinned practice exam for pin integration test.",
             IsPinned = true
         });
@@ -67,7 +65,7 @@ public sealed class PracticeExamPinIntegrationTests : IClassFixture<CustomWebApp
         listResponse.EnsureSuccessStatusCode();
         var list = await listResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResult<ExamListItemDto>>>();
         list!.Data!.Items.Should().NotBeEmpty();
-        list.Data.Items[0].Title.Should().Be(uniquePaper);
+        list.Data.Items[0].PaperCode.Should().Be(uniquePaper);
         list.Data.Items[0].IsPinned.Should().BeTrue();
 
         var previousItem = list.Data.Items.FirstOrDefault(e => e.Id == PinnedSeedExamId);
@@ -84,11 +82,9 @@ public sealed class PracticeExamPinIntegrationTests : IClassFixture<CustomWebApp
         var uniquePaper = $"INT-PIN-LIST-{Guid.NewGuid():N}"[..24];
         var createResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
         {
-            Code = "PRF192",
-            Title = uniquePaper,
+            SubjectCode = "PRF192",
+            PaperCode = uniquePaper,
             ExamType = nameof(ExamType.Practice),
-            Semester = "3",
-            Major = "SE",
             Description = "Pinned practice exam for public list ordering.",
             IsPinned = true
         });
@@ -108,7 +104,7 @@ public sealed class PracticeExamPinIntegrationTests : IClassFixture<CustomWebApp
         var listResponse = await _client.GetAsync("/api/v1/exams?code=PRF192&type=Practice&pageSize=50");
         listResponse.EnsureSuccessStatusCode();
         var list = await listResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResult<ExamListItemDto>>>();
-        var pinnedItem = list!.Data!.Items.Should().ContainSingle(e => e.Title == uniquePaper).Subject;
+        var pinnedItem = list!.Data!.Items.Should().ContainSingle(e => e.PaperCode == uniquePaper).Subject;
         pinnedItem.IsPinned.Should().BeTrue();
         list.Data.Items[0].Id.Should().Be(pinnedItem.Id);
     }
@@ -126,12 +122,9 @@ public sealed class PracticeExamPinIntegrationTests : IClassFixture<CustomWebApp
         context.Exams.Add(new Exam
         {
             Id = PinnedSeedExamId,
-            Code = "MAE101",
-            Title = "INT-PIN-SEED-A",
+            SubjectCode = "MAE101",
+            PaperCode = "INT-PIN-SEED-A",
             ExamType = ExamType.Practice,
-            Semester = 2,
-            Major = "SE",
-            QuestionCount = 0,
             Status = ExamStatus.Published,
             ContentHash = "integration-pinned-practice-seed-a",
             Description = "Pinned practice exam seed for pin integration tests",

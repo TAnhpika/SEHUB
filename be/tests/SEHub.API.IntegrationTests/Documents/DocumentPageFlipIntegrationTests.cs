@@ -89,8 +89,6 @@ public sealed class DocumentPageFlipIntegrationTests : IClassFixture<CustomWebAp
             {
                 Id = DocumentCategoryId,
                 Name = "CSD201 Materials",
-                Semester = 1,
-                Major = "SE",
                 SubjectCode = "CSD201",
                 CreatedAt = DateTime.UtcNow
             });
@@ -104,7 +102,6 @@ public sealed class DocumentPageFlipIntegrationTests : IClassFixture<CustomWebAp
                 Id = DocumentId,
                 CategoryId = DocumentCategoryId,
                 Title = "Pagination Test.pdf",
-                FilePath = string.Empty,
                 DriveFileId = driveFileId,
                 OriginalFileName = "pagination-test.pdf",
                 MimeType = "application/pdf",

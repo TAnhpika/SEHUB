@@ -10,7 +10,6 @@ public class Post : BaseEntity, ISoftDeletable
     public string Content { get; set; } = string.Empty;
     public PostStatus Status { get; set; }
     public int ViewCount { get; set; }
-    public string? CoverImageUrl { get; set; }
     public bool IsPinned { get; set; }
     public bool IsFeatured { get; set; }
     public Guid? ModeratedById { get; set; }

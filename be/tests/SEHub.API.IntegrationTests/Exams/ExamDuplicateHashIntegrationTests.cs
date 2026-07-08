@@ -30,11 +30,9 @@ public sealed class ExamDuplicateHashIntegrationTests : IClassFixture<CustomWebA
         var optionBId = Guid.NewGuid();
         var request = new CreateExamRequest
         {
-            Code = "MAE101",
-            Title = uniquePaper,
+            SubjectCode = "MAE101",
+            PaperCode = uniquePaper,
             ExamType = nameof(ExamType.Final),
-            Semester = "2",
-            Major = "SE",
             Description = "Duplicate hash integration test.",
             Questions =
             [
@@ -58,11 +56,9 @@ public sealed class ExamDuplicateHashIntegrationTests : IClassFixture<CustomWebA
         var duplicateTitle = $"INT-DUP2-{Guid.NewGuid():N}"[..20];
         var duplicateRequest = new CreateExamRequest
         {
-            Code = request.Code,
-            Title = duplicateTitle,
+            SubjectCode = request.SubjectCode,
+            PaperCode = duplicateTitle,
             ExamType = request.ExamType,
-            Semester = request.Semester,
-            Major = request.Major,
             Description = request.Description,
             Questions = [CloneQuestionWithFreshOptionIds(request.Questions[0])],
         };
@@ -101,11 +97,9 @@ public sealed class ExamDuplicateHashIntegrationTests : IClassFixture<CustomWebA
 
         var firstResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
         {
-            Code = "MAE101",
-            Title = $"INT-UPD-A-{seed}",
+            SubjectCode = "MAE101",
+            PaperCode = $"INT-UPD-A-{seed}",
             ExamType = nameof(ExamType.Final),
-            Semester = "2",
-            Major = "SE",
             Questions = [sharedQuestion],
         });
         firstResponse.EnsureSuccessStatusCode();
@@ -114,11 +108,9 @@ public sealed class ExamDuplicateHashIntegrationTests : IClassFixture<CustomWebA
         var optionDId = Guid.NewGuid();
         var secondResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
         {
-            Code = "MAE101",
-            Title = $"INT-UPD-B-{seed}",
+            SubjectCode = "MAE101",
+            PaperCode = $"INT-UPD-B-{seed}",
             ExamType = nameof(ExamType.Final),
-            Semester = "2",
-            Major = "SE",
             Questions =
             [
                 new CreateExamQuestionItem

@@ -328,7 +328,6 @@ public sealed class PreviewPageLimitTests
             {
                 Id = DocumentId,
                 Title = "Sample Document",
-                FilePath = string.Empty,
                 DriveFileId = driveFileId,
                 OriginalFileName = "sample.pdf",
                 MimeType = "application/pdf",

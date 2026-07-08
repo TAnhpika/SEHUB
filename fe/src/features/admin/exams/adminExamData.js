@@ -418,8 +418,8 @@ export async function loadDuplicateExamSummary(duplicateExamId) {
   const exam = await adminApi.getExam(duplicateExamId);
   return {
     id: exam.id ?? exam.Id,
-    code: exam.code ?? exam.Code ?? "",
-    title: exam.title ?? exam.Title ?? "",
+    code: exam.subjectCode ?? exam.SubjectCode ?? exam.code ?? exam.Code ?? "",
+    title: exam.paperCode ?? exam.PaperCode ?? exam.title ?? exam.Title ?? "",
   };
 }
 

@@ -113,12 +113,6 @@ public sealed class QuestionCommentEndpointsTests : IClassFixture<CustomWebAppli
             ]
         });
 
-        var exam = await context.Exams.FindAsync(CustomWebApplicationFactory.PublishedExamId);
-        if (exam is not null)
-        {
-            exam.QuestionCount = 1;
-        }
-
         await context.SaveChangesAsync();
     }
 

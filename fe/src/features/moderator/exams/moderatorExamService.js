@@ -50,6 +50,8 @@ export function mapApiExamToContributionEntry(dto, moderatorUsername) {
   const examType = mapApiExamType(dto.examType);
   const revisionOfExamId = dto.revisionOfExamId ?? null;
   const status = mapApiStatusToContribution(dto.status, revisionOfExamId);
+  const subjectCodeRaw = dto.subjectCode ?? dto.code ?? "";
+  const paperCodeRaw = dto.paperCode ?? dto.title ?? "";
 
   return {
     id: dto.id,
@@ -57,15 +59,16 @@ export function mapApiExamToContributionEntry(dto, moderatorUsername) {
     moderator: moderatorUsername,
     examType,
     action: revisionOfExamId ? "revision_submitted" : "submitted",
-    subjectCode: isBareSubjectCode(dto.code)
-      ? (normalizeCourseSubjectCode(dto.code) ?? dto.code)
-      : (dto.subjectName ? normalizeCourseSubjectCode(dto.code) : extractCourseSubjectCode(dto.code, dto.title)) ?? "",
+    subjectCode: isBareSubjectCode(subjectCodeRaw)
+      ? (normalizeCourseSubjectCode(subjectCodeRaw) ?? subjectCodeRaw)
+      : (dto.subjectName ? normalizeCourseSubjectCode(subjectCodeRaw) : extractCourseSubjectCode(subjectCodeRaw, paperCodeRaw)) ?? "",
     semester: dto.semester ? `Học kỳ ${dto.semester}` : "",
-    title: dto.title,
+    title: paperCodeRaw,
+    paperCode: paperCodeRaw,
     description: dto.description ?? "",
     pendingId: dto.id,
     examApiId: dto.id,
-    examCode: dto.title ?? dto.code,
+    examCode: paperCodeRaw || subjectCodeRaw,
     questionCount: dto.questionCount ?? null,
     status,
     statusLabel: CONTRIBUTION_STATUS_LABELS[status],
@@ -75,9 +78,9 @@ export function mapApiExamToContributionEntry(dto, moderatorUsername) {
     canResubmit: dto.canResubmit ?? false,
     isContentLocked: dto.isContentLocked ?? false,
     revisionOfExamId,
-    revisionSourceCode: dto.revisionSourceCode ?? null,
-    revisionSourceTitle: dto.revisionSourceTitle ?? null,
-    ...buildExamDisplayFields(dto),
+    revisionSourceCode: dto.revisionSourceSubjectCode ?? dto.revisionSourceCode ?? null,
+    revisionSourceTitle: dto.revisionSourcePaperCode ?? dto.revisionSourceTitle ?? null,
+    ...buildExamDisplayFields({ ...dto, code: subjectCodeRaw, title: paperCodeRaw }),
   };
 }
 
@@ -102,11 +105,9 @@ export function buildFinalExamCreateBody(examInfo, questions) {
   });
 
   return {
-    code: subjectCode,
-    title: paperCode || `${subjectCode} — Cuối kỳ`,
+    subjectCode,
+    paperCode: paperCode || `${subjectCode} — Cuối kỳ`,
     examType: "Final",
-    semester: parseSemesterId(examInfo.semesterLabel),
-    major,
     description: `${examInfo.subjectName ?? subjectCode} · ${examInfo.durationMinutes} phút`,
     questions: apiQuestions,
   };
@@ -123,11 +124,9 @@ export function buildPracticeExamCreateBody(payload) {
   });
 
   return {
-    code: subjectCode,
-    title: paperCode,
+    subjectCode,
+    paperCode,
     examType: "Practice",
-    semester: parseSemesterId(payload.semester),
-    major,
     description: payload.description?.trim() ?? "",
     questions: [],
   };

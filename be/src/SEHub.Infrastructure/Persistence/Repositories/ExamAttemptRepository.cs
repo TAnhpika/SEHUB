@@ -58,6 +58,9 @@ public class ExamAttemptRepository : IExamAttemptRepository
         var query = _context.ExamAttempts
             .AsNoTracking()
             .Include(a => a.Exam)
+            .ThenInclude(e => e!.Subject)
+            .Include(a => a.Exam)
+            .ThenInclude(e => e!.Questions)
             .Where(a =>
                 a.UserId == userId &&
                 a.Status == ExamAttemptStatus.Submitted &&

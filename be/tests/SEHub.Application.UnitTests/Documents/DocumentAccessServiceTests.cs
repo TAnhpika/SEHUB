@@ -56,7 +56,7 @@ public sealed class DocumentAccessServiceTests
     {
         Id = Guid.NewGuid(),
         Title = "Doc",
-        FilePath = "documents/sample.pdf",
+        DriveFileId = "drive-file-sample",
         MimeType = "application/pdf",
         PageCount = pageCount,
         AccessTier = accessTier,

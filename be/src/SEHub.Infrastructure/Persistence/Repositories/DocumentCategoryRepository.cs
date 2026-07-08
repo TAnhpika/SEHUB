@@ -29,7 +29,8 @@ public class DocumentCategoryRepository : IDocumentCategoryRepository
 
     public async Task<IReadOnlyList<DocumentCategory>> GetAllAsync(CancellationToken cancellationToken = default) =>
         await _context.DocumentCategories
-            .OrderBy(c => c.Semester)
+            .Include(c => c.Subject)
+            .OrderBy(c => c.Subject != null ? c.Subject.Semester : int.MaxValue)
             .ThenBy(c => c.Name)
             .ToListAsync(cancellationToken);
 

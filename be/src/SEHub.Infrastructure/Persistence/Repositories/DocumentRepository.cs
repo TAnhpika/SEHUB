@@ -17,7 +17,10 @@ public class DocumentRepository : IDocumentRepository
     public async Task<(IReadOnlyList<Document> Items, int TotalCount)> GetPagedAsync(
         DocumentQueryParams query, CancellationToken cancellationToken = default)
     {
-        var dbQuery = _context.Documents.Include(d => d.Category).AsQueryable();
+        var dbQuery = _context.Documents
+            .Include(d => d.Category)
+            .ThenInclude(c => c.Subject)
+            .AsQueryable();
 
         if (query.CategoryId.HasValue)
         {
@@ -26,12 +29,12 @@ public class DocumentRepository : IDocumentRepository
 
         if (!string.IsNullOrWhiteSpace(query.Semester) && int.TryParse(query.Semester, out var semester))
         {
-            dbQuery = dbQuery.Where(d => d.Category.Semester == semester);
+            dbQuery = dbQuery.Where(d => d.Category.Subject != null && d.Category.Subject.Semester == semester);
         }
 
         if (!string.IsNullOrWhiteSpace(query.Major))
         {
-            dbQuery = dbQuery.Where(d => d.Category.Major == query.Major);
+            dbQuery = ApplyMajorFilter(dbQuery, query.Major.Trim());
         }
 
         var total = await dbQuery.CountAsync(cancellationToken);
@@ -65,11 +68,32 @@ public class DocumentRepository : IDocumentRepository
     public async Task<IReadOnlyList<Document>> GetLocalStoredAsync(CancellationToken cancellationToken = default) =>
         await _context.Documents
             .Where(d => !d.IsDeleted
-                && (d.DriveFileId == null || d.DriveFileId == string.Empty)
-                && d.FilePath != string.Empty)
+                && (d.DriveFileId == null || d.DriveFileId == string.Empty))
             .OrderBy(d => d.CreatedAt)
             .ToListAsync(cancellationToken);
 
     public Task<int> CountAsync(CancellationToken cancellationToken = default) =>
         _context.Documents.CountAsync(cancellationToken);
+
+    private static IQueryable<Document> ApplyMajorFilter(IQueryable<Document> query, string major)
+    {
+        var normalized = major.ToUpperInvariant();
+        if (normalized == "AI")
+        {
+            return query.Where(d =>
+                d.Category.SubjectCode.StartsWith("CSI")
+                || d.Category.SubjectCode.StartsWith("CSD")
+                || d.Category.SubjectCode.StartsWith("AIG"));
+        }
+
+        if (normalized == "SE")
+        {
+            return query.Where(d =>
+                !d.Category.SubjectCode.StartsWith("CSI")
+                && !d.Category.SubjectCode.StartsWith("CSD")
+                && !d.Category.SubjectCode.StartsWith("AIG"));
+        }
+
+        return query;
+    }
 }
