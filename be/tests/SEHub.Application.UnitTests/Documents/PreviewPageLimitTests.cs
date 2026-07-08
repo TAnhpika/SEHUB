@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using SEHub.Application.Abstractions;
@@ -6,9 +7,11 @@ using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Documents;
 using SEHub.Application.Gamification.Abstractions;
 using SEHub.Application.Models;
+using SEHub.Contracts.Documents;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
+using SEHub.Infrastructure.Caching;
 using SEHub.Infrastructure.Documents;
 
 namespace SEHub.Application.UnitTests.Documents;
@@ -36,6 +39,7 @@ public sealed class PreviewPageLimitTests
     private DocumentService CreateSut(IPdfPageExtractor? pdfPageExtractor = null)
     {
         var accessService = new DocumentAccessService(_currentUser.Object);
+        var pdfCache = new DocumentPdfCache(new MemoryCache(new MemoryCacheOptions()));
         return new DocumentService(
             _documentRepository.Object,
             _accessLogRepository.Object,
@@ -47,6 +51,7 @@ public sealed class PreviewPageLimitTests
             _mapper.Object,
             _gamificationPublisher.Object,
             pdfPageExtractor ?? _pdfPageExtractor.Object,
+            pdfCache,
             _configuration);
     }
 
@@ -134,18 +139,51 @@ public sealed class PreviewPageLimitTests
     }
 
     [Fact]
-    public async Task GetPreviewAsync_WhenStoredPageCountExceedsActualPdf_ThrowsForMissingPage()
+    public async Task GetByIdAsync_WhenStoredPageCountExceedsActualPdf_ReturnsReconciledCount()
     {
         SetupDocument(pageCount: 12, accessTier: AccessTier.FreePreview, driveFileId: "drive-file-1");
         SetupEffectivePdfPageCount(10, "drive-file-1");
         _currentUser.Setup(u => u.IsAuthenticated).Returns(true);
+        _currentUser.Setup(u => u.UserId).Returns(Guid.NewGuid());
+        _currentUser.Setup(u => u.IsPremium).Returns(true);
+        _mapper.Setup(m => m.Map<DocumentDetailDto>(It.IsAny<Document>()))
+            .Returns((Document source) => new DocumentDetailDto
+            {
+                Id = source.Id,
+                Title = source.Title,
+                Category = "CSD201",
+                PageCount = source.PageCount,
+                AccessTier = source.AccessTier.ToString(),
+                MimeType = source.MimeType,
+                CreatedAt = DateTime.UtcNow,
+                CanDownload = true,
+                PageLimit = source.PageCount
+            });
+
+        var sut = CreateSut();
+        var detail = await sut.GetByIdAsync(DocumentId);
+
+        detail.PageCount.Should().Be(10);
+        _documentRepository.Verify(
+            r => r.UpdateAsync(It.Is<Document>(d => d.PageCount == 10), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetPreviewAsync_WhenStoredPageCountExceedsActualPdf_UsesStoredCountWithoutReconcile()
+    {
+        SetupDocument(pageCount: 12, accessTier: AccessTier.FreePreview, driveFileId: "drive-file-1");
+        _currentUser.Setup(u => u.IsAuthenticated).Returns(true);
+        _currentUser.Setup(u => u.UserId).Returns(Guid.NewGuid());
         _currentUser.Setup(u => u.IsPremium).Returns(true);
 
         var sut = CreateSut();
-        var act = () => sut.GetPreviewAsync(DocumentId, page: 11);
+        var preview = await sut.GetPreviewAsync(DocumentId, page: 11);
 
-        await act.Should().ThrowAsync<NotFoundException>()
-            .WithMessage("*Page 11 is out of range*");
+        preview.Page.Should().Be(11);
+        _cloudStorage.Verify(
+            s => s.OpenReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -202,10 +240,45 @@ public sealed class PreviewPageLimitTests
         var sut = CreateSut();
         var content = await sut.GetContentAsync(DocumentId, page: null);
 
-        content.Stream.Should().BeSameAs(fullStream);
+        content.Stream.Length.Should().Be(3);
         _pdfPageExtractor.Verify(
             e => e.ExtractSinglePageAsync(It.IsAny<Stream>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task GetContentAsync_SecondPageRequest_UsesPdfCache_NotSecondDriveDownload()
+    {
+        SetupDocument(pageCount: 2, accessTier: AccessTier.FreePreview, driveFileId: "drive-file-1");
+        _currentUser.Setup(u => u.IsAuthenticated).Returns(true);
+        _currentUser.Setup(u => u.UserId).Returns(Guid.NewGuid());
+        _currentUser.Setup(u => u.IsPremium).Returns(false);
+        _currentUser.Setup(u => u.IsModeratorOrAdmin).Returns(false);
+
+        var openCount = 0;
+        _cloudStorage
+            .Setup(s => s.OpenReadAsync("drive-file-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() =>
+            {
+                openCount++;
+                return new CloudFileReadResult
+                {
+                    Stream = PdfTestHelper.CreatePdf(pageCount: 2),
+                    ContentType = "application/pdf",
+                    FileName = "sample.pdf"
+                };
+            });
+
+        var sut = CreateSut(new PdfPageExtractor());
+        var first = await sut.GetContentAsync(DocumentId, page: 1);
+        PdfTestHelper.GetPageCount(first.Stream).Should().Be(1);
+        first.Stream.Dispose();
+
+        var second = await sut.GetContentAsync(DocumentId, page: 2);
+        PdfTestHelper.GetPageCount(second.Stream).Should().Be(1);
+        second.Stream.Dispose();
+
+        openCount.Should().Be(1);
     }
 
     [Fact]

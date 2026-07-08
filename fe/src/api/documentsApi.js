@@ -10,7 +10,7 @@ import {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5006";
 
 export function listDocuments(params = {}) {
-  return apiRequest(`/api/v1/documents${buildQuery(params)}`);
+  return apiRequest(`/api/v1/documents${buildQuery(params)}`, { auth: false });
 }
 
 export function getDocument(id) {

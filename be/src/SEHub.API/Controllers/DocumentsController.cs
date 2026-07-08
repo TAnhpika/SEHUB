@@ -18,7 +18,7 @@ public sealed class DocumentsController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    [AllowAnonymous]
     public async Task<IActionResult> GetDocuments([FromQuery] DocumentQueryParams query, CancellationToken cancellationToken)
     {
         var result = await _documentService.GetDocumentsAsync(query, cancellationToken);

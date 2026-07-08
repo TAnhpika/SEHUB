@@ -8,6 +8,10 @@ public sealed class FakeCloudFileStorageService : ICloudFileStorageService
 {
     private readonly ConcurrentDictionary<string, byte[]> _files = new();
 
+    public int OpenReadCallCount { get; private set; }
+
+    public void ResetOpenReadCallCount() => OpenReadCallCount = 0;
+
     public Task<CloudFileUploadResult> UploadAsync(
         Stream stream,
         string fileName,
@@ -38,6 +42,7 @@ public sealed class FakeCloudFileStorageService : ICloudFileStorageService
 
     public Task<CloudFileReadResult> OpenReadAsync(string driveFileId, CancellationToken cancellationToken = default)
     {
+        OpenReadCallCount++;
         if (!_files.TryGetValue(driveFileId, out var bytes))
         {
             throw new FileNotFoundException("Drive file not found.", driveFileId);

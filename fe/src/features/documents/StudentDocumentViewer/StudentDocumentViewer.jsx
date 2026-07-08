@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -22,7 +22,12 @@ import {
   loadDocumentOverview,
   loadDocumentPageContent,
 } from "@/features/documents/documentPageContent";
-import { loadDocumentDetail } from "@/features/documents/studentDocumentsData";
+import {
+  isPdfDocument,
+  loadDocumentDetail,
+  loadDocumentFullContentBlob,
+  resolveDocumentApiId,
+} from "@/features/documents/studentDocumentsData";
 import styles from "./StudentDocumentViewer.module.css";
 
 function StudentDocumentViewer({ document: doc }) {
@@ -34,23 +39,40 @@ function StudentDocumentViewer({ document: doc }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageContent, setPageContent] = useState(null);
   const [pageLoadError, setPageLoadError] = useState(null);
+  const [pageLoading, setPageLoading] = useState(false);
+  const [fullPdfBlobUrl, setFullPdfBlobUrl] = useState(null);
   const [downloading, setDownloading] = useState(false);
-  const contentUrlRef = useRef(null);
+  const fullPdfUrlRef = useRef(null);
+  const pageCacheRef = useRef(new Map());
 
-  function revokeContentUrl() {
-    if (contentUrlRef.current?.startsWith("blob:")) {
-      URL.revokeObjectURL(contentUrlRef.current);
-      contentUrlRef.current = null;
+  const documentId = resolveDocumentApiId(enrichedDoc) ?? enrichedDoc?.id ?? null;
+
+  function revokeFullPdfUrl() {
+    if (fullPdfUrlRef.current?.startsWith("blob:")) {
+      URL.revokeObjectURL(fullPdfUrlRef.current);
+      fullPdfUrlRef.current = null;
     }
+  }
+
+  function clearPageCache() {
+    for (const entry of pageCacheRef.current.values()) {
+      if (entry?.contentUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(entry.contentUrl);
+      }
+    }
+    pageCacheRef.current.clear();
   }
 
   useEffect(() => {
     setEnrichedDoc(doc);
     setOverview(getDocumentOverview(doc));
     setCurrentPage(1);
-    revokeContentUrl();
+    revokeFullPdfUrl();
+    clearPageCache();
     setPageContent(null);
+    setFullPdfBlobUrl(null);
     setPageLoadError(null);
+    setPageLoading(false);
   }, [doc]);
 
   useEffect(() => {
@@ -82,47 +104,137 @@ function StudentDocumentViewer({ document: doc }) {
 
   const access = getDocumentAccessState(enrichedDoc, { isPremium, isAuthenticated });
   const isSlide = isSlideDocument(enrichedDoc);
+  const useFullPdfMode = access.canDownload && isPdfDocument(enrichedDoc);
   const pageLabels = buildMockPageLabels(access.totalPages, access.visiblePages);
   const activePageLabel = pageLabels[currentPage - 1];
   const canShowCurrentPage = Boolean(activePageLabel?.visible);
 
+  const prefetchPage = useCallback(
+    (pageNum) => {
+      if (useFullPdfMode || !documentId || pageCacheRef.current.has(pageNum)) {
+        return;
+      }
+
+      const label = pageLabels[pageNum - 1];
+      if (!label?.visible) {
+        return;
+      }
+
+      loadDocumentPageContent(enrichedDoc, pageNum)
+        .then((content) => {
+          if (content?.contentUrl?.startsWith("blob:")) {
+            pageCacheRef.current.set(pageNum, content);
+          }
+        })
+        .catch(() => {
+          /* ignore prefetch errors */
+        });
+    },
+    [documentId, enrichedDoc, pageLabels, useFullPdfMode],
+  );
+
   useEffect(() => {
-    if (!access.canView || !canShowCurrentPage) {
-      setPageContent(null);
+    if (!access.canView || !useFullPdfMode) {
+      revokeFullPdfUrl();
+      setFullPdfBlobUrl(null);
       return undefined;
     }
 
     let cancelled = false;
+    setPageLoading(true);
     setPageLoadError(null);
 
-    loadDocumentPageContent(enrichedDoc, currentPage)
-      .then((content) => {
-        if (!cancelled) {
-          revokeContentUrl();
-          if (content?.contentUrl?.startsWith("blob:")) {
-            contentUrlRef.current = content.contentUrl;
-          }
-          if (content?.totalPages && content.totalPages !== enrichedDoc.pages) {
-            setEnrichedDoc((prev) => ({ ...prev, pages: content.totalPages }));
-          }
-          setPageContent(content);
+    loadDocumentFullContentBlob(enrichedDoc)
+      .then((blobUrl) => {
+        if (cancelled || !blobUrl) {
+          throw new Error("Không tải được tài liệu.");
         }
+        revokeFullPdfUrl();
+        fullPdfUrlRef.current = blobUrl;
+        setFullPdfBlobUrl(blobUrl);
       })
       .catch((error) => {
         if (!cancelled) {
-          revokeContentUrl();
-          setPageContent(null);
-          setPageLoadError(error?.message ?? "Không tải được trang này.");
+          revokeFullPdfUrl();
+          setFullPdfBlobUrl(null);
+          setPageLoadError(error?.message ?? "Không tải được tài liệu.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPageLoading(false);
         }
       });
 
     return () => {
       cancelled = true;
-      revokeContentUrl();
     };
-  }, [access.canView, canShowCurrentPage, currentPage, enrichedDoc]);
+  }, [access.canView, documentId, enrichedDoc, useFullPdfMode]);
 
-  useEffect(() => () => revokeContentUrl(), []);
+  useEffect(() => {
+    if (!access.canView || useFullPdfMode || !canShowCurrentPage) {
+      setPageContent(null);
+      setPageLoading(false);
+      return undefined;
+    }
+
+    const cached = pageCacheRef.current.get(currentPage);
+    if (cached) {
+      setPageContent(cached);
+      setPageLoadError(null);
+      setPageLoading(false);
+      prefetchPage(currentPage + 1);
+      prefetchPage(currentPage - 1);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setPageLoading(true);
+    setPageLoadError(null);
+
+    loadDocumentPageContent(enrichedDoc, currentPage)
+      .then((content) => {
+        if (!cancelled) {
+          if (content?.contentUrl?.startsWith("blob:")) {
+            pageCacheRef.current.set(currentPage, content);
+          }
+          setPageContent(content);
+          prefetchPage(currentPage + 1);
+          prefetchPage(currentPage - 1);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setPageContent(null);
+          setPageLoadError(error?.message ?? "Không tải được trang này.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPageLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    access.canView,
+    canShowCurrentPage,
+    currentPage,
+    documentId,
+    enrichedDoc.pages,
+    prefetchPage,
+    useFullPdfMode,
+  ]);
+
+  useEffect(
+    () => () => {
+      revokeFullPdfUrl();
+      clearPageCache();
+    },
+    [],
+  );
 
   async function handleDownload() {
     if (!access.canDownload || downloading) return;
@@ -139,9 +251,13 @@ function StudentDocumentViewer({ document: doc }) {
   }
 
   const pageIndicatorTotal = access.limited ? access.visiblePages : access.totalPages;
-  const previewFrameSrc = pageContent?.contentUrl
-    ? `${pageContent.contentUrl}#page=1&toolbar=0&navpanes=0`
-    : null;
+  const previewFrameSrc = useFullPdfMode
+    ? fullPdfBlobUrl
+      ? `${fullPdfBlobUrl}#toolbar=0&navpanes=0`
+      : null
+    : pageContent?.contentUrl
+      ? `${pageContent.contentUrl}#page=1&toolbar=0&navpanes=0`
+      : null;
 
   function goToPage(nextPage) {
     const label = pageLabels[nextPage - 1];
@@ -225,12 +341,21 @@ function StudentDocumentViewer({ document: doc }) {
 
           {canShowCurrentPage ? (
             <div className={styles.pageView}>
-              <h4 className={styles.pageTitle}>{pageContent?.title ?? "Đang tải trang..."}</h4>
-              {previewFrameSrc ? (
+              <h4 className={styles.pageTitle}>
+                {useFullPdfMode
+                  ? enrichedDoc.name
+                  : (pageContent?.title ?? "Đang tải trang...")}
+              </h4>
+              {pageLoading ? (
+                <div className={styles.pageBody}>
+                  <p>Đang tải trang...</p>
+                </div>
+              ) : previewFrameSrc ? (
                 <iframe
-                  title={`${enrichedDoc.name} trang ${currentPage}`}
+                  key={useFullPdfMode ? `${documentId}-full` : `${documentId}-page-${currentPage}`}
+                  title={useFullPdfMode ? enrichedDoc.name : `${enrichedDoc.name} trang ${currentPage}`}
                   src={previewFrameSrc}
-                  className={styles.previewFrame}
+                  className={useFullPdfMode ? styles.previewFrameFull : styles.previewFrame}
                 />
               ) : pageLoadError ? (
                 <div className={styles.pageBody}>
@@ -244,32 +369,34 @@ function StudentDocumentViewer({ document: doc }) {
                 </div>
               )}
 
-              <div className={styles.pageNav}>
-                <button
-                  type="button"
-                  className={styles.navBtn}
-                  disabled={currentPage <= 1}
-                  onClick={() => goToPage(currentPage - 1)}
-                  aria-label="Trang trước"
-                >
-                  <FontAwesomeIcon icon={faChevronLeft} />
-                </button>
-                <span className={styles.pageIndicator}>
-                  {isSlide ? "Slide" : "Trang"} {currentPage} / {pageIndicatorTotal}
-                </span>
-                <button
-                  type="button"
-                  className={styles.navBtn}
-                  disabled={
-                    currentPage >= pageIndicatorTotal ||
-                    !pageLabels[currentPage]?.visible
-                  }
-                  onClick={() => goToPage(currentPage + 1)}
-                  aria-label="Trang sau"
-                >
-                  <FontAwesomeIcon icon={faChevronRight} />
-                </button>
-              </div>
+              {!useFullPdfMode ? (
+                <div className={styles.pageNav}>
+                  <button
+                    type="button"
+                    className={styles.navBtn}
+                    disabled={currentPage <= 1}
+                    onClick={() => goToPage(currentPage - 1)}
+                    aria-label="Trang trước"
+                  >
+                    <FontAwesomeIcon icon={faChevronLeft} />
+                  </button>
+                  <span className={styles.pageIndicator}>
+                    {isSlide ? "Slide" : "Trang"} {currentPage} / {pageIndicatorTotal}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.navBtn}
+                    disabled={
+                      currentPage >= pageIndicatorTotal ||
+                      !pageLabels[currentPage]?.visible
+                    }
+                    onClick={() => goToPage(currentPage + 1)}
+                    aria-label="Trang sau"
+                  >
+                    <FontAwesomeIcon icon={faChevronRight} />
+                  </button>
+                </div>
+              ) : null}
 
               {!isPremium && access.limited ? (
                 <p className={styles.limitBanner}>

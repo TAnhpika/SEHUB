@@ -1,5 +1,4 @@
 import * as documentsApi from "@/api/documentsApi";
-import { resolveAssetUrl } from "@/api/assetUrl";
 import {
   mapDocumentDetailDto,
   mapDocumentToSubjectListItem,
@@ -176,21 +175,30 @@ export async function loadDocumentPreviewPage(doc, pageNum) {
     return null;
   }
 
-  const preview = await documentsApi.getDocumentPreview(apiId, pageNum);
-  if (!preview) {
+  const blobUrl = await documentsApi.fetchDocumentContentBlobUrl(apiId, pageNum);
+  const totalPages = doc.pages ?? pageNum;
+
+  return {
+    page: pageNum,
+    totalPages,
+    pageLimit: doc.pageLimit,
+    contentUrl: blobUrl,
+  };
+}
+
+export function isPdfDocument(doc) {
+  if (!doc) return false;
+  if (doc.mimeType === "application/pdf") return true;
+  return /\.pdf$/i.test(doc.name ?? "");
+}
+
+export async function loadDocumentFullContentBlob(doc) {
+  const apiId = resolveDocumentApiId(doc);
+  if (!apiId || USE_MOCK) {
     return null;
   }
 
-  if (documentsApi.isAuthenticatedDocumentContentUrl(preview.contentUrl)) {
-    const blobUrl = await documentsApi.fetchDocumentContentBlobUrl(apiId, pageNum);
-    return { ...preview, pageLimit: preview.pageLimit ?? doc.pageLimit, contentUrl: blobUrl };
-  }
-
-  return {
-    ...preview,
-    pageLimit: preview.pageLimit ?? doc.pageLimit,
-    contentUrl: resolveAssetUrl(preview.contentUrl),
-  };
+  return documentsApi.fetchDocumentContentBlobUrl(apiId, null);
 }
 
 export async function fetchDocumentDownloadUrl(doc) {

@@ -101,6 +101,7 @@ public static class DependencyInjection
         services.AddScoped<IQuestionAttachmentRepository, QuestionAttachmentRepository>();
         services.AddScoped<IProfileActivityCache, ProfileActivityCache>();
         services.AddScoped<IProfileSnapshotCache, ProfileSnapshotCache>();
+        services.AddScoped<IDocumentPdfCache, DocumentPdfCache>();
         services.AddScoped<IUserBanRepository, UserBanRepository>();
         services.AddScoped<IViolationEscalationRepository, ViolationEscalationRepository>();
         services.AddScoped<IViolationQueueRepository, ViolationQueueRepository>();
