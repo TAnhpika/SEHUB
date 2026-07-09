@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Section sidebar hiển thị điều hướng theo nhóm môn học, có phân nhánh theo scope và quyền Premium.
+ *
+ * @module common/Sidebar/SubjectNavSection
+ */
+
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -16,7 +22,30 @@ const SUBJECT_ICONS = {
 };
 
 /**
- * @param {"community" | "home"} [scope="community"]
+ * @typedef {Object} SubjectNavSectionProps
+ * @property {string} pathname - Pathname hiện tại để xác định item active.
+ * @property {Record<string, string>} styles - CSS module từ sidebar cha.
+ * @property {"community" | "home"} [scope="community"] - Không gian route cần build link.
+ * @property {() => void} [onNavigate] - Callback đóng drawer/menu sau khi click điều hướng.
+ * @property {boolean} [isPremium=false] - Quyền Premium hiện tại để mở thêm link cần trả phí.
+ */
+
+/**
+ * Khối điều hướng môn học dùng chung cho sidebar `community` và `home`.
+ *
+ * Danh sách link được sinh qua `getSubjectNavLinks(scope, { isPremium })`
+ * để giữ luật hiển thị Premium nhất quán ở mọi khu vực.
+ *
+ * @param {SubjectNavSectionProps} props - Props điều khiển section điều hướng.
+ * @returns {import('react').ReactElement} Danh sách link môn học kèm trạng thái active.
+ *
+ * @example
+ * <SubjectNavSection
+ *   pathname={pathname}
+ *   styles={styles}
+ *   scope="home"
+ *   isPremium={isPremium}
+ * />
  */
 function SubjectNavSection({
   pathname,

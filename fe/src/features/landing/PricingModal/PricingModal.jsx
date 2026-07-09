@@ -4,10 +4,43 @@ import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import PricingContent from "@/features/premium/PricingContent/PricingContent";
 import styles from "./PricingModal.module.css";
 
+/**
+ * @fileoverview Modal bảng giá Premium dùng trên landing page cho guest user.
+ *
+ * Modal này khóa scroll nền, đóng bằng click overlay / nút close / phím Escape,
+ * và tái sử dụng `PricingContent` ở chế độ yêu cầu đăng nhập.
+ *
+ * @module features/landing/PricingModal/PricingModal
+ */
+
+/**
+ * @typedef {Object} PricingModalProps
+ * @property {boolean} open - Trạng thái hiển thị của modal.
+ * @property {() => void} onClose - Callback đóng modal.
+ */
+
+/**
+ * Modal hiển thị bảng giá Premium trên landing page.
+ *
+ * Khi mở, component sẽ cố định `body` để tránh scroll nền và giữ nguyên vị trí hiện tại
+ * của trang để UX không bị nhảy khi đóng modal.
+ *
+ * @param {PricingModalProps} props - Props điều khiển modal.
+ * @returns {import('react').ReactElement|null} Overlay/dialog hoặc `null` khi chưa mở.
+ *
+ * @example
+ * <PricingModal open={pricingOpen} onClose={() => setPricingOpen(false)} />
+ */
 function PricingModal({ open, onClose }) {
   useEffect(() => {
     if (!open) return undefined;
 
+    /**
+     * Đóng modal khi người dùng nhấn phím Escape.
+     *
+     * @param {KeyboardEvent} event - Sự kiện bàn phím từ `window`.
+     * @returns {void}
+     */
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
     }

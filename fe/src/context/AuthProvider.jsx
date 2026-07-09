@@ -1,3 +1,15 @@
+/**
+ * @fileoverview Auth provider trung tâm của FE: lưu phiên, bootstrap `/me`, đồng bộ Premium và AI token.
+ *
+ * Module này chịu trách nhiệm:
+ * - Khôi phục phiên đăng nhập từ access/refresh token.
+ * - Enrich user từ dữ liệu auth, profile stats và subscription Premium.
+ * - Cung cấp các action đăng nhập/đăng ký/đăng xuất/Google login cho toàn app.
+ * - Đồng bộ snapshot AI token và trạng thái Premium vào `AuthContext`.
+ *
+ * @module context/AuthProvider
+ */
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as authApi from "@/api/authApi";
 import { deriveUsernameFromEmail, mapApiUser } from "@/api/authMapper";
@@ -20,6 +32,11 @@ const STORAGE_KEY = "sehubs_user";
 const REMEMBER_KEY = "sehubs_remember_login";
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
+/**
+ * Xóa session mock cũ còn sót lại để tránh bootstrap sai user sau khi chuyển sang API thật.
+ *
+ * @returns {void}
+ */
 function purgeLegacyMockSession() {
   try {
     const token = localStorage.getItem("sehubs_token");
@@ -49,6 +66,11 @@ function purgeLegacyMockSession() {
 
 const DEV_SESSION_CLEARED_KEY = "sehubs_dev_session_cleared";
 
+/**
+ * Trong môi trường dev, cho phép clear session đúng một lần mỗi tab khi flag bật.
+ *
+ * @returns {void}
+ */
 function purgeDevSessionIfEnabled() {
   if (!import.meta.env.DEV || import.meta.env.VITE_DEV_CLEAR_SESSION !== "true") {
     return;
@@ -67,6 +89,26 @@ function purgeDevSessionIfEnabled() {
 purgeLegacyMockSession();
 purgeDevSessionIfEnabled();
 
+/**
+ * @typedef {Object} AuthUserLike
+ * @property {string | null} [id] - ID người dùng.
+ * @property {string | null} [username] - Username đăng nhập.
+ * @property {string | null} [displayName] - Tên hiển thị.
+ * @property {string | null} [email] - Email tài khoản.
+ * @property {string | null} [role] - Vai trò nghiệp vụ (`student`, `moderator`, `admin`...).
+ * @property {string | null} [plan] - Gói hiện tại (`Basic`/`Premium`).
+ * @property {boolean} [isPremium] - Cờ Premium legacy/fallback.
+ * @property {string | null} [premiumExpiresAt] - Hạn Premium nếu có.
+ * @property {string | null} [premiumPlanName] - Tên gói Premium đang dùng.
+ * @property {boolean} [emailConfirmed] - Trạng thái xác thực email.
+ */
+
+/**
+ * Chuẩn hóa user đọc từ storage/API để luôn có `plan` và `isPremium` nhất quán.
+ *
+ * @param {AuthUserLike | null | undefined} stored - User thô từ localStorage hoặc mapper khác.
+ * @returns {AuthUserLike | null} User đã enrich; `null` nếu input rỗng.
+ */
 function enrichUser(stored) {
   if (!stored) return null;
 
@@ -81,10 +123,21 @@ function enrichUser(stored) {
   };
 }
 
+/**
+ * Map DTO auth user từ backend rồi enrich theo nghiệp vụ Premium nội bộ.
+ *
+ * @param {Record<string, any>} dto - DTO user từ API auth.
+ * @returns {AuthUserLike | null} User đã map và enrich.
+ */
 function mapAndEnrichUser(dto) {
   return enrichUser(mapApiUser(dto));
 }
 
+/**
+ * Đọc user đã cache trong localStorage.
+ *
+ * @returns {AuthUserLike | null} User đã enrich hoặc `null` nếu không có/parse lỗi.
+ */
 export function readStoredUser() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -94,6 +147,11 @@ export function readStoredUser() {
   }
 }
 
+/**
+ * Kiểm tra có đủ token + user cache để coi là còn session lưu cục bộ hay không.
+ *
+ * @returns {boolean} `true` nếu local có access token hợp lệ và user cache.
+ */
 export function hasStoredSession() {
   try {
     const token = getAccessToken();
@@ -105,6 +163,12 @@ export function hasStoredSession() {
   }
 }
 
+/**
+ * Ghi hoặc xóa user hiện tại trong localStorage.
+ *
+ * @param {AuthUserLike | null} user - User cần persist; `null` để clear.
+ * @returns {void}
+ */
 function persistUser(user) {
   if (user) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
@@ -113,6 +177,16 @@ function persistUser(user) {
   }
 }
 
+/**
+ * Áp phiên auth mới sau login/register/googleLogin vào state, token store và localStorage.
+ *
+ * Nếu không dùng mock, module tiếp tục gọi `/me` để enrich thêm stats/subscription.
+ *
+ * @param {import('react').Dispatch<import('react').SetStateAction<AuthUserLike | null>>} setUser - Setter user state.
+ * @param {import('react').Dispatch<import('react').SetStateAction<boolean>>} setIsBootstrapping - Setter cờ bootstrap.
+ * @param {{ user: Record<string, any>, accessToken: string, refreshToken?: string | null }} loginResponse - Payload trả về sau auth thành công.
+ * @returns {AuthUserLike | null} User vừa áp vào session.
+ */
 function applyAuthSession(setUser, setIsBootstrapping, loginResponse) {
   const nextUser = mapAndEnrichUser(loginResponse.user);
   setAccessToken(loginResponse.accessToken);
@@ -134,6 +208,13 @@ function applyAuthSession(setUser, setIsBootstrapping, loginResponse) {
   return nextUser;
 }
 
+/**
+ * Merge dữ liệu `/me` vào user hiện tại, bao gồm stats hồ sơ, subscription Premium và AI tokens.
+ *
+ * @param {AuthUserLike | null} user - User nền hiện có trong state.
+ * @param {Record<string, any> | null | undefined} meDto - DTO `/me` từ backend.
+ * @returns {AuthUserLike | null} User đã enrich thêm thông tin mới.
+ */
 function applyMeEnrichment(user, meDto) {
   if (!user || !meDto || USE_MOCK) {
     return user;
@@ -172,6 +253,15 @@ function applyMeEnrichment(user, meDto) {
   return next;
 }
 
+/**
+ * Đồng bộ lại user từ API `/me` khi cần refresh dữ liệu mới nhất.
+ *
+ * @param {AuthUserLike | null} user - User hiện tại trong state.
+ * @param {Record<string, any> | null} [meDto=null] - DTO `/me` đã có sẵn để tránh gọi lại API.
+ * @returns {Promise<AuthUserLike | null>} User sau khi đồng bộ.
+ *
+ * @throws {Error} Khi `authApi.getMe()` thất bại trong API mode.
+ */
 async function syncUserFromApi(user, meDto = null) {
   if (!user || USE_MOCK) {
     return user;
@@ -181,10 +271,22 @@ async function syncUserFromApi(user, meDto = null) {
   return applyMeEnrichment(user, me);
 }
 
+/**
+ * Quyết định bootstrap error có cần clear hẳn session hay chỉ fallback tạm sang storage.
+ *
+ * @param {unknown} error - Lỗi phát sinh khi bootstrap `/me`.
+ * @returns {boolean} `true` nếu lỗi auth 401/403 buộc phải làm sạch phiên.
+ */
 function shouldClearSessionOnBootstrapError(error) {
   return error instanceof ApiError && (error.status === 401 || error.status === 403);
 }
 
+/**
+ * Fallback user từ localStorage vào state khi bootstrap lỗi nhưng chưa chắc phiên đã chết.
+ *
+ * @param {import('react').Dispatch<import('react').SetStateAction<AuthUserLike | null>>} setUser - Setter user state.
+ * @returns {void}
+ */
 function applyStoredUserFallback(setUser) {
   const stored = readStoredUser();
   if (stored) {
@@ -192,6 +294,12 @@ function applyStoredUserFallback(setUser) {
   }
 }
 
+/**
+ * Xóa toàn bộ dấu vết phiên đăng nhập hiện tại ở token store, AI snapshot và local cache.
+ *
+ * @param {import('react').Dispatch<import('react').SetStateAction<AuthUserLike | null>>} setUser - Setter user state.
+ * @returns {void}
+ */
 function clearAuthSession(setUser) {
   clearAuthTokens();
   clearServerAiTokenSnapshot();
@@ -199,6 +307,27 @@ function clearAuthSession(setUser) {
   setUser(null);
 }
 
+/**
+ * @typedef {Object} AuthProviderProps
+ * @property {import('react').ReactNode} children - Cây component được bọc bởi provider.
+ */
+
+/**
+ * Provider auth toàn cục cho ứng dụng.
+ *
+ * `value` do provider cấp gồm:
+ * - User/session state (`user`, `isAuthenticated`, `isBootstrapping`, `isPremium`...).
+ * - Auth actions (`login`, `register`, `logout`, `googleLogin`...).
+ * - Premium/AI helpers dùng trong các flow học tập và chatbot.
+ *
+ * @param {AuthProviderProps} props - Props provider.
+ * @returns {import('react').ReactElement} `AuthContext.Provider` bao bọc toàn app.
+ *
+ * @example
+ * <AuthProvider>
+ *   <App />
+ * </AuthProvider>
+ */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     if (!getAccessToken()) {

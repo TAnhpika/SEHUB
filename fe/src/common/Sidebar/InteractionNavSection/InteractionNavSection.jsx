@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Section sidebar cho các điểm chạm tương tác như nhắn tin và AI Advisor.
+ *
+ * @module common/Sidebar/InteractionNavSection
+ */
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -5,6 +11,30 @@ import { faMessage, faRobot } from "@fortawesome/free-solid-svg-icons";
 import { loadUnreadCount } from "@/features/chat/messagesData";
 import { useChatHub } from "@/hooks/useChatHub";
 
+/**
+ * @typedef {Object} InteractionNavSectionProps
+ * @property {string} pathname - Pathname hiện tại để xác định trạng thái active.
+ * @property {Record<string, string>} styles - CSS module do sidebar cha truyền xuống.
+ * @property {boolean} [isPremium=false] - Cờ mở/ẩn lối vào AI Advisor.
+ * @property {() => void} [onNavigate] - Callback đóng drawer sau khi người dùng điều hướng.
+ */
+
+/**
+ * Section điều hướng tính năng tương tác trong sidebar chính.
+ *
+ * Module này đồng bộ badge tin nhắn chưa đọc từ `useChatHub` và lần fetch đầu qua `loadUnreadCount`.
+ * Link AI Advisor chỉ hiện khi người dùng có quyền Premium.
+ *
+ * @param {InteractionNavSectionProps} props - Props render section tương tác.
+ * @returns {import('react').ReactElement} Danh sách link tương tác kèm badge unread.
+ *
+ * @example
+ * <InteractionNavSection
+ *   pathname={pathname}
+ *   styles={styles}
+ *   isPremium={isPremium}
+ * />
+ */
 function InteractionNavSection({ pathname, styles, isPremium = false, onNavigate }) {
   const isMessagesActive =
     pathname === "/home/messages" || pathname.startsWith("/home/messages/");

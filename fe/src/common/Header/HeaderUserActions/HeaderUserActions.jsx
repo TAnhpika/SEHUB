@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Cụm action người dùng ở header chính: thông báo, streak, theme, workspace và menu hồ sơ.
+ *
+ * @module common/Header/HeaderUserActions
+ */
+
 import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -14,6 +20,19 @@ import ThemeSwitcher from "@/common/ThemeSwitcher/ThemeSwitcher";
 import { useHoverDropdown } from "@/hooks/useHoverDropdown";
 import styles from "@/common/Header/MainHeader/MainHeader.module.css";
 
+/**
+ * Khu vực thao tác người dùng ở header sau đăng nhập.
+ *
+ * Hiển thị notification, streak, menu theme/workspace và profile dropdown.
+ * Tên hiển thị được tô class Premium khi tài khoản đang có quyền Premium.
+ *
+ * @returns {import('react').ReactElement} Cụm action phía phải của header.
+ *
+ * @example
+ * <header>
+ *   <HeaderUserActions />
+ * </header>
+ */
 function HeaderUserActions() {
   const navigate = useNavigate();
   const { user, logout, isPremium } = useAuth();
@@ -23,6 +42,11 @@ function HeaderUserActions() {
   const displayName = user?.displayName ?? "Anhpika";
   const initial = user?.initial ?? displayName.charAt(0).toUpperCase();
 
+  /**
+   * Đóng dropdown hồ sơ và bỏ focus khỏi trigger/menu item đang active.
+   *
+   * @returns {void}
+   */
   function handleProfileClick() {
     closeProfileMenu();
     if (document.activeElement instanceof HTMLElement) {
@@ -30,6 +54,11 @@ function HeaderUserActions() {
     }
   }
 
+  /**
+   * Đăng xuất khỏi phiên hiện tại rồi điều hướng về landing page.
+   *
+   * @returns {void}
+   */
   function handleLogout() {
     handleProfileClick();
     logout();

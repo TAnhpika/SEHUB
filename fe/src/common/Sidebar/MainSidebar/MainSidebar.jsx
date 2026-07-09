@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Sidebar chính trong khu vực `/home`, gồm nav cốt lõi, môn học, tương tác và upsell Premium.
+ *
+ * @module common/Sidebar/MainSidebar
+ */
+
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
@@ -12,11 +18,30 @@ import SubjectNavSection from "@/common/Sidebar/SubjectNavSection/SubjectNavSect
 import InteractionNavSection from "@/common/Sidebar/InteractionNavSection/InteractionNavSection";
 import styles from "./MainSidebar.module.css";
 
+/**
+ * Các link điều hướng top-level luôn hiển thị trong sidebar chính.
+ *
+ * @constant {Array<{ to: string, label: string, icon: import('@fortawesome/fontawesome-svg-core').IconDefinition, end?: boolean }>}
+ * @readonly
+ */
 const MAIN_LINKS = [
   { to: "/home", label: "Trang chủ", icon: faHome, end: true },
   { to: "/home/friends", label: "Tìm kiếm bạn bè", icon: faUserGroup },
 ];
 
+/**
+ * Sidebar trái dùng cho shell khu vực người dùng đã đăng nhập.
+ *
+ * Sidebar hỗ trợ:
+ * - Drawer mobile với overlay portal và lock body scroll.
+ * - Điều hướng môn học/tương tác có phụ thuộc quyền Premium.
+ * - Khối CTA nâng cấp Premium và liên kết cộng đồng/feedback.
+ *
+ * @returns {import('react').ReactElement} Sidebar chính của `MainLayout`.
+ *
+ * @example
+ * <MainSidebar />
+ */
 function MainSidebar() {
   const { pathname } = useLocation();
   const { isPremium } = useAuth();
@@ -28,6 +53,11 @@ function MainSidebar() {
     closeSidebar();
   }, [pathname, closeSidebar]);
 
+  /**
+   * Đóng drawer sau khi click điều hướng trên màn nhỏ để tránh che nội dung mới.
+   *
+   * @returns {void}
+   */
   function handleNavClick() {
     if (window.innerWidth <= 1024) {
       closeSidebar();
