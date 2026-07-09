@@ -20,12 +20,9 @@ public sealed class ExamGradingServiceTests
         var exam = new Exam
         {
             Id = Guid.NewGuid(),
-            Code = "EX-001",
-            Title = "Sample Exam",
+            SubjectCode = "EX-001",
+            PaperCode = "Sample Exam",
             ExamType = ExamType.Final,
-            Semester = 1,
-            Major = "SE",
-            QuestionCount = 2,
             Status = ExamStatus.Published,
             Questions =
             [
@@ -83,8 +80,8 @@ public sealed class ExamGradingServiceTests
         var exam = new Exam
         {
             Id = Guid.NewGuid(),
-            Code = "EX-MULTI",
-            Title = "Multi Exam",
+            SubjectCode = "EX-MULTI",
+            PaperCode = "Multi Exam",
             ExamType = ExamType.Final,
             Status = ExamStatus.Published,
             Questions =
@@ -121,8 +118,8 @@ public sealed class ExamGradingServiceTests
         var exam = new Exam
         {
             Id = Guid.NewGuid(),
-            Code = "EX-EMPTY",
-            Title = "Empty Exam",
+            SubjectCode = "EX-EMPTY",
+            PaperCode = "Empty Exam",
             ExamType = ExamType.Final,
             Status = ExamStatus.Published
         };

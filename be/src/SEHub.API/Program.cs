@@ -72,6 +72,7 @@ if (!app.Environment.IsEnvironment("Testing"))
     var context = scope.ServiceProvider.GetRequiredService<SEHubDbContext>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<SEHubDbContext>>();
     await ExamSchemaMigration.EnsureSubjectForeignKeyAsync(context, logger);
+    await ExamContentHashBackfill.RunAsync(context, logger);
 }
 
 app.Run();

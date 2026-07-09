@@ -45,8 +45,8 @@ export function createExam(body, confirmDuplicate = false) {
   });
 }
 
-export function updateExam(id, body) {
-  return apiRequest(`/api/v1/admin/exams/${id}`, {
+export function updateExam(id, body, confirmDuplicate = false) {
+  return apiRequest(`/api/v1/admin/exams/${id}${buildQuery({ confirmDuplicate })}`, {
     method: "PUT",
     body,
   });
@@ -67,8 +67,8 @@ export function rejectExam(id, body) {
   });
 }
 
-export function resubmitExam(id, body) {
-  return apiRequest(`/api/v1/admin/exams/${id}/resubmit`, {
+export function resubmitExam(id, body, confirmDuplicate = false) {
+  return apiRequest(`/api/v1/admin/exams/${id}/resubmit${buildQuery({ confirmDuplicate })}`, {
     method: "PUT",
     body,
   });

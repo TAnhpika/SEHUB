@@ -172,58 +172,51 @@ public class PostRepository : IPostRepository
             p => p.IsPinned && p.Status == PostStatus.Published,
             cancellationToken);
 
-    public async Task<(IReadOnlyList<Post> Items, int TotalCount)> GetPublishedCandidatesForPinningAsync(
+    public async Task<IReadOnlyList<Post>> GetPublishedCandidatesForPinningAsync(
         string? search,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
     {
         var dbQuery = _context.Posts.Where(p => p.Status == PostStatus.Published && !p.IsPinned);
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var term = search.Trim();
-            dbQuery = dbQuery.Where(p =>
-                p.Title.Contains(term) ||
-                p.Content.Contains(term) ||
-                _context.Users.Any(u => u.Id == p.AuthorId && (u.UserName!.Contains(term) || u.DisplayName.Contains(term))));
-        }
-
-        var total = await dbQuery.CountAsync(cancellationToken);
-        var items = await dbQuery
+        dbQuery = ApplyPublishedCandidateSearch(dbQuery, search);
+        return await dbQuery
             .OrderByDescending(p => p.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
-
-        return (items, total);
     }
 
-    public async Task<(IReadOnlyList<Post> Items, int TotalCount)> GetPublishedCandidatesForFeaturingAsync(
+    public async Task<IReadOnlyList<Post>> GetPublishedCandidatesForFeaturingAsync(
         string? search,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
     {
         var dbQuery = _context.Posts.Where(p => p.Status == PostStatus.Published && !p.IsFeatured);
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var term = search.Trim();
-            dbQuery = dbQuery.Where(p =>
-                p.Title.Contains(term) ||
-                p.Content.Contains(term) ||
-                _context.Users.Any(u => u.Id == p.AuthorId && (u.UserName!.Contains(term) || u.DisplayName.Contains(term))));
-        }
-
-        var total = await dbQuery.CountAsync(cancellationToken);
-        var items = await dbQuery
+        dbQuery = ApplyPublishedCandidateSearch(dbQuery, search);
+        return await dbQuery
             .OrderByDescending(p => p.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
+    }
 
-        return (items, total);
+    private IQueryable<Post> ApplyPublishedCandidateSearch(IQueryable<Post> dbQuery, string? search)
+    {
+        if (string.IsNullOrWhiteSpace(search))
+        {
+            return dbQuery;
+        }
+
+        var term = search.Trim();
+        var matchingAuthorIds = _context.Users
+            .Where(u => u.UserName!.Contains(term) || u.DisplayName.Contains(term))
+            .Select(u => u.Id);
+
+        return dbQuery.Where(p =>
+            p.Title.Contains(term) ||
+            matchingAuthorIds.Contains(p.AuthorId));
     }
 
     public async Task AddAsync(Post post, CancellationToken cancellationToken = default) =>

@@ -144,7 +144,7 @@ export async function loadDocumentOverview(doc) {
 }
 
 /**
- * @param {{ id: string, name: string, subject?: string, description?: string, pages?: number }} doc
+ * @param {{ id: string, name: string, subject?: string, description?: string, pages?: number, pageLimit?: number }} doc
  * @param {number} pageNum
  */
 export async function loadDocumentPageContent(doc, pageNum) {

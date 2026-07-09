@@ -58,9 +58,13 @@ public sealed class ExamsController : ControllerBase
 
     [HttpPut("{id:guid}")]
     [Authorize(Policy = PolicyNames.RequireAdmin)]
-    public async Task<IActionResult> UpdateExam(Guid id, [FromBody] UpdateExamRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateExam(
+        Guid id,
+        [FromBody] UpdateExamRequest request,
+        [FromQuery] bool confirmDuplicate = false,
+        CancellationToken cancellationToken = default)
     {
-        var result = await _adminExamService.UpdateExamAsync(id, request, cancellationToken);
+        var result = await _adminExamService.UpdateExamAsync(id, request, confirmDuplicate, cancellationToken);
         return Ok(result);
     }
 
@@ -82,9 +86,13 @@ public sealed class ExamsController : ControllerBase
 
     [HttpPut("{id:guid}/resubmit")]
     [Authorize(Policy = PolicyNames.RequireModerator)]
-    public async Task<IActionResult> ResubmitExam(Guid id, [FromBody] ResubmitExamRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> ResubmitExam(
+        Guid id,
+        [FromBody] ResubmitExamRequest request,
+        [FromQuery] bool confirmDuplicate = false,
+        CancellationToken cancellationToken = default)
     {
-        var result = await _adminExamService.ResubmitExamAsync(id, request, cancellationToken);
+        var result = await _adminExamService.ResubmitExamAsync(id, request, confirmDuplicate, cancellationToken);
         return Ok(result);
     }
 

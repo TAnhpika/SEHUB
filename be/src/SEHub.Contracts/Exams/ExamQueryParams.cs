@@ -2,7 +2,7 @@ namespace SEHub.Contracts.Exams;
 
 public sealed class ExamQueryParams
 {
-    public string? Code { get; init; }
+    public string? SubjectCode { get; init; }
     public string? Type { get; init; }
     public string? Semester { get; init; }
     public string? Major { get; init; }

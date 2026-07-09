@@ -192,7 +192,7 @@ public sealed class QuestionReportService : IQuestionReportService
             Reason = report.Reason,
             Detail = report.Detail,
             ExamId = report.ExamId,
-            ExamCode = exam?.Code ?? string.Empty,
+            ExamCode = exam?.SubjectCode ?? string.Empty,
             QuestionId = report.QuestionId,
             QuestionIndex = question?.OrderIndex ?? 0,
             QuestionText = question?.Content ?? string.Empty,

@@ -1,53 +1,72 @@
-using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Contracts.Admin;
+using SEHub.Domain.Exceptions;
 
 namespace SEHub.Application.Admin;
 
 public sealed class OcrExamService : IOcrExamService
 {
     private readonly IExamRepository _examRepository;
+    private readonly IExamMarkdownImportService _markdownImport;
 
-    public OcrExamService(IExamRepository examRepository)
+    public OcrExamService(
+        IExamRepository examRepository,
+        IExamMarkdownImportService markdownImport)
     {
         _examRepository = examRepository;
+        _markdownImport = markdownImport;
     }
 
     public async Task<OcrExamResponse> ProcessAsync(OcrExamRequest request, CancellationToken cancellationToken = default)
     {
-        // Stub OCR: treat base64 payload as plain text source for normalization
-        var rawText = request.Base64Image;
-        var normalized = NormalizeText(rawText);
-        var contentHash = ComputeSha256Hash(normalized);
+        var rawText = TryDecodeUtf8Payload(request.Base64Image) ?? request.Base64Image;
+        if (string.IsNullOrWhiteSpace(rawText))
+        {
+            throw new DomainException("OCR payload is required.");
+        }
 
+        var parsed = _markdownImport.Parse(rawText);
+        if (parsed.Questions.Count == 0)
+        {
+            throw new DomainException("Không parse được câu hỏi từ nội dung OCR.");
+        }
+
+        var contentHash = ExamContentFingerprint.ComputeHashFromQuestions(parsed.Questions);
         var duplicate = await _examRepository.GetByContentHashAsync(contentHash, cancellationToken);
 
         return new OcrExamResponse
         {
-            Text = normalized,
+            Text = rawText.Trim(),
             ContentHash = contentHash,
             DuplicateWarning = duplicate is not null,
-            DuplicateExamId = duplicate?.Id
+            DuplicateExamId = duplicate?.Id,
+            Questions = parsed.Questions,
         };
     }
 
-    internal static string NormalizeText(string input)
+    private static string? TryDecodeUtf8Payload(string payload)
     {
-        if (string.IsNullOrWhiteSpace(input))
+        if (string.IsNullOrWhiteSpace(payload))
         {
-            return string.Empty;
+            return null;
         }
 
-        var text = input.Trim().ToLowerInvariant();
-        text = Regex.Replace(text, @"\s+", " ");
-        return text;
-    }
+        var base64 = payload.Trim();
+        var commaIndex = base64.IndexOf(',');
+        if (base64.StartsWith("data:", StringComparison.OrdinalIgnoreCase) && commaIndex >= 0)
+        {
+            base64 = base64[(commaIndex + 1)..];
+        }
 
-    internal static string ComputeSha256Hash(string input)
-    {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
+        try
+        {
+            var bytes = Convert.FromBase64String(base64);
+            return Encoding.UTF8.GetString(bytes);
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
     }
 }

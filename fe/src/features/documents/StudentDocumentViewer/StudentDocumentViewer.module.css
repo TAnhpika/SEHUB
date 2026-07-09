@@ -148,6 +148,14 @@
   border-radius: 8px;
 }
 
+.previewFrameFull {
+  width: 100%;
+  min-height: min(72vh, 720px);
+  background: var(--color-surface);
+  border: 1px solid var(--moderator-border);
+  border-radius: 8px;
+}
+
 .pageNav {
   display: flex;
   gap: 1rem;
@@ -376,7 +384,8 @@
     margin-top: 0.75rem;
   }
 
-  .previewFrame {
+  .previewFrame,
+  .previewFrameFull {
     min-height: min(320px, 50vh);
   }
 

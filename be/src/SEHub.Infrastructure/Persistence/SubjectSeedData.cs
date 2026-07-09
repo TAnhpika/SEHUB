@@ -123,7 +123,7 @@ public static class SubjectSeedData
         }
 
         var categories = await context.DocumentCategories
-            .Where(category => category.SubjectCode == null)
+            .Where(category => category.SubjectCode == string.Empty)
             .ToListAsync();
 
         var updated = 0;
@@ -144,9 +144,7 @@ public static class SubjectSeedData
             }
 
             category.SubjectCode = subject.Code;
-            category.Semester = subject.Semester;
             category.Name = $"{subject.Code} — {subject.Name}";
-            category.Major = ExamMajorResolver.Normalize(subject.Code, subject.Code);
             updated++;
         }
 

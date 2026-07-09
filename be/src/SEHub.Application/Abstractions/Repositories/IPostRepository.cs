@@ -22,12 +22,12 @@ public interface IPostRepository
     Task<int> CountFeaturedAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Post>> GetPinnedAsync(int limit, CancellationToken cancellationToken = default);
     Task<int> CountPinnedAsync(CancellationToken cancellationToken = default);
-    Task<(IReadOnlyList<Post> Items, int TotalCount)> GetPublishedCandidatesForFeaturingAsync(
+    Task<IReadOnlyList<Post>> GetPublishedCandidatesForFeaturingAsync(
         string? search,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
-    Task<(IReadOnlyList<Post> Items, int TotalCount)> GetPublishedCandidatesForPinningAsync(
+    Task<IReadOnlyList<Post>> GetPublishedCandidatesForPinningAsync(
         string? search,
         int page,
         int pageSize,

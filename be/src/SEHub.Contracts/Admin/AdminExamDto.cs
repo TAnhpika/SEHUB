@@ -5,8 +5,8 @@ namespace SEHub.Contracts.Admin;
 public sealed class AdminExamDto
 {
     public Guid Id { get; init; }
-    public string Code { get; init; } = string.Empty;
-    public string Title { get; init; } = string.Empty;
+    public string SubjectCode { get; init; } = string.Empty;
+    public string PaperCode { get; init; } = string.Empty;
     public string SubjectName { get; init; } = string.Empty;
     public string ExamType { get; init; } = string.Empty;
     public string? Semester { get; init; }
@@ -14,7 +14,6 @@ public sealed class AdminExamDto
     public int QuestionCount { get; init; }
     public string Status { get; init; } = string.Empty;
     public string? Description { get; init; }
-    public string? AssetUrl { get; init; }
     public string? ContentHash { get; init; }
     public IReadOnlyList<ExamAttachmentDto> Attachments { get; init; } = [];
     public DateTime CreatedAt { get; init; }
@@ -25,11 +24,12 @@ public sealed class AdminExamDto
     public DateTime? RejectedAt { get; init; }
     public bool CanResubmit { get; init; }
     public bool IsContentLocked { get; init; }
-    public string? RevisionSourceCode { get; init; }
-    public string? RevisionSourceTitle { get; init; }
+    public string? RevisionSourceSubjectCode { get; init; }
+    public string? RevisionSourcePaperCode { get; init; }
     public string? SubmittedByUsername { get; init; }
     public string? SubmittedByDisplayName { get; init; }
-    public bool IsPinned { get; init; }    public IReadOnlyList<AdminExamQuestionDto> Questions { get; init; } = [];
+    public bool IsPinned { get; init; }
+    public IReadOnlyList<AdminExamQuestionDto> Questions { get; init; } = [];
 }
 
 public sealed class AdminExamQuestionDto

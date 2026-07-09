@@ -1,7 +1,6 @@
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Exceptions;
-using SEHub.Shared.Subjects;
 
 namespace SEHub.Application.Exams;
 
@@ -24,8 +23,6 @@ public static class ExamSubjectBinder
 
     public static void ApplySubject(Exam exam, Subject subject)
     {
-        exam.Code = subject.Code;
-        exam.Semester = subject.Semester;
-        exam.Major = ExamMajorResolver.Normalize(subject.Code, subject.Code);
+        exam.SubjectCode = subject.Code;
     }
 }

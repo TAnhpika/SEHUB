@@ -182,11 +182,11 @@ function formatExamUploadedAt(value) {
 }
 
 function mapApiExamListItemToPaper(dto, courseCode, typeLabel) {
-  const paperCode = dto.title || dto.code || dto.id;
+  const paperCode = dto.paperCode ?? dto.title ?? dto.subjectCode ?? dto.code ?? dto.id;
   const displayCode = resolvePublicExamName({
     code: paperCode,
     title: paperCode,
-    major: dto.code,
+    subjectCode: dto.subjectCode ?? dto.code,
     description: dto.description,
   });
   const parsed = parseExamPaperCode(paperCode) ?? parseExamPaperCode(displayCode);

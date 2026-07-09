@@ -716,11 +716,6 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
-                    b.Property<string>("FilePath")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
@@ -800,20 +795,13 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Major")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int>("Semester")
-                        .HasColumnType("integer");
-
                     b.Property<string>("SubjectCode")
+                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
@@ -822,9 +810,8 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SubjectCode");
-
-                    b.HasIndex("Semester", "Major");
+                    b.HasIndex("SubjectCode")
+                        .IsUnique();
 
                     b.ToTable("DocumentCategories");
                 });
@@ -834,15 +821,6 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
-
-                    b.Property<string>("AssetUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("ContentHash")
                         .IsRequired()
@@ -863,16 +841,13 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsPinned")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("Major")
+                    b.Property<string>("PaperCode")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
                     b.Property<DateTime?>("PinnedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("QuestionCount")
-                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("RejectedAt")
                         .HasColumnType("timestamp with time zone");
@@ -891,19 +866,16 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("RevisionOfExamId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("Semester")
-                        .HasColumnType("integer");
-
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<string>("SubjectCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<Guid?>("SubmittedById")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -912,18 +884,18 @@ namespace SEHub.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ContentHash");
 
+                    b.HasIndex("PaperCode")
+                        .IsUnique();
+
                     b.HasIndex("RejectedById");
 
                     b.HasIndex("RevisionOfExamId");
 
                     b.HasIndex("SubmittedById");
 
-                    b.HasIndex("Title")
-                        .IsUnique();
+                    b.HasIndex("SubjectCode", "ExamType", "IsPinned");
 
-                    b.HasIndex("Code", "ExamType", "IsPinned");
-
-                    b.HasIndex("Code", "Status", "ExamType");
+                    b.HasIndex("SubjectCode", "Status", "ExamType");
 
                     b.ToTable("Exams");
                 });
@@ -1408,10 +1380,6 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(10000)
                         .HasColumnType("character varying(10000)");
-
-                    b.Property<string>("CoverImageUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -2955,19 +2923,14 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.HasOne("SEHub.Domain.Entities.Subject", "Subject")
                         .WithMany()
                         .HasForeignKey("SubjectCode")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Subject");
                 });
 
             modelBuilder.Entity("SEHub.Domain.Entities.Exam", b =>
                 {
-                    b.HasOne("SEHub.Domain.Entities.Subject", "Subject")
-                        .WithMany()
-                        .HasForeignKey("Code")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("RejectedById")
@@ -2977,6 +2940,12 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("RevisionOfExamId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SEHub.Domain.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectCode")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()

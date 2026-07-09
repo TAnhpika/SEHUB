@@ -107,7 +107,6 @@ public sealed class AdminDocumentService : IAdminDocumentService
             Id = Guid.NewGuid(),
             CategoryId = category.Id,
             Title = title,
-            FilePath = string.Empty,
             DriveFileId = upload.DriveFileId,
             OriginalFileName = upload.OriginalFileName,
             MimeType = mimeType,
@@ -205,8 +204,6 @@ public sealed class AdminDocumentService : IAdminDocumentService
         {
             Id = Guid.NewGuid(),
             Name = $"{subject.Code} — {subject.Name}",
-            Semester = subject.Semester,
-            Major = subject.Major,
             SubjectCode = subject.Code,
             CreatedAt = DateTime.UtcNow
         };

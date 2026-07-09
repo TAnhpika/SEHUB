@@ -7,7 +7,6 @@ public class Document : BaseEntity, ISoftDeletable
 {
     public Guid CategoryId { get; set; }
     public string Title { get; set; } = string.Empty;
-    public string FilePath { get; set; } = string.Empty;
     public string? DriveFileId { get; set; }
     public string? OriginalFileName { get; set; }
     public string MimeType { get; set; } = string.Empty;

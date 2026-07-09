@@ -2,13 +2,10 @@ namespace SEHub.Contracts.Admin;
 
 public sealed class CreateExamRequest
 {
-    public string Code { get; init; } = string.Empty;
-    public string Title { get; init; } = string.Empty;
+    public string SubjectCode { get; init; } = string.Empty;
+    public string PaperCode { get; init; } = string.Empty;
     public string ExamType { get; init; } = string.Empty;
-    public string? Semester { get; init; }
-    public string? Major { get; init; }
     public string? Description { get; init; }
-    public string? AssetUrl { get; init; }
     public IReadOnlyList<CreateExamQuestionItem> Questions { get; init; } = [];
     public bool IsPinned { get; init; }
 }

@@ -65,12 +65,9 @@ public sealed class ExamQueryServiceTests
         var exam = new Exam
         {
             Id = ExamId,
-            Code = "EX-DRAFT",
-            Title = "Draft",
+            SubjectCode = "EX-DRAFT",
+            PaperCode = "Draft",
             ExamType = ExamType.Final,
-            Semester = 1,
-            Major = "SE",
-            QuestionCount = 0,
             Status = ExamStatus.PendingApproval,
             Questions = []
         };
@@ -108,12 +105,9 @@ public sealed class ExamQueryServiceTests
         var exam = new Exam
         {
             Id = ExamId,
-            Code = "EX-001",
-            Title = "Sample",
+            SubjectCode = "EX-001",
+            PaperCode = "Sample",
             ExamType = ExamType.Final,
-            Semester = 1,
-            Major = "SE",
-            QuestionCount = 1,
             Status = ExamStatus.Published,
             Questions =
             [

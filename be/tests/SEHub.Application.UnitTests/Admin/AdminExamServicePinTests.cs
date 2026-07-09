@@ -48,7 +48,7 @@ public sealed class AdminExamServicePinTests
             .Setup(r => r.GetByCodeAsync(subjectCode, It.IsAny<CancellationToken>()))
             .ReturnsAsync(subject);
         _examRepository
-            .Setup(r => r.GetByTitleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByPaperCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Exam?)null);
         _examRepository
             .Setup(r => r.GetByContentHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -66,17 +66,15 @@ public sealed class AdminExamServicePinTests
         var sut = CreateSut();
         await sut.CreateExamAsync(new CreateExamRequest
         {
-            Code = subjectCode,
-            Title = "PIN-UNIT-TEST-01",
+            SubjectCode = subjectCode,
+            PaperCode = "PIN-UNIT-TEST-01",
             ExamType = nameof(ExamType.Practice),
-            Semester = "1",
-            Major = "SE",
             Description = "Pinned practice exam unit test.",
             IsPinned = true
         });
 
         _examRepository.Verify(
-            r => r.UnpinPracticeExamsByCodeAsync(
+            r => r.UnpinPracticeExamsBySubjectCodeAsync(
                 subjectCode,
                 It.Is<Guid?>(id => id.HasValue),
                 It.IsAny<CancellationToken>()),
@@ -97,7 +95,7 @@ public sealed class AdminExamServicePinTests
             .Setup(r => r.GetByCodeAsync(subjectCode, It.IsAny<CancellationToken>()))
             .ReturnsAsync(subject);
         _examRepository
-            .Setup(r => r.GetByTitleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByPaperCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Exam?)null);
         _examRepository
             .Setup(r => r.GetByContentHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -115,11 +113,9 @@ public sealed class AdminExamServicePinTests
         var sut = CreateSut();
         await sut.CreateExamAsync(new CreateExamRequest
         {
-            Code = subjectCode,
-            Title = "PIN-FINAL-IGNORED",
+            SubjectCode = subjectCode,
+            PaperCode = "PIN-FINAL-IGNORED",
             ExamType = nameof(ExamType.Final),
-            Semester = "2",
-            Major = "SE",
             Description = "Final exams cannot be pinned.",
             IsPinned = true,
             Questions =
@@ -143,7 +139,7 @@ public sealed class AdminExamServicePinTests
         });
 
         _examRepository.Verify(
-            r => r.UnpinPracticeExamsByCodeAsync(
+            r => r.UnpinPracticeExamsBySubjectCodeAsync(
                 It.IsAny<string>(),
                 It.IsAny<Guid?>(),
                 It.IsAny<CancellationToken>()),

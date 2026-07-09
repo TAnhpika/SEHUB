@@ -167,16 +167,38 @@ export function mapAdminUserDetail(dto) {
   };
 }
 
+function readExamSubjectCode(dto) {
+  return dto.subjectCode ?? dto.code ?? "";
+}
+
+function readExamPaperCode(dto) {
+  return dto.paperCode ?? dto.title ?? "";
+}
+
 export function mapAdminExamListItem(dto) {
   const typeKey = mapExamTypeKey(dto.examType);
   const status = mapExamStatus(dto.status);
-  const assetUrl = dto.assetUrl ?? null;
+  const subjectCode = readExamSubjectCode(dto);
+  const paperCode = readExamPaperCode(dto);
+  const attachments = (dto.attachments ?? []).map((attachment) => ({
+    id: attachment.id,
+    name: attachment.originalFileName,
+    contentType: attachment.contentType ?? "",
+    fileSize: attachment.fileSize ?? 0,
+    size: attachment.fileSize ?? 0,
+    viewPath: attachment.viewPath,
+    viewUrl: resolveAssetUrl(attachment.viewPath),
+  }));
+  const primaryAttachment = attachments[0];
+  const assetUrl = primaryAttachment?.viewUrl ?? primaryAttachment?.viewPath ?? dto.assetUrl ?? null;
 
   return {
     id: dto.id,
     apiId: dto.id,
-    code: dto.code,
-    title: dto.title,
+    code: subjectCode,
+    title: paperCode,
+    subjectCode,
+    paperCode,
     type: typeKey === "practice" ? "Thực hành" : "Cuối kỳ",
     typeKey,
     track: dto.major ?? "SE",
@@ -189,28 +211,20 @@ export function mapAdminExamListItem(dto) {
     sha256: dto.contentHash ?? "",
     description: dto.description ?? "",
     assetUrl,
-    attachments: (dto.attachments ?? []).length > 0
-      ? (dto.attachments ?? []).map((attachment) => ({
-          id: attachment.id,
-          name: attachment.originalFileName,
-          contentType: attachment.contentType ?? "",
-          fileSize: attachment.fileSize ?? 0,
-          size: attachment.fileSize ?? 0,
-          viewPath: attachment.viewPath,
-          viewUrl: resolveAssetUrl(attachment.viewPath),
-        }))
+    attachments: attachments.length > 0
+      ? attachments
       : assetUrl
         ? [{ id: "asset", name: assetUrl.split("/").pop() ?? "asset", url: assetUrl }]
         : [],
     revisionOfExamId: dto.revisionOfExamId ?? null,
-    revisionSourceCode: dto.revisionSourceCode ?? null,
-    revisionSourceTitle: dto.revisionSourceTitle ?? null,
+    revisionSourceCode: dto.revisionSourceSubjectCode ?? dto.revisionSourceCode ?? null,
+    revisionSourceTitle: dto.revisionSourcePaperCode ?? dto.revisionSourceTitle ?? null,
     rejectionReasonCode: dto.rejectionReasonCode ?? null,
     rejectionReasonDetail: dto.rejectionReasonDetail ?? null,
     rejectedAt: dto.rejectedAt ?? null,
     canResubmit: dto.canResubmit ?? false,
     isContentLocked: dto.isContentLocked ?? false,
-    ...buildExamDisplayFields(dto),
+    ...buildExamDisplayFields({ ...dto, code: subjectCode, title: paperCode }),
   };
 }
 
@@ -338,11 +352,9 @@ export function mapFinalExamWizardToCreateRequest(examInfo, questions) {
   });
 
   return {
-    code: subjectCode,
-    title: paperCode || `${subjectCode} — Cuối kỳ`,
+    subjectCode,
+    paperCode: paperCode || `${subjectCode} — Cuối kỳ`,
     examType: "Final",
-    semester: String(parseSemesterNumber(examInfo.semesterLabel) ?? ""),
-    major,
     description: `${examInfo.subjectName ?? subjectCode} · ${examInfo.durationMinutes} phút`,
     questions: mapWizardQuestionsToCreateItems(questions),
   };
@@ -359,7 +371,7 @@ export function mapFinalExamWizardToResubmitRequest(examInfo, questions, { isRev
     : examInfo.examCode?.trim() || examInfo.subjectName?.trim() || examInfo.subjectCode.trim();
 
   return {
-    title,
+    paperCode: title,
     description: `${examInfo.subjectName ?? examInfo.subjectCode} · ${examInfo.durationMinutes} phút`,
     questions: mapWizardQuestionsToCreateItems(questions),
   };
@@ -372,12 +384,10 @@ export function mapExamDetailToWizard(dto) {
   const durationMatch = String(dto.description ?? "").match(/(\d+)\s*phút/);
   const durationMinutes = durationMatch ? Number(durationMatch[1]) : 60;
   const questionCount = Math.max(dto.questionCount ?? 0, wizardQuestions.length, 1);
-  const subjectCode = isBareSubjectCode(dto.code)
-    ? (normalizeCourseSubjectCode(dto.code) ?? dto.code)
-    : (extractCourseSubjectCode(dto.code, dto.revisionSourceCode, dto.title) ?? "");
-  const paperCode = isExamPaperCode(dto.title)
-    ? stripRevisionLabel(dto.title)
-    : resolvePublicExamName(dto);
+  const subjectCode = readExamSubjectCode(dto);
+  const paperCode = isExamPaperCode(readExamPaperCode(dto))
+    ? stripRevisionLabel(readExamPaperCode(dto))
+    : resolvePublicExamName({ ...dto, code: subjectCode, title: readExamPaperCode(dto) });
   const major = resolveExamMajor({
     major: dto.major,
     subjectCode,
@@ -397,8 +407,8 @@ export function mapExamDetailToWizard(dto) {
       termSeason: termParts?.termSeason ?? defaultTerm.termSeason,
       academicYear: termParts?.academicYear ?? defaultTerm.academicYear,
       examCode: paperCode,
-      revisionSourceCode: dto.revisionSourceCode ?? null,
-      revisionSourceTitle: dto.revisionSourceTitle ?? null,
+      revisionSourceCode: dto.revisionSourceSubjectCode ?? dto.revisionSourceCode ?? null,
+      revisionSourceTitle: dto.revisionSourcePaperCode ?? dto.revisionSourceTitle ?? null,
       durationMinutes,
       totalQuestions: questionCount,
     },
@@ -497,11 +507,9 @@ export function mapAdminExamFormToCreateRequest(form, { questions = [] } = {}) {
       : form.description?.trim() ?? "";
 
   return {
-    code: subjectCode,
-    title: paperCode,
+    subjectCode,
+    paperCode,
     examType: form.typeKey === "final" ? "Final" : "Practice",
-    semester: form.semester,
-    major: form.track ?? "SE",
     description,
     questions,
   };
@@ -513,11 +521,9 @@ export function mapAdminExamFormToUpdateRequest(form, { questions = null } = {})
   const paperCode = String(form.title ?? "").trim();
 
   const body = {
-    code: subjectCode,
-    title: paperCode,
+    subjectCode,
+    paperCode,
     examType: form.typeKey === "final" ? "Final" : "Practice",
-    semester: form.semester,
-    major: form.track ?? "SE",
     description: form.description?.trim() ?? "",
   };
 
@@ -542,13 +548,10 @@ export function mapPracticeExamFormToCreateRequest(form) {
   });
 
   return {
-    code: subjectCode,
-    title: paperCode,
+    subjectCode,
+    paperCode,
     examType: "Practice",
-    semester: String(parseSemesterNumber(form.semester) ?? ""),
-    major,
     description: [form.description, githubGuide].filter(Boolean).join("\n\n"),
-    assetUrl: form.assetUrl ?? null,
     questions: [],
     isPinned: Boolean(form.pinExam),
   };
@@ -625,19 +628,23 @@ export function mapPracticeExamFormToResubmitRequest(payload, { isRevision = fal
     : payload.title?.trim() ?? "";
 
   return {
-    title,
+    paperCode: title,
     description: payload.description?.trim() ?? "",
     questions: [],
   };
 }
 
 export function mapPracticeExamDetailToForm(dto) {
-  const subjectCode = isBareSubjectCode(dto.code)
-    ? (normalizeCourseSubjectCode(dto.code) ?? dto.code)
-    : (extractCourseSubjectCode(dto.code, dto.revisionSourceCode, dto.title) ?? dto.code);
-  const paperCode = isExamPaperCode(dto.title)
-    ? stripRevisionLabel(dto.title)
-    : resolvePublicExamName(dto);
+  const subjectCode = isBareSubjectCode(readExamSubjectCode(dto))
+    ? (normalizeCourseSubjectCode(readExamSubjectCode(dto)) ?? readExamSubjectCode(dto))
+    : (extractCourseSubjectCode(
+      readExamSubjectCode(dto),
+      dto.revisionSourceSubjectCode ?? dto.revisionSourceCode,
+      readExamPaperCode(dto),
+    ) ?? readExamSubjectCode(dto));
+  const paperCode = isExamPaperCode(readExamPaperCode(dto))
+    ? stripRevisionLabel(readExamPaperCode(dto))
+    : resolvePublicExamName({ ...dto, code: subjectCode, title: readExamPaperCode(dto) });
   const description = String(dto.description ?? "").split("\n\n")[0]?.trim() ?? dto.description ?? "";
 
   return {

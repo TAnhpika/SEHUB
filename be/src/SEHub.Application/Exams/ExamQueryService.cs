@@ -1,8 +1,10 @@
 using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Exams;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Exams;
+using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
 
@@ -30,9 +32,13 @@ public sealed class ExamQueryService : IExamQueryService
     public async Task<PagedResult<ExamListItemDto>> GetExamsAsync(ExamQueryParams query, CancellationToken cancellationToken = default)
     {
         var (items, total) = await _examRepository.GetPagedAsync(query, cancellationToken);
+        var questionCounts = await _examRepository.GetQuestionCountsAsync(
+            items.Select(e => e.Id).ToList(),
+            cancellationToken);
+
         return new PagedResult<ExamListItemDto>
         {
-            Items = _mapper.Map<IReadOnlyList<ExamListItemDto>>(items),
+            Items = items.Select(e => MapListItem(e, questionCounts.GetValueOrDefault(e.Id))).ToList(),
             Page = query.Page,
             PageSize = query.PageSize,
             TotalCount = total
@@ -41,7 +47,7 @@ public sealed class ExamQueryService : IExamQueryService
 
     public async Task<ExamDetailDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var exam = await _examRepository.GetByIdAsync(id, cancellationToken: cancellationToken)
+        var exam = await _examRepository.GetByIdAsync(id, includeQuestions: true, cancellationToken: cancellationToken)
             ?? throw new NotFoundException("Exam", id);
 
         if (exam.Status != ExamStatus.Published && !_currentUser.IsModeratorOrAdmin)
@@ -49,7 +55,6 @@ public sealed class ExamQueryService : IExamQueryService
             throw new NotFoundException("Exam", id);
         }
 
-        var dto = _mapper.Map<ExamDetailDto>(exam);
         IReadOnlyList<ExamAttachmentDto> attachmentDtos = [];
 
         if (ExamContentAccess.CanViewExamContent(_currentUser, exam))
@@ -60,17 +65,16 @@ public sealed class ExamQueryService : IExamQueryService
 
         return new ExamDetailDto
         {
-            Id = dto.Id,
-            Code = dto.Code,
-            Title = dto.Title,
-            SubjectName = exam.Subject?.Name ?? string.Empty,
-            ExamType = dto.ExamType,
-            Semester = dto.Semester,
-            Major = dto.Major,
-            QuestionCount = dto.QuestionCount,
-            Status = dto.Status,
-            Description = dto.Description,
-            AssetUrl = dto.AssetUrl,
+            Id = exam.Id,
+            SubjectCode = exam.SubjectCode,
+            PaperCode = exam.PaperCode,
+            SubjectName = ExamDtoMapper.ResolveSubjectName(exam),
+            ExamType = exam.ExamType.ToString(),
+            Semester = ExamDtoMapper.ResolveSemester(exam).ToString(),
+            Major = ExamDtoMapper.ResolveMajor(exam),
+            QuestionCount = exam.Questions.Count,
+            Status = exam.Status.ToString(),
+            Description = exam.Description,
             Attachments = attachmentDtos
         };
     }
@@ -135,4 +139,22 @@ public sealed class ExamQueryService : IExamQueryService
             }).ToList()
         };
     }
+
+    private static ExamListItemDto MapListItem(Exam exam, int questionCount) => new()
+    {
+        Id = exam.Id,
+        SubjectCode = exam.SubjectCode,
+        PaperCode = exam.PaperCode,
+        SubjectName = ExamDtoMapper.ResolveSubjectName(exam),
+        ExamType = exam.ExamType.ToString(),
+        Semester = ExamDtoMapper.ResolveSemester(exam).ToString(),
+        Major = ExamDtoMapper.ResolveMajor(exam),
+        QuestionCount = questionCount,
+        Status = exam.Status.ToString(),
+        Description = exam.Description,
+        ContentHash = exam.ContentHash,
+        CreatedAt = exam.CreatedAt,
+        UpdatedAt = exam.UpdatedAt,
+        IsPinned = exam.IsPinned
+    };
 }

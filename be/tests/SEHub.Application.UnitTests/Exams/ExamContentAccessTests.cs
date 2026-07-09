@@ -14,11 +14,9 @@ public sealed class ExamContentAccessTests
     private static Exam PublishedExam() => new()
     {
         Id = ExamId,
-        Code = "EX-001",
-        Title = "Sample",
+        SubjectCode = "EX-001",
+        PaperCode = "Sample",
         ExamType = ExamType.Final,
-        Semester = 1,
-        Major = "SE",
         Status = ExamStatus.Published
     };
 

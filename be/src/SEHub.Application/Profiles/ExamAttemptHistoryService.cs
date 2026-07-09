@@ -1,5 +1,6 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Exams;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Profiles;
 using SEHub.Domain.Entities;
@@ -62,7 +63,7 @@ public sealed class ExamAttemptHistoryService : IExamAttemptHistoryService
 
     private static ExamAttemptHistoryItemDto MapToDto(ExamAttempt attempt)
     {
-        var questionCount = attempt.Exam?.QuestionCount ?? 0;
+        var questionCount = attempt.Exam?.Questions?.Count ?? 0;
         var scorePercent = attempt.Score ?? 0m;
         var correctCount = questionCount > 0
             ? (int)Math.Round(scorePercent / 100m * questionCount, MidpointRounding.AwayFromZero)
@@ -72,10 +73,10 @@ public sealed class ExamAttemptHistoryService : IExamAttemptHistoryService
         {
             AttemptId = attempt.Id,
             ExamId = attempt.ExamId,
-            ExamCode = attempt.Exam?.Code ?? string.Empty,
-            ExamTitle = attempt.Exam?.Title ?? string.Empty,
-            Major = attempt.Exam?.Major ?? string.Empty,
-            Semester = attempt.Exam?.Semester ?? 0,
+            ExamCode = attempt.Exam?.SubjectCode ?? string.Empty,
+            ExamTitle = attempt.Exam?.PaperCode ?? string.Empty,
+            Major = attempt.Exam is not null ? ExamDtoMapper.ResolveMajor(attempt.Exam) : string.Empty,
+            Semester = attempt.Exam is not null ? ExamDtoMapper.ResolveSemester(attempt.Exam) : 0,
             QuestionCount = questionCount,
             SubmittedAt = attempt.SubmittedAt ?? attempt.StartedAt,
             ScorePercent = scorePercent,

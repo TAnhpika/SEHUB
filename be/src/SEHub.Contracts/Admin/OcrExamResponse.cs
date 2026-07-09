@@ -6,4 +6,5 @@ public sealed class OcrExamResponse
     public string ContentHash { get; init; } = string.Empty;
     public bool DuplicateWarning { get; init; }
     public Guid? DuplicateExamId { get; init; }
+    public IReadOnlyList<CreateExamQuestionItem> Questions { get; init; } = [];
 }

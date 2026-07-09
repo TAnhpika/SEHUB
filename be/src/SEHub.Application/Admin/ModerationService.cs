@@ -752,8 +752,8 @@ public sealed class ModerationService : IModerationService
                     Username = user?.Username ?? "unknown",
                     DisplayName = user?.DisplayName ?? "Unknown"
                 },
-                ExamTitle = exam?.Title,
-                ExamCode = exam?.Code
+                ExamTitle = exam?.PaperCode,
+                ExamCode = exam?.SubjectCode
             };
         }).ToList();
 

@@ -10,16 +10,14 @@ public class ExamConfiguration : IEntityTypeConfiguration<Exam>
     public void Configure(EntityTypeBuilder<Exam> builder)
     {
         builder.HasKey(e => e.Id);
-        builder.HasIndex(e => e.Title).IsUnique();
-        builder.HasIndex(e => new { e.Code, e.Status, e.ExamType });
-        builder.HasIndex(e => new { e.Code, e.ExamType, e.IsPinned });
+        builder.HasIndex(e => e.PaperCode).IsUnique();
+        builder.HasIndex(e => new { e.SubjectCode, e.Status, e.ExamType });
+        builder.HasIndex(e => new { e.SubjectCode, e.ExamType, e.IsPinned });
         builder.HasIndex(e => e.ContentHash);
-        builder.Property(e => e.Code).HasMaxLength(20).IsRequired();
-        builder.Property(e => e.Title).HasMaxLength(100).IsRequired();
-        builder.Property(e => e.Major).HasMaxLength(100).IsRequired();
+        builder.Property(e => e.SubjectCode).HasMaxLength(20).IsRequired();
+        builder.Property(e => e.PaperCode).HasMaxLength(100).IsRequired();
         builder.Property(e => e.ContentHash).HasMaxLength(64).IsRequired();
         builder.Property(e => e.Description).HasMaxLength(4000);
-        builder.Property(e => e.AssetUrl).HasMaxLength(500);
         builder.Property(e => e.RejectionReasonCode).HasMaxLength(50);
         builder.Property(e => e.RejectionReasonDetail).HasMaxLength(2000);
         builder.HasIndex(e => e.SubmittedById);
@@ -27,7 +25,7 @@ public class ExamConfiguration : IEntityTypeConfiguration<Exam>
 
         builder.HasOne(e => e.Subject)
             .WithMany()
-            .HasForeignKey(e => e.Code)
+            .HasForeignKey(e => e.SubjectCode)
             .HasPrincipalKey(s => s.Code)
             .OnDelete(DeleteBehavior.Restrict);
 

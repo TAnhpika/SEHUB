@@ -61,7 +61,7 @@ public class AiExamChatApplicationServiceTests
         var exam = new Exam
         {
             Id = _examId,
-            Title = "Sample",
+            PaperCode = "Sample",
             ExamType = ExamType.Final,
             Questions =
             [

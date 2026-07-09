@@ -28,22 +28,23 @@ export function mapExamDetailDtoToFeExam(dto, courseCode) {
     mapExamAttachmentDto(attachment, dto.id),
   );
   const primaryAttachment = attachments[0];
-  const paperCode = dto.title || dto.code;
+  const subjectCode = dto.subjectCode ?? dto.code ?? "";
+  const paperCode = dto.paperCode ?? dto.title ?? subjectCode;
   const term = resolveExamTermFromCode(paperCode);
 
   return {
     id: paperCode || dto.id,
     apiId: dto.id,
-    courseCode: (courseCode?.toUpperCase() ?? dto.code ?? "").toUpperCase(),
+    courseCode: (courseCode?.toUpperCase() ?? subjectCode).toUpperCase(),
     subjectName: dto.subjectName ?? "",
     type: examTypeLabel,
     examType: dto.examType,
     questionCount: dto.questionCount ?? 0,
-    title: dto.title,
+    title: paperCode,
     paperCode,
-    subjectCode: dto.code,
+    subjectCode,
     description: dto.description,
-    assetUrl: dto.assetUrl ?? primaryAttachment?.viewUrl ?? primaryAttachment?.viewPath ?? null,
+    assetUrl: primaryAttachment?.viewUrl ?? primaryAttachment?.viewPath ?? dto.assetUrl ?? null,
     attachments,
     semester: dto.semester,
     major: dto.major,
