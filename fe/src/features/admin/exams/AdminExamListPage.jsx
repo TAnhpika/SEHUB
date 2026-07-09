@@ -232,7 +232,7 @@ function AdminExamListPage() {
       breadcrumbs={[{ label: "Dashboard", to: "/admin" }, { label: "Quản lý đề thi" }]}
       actions={
         <>
-          <Button look="outline" to="/admin/exams/submissions">
+          <Button look="outline" to="/admin/moderation/practice-submissions">
             Quản lý bài nộp thực hành
           </Button>
           <Button look="outline" to="/admin/exams/pending">

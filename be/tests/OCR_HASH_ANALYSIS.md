@@ -1,8 +1,12 @@
 # Phân tích OCR / SHA-256 chống trùng đề
 
-**Ngày:** 2026-07-08  
-**Phạm vi:** Xác minh code + probe hash (không sửa production)  
-**Verdict tổng:** Cơ chế chống trùng **có** trên `POST /admin/exams`, nhưng OCR **stub**, fingerprint **yếu**, vòng đời sau create **không** tái kiểm — chống trùng đề scan gần như giấy tờ.
+**Ngày cập nhật:** 2026-07-09 (audit hoàn tất)  
+**Phạm vi:** Đối chiếu code + test tự động + checklist QA  
+**Báo cáo đầy đủ:** [EXAM_DUPLICATE_AUDIT.md](./EXAM_DUPLICATE_AUDIT.md)
+
+> **Lưu ý:** Phiên bản 2026-07-08 của file này **đã lỗi thời** (stem-only hash, không NFC, update/resubmit không check). Phần dưới phản ánh **code hiện tại**.
+
+**Verdict tổng:** Cơ chế SHA-256 **hoạt động** trên create/update/resubmit đề cuối kỳ; OCR vẫn **stub markdown**; practice chỉ hash metadata; FE resubmit thiếu UX 409; approve không tái kiểm (race có thể publish trùng).
 
 ---
 
@@ -10,114 +14,106 @@
 
 ```mermaid
 flowchart TD
-  UI[Admin/Mod UI] --> FE{Gọi POST /admin/exams/ocr?}
-  FE -->|Không — Confirmed| Mock[Mock SHA + MOCK_OCR_QUESTIONS]
-  FE -->|API tồn tại nhưng 0 caller FE| Stub[OcrExamService stub]
-  Stub --> Soft[DuplicateWarning only]
-  Mock --> Create[POST /admin/exams]
-  Create --> Src[BuildContentHashSource]
-  Src --> Norm[NormalizeText]
+  UI[Admin/Mod UI] --> OCRPath{OCR path?}
+  OCRPath -->|AdminExamFormPage| OcrApi[POST /admin/exams/ocr]
+  OCRPath -->|USE_MOCK=true| Mock[mockComputeSha256]
+  OcrApi --> Parse[Parse markdown UTF-8/base64]
+  Parse --> Soft[DuplicateWarning soft only]
+  Mock --> Soft
+  UI --> Save[POST/PUT /admin/exams]
+  Save --> FP[ExamContentFingerprint]
+  FP --> Norm[NormalizeText NFC punct]
   Norm --> Sha[SHA256 hex]
-  Sha --> Check{GetByContentHash và not confirmDuplicate?}
+  Sha --> Check{GetByContentHash and not confirmDuplicate?}
   Check -->|Có| E409[409 DUPLICATE_EXAM]
-  Check -->|Không| Save[Lưu Exam.ContentHash]
+  Check -->|Không| Store[Lưu Exam.ContentHash]
 ```
 
-### Hash khi create
+### Hash khi create (`ExamContentFingerprint`)
 
-| Loại đề | Nguồn hash (`BuildContentHashSource`) |
-|---------|----------------------------------------|
-| Có câu hỏi (Final) | `string.Join('|', Questions.Select(q => q.Content))` — **chỉ stem** |
-| Không câu (Practice điển hình) | `{Code}\|{Title}\|{Description}\|{AssetUrl}` |
+| Loại đề | Nguồn hash |
+|---------|------------|
+| Có câu hỏi (Final) | Per-question segment: content + type + options + correct labels + required count; join `||`; sort `OrderIndex` |
+| Không câu (Practice) | `subjectCode\|paperCode\|description` (normalized) — **không** `AssetUrl` / file |
 
-Normalize ([`OcrExamService.NormalizeText`](../src/SEHub.Application/Admin/OcrExamService.cs)): trim → `ToLowerInvariant` → `\s+` → `" "`.  
-**Không** Unicode NFC, **không** strip ký tự đặc biệt (lệch [`ARCHITECTURE-BE.md`](../../ARCHITECTURE-BE.md) §6.6).
+Normalize: trim → `ToLowerInvariant` → **NFC** → collapse whitespace → **strip punctuation**. Khớp [ARCHITECTURE-BE.md](../../ARCHITECTURE-BE.md) §6.6.
 
-DB: `ContentHash` varchar(64), index `IX_Exams_ContentHash` **không unique** ([`ExamConfiguration.cs`](../src/SEHub.Infrastructure/Persistence/Configurations/ExamConfiguration.cs)).
+DB: `ContentHash` varchar(64), index `IX_Exams_ContentHash` **không unique**.
 
 ---
 
-## 2. Ma trận rủi ro (Confirmed)
+## 2. Ma trận rủi ro (cập nhật 2026-07-09)
 
-### P0 — Không đạt nghiệp vụ OCR
-
-| # | Rủi ro | Kết quả | Bằng chứng |
-|---|--------|---------|------------|
-| 1 | OCR chưa thật | **Confirmed** | Comment stub trong `OcrExamService.ProcessAsync`; `Base64Image` coi như plain text |
-| 2 | OCR hash ≠ Create hash | **Confirmed** | OCR hash raw payload; create hash join `question.Content`. FE **không** gọi `ocrExam()` (chỉ define ở `adminApi.js`) |
-| 3 | FE Admin OCR = mock | **Confirmed** | `AdminExamFormPage.runOcr` → `mockComputeSha256` / `buildMockOcrImportQuestions`; UI trùng dùng `findDuplicateBySha` trên **in-memory store**, không BE |
-
-### P1 — Fingerprint yếu (probe C#)
-
-| # | Case | Kết quả probe | Ý nghĩa |
-|---|------|---------------|---------|
-| 4 | Đổi options/đáp án, giữ stem | **False negative by design** | Options/CorrectOptionId **không** vào hash |
-| 5 | Xáo thứ tự 2 câu cùng stem | `order_sensitive=True` (hash khác) | **Lọt trùng** nếu xáo order |
-| 6 | `Hello!!!` vs `Hello` | `punct_sensitive=True` | Thiếu strip punct so với docs |
-| 7 | `""` và `"   "` | cùng `e3b0c44298fc1c14…` (SHA256 empty) | **Empty collision** |
-| 8 | Practice đổi chỉ `AssetUrl` | `practice_asset_sensitive=True` | Đề “giống” file khác URL → hash khác |
-| — | Whitespace / case | `whitespace_ok=True`, `case_ok=True` | Phần normalize hiện có **ổn** |
-
-Probe (cùng logic `NormalizeText` + `ComputeSha256Hash`):
-
-```
-order_sensitive=True
-empty_equal=True
-practice_asset_sensitive=True
-punct_sensitive=True
-whitespace_ok=True
-case_ok=True
-```
-
-### P2 — Vòng đời / đồng thời
+### P0 — OCR
 
 | # | Rủi ro | Kết quả | Bằng chứng |
 |---|--------|---------|------------|
-| 9 | Update / replace questions | **Confirmed — không check trùng** | `ReplaceExamQuestionsAsync` gán lại `ContentHash`, **không** gọi `GetByContentHashAsync` |
-| 9b | Resubmit practice (0 Q) | **Confirmed — recompute, không check** | `ApplyResubmitContent` |
-| 10 | Revision clone | **Confirmed by design** | `CloneExamAsRevision` copy `published.ContentHash` |
-| 11 | Race TOCTOU | **Confirmed (thiết kế)** | Check-then-insert + index non-unique; `confirmDuplicate=true` cố ý cho phép trùng |
-| 12 | OCR noise / fuzzy | **Confirmed gap** | Docs nghiệp vụ biết; không MinHash/fuzzy trong code |
+| 1 | OCR chưa thật (ảnh scan) | **Confirmed** | `OcrExamService` decode base64 → parse markdown |
+| 2 | OCR hash ≠ Create hash | **Resolved** | Cùng `ComputeHashFromQuestions` |
+| 3 | FE mock khi `VITE_USE_MOCK=true` | **Confirmed** | `adminExamData.runOcrExamFromFile` mock branch |
+
+### P1 — Fingerprint
+
+| # | Case | Kết quả | Ghi chú |
+|---|------|---------|---------|
+| 4 | Đổi options/đáp án | **Detected** | Unit test `DetectsOptionTextChange`, `DetectsCorrectAnswerChange` |
+| 5 | Xáo thứ tự câu (cùng OrderIndex logic) | **Order-independent** | Unit test `IsOrderIndependent_ByOrderIndex` |
+| 6 | Punctuation | **Stripped** | Unit test `StripsPunctuationAndCollapsesWhitespace` |
+| 7 | Empty source | **Rejected** | `ComputeHash` throws `DomainException` |
+| 8 | Practice file khác, metadata giống | **Không trùng** | Hash gồm `paperCode`; integration test |
+
+### P2 — Vòng đời
+
+| # | Rủi ro | Kết quả | Bằng chứng |
+|---|--------|---------|------------|
+| 9 | Update questions | **Check trùng** | `ReplaceExamQuestionsAsync` + integration test |
+| 9b | Resubmit | **Check trùng (BE)** | Integration `ResubmitRejectedExam_...409` |
+| 9c | Resubmit FE | **Gap** | `resubmitFinalExamViaApi` không `confirmDuplicate` / catch 409 |
+| 10 | Revision clone | **By design** | `IsSameExamLineage` |
+| 11 | Race / approve | **Confirmed** | 2 pending cùng hash → cả 2 Published sau approve |
+| 12 | Archived trong lookup | **Confirmed** | Create trùng content khi có bản Archived → 409 |
+| 13 | OCR noise / fuzzy | **Gap G2** | Không MinHash/fuzzy |
 
 ### P3 — Test
 
-| # | Gap | Kết quả |
+| # | Mục | Kết quả |
 |---|-----|---------|
-| 13 | Unit normalize/hash | **Confirmed thiếu** |
-| 14 | Integration 409 + `confirmDuplicate` | **Confirmed thiếu** (docs yêu cầu) |
-| 15 | Pin tests mock hash null | Bypass, không assert duplicate |
+| 14 | Unit `ExamContentFingerprintTests` | **7/7 passed** |
+| 15 | Integration duplicate suite | **7/7 passed** |
 
 ---
 
 ## 3. Đối chiếu FE paths
 
-| Path | Chống trùng thật? | Ghi chú |
-|------|-------------------|---------|
-| Mod/Admin wizard Final — [`FinalExamReviewStep.jsx`](../../fe/src/features/moderator/finalExams/steps/FinalExamReviewStep.jsx) | **Có (BE 409)** | Catch 409 → confirm → `send(true)` = `confirmDuplicate` |
-| Practice — [`AddPracticeExamPage.jsx`](../../fe/src/features/moderator/practiceExams/AddPracticeExamPage/AddPracticeExamPage.jsx) | **Có (BE 409)** | Cùng pattern |
-| Admin classic form — [`AdminExamFormPage.jsx`](../../fe/src/features/admin/exams/AdminExamFormPage.jsx) | **Một phần** | UI mock SHA trùng; save truyền `confirmDuplicate: forceUniqueSha`. OCR **không** gọi API |
-| `adminApi.ocrExam` | **Dead from FE** | Không có `ocrExam(` usage ngoài định nghĩa API |
-
-**Edit/resubmit Final** trong `FinalExamReviewStep`: nhánh `isEditMode` gọi `resubmitFinalExamViaApi` — **không** hỏi 409 duplicate (khớp BE không check trên resubmit).
-
----
-
-## 4. Điểm đã ổn
-
-- Create Final cùng nội dung stem (cùng thứ tự) → 409 `DUPLICATE_EXAM` khi `confirmDuplicate=false` — logic đúng trong `CreateExamAsync`.
-- `confirmDuplicate=true` cho phép ghi (index non-unique) — đúng intentional override.
-- Normalize whitespace + case giúp hash ổn định với khác biệt format nhẹ.
+| Path | Chống trùng | Ghi chú |
+|------|-------------|---------|
+| `FinalExamReviewStep` create | **BE 409 + confirm** | Đạt |
+| `FinalExamReviewStep` edit/resubmit | **Gap** | Không catch 409 |
+| `AddPracticeExamPage` create | **BE 409 + confirm** | Đạt (Final-style); practice thực tế hiếm trùng vì hash gồm paper |
+| `AddPracticeExamPage` resubmit | **Gap** | Giống Final |
+| `AdminExamFormPage` | **Một phần** | OCR API + soft warn; save `confirmDuplicate`; không catch 409 từ API |
+| `adminApi.ocrExam` | **Wired** | Qua `runOcrExamFromFile` khi không mock |
 
 ---
 
-## 5. Đề xuất fix (ưu tiên — chưa implement)
+## 4. Điểm đã ổn (so với phân tích 2026-07-08)
 
-1. **Canonical fingerprint dùng chung** (OCR sau này + create + update): sort theo `OrderIndex`; gồm content + options + correct labels; một helper.
-2. **Bổ sung normalize** khớp ARCHITECTURE: NFC; strip punct thận trọng với tiếng Việt.
-3. **Gate trùng trên update/resubmit/replace**, loại trừ `exam.Id` hiện tại (+ optionally parent revision).
-4. **Wire hoặc gỡ stub**: đừng để Admin OCR mock tạo cảm giác đã chống trùng; khi OCR thật sẵn sàng mới soft-warn với **cùng** fingerprint create.
-5. **Test bắt buộc**: golden normalize; create 409; confirmDuplicate insert; order-swap false-negative regression sau khi sort OrderIndex.
-6. Race: cân nhắc unique filter / transaction nếu product muốn chặn hard (phải tương thích `confirmDuplicate`).
+- Canonical fingerprint dùng chung OCR + create + update/resubmit.
+- Normalize NFC + strip punctuation.
+- Gate trùng trên create, update, resubmit (BE).
+- Unit + integration tests cho 409 và `confirmDuplicate`.
+- Order-independent hashing theo `OrderIndex`.
+
+---
+
+## 5. Đề xuất fix (ưu tiên)
+
+1. **P0 — OCR:** Tích hợp OCR thật hoặc đổi messaging G1 thành import markdown.
+2. **P1 — FE resubmit:** Mirror `FinalExamReviewStep` create — catch 409, `confirmDuplicate` trên `resubmitExam`.
+3. **P1 — Admin save:** Catch 409 `DUPLICATE_EXAM` khi OCR không warn trước.
+4. **P2 — Approve gate:** `EnsureNoDuplicateHashAsync` trước publish (trừ lineage).
+5. **P2 — Practice:** Hash file SHA hoặc document metadata-only.
+6. **G2 — Fuzzy:** MinHash/Levenshtein theo Phụ lục A nghiệp vụ.
 
 ---
 
@@ -125,18 +121,15 @@ case_ok=True
 
 | Layer | Path |
 |-------|------|
-| OCR stub | `be/src/SEHub.Application/Admin/OcrExamService.cs` |
-| Create + hash source | `be/src/SEHub.Application/Admin/AdminExamService.cs` |
+| Fingerprint | `be/src/SEHub.Application/Admin/ExamContentFingerprint.cs` |
+| Create + gate | `be/src/SEHub.Application/Admin/AdminExamService.cs` |
+| OCR | `be/src/SEHub.Application/Admin/OcrExamService.cs` |
 | API | `be/src/SEHub.API/Controllers/Admin/ExamsController.cs` |
-| Repo lookup | `ExamRepository.GetByContentHashAsync` |
-| EF | `ExamConfiguration.cs` |
-| FE API | `fe/src/api/adminApi.js` |
-| Mock OCR / SHA | `fe/src/features/admin/exams/adminExamData.js`, `AdminExamFormPage.jsx` |
-| 409 UX | `FinalExamReviewStep.jsx`, `AddPracticeExamPage.jsx` |
-| Docs | `ARCHITECTURE-BE.md` §6.6, `SEHUB_PhanTichNghiepVu.md` §4.2 |
+| Tests | `ExamContentFingerprintTests.cs`, `ExamDuplicateHashIntegrationTests.cs` |
+| Audit report | `be/tests/EXAM_DUPLICATE_AUDIT.md` |
 
 ---
 
 ## Kết luận một câu
 
-**Chống trùng đề dựa SHA-256 chỉ đáng tin khi tạo đề từ nội dung câu hỏi đã cấu trúc sẵn và cùng thứ tự; OCR scan + đổi đáp án/xáo câu/update sau create đều nằm ngoài hàng rào hiện tại.**
+**Chống trùng SHA-256 đạt cho đề cuối kỳ qua API (create/update/resubmit); OCR ảnh, practice file-content, FE resubmit UX, và approve race vẫn là gap so với nghiệp vụ G1.**

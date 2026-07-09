@@ -54,7 +54,7 @@ public sealed class PracticeReviewNotificationIntegrationTests : IClassFixture<C
             item.Type == "moderation"
             && item.Title.Contains("đã chấm bài thực hành", StringComparison.OrdinalIgnoreCase)
             && item.LinkUrl != null
-            && item.LinkUrl.Contains($"/admin/exams/submissions?highlight={CustomWebApplicationFactory.PracticeSubmissionId}", StringComparison.Ordinal)
+            && item.LinkUrl.Contains($"/admin/moderation/practice-submissions?highlight={CustomWebApplicationFactory.PracticeSubmissionId}", StringComparison.Ordinal)
             && item.ReferenceId == CustomWebApplicationFactory.PracticeSubmissionId);
     }
 

@@ -46,6 +46,7 @@ const AdminPracticeSubmissionsPage = lazy(() => import("@/features/admin/exams/A
 const AdminDocumentCatalogPage = lazy(() => import("@/features/admin/documents/AdminDocumentCatalogPage"));
 const AdminDocumentSubjectPage = lazy(() => import("@/features/admin/documents/AdminDocumentSubjectPage"));
 const AdminModerationPage = lazy(() => import("@/features/admin/moderation/AdminModerationPage"));
+const AdminContentModerationPage = lazy(() => import("@/features/admin/moderation/AdminContentModerationPage"));
 const AdminReportDetailPage = lazy(() => import("@/features/admin/moderation/AdminReportDetailPage"));
 const AdminBannedPage = lazy(() => import("@/features/admin/moderation/AdminBannedPage"));
 const AdminPaymentListPage = lazy(() => import("@/features/admin/payments/AdminPaymentListPage"));
@@ -268,14 +269,22 @@ function App() {
                 <Route path="exams/new/final/*" element={<AdminAddFinalExamWizard />} />
                 <Route path="exams/new/practice" element={<AdminAddPracticeExamPage />} />
                 <Route path="exams/pending" element={<AdminExamPendingPage />} />
-                <Route path="exams/submissions" element={<AdminPracticeSubmissionsPage />} />
+                <Route
+                  path="exams/submissions"
+                  element={<Navigate to="/admin/moderation/practice-submissions" replace />}
+                />
                 <Route path="exams/:id/edit" element={<AdminExamFormPage />} />
                 <Route path="exams/:id" element={<AdminExamDetailPage />} />
                 <Route path="documents" element={<AdminDocumentCatalogPage />} />
                 <Route path="documents/:courseCode" element={<AdminDocumentSubjectPage />} />
-                <Route path="moderation" element={<AdminModerationPage />} />
+                <Route path="moderation/content" element={<AdminContentModerationPage />} />
+                <Route
+                  path="moderation/practice-submissions"
+                  element={<AdminPracticeSubmissionsPage />}
+                />
                 <Route path="moderation/banned" element={<AdminBannedPage />} />
                 <Route path="moderation/:id" element={<AdminReportDetailPage />} />
+                <Route path="moderation" element={<AdminModerationPage />} />
                 <Route path="payments" element={<AdminPaymentListPage />} />
                 <Route path="payments/:id" element={<AdminPaymentDetailPage />} />
                 <Route path="vouchers" element={<AdminVoucherPage />} />

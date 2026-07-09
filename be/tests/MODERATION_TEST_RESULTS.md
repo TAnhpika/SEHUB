@@ -89,17 +89,30 @@ dotnet test --filter "FullyQualifiedName~Moderation|FullyQualifiedName~SocialPha
 | Permanent ban | Đã cover | `Admin_PermanentBan_AppearsInBannedList` |
 | BannedUserMiddleware | Đã cover | `BannedUserMiddleware_BlocksApiCallWithExistingToken` |
 | Mod không khóa mod | Chưa test | Chỉ test không khóa admin (L10) |
-| UI manual (toast, modal, routing) | Chưa verify | Cần QA trên FE: `/moderator/reports`, `/moderator/violations`, `/admin/moderation` |
+| UI manual (toast, modal, routing) | Đã cập nhật route | QA: matrix route Admin/Mod bên dưới |
 | `GET /banned` hiển thị ban record cũ sau unban | Quan sát | `GetActiveBansAsync` lọc theo `Until`, không theo `User.IsBanned` — có thể hiển thị ban tạm đã unban trong danh sách |
 
 ### Manual UI checklist (khuyến nghị QA)
 
+**Ma trận route sau refactor Admin/Mod UI (2026-07-09):**
+
+| Nghiệp vụ | Moderator (primary) | Admin (full power, shared component) |
+|-----------|---------------------|--------------------------------------|
+| Báo cáo | `/moderator/reports` | `/admin/moderation` |
+| Duyệt bài | `/moderator/content` | `/admin/moderation/content` |
+| Chấm TH | `/moderator/practice-submissions` | `/admin/moderation/practice-submissions` |
+| Duyệt đề Mod | — | `/admin/exams/pending` |
+| Legacy redirect | — | `/admin/exams/submissions` → practice-submissions |
+
 1. SV: báo cáo bài / comment / profile / chat / câu hỏi → toast xác nhận
 2. Mod: `/moderator/reports` — bỏ qua, xóa bài, escalate user
-3. Mod: `/moderator/violations` — cảnh cáo, khóa 1/7/30 ngày, mở khóa
-4. Admin: `/admin/moderation` — khóa 7 ngày / vĩnh viễn từ queue
-5. Admin: `/admin/moderation/banned` — danh sách + mở khóa
-6. SV bị khóa: `AccountPenaltyModal` khi login + notification
+3. Mod: `/moderator/content` — duyệt / từ chối bài pending
+4. Mod: `/moderator/violations` — cảnh cáo, khóa 1/7/30 ngày, mở khóa
+5. Admin: `/admin/moderation` — xử lý báo cáo (cùng workspace với Mod)
+6. Admin: `/admin/moderation/content` — duyệt bài (trước đây chỉ có trên Mod)
+7. Admin: `/admin/moderation/practice-submissions` — chấm TH + highlight từ notification
+8. Admin: `/admin/moderation/banned` — danh sách + mở khóa
+9. SV bị khóa: `AccountPenaltyModal` khi login + notification
 
 **Tài khoản:** `free@test.local` / `moderator@sehub.local` / `admin@sehub.local`
 
@@ -107,5 +120,10 @@ dotnet test --filter "FullyQualifiedName~Moderation|FullyQualifiedName~SocialPha
 
 ## File thay đổi
 
+- `fe/src/features/moderation/reports/ReportsWorkspace.jsx` — shared báo cáo (admin + mod)
+- `fe/src/features/moderation/practice/PracticeSubmissionsWorkspace.jsx` — shared chấm TH
+- `fe/src/features/admin/adminNavData.js` — subgroup Kiểm duyệt
+- `fe/src/app/App.jsx` — routes `/admin/moderation/content`, `/admin/moderation/practice-submissions`
+- `be/src/SEHub.Infrastructure/.../AdminActivityReadRepository.cs` — audit `admin`/`mod` trên REPORT_RESOLVED
 - `be/tests/SEHub.API.IntegrationTests/Moderation/ReportIntegrationTests.cs` — fix escalate test
 - `be/tests/SEHub.API.IntegrationTests/Moderation/ModerationE2EIntegrationTests.cs` — **mới**, 17 test cases

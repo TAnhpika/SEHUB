@@ -29,6 +29,8 @@ export const QUICK_LINK_ICONS = {
   "/admin/users": faUsers,
   "/admin/exams/pending": faClipboardCheck,
   "/admin/moderation": faFlag,
+  "/admin/moderation/content": faClipboardCheck,
+  "/admin/moderation/practice-submissions": faClipboardCheck,
   "/admin/documents": faBook,
   "/admin/payments": faCreditCard,
   "/admin/permissions": faUserShield,

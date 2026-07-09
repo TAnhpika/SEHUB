@@ -143,6 +143,215 @@ public sealed class ExamDuplicateHashIntegrationTests : IClassFixture<CustomWebA
     }
 
     [Fact]
+    public async Task ResubmitRejectedExam_WithIdenticalQuestionsToAnotherExam_Returns409_ThenSucceedsWithConfirmDuplicate()
+    {
+        var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
+
+        var adminToken = await _factory.LoginAdminAndGetTokenAsync(_client);
+        var seed = Guid.NewGuid().ToString("N")[..8];
+        var sharedQuestion = BuildSharedQuestionCopy(seed);
+
+        var firstResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
+        {
+            SubjectCode = "MAE101",
+            PaperCode = $"INT-RESUB-A-{seed}",
+            ExamType = nameof(ExamType.Final),
+            Questions = [sharedQuestion],
+        });
+        firstResponse.EnsureSuccessStatusCode();
+
+        var optionCId = Guid.NewGuid();
+        var optionDId = Guid.NewGuid();
+        var secondResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
+        {
+            SubjectCode = "MAE101",
+            PaperCode = $"INT-RESUB-B-{seed}",
+            ExamType = nameof(ExamType.Final),
+            Questions =
+            [
+                new CreateExamQuestionItem
+                {
+                    OrderIndex = 1,
+                    Content = $"Different stem {seed}",
+                    CorrectOptionId = optionDId,
+                    Options =
+                    [
+                        new CreateExamOptionItem { Id = optionCId, Label = "A", Text = "Yes" },
+                        new CreateExamOptionItem { Id = optionDId, Label = "B", Text = "No" },
+                    ],
+                },
+            ],
+        });
+        secondResponse.EnsureSuccessStatusCode();
+        var secondBody = await secondResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
+        var rejectedExamId = secondBody!.Data!.Id;
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        var rejectResponse = await _client.PostAsJsonAsync(
+            $"/api/v1/admin/exams/{rejectedExamId}/reject",
+            new RejectExamRequest
+            {
+                ReasonCode = "QUALITY",
+                ReasonLabel = "Quality issue",
+                Detail = "Integration duplicate resubmit test.",
+            });
+        rejectResponse.EnsureSuccessStatusCode();
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
+        var resubmitConflict = await _client.PutAsJsonAsync(
+            $"/api/v1/admin/exams/{rejectedExamId}/resubmit",
+            new ResubmitExamRequest
+            {
+                PaperCode = $"INT-RESUB-B-{seed}",
+                Questions = [BuildSharedQuestionCopy(seed)],
+            });
+        resubmitConflict.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        var resubmitAllowed = await _client.PutAsJsonAsync(
+            $"/api/v1/admin/exams/{rejectedExamId}/resubmit?confirmDuplicate=true",
+            new ResubmitExamRequest
+            {
+                PaperCode = $"INT-RESUB-B-{seed}",
+                Questions = [BuildSharedQuestionCopy(seed)],
+            });
+        resubmitAllowed.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task ApproveTwoPendingExams_WithSameContentHash_AllowsBothPublished()
+    {
+        var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
+
+        var adminToken = await _factory.LoginAdminAndGetTokenAsync(_client);
+        var seed = Guid.NewGuid().ToString("N")[..8];
+        var sharedQuestion = BuildSharedQuestionCopy(seed);
+
+        var firstResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
+        {
+            SubjectCode = "MAE101",
+            PaperCode = $"INT-RACE-A-{seed}",
+            ExamType = nameof(ExamType.Final),
+            Questions = [sharedQuestion],
+        });
+        firstResponse.EnsureSuccessStatusCode();
+        var firstBody = await firstResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
+        var firstId = firstBody!.Data!.Id;
+
+        var secondResponse = await _client.PostAsJsonAsync(
+            $"/api/v1/admin/exams?confirmDuplicate=true",
+            new CreateExamRequest
+            {
+                SubjectCode = "MAE101",
+                PaperCode = $"INT-RACE-B-{seed}",
+                ExamType = nameof(ExamType.Final),
+                Questions = [BuildSharedQuestionCopy(seed)],
+            });
+        secondResponse.EnsureSuccessStatusCode();
+        var secondBody = await secondResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
+        var secondId = secondBody!.Data!.Id;
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        (await _client.PostAsync($"/api/v1/admin/exams/{firstId}/approve", null)).EnsureSuccessStatusCode();
+        (await _client.PostAsync($"/api/v1/admin/exams/{secondId}/approve", null)).EnsureSuccessStatusCode();
+
+        var firstDetail = await _client.GetFromJsonAsync<ApiResponse<AdminExamDto>>($"/api/v1/admin/exams/{firstId}");
+        var secondDetail = await _client.GetFromJsonAsync<ApiResponse<AdminExamDto>>($"/api/v1/admin/exams/{secondId}");
+
+        firstDetail!.Data!.Status.Should().Be(nameof(ExamStatus.Published));
+        secondDetail!.Data!.Status.Should().Be(nameof(ExamStatus.Published));
+        firstDetail.Data.ContentHash.Should().Be(secondDetail.Data.ContentHash);
+    }
+
+    [Fact]
+    public async Task CreateExam_WhenArchivedExamHasSameContentHash_Returns409()
+    {
+        var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
+
+        var adminToken = await _factory.LoginAdminAndGetTokenAsync(_client);
+        var seed = Guid.NewGuid().ToString("N")[..8];
+        var sharedQuestion = BuildSharedQuestionCopy(seed);
+        var livePaperCode = $"INT-ARCH-{seed}";
+
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
+        {
+            SubjectCode = "MAE101",
+            PaperCode = livePaperCode,
+            ExamType = nameof(ExamType.Final),
+            Questions = [sharedQuestion],
+        });
+        createResponse.EnsureSuccessStatusCode();
+        var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
+        var liveExamId = created!.Data!.Id;
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        (await _client.PostAsync($"/api/v1/admin/exams/{liveExamId}/approve", null)).EnsureSuccessStatusCode();
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
+        var revisionResponse = await _client.PostAsync($"/api/v1/admin/exams/{liveExamId}/revision", null);
+        revisionResponse.EnsureSuccessStatusCode();
+        var revision = await revisionResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
+        var revisionId = revision!.Data!.Id;
+
+        var resubmitResponse = await _client.PutAsJsonAsync(
+            $"/api/v1/admin/exams/{revisionId}/resubmit",
+            new ResubmitExamRequest
+            {
+                PaperCode = revision.Data.PaperCode,
+                Description = revision.Data.Description,
+                Questions = [],
+            });
+        resubmitResponse.EnsureSuccessStatusCode();
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        (await _client.PostAsync($"/api/v1/admin/exams/{revisionId}/approve", null)).EnsureSuccessStatusCode();
+
+        var archivedParent = await _client.GetFromJsonAsync<ApiResponse<AdminExamDto>>($"/api/v1/admin/exams/{liveExamId}");
+        archivedParent!.Data!.Status.Should().Be(nameof(ExamStatus.Archived));
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
+        var conflict = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
+        {
+            SubjectCode = "MAE101",
+            PaperCode = $"INT-ARCH-NEW-{seed}",
+            ExamType = nameof(ExamType.Final),
+            Questions = [BuildSharedQuestionCopy(seed)],
+        });
+        conflict.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task CreatePracticeExam_WithSameDescriptionButDifferentPaperCode_DoesNotDuplicateHash()
+    {
+        var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
+
+        var seed = Guid.NewGuid().ToString("N")[..8];
+        const string subjectCode = "PRF192";
+        const string description = "Practice metadata duplicate audit test.";
+
+        var firstResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
+        {
+            SubjectCode = subjectCode,
+            PaperCode = $"INT-PRAC-META-A-{seed}",
+            ExamType = nameof(ExamType.Practice),
+            Description = description,
+        });
+        firstResponse.EnsureSuccessStatusCode();
+
+        var secondResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
+        {
+            SubjectCode = subjectCode,
+            PaperCode = $"INT-PRAC-META-B-{seed}",
+            ExamType = nameof(ExamType.Practice),
+            Description = description,
+        });
+        secondResponse.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
     public async Task OcrExam_WithMarkdownQuestions_ReturnsCanonicalHashAndQuestions()
     {
         var adminToken = await _factory.LoginAdminAndGetTokenAsync(_client);

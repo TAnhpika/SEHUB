@@ -7,20 +7,27 @@ import { getPaymentStatsFromList, loadAdminPayments } from "@/features/admin/pay
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
-function buildNotificationsFromPending(pending, recent) {
-  const pendingItems = pending
-    .filter((item) => item.count > 0)
-    .map((item) => ({
-      id: `pending-${item.id}`,
-      kind: "action",
-      title: `${item.label} (${item.count})`,
-      desc: item.urgent ? "Cần xử lý sớm" : "Việc chờ trong hàng đợi",
-      time: "Hôm nay",
-      to: item.to,
-      urgent: item.urgent,
-    }));
+const ADMIN_PENDING_IDS = new Set(["p1", "p3", "p5"]);
+const MODERATOR_PENDING_IDS = new Set(["p2", "p4", "p6"]);
 
-  const recentItems = recent.map((row) => ({
+function buildQueueItem(id, label, count, to, urgent = count > 0) {
+  if (count <= 0) {
+    return null;
+  }
+
+  return {
+    id: `pending-${id}`,
+    kind: "action",
+    title: `${label} (${count})`,
+    desc: urgent ? "Cần xử lý sớm" : "Việc chờ trong hàng đợi",
+    time: "Hôm nay",
+    to,
+    urgent,
+  };
+}
+
+function mapActivityItems(recent) {
+  return recent.map((row) => ({
     id: `activity-${row.id}`,
     kind: "activity",
     title: row.text,
@@ -29,22 +36,74 @@ function buildNotificationsFromPending(pending, recent) {
     to: "/admin/activity",
     urgent: false,
   }));
-
-  return [...pendingItems, ...recentItems];
 }
 
-function mapWorkflowNotifications(items) {
-  return items
-    .filter((item) => item.type === "moderation" || item.type === "examreview")
-    .map((item) => ({
-      id: `notif-${item.id}`,
-      kind: "action",
-      title: item.title,
-      desc: item.body || null,
-      time: item.time,
-      to: item.linkUrl || "/admin",
-      urgent: !item.read,
-    }));
+/** Push workflow chỉ dành cho Admin — loại moderation của Moderator và legacy DB. */
+export function isAdminWorkflowPush(item) {
+  if (item.type === "examreview" || item.type === "refund") {
+    return true;
+  }
+
+  if (item.type === "moderation") {
+    const link = item.linkUrl || "";
+    return link.startsWith("/admin/");
+  }
+
+  return false;
+}
+
+function mapAdminWorkflowNotifications(items) {
+  return items.filter(isAdminWorkflowPush).map((item) => ({
+    id: `notif-${item.id}`,
+    kind: "action",
+    title: item.title,
+    desc: item.body || null,
+    time: item.time,
+    to: item.linkUrl || "/admin",
+    urgent: !item.read,
+  }));
+}
+
+function splitMockPending(pending) {
+  const adminQueue = pending
+    .filter((item) => ADMIN_PENDING_IDS.has(item.id))
+    .map((item) =>
+      buildQueueItem(item.id, item.label, item.count, item.to, item.urgent),
+    )
+    .filter(Boolean);
+
+  const moderatorQueue = pending
+    .filter((item) => MODERATOR_PENDING_IDS.has(item.id))
+    .map((item) =>
+      buildQueueItem(item.id, item.label, item.count, item.to, item.urgent),
+    )
+    .filter(Boolean);
+
+  return { adminQueue, moderatorQueue };
+}
+
+function buildAdminNotificationPayload({ adminTasks, moderatorQueue, activity, counts }) {
+  return {
+    adminTasks,
+    moderatorQueue,
+    activity,
+    counts,
+  };
+}
+
+function countActionItems(items) {
+  return items.filter((item) => item.kind === "action").length;
+}
+
+function buildCounts(adminTasks, moderatorQueue) {
+  const adminPending = countActionItems(adminTasks);
+  const moderatorPending = countActionItems(moderatorQueue);
+
+  return {
+    adminPending,
+    moderatorPending,
+    total: adminPending + moderatorPending,
+  };
 }
 
 /**
@@ -55,75 +114,121 @@ export function getAdminHeaderNotifications() {
   const recent = getMergedActivityLog()
     .slice(0, 4)
     .map(({ id, time, text }) => ({ id, time, text }));
-  return buildNotificationsFromPending(pending, recent);
+  const { adminQueue, moderatorQueue } = splitMockPending(pending);
+  const activity = mapActivityItems(recent);
+  const adminTasks = [...adminQueue];
+  const counts = buildCounts(adminTasks, moderatorQueue);
+
+  return buildAdminNotificationPayload({
+    adminTasks,
+    moderatorQueue,
+    activity,
+    counts,
+  });
 }
 
 export async function loadAdminHeaderNotifications() {
   if (USE_MOCK) {
     const pending = getDashboardPending();
     const recent = await loadAdminActivityPreview(4);
-    return buildNotificationsFromPending(pending, recent);
+    const { adminQueue, moderatorQueue } = splitMockPending(pending);
+    const activity = mapActivityItems(recent);
+    const adminTasks = [...adminQueue];
+    const counts = buildCounts(adminTasks, moderatorQueue);
+
+    return buildAdminNotificationPayload({
+      adminTasks,
+      moderatorQueue,
+      activity,
+      counts,
+    });
   }
 
   const [modStats, pendingExamsPage, submissionsPage, paymentsList, recent, notifPage, unread] =
     await Promise.all([
-    adminApi.getModerationStats(),
-    adminApi.listExams({ status: "PendingApproval", pageSize: 1 }),
-    adminApi.listModerationPracticeSubmissions({ status: "Submitted", pageSize: 1 }),
-    loadAdminPayments(),
-    loadAdminActivityPreview(4),
-    getNotifications({ page: 1, pageSize: 20 }),
-    getNotificationUnreadCount(),
-  ]);
+      adminApi.getModerationStats(),
+      adminApi.listExams({ status: "PendingApproval", pageSize: 1 }),
+      adminApi.listModerationPracticeSubmissions({ status: "Submitted", pageSize: 1 }),
+      loadAdminPayments(),
+      loadAdminActivityPreview(4),
+      getNotifications({ page: 1, pageSize: 20 }),
+      getNotificationUnreadCount(),
+    ]);
 
   const paymentStats = getPaymentStatsFromList(paymentsList);
-  const pending = [
-    {
-      id: "p1",
-      label: "Duyệt đề Mod",
-      count: pendingExamsPage.totalCount ?? 0,
-      to: "/admin/exams/pending",
-      urgent: (pendingExamsPage.totalCount ?? 0) > 0,
-    },
-    {
-      id: "p2",
-      label: "Báo cáo chờ",
-      count: modStats.pendingReports ?? 0,
-      to: "/admin/moderation",
-      urgent: (modStats.pendingReports ?? 0) > 0,
-    },
-    {
-      id: "p3",
-      label: "Chờ xác nhận PayOS",
-      count: paymentStats.awaitingConfirm,
-      to: "/admin/payments",
-      urgent: paymentStats.awaitingConfirm > 0,
-    },
-    {
-      id: "p4",
-      label: "Bài nộp TH chờ chấm",
-      count: submissionsPage.totalCount ?? modStats.pendingPracticeSubmissions ?? 0,
-      to: "/admin/exams/submissions",
-      urgent: (submissionsPage.totalCount ?? 0) > 0,
-    },
-  ].filter((item) => item.count > 0 || item.id === "p2");
+  const workflowNotifs = mapAdminWorkflowNotifications(mapNotificationPage(notifPage).items);
 
-  const workflowNotifs = mapWorkflowNotifications(mapNotificationPage(notifPage).items);
-  const queueNotifs = buildNotificationsFromPending(pending, recent);
-  const merged = [...workflowNotifs, ...queueNotifs];
+  const adminQueue = [
+    buildQueueItem(
+      "p1",
+      "Duyệt đề Mod",
+      pendingExamsPage.totalCount ?? 0,
+      "/admin/exams/pending",
+      (pendingExamsPage.totalCount ?? 0) > 0,
+    ),
+    buildQueueItem(
+      "p3",
+      "Chờ xác nhận PayOS",
+      paymentStats.awaitingConfirm,
+      "/admin/payments",
+      paymentStats.awaitingConfirm > 0,
+    ),
+    buildQueueItem(
+      "p5",
+      "Thanh toán lỗi",
+      paymentStats.failed,
+      "/admin/payments",
+      false,
+    ),
+  ].filter(Boolean);
+
+  const moderatorQueue = [
+    buildQueueItem(
+      "m-reports",
+      "Báo cáo chờ xử lý",
+      modStats.pendingReports ?? 0,
+      "/admin/moderation",
+      (modStats.pendingReports ?? 0) > 0,
+    ),
+    buildQueueItem(
+      "m-posts",
+      "Bài viết chờ duyệt",
+      modStats.pendingPosts ?? 0,
+      "/admin/moderation/content",
+      (modStats.pendingPosts ?? 0) > 0,
+    ),
+    buildQueueItem(
+      "m-practice",
+      "Bài nộp TH chờ chấm",
+      submissionsPage.totalCount ?? modStats.pendingPracticeSubmissions ?? 0,
+      "/admin/moderation/practice-submissions",
+      (submissionsPage.totalCount ?? modStats.pendingPracticeSubmissions ?? 0) > 0,
+    ),
+  ].filter(Boolean);
+
+  const adminTasks = [...workflowNotifs, ...adminQueue];
+  const activity = mapActivityItems(recent);
+  const counts = buildCounts(adminTasks, moderatorQueue);
   void unread;
-  return merged;
+
+  return buildAdminNotificationPayload({
+    adminTasks,
+    moderatorQueue,
+    activity,
+    counts,
+  });
 }
 
 export function getAdminNotificationCount() {
-  return getDashboardPending().reduce((sum, item) => sum + item.count, 0);
+  const payload = getAdminHeaderNotifications();
+  return payload.counts.total;
 }
 
 export async function loadAdminNotificationCount() {
-  const [notifications, unread] = await Promise.all([
+  const [payload, unread] = await Promise.all([
     loadAdminHeaderNotifications(),
     getNotificationUnreadCount(),
   ]);
-  const actionCount = notifications.filter((item) => item.kind === "action").length;
-  return Math.max(unread?.totalUnread ?? 0, actionCount);
+
+  return Math.max(unread?.totalUnread ?? 0, payload.counts.total);
 }

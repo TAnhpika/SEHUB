@@ -254,7 +254,7 @@ function AdminExamDetailPage() {
           <h2 className={styles.panelTitle}>Bài nộp GitHub (Thực hành)</h2>
           <p className={styles.panelDesc}>
             Sinh viên Premium nộp link repo — Admin/Mod chấm Đã xem / Đạt / Không đạt (§3.4).{" "}
-            <Link to="/admin/exams/submissions" className={styles.link}>
+            <Link to="/admin/moderation/practice-submissions" className={styles.link}>
               Xem tất cả bài nộp thực hành
             </Link>
           </p>

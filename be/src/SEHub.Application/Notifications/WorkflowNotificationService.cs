@@ -319,7 +319,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         var reasonLabel = FormatReportReason(reason);
 
         await NotifyRoleMembersAsync(
-            [RoleNames.Moderator, RoleNames.Admin],
+            [RoleNames.Moderator],
             NotificationType.Moderation,
             $"{actorName} báo cáo một bài viết",
             $"Lý do: {reasonLabel}",
@@ -341,7 +341,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         var reasonLabel = FormatReportReason(reason);
 
         await NotifyRoleMembersAsync(
-            [RoleNames.Moderator, RoleNames.Admin],
+            [RoleNames.Moderator],
             NotificationType.Moderation,
             $"{actorName} báo cáo một bình luận",
             $"Lý do: {reasonLabel}",
@@ -366,7 +366,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         var preview = Truncate(detail, 120);
 
         await NotifyRoleMembersAsync(
-            [RoleNames.Moderator, RoleNames.Admin],
+            [RoleNames.Moderator],
             NotificationType.Moderation,
             $"{actorName} báo cáo người dùng @{reportedLabel}",
             $"Lý do: {reasonLabel} — {preview}",
@@ -389,7 +389,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         var preview = Truncate(detail, 120);
 
         await NotifyRoleMembersAsync(
-            [RoleNames.Moderator, RoleNames.Admin],
+            [RoleNames.Moderator],
             NotificationType.Moderation,
             $"{actorName} báo cáo cuộc trò chuyện",
             $"Lý do: {reasonLabel} — {preview}",
@@ -413,7 +413,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         var preview = Truncate(detail, 120);
 
         await NotifyRoleMembersAsync(
-            [RoleNames.Moderator, RoleNames.Admin],
+            [RoleNames.Moderator],
             NotificationType.Moderation,
             $"{actorName} báo cáo câu hỏi đề {exam.PaperCode}",
             $"Lý do: {reasonLabel} — {preview}",
@@ -527,7 +527,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             NotificationType.Moderation,
             $"{actorName} đã chấm bài thực hành",
             body,
-            $"/admin/exams/submissions?highlight={submission.Id}",
+            $"/admin/moderation/practice-submissions?highlight={submission.Id}",
             moderatorUserId,
             submission.Id,
             cancellationToken);
@@ -542,7 +542,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         var postLabel = BuildPostLabel(post);
 
         await NotifyRoleMembersAsync(
-            [RoleNames.Moderator, RoleNames.Admin],
+            [RoleNames.Moderator],
             NotificationType.Moderation,
             $"{actorName} đăng bài chờ duyệt",
             postLabel,
@@ -561,11 +561,11 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         var actorName = await ResolveActorNameAsync(studentUserId, cancellationToken);
 
         await NotifyRoleMembersAsync(
-            [RoleNames.Moderator, RoleNames.Admin],
+            [RoleNames.Moderator],
             NotificationType.Moderation,
             $"{actorName} nộp bài thực hành",
             $"{exam.PaperCode} ({exam.SubjectCode})",
-            "/admin/exams/submissions",
+            "/moderator/practice-submissions",
             studentUserId,
             submission.Id,
             cancellationToken);
