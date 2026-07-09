@@ -1,6 +1,11 @@
 /**
- * Nhật ký đóng góp đề — Moderator (§2.4).
+ * @fileoverview Nhật ký đóng góp đề — Moderator (§2.4).
+ *
  * Gửi duyệt qua API; lưu nháp giữ local cho đến khi gửi.
+ * Merge bản ghi localStorage với dữ liệu API, resolve trạng thái pending/approved/rejected.
+ *
+ * @module features/moderator/exams/moderatorExamContributionStore
+ * @see {@link module:features/moderator/exams/moderatorExamService} — fetch và map entry từ API
  */
 
 import {
@@ -36,7 +41,10 @@ export {
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
+/** @constant {string} Key localStorage lưu nhật ký đóng góp đề. */
 const STORAGE_KEY = "sehubs_moderator_exam_contribution_audit";
+
+/** @constant {string} Key legacy — tự migrate sang `STORAGE_KEY` khi đọc. */
 const LEGACY_PRACTICE_KEY = "sehubs_practice_exam_contribution_audit";
 
 function loadStore() {
@@ -79,7 +87,10 @@ function appendEntry(entry) {
 }
 
 /**
- * @param {string | null | undefined} pendingId
+ * Suy ra trạng thái hiển thị của entry từ hàng chờ Admin (mock) theo `pendingId`.
+ *
+ * @param {string | null | undefined} pendingId - ID đề trên hàng chờ Admin.
+ * @returns {import('@/features/moderator/exams/moderatorExamConstants').ContributionDisplayStatus}
  */
 export function resolvePendingStatus(pendingId) {
   if (!pendingId) return "draft_saved";
@@ -146,6 +157,8 @@ function mergeContributionEntries(localEntries, apiEntries) {
 }
 
 /**
+ * Ghi nhận bản lưu nháp đóng góp đề vào localStorage (chưa gửi Admin).
+ *
  * @param {{
  *   examType: import("@/features/moderator/exams/moderatorExamConstants").ExamContributionType;
  *   moderator: string;
@@ -154,7 +167,8 @@ function mergeContributionEntries(localEntries, apiEntries) {
  *   title: string;
  *   description?: string;
  *   wizardStep?: string;
- * }} payload
+ * }} payload - Thông tin đề đang soạn.
+ * @returns {object} Entry audit vừa append.
  */
 export function recordExamDraft(payload) {
   return appendEntry({
@@ -173,8 +187,13 @@ export function recordExamDraft(payload) {
 }
 
 /**
- * @param {object} payload
- * @param {{ examInfo?: object; questions?: object[]; confirmDuplicate?: boolean }} [options]
+ * Gửi đề cuối kỳ hoặc thực hành lên Admin duyệt qua API (hoặc mock).
+ *
+ * @param {object} payload - Payload đóng góp (examType, moderator, subjectCode, ...).
+ * @param {{ examInfo?: object; questions?: object[]; confirmDuplicate?: boolean }} [options={}]
+ *   - `examInfo` + `questions` bắt buộc cho đề cuối kỳ; `confirmDuplicate` bỏ qua HTTP 409.
+ * @returns {Promise<{ pending: object, audit: object }>} Kết quả pending và entry audit.
+ * @throws {import('@/api/httpClient').ApiError} Khi API trả lỗi (ví dụ 409 trùng nội dung).
  */
 export async function submitExamForApproval(payload, options = {}) {
   const { examInfo, questions, confirmDuplicate = false } = options;
@@ -253,8 +272,11 @@ export async function submitExamForApproval(payload, options = {}) {
 export { ApiError };
 
 /**
- * @param {string | undefined} moderator
- * @param {{ examType?: 'all' | import("@/features/moderator/exams/moderatorExamConstants").ExamContributionType; status?: string }} [filters]
+ * Tải nhật ký đóng góp đề — merge local draft + API, enrich revision.
+ *
+ * @param {string | undefined} moderator - Username Moderator (lọc entry).
+ * @param {{ examType?: 'all' | import("@/features/moderator/exams/moderatorExamConstants").ExamContributionType; status?: string }} [filters={}]
+ * @returns {Promise<Array<object>>} Danh sách entry audit đã sort mới nhất trước.
  */
 export async function loadExamContributionAudit(moderator, filters = {}) {
   const { status, ...baseFilters } = filters;
@@ -276,25 +298,45 @@ export async function loadExamContributionAudit(moderator, filters = {}) {
   return merged;
 }
 
-/** @deprecated Prefer loadExamContributionAudit */
+/**
+ * @deprecated Prefer {@link loadExamContributionAudit}
+ * @param {string | undefined} moderator
+ * @param {object} [filters={}]
+ * @returns {Array<object>} Chỉ bản ghi local, không merge API.
+ */
 export function getExamContributionAudit(moderator, filters = {}) {
   return getLocalDraftEntries(moderator, filters);
 }
 
-/** @param {string | undefined} moderator @param {import("@/features/moderator/exams/moderatorExamConstants").ExamContributionType | 'all'} [examType] */
+/**
+ * Đếm số đóng góp đang chờ Admin duyệt (async, merge local + API).
+ *
+ * @param {string | undefined} moderator - Username Moderator.
+ * @param {import("@/features/moderator/exams/moderatorExamConstants").ExamContributionType | 'all'} [examType="all"]
+ * @returns {Promise<number>} Số entry có `status === 'pending_admin'`.
+ */
 export async function loadPendingContributionCount(moderator, examType = "all") {
   const entries = await loadExamContributionAudit(moderator, { examType });
   return entries.filter((entry) => entry.status === "pending_admin").length;
 }
 
-/** @deprecated Prefer loadPendingContributionCount */
+/**
+ * @deprecated Prefer {@link loadPendingContributionCount}
+ * @param {string | undefined} moderator
+ * @param {import("@/features/moderator/exams/moderatorExamConstants").ExamContributionType | 'all'} [examType]
+ * @returns {number}
+ */
 export function getPendingContributionCount(moderator, examType = "all") {
   return getLocalDraftEntries(moderator, { examType }).filter(
     (entry) => entry.status === "pending_admin",
   ).length;
 }
 
-/** @deprecated — dùng recordExamDraft với examType: 'practice' */
+/**
+ * @deprecated Dùng {@link recordExamDraft} với `examType: 'practice'`.
+ * @param {object} payload - Payload legacy (subject, semester, title, ...).
+ * @returns {object}
+ */
 export function recordPracticeExamDraft(payload) {
   return recordExamDraft({
     examType: "practice",
@@ -306,16 +348,23 @@ export function recordPracticeExamDraft(payload) {
   });
 }
 
-/** @deprecated — dùng getExamContributionAudit(..., { examType: 'practice' }) */
+/**
+ * @deprecated Dùng {@link getExamContributionAudit} với `{ examType: 'practice' }`.
+ * @param {string | undefined} moderator
+ * @returns {Array<object>}
+ */
 export function getPracticeExamContributionAudit(moderator) {
   return getExamContributionAudit(moderator, { examType: "practice" });
 }
 
 /**
- * @param {string} moderator
- * @param {object} examInfo
- * @param {number} completeCount
- * @param {string} [wizardStep]
+ * Xây payload đóng góp đề cuối kỳ từ state wizard để lưu nháp hoặc gửi duyệt.
+ *
+ * @param {string} moderator - Username Moderator.
+ * @param {object} examInfo - Metadata đề wizard.
+ * @param {number} completeCount - Số câu đã hoàn thiện.
+ * @param {string} [wizardStep] - Nhãn bước wizard hiện tại (audit log).
+ * @returns {object} Payload chuẩn cho `recordExamDraft` / `submitExamForApproval`.
  */
 export function buildFinalExamContributionPayload(moderator, examInfo, completeCount, wizardStep) {
   return {

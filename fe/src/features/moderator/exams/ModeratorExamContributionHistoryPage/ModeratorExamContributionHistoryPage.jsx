@@ -13,14 +13,37 @@ import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShe
 import { ModeratorAuditListSkeleton } from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
 import styles from "./ModeratorExamContributionHistoryPage.module.css";
 
+/**
+ * @fileoverview Trang lịch sử đóng góp đề cuối kỳ / thực hành của Moderator.
+ *
+ * Hiển thị metric chờ duyệt, bộ lọc loại đề và trạng thái,
+ * danh sách phân trang và link nhanh tạo đề mới.
+ *
+ * @module features/moderator/exams/ModeratorExamContributionHistoryPage
+ */
+
+/** @constant {number} Số entry mỗi trang phân trang. */
 const PAGE_SIZE = 8;
 
+/**
+ * Breadcrumb hiển thị trên `ModeratorPageShell`.
+ *
+ * @constant {ReadonlyArray<{ label: string, to?: string }>}
+ * @readonly
+ */
 const HISTORY_CRUMBS = [
   { label: "Trang chủ", to: "/home" },
   { label: "Đóng góp đề" },
   { label: "Lịch sử đóng góp đề" },
 ];
 
+/**
+ * Trang lịch sử đóng góp đề — lọc, phân trang và metric chờ Admin duyệt.
+ *
+ * Đọc query `?type=final|practice` để preset bộ lọc loại đề.
+ *
+ * @returns {import('react').ReactElement} Trang lịch sử đóng góp đầy đủ.
+ */
 function ModeratorExamContributionHistoryPage() {
   const { user } = useAuth();
   const moderator = user?.username ?? "mod_sehub";

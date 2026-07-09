@@ -11,8 +11,61 @@ import {
 } from "@/features/moderator/finalExams/finalExamData";
 import { loadExamForWizardEdit } from "@/features/moderator/exams/moderatorExamService";
 
+/**
+ * @fileoverview React Context quản lý state wizard tạo / sửa đề cuối kỳ.
+ *
+ * Cung cấp:
+ * - Metadata đề (`examInfo`), danh sách câu hỏi, chỉ số câu đang soạn.
+ * - Tiến độ hoàn thiện, đồng bộ số slot câu hỏi theo `totalQuestions`.
+ * - Chế độ edit / revision edit và tải đề từ API.
+ * - Helper cập nhật câu hỏi / đáp án đang active.
+ *
+ * @module features/moderator/finalExams/FinalExamWizardContext
+ * @see {@link module:features/moderator/finalExams/finalExamData} — hằng số và helper câu hỏi
+ */
+
+/** @type {import('react').Context<import('./FinalExamWizardContext').FinalExamWizardContextValue | null>} */
 const FinalExamWizardContext = createContext(null);
 
+/**
+ * @typedef {Object} FinalExamWizardContextValue
+ * @property {import('@/features/moderator/finalExams/finalExamData').EMPTY_FINAL_EXAM_INFO} examInfo - Metadata đề hiện tại.
+ * @property {import('react').Dispatch<import('react').SetStateAction<object>>} setExamInfo - Cập nhật metadata đề.
+ * @property {Array<object>} questions - Danh sách câu hỏi wizard.
+ * @property {import('react').Dispatch<import('react').SetStateAction<Array<object>>>} setQuestions - Cập nhật toàn bộ câu hỏi.
+ * @property {number} activeQuestionIndex - Chỉ số câu hỏi đang soạn (0-based).
+ * @property {import('react').Dispatch<import('react').SetStateAction<number>>} setActiveQuestionIndex - Chuyển câu đang soạn.
+ * @property {number} completeCount - Số câu đã hoàn thiện theo `isQuestionComplete`.
+ * @property {number} totalQuestions - Tổng số câu theo metadata.
+ * @property {number} progressPercent - Phần trăm hoàn thiện (0–100).
+ * @property {(count?: number) => void} ensureQuestionSlots - Đồng bộ độ dài mảng `questions` với số câu mục tiêu.
+ * @property {string | null} editingExamId - ID đề đang chỉnh sửa (null khi tạo mới).
+ * @property {string | null} revisionOfExamId - ID đề gốc khi đang sửa bản revision.
+ * @property {boolean} isEditMode - `true` khi `editingExamId` có giá trị.
+ * @property {boolean} isRevisionEdit - `true` khi chỉnh sửa bản cập nhật đề đã public.
+ * @property {string} basePath - Đường dẫn gốc wizard (add hoặc edit).
+ * @property {Array<{ id: number, path: string, title: string, hint: string }>} wizardSteps - Cấu hình 3 bước wizard.
+ * @property {boolean} loadingExam - Đang tải đề để chỉnh sửa.
+ * @property {string | null} loadExamError - Thông báo lỗi khi tải đề thất bại.
+ * @property {(examId: string) => Promise<object>} loadExamForEdit - Tải đề từ API và hydrate state.
+ * @property {() => void} resetWizard - Đặt lại toàn bộ state về mặc định tạo mới.
+ * @property {boolean} publishesDirectly - Admin xuất bản trực tiếp, không qua duyệt.
+ * @property {string} flowScope - `'admin'` hoặc `'moderator'`.
+ * @property {(patch: object) => void} updateActiveQuestion - Gộp patch vào câu hỏi đang active.
+ * @property {(key: string, text: string) => void} updateActiveAnswer - Cập nhật nội dung một phương án đáp án.
+ */
+
+/**
+ * @typedef {Object} FinalExamWizardProviderProps
+ * @property {import('react').ReactNode} children - Cây component con dùng `useFinalExamWizard`.
+ */
+
+/**
+ * Provider chia sẻ state wizard đề cuối kỳ cho toàn bộ cây component con.
+ *
+ * @param {FinalExamWizardProviderProps} props - Props của provider.
+ * @returns {import('react').ReactElement} Context provider.
+ */
 export function FinalExamWizardProvider({ children }) {
   const flow = useExamFormFlow();
   const [examInfo, setExamInfo] = useState(EMPTY_FINAL_EXAM_INFO);
@@ -164,6 +217,15 @@ export function FinalExamWizardProvider({ children }) {
   );
 }
 
+/**
+ * Hook truy cập context wizard đề cuối kỳ.
+ *
+ * @returns {FinalExamWizardContextValue} Giá trị context wizard.
+ * @throws {Error} Khi gọi ngoài `FinalExamWizardProvider`.
+ *
+ * @example
+ * const { examInfo, questions, ensureQuestionSlots } = useFinalExamWizard();
+ */
 export function useFinalExamWizard() {
   const context = useContext(FinalExamWizardContext);
   if (!context) {

@@ -16,6 +16,20 @@ import {
 import styles from "@/features/moderator/shared/moderatorPage.module.css";
 import pageStyles from "./ModeratorPracticeSubmissionsPage.module.css";
 
+/**
+ * @fileoverview Trang chấm bài nộp thực hành (GitHub) của Moderator — §3.4.
+ *
+ * Liệt kê bài nộp sinh viên Premium, lọc theo môn / trạng thái / sắp xếp,
+ * phân trang và chấm Đã xem / Đạt / Không đạt qua `PracticeSubmissionGrader`.
+ *
+ * @module features/moderator/practiceExams/ModeratorPracticeSubmissionsPage
+ */
+
+/**
+ * Trang danh sách bài nộp thực hành cần chấm.
+ *
+ * @returns {import('react').ReactElement} Bảng bài nộp kèm bộ lọc và phân trang.
+ */
 function ModeratorPracticeSubmissionsPage() {
   const { user } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);

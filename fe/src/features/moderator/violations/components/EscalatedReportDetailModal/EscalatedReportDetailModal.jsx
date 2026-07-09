@@ -1,8 +1,46 @@
+/**
+ * @fileoverview Modal hiển thị chi tiết báo cáo đã escalate sang luồng xử lý vi phạm.
+ *
+ * Mở qua deep-link query string trên `ViolatingAccountsPage` (`reason`, `code`, `reporter`).
+ *
+ * @module features/moderator/violations/components/EscalatedReportDetailModal
+ */
+
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFlag, faUser, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "@/common/Modal/Modal";
 import styles from "./EscalatedReportDetailModal.module.css";
 
+/**
+ * @typedef {Object} EscalatedReportDetailModalProps
+ * @property {boolean} open - Điều khiển hiển thị modal.
+ * @property {() => void} onClose - Đóng modal.
+ * @property {string} [reportCode] - Mã báo cáo (không có `#`).
+ * @property {string} [username] - Username tài khoản bị báo cáo (có thể kèm `@`).
+ * @property {string} [reporterUsername] - Username người báo cáo.
+ * @property {string} [detail] - Nội dung chi tiết báo cáo.
+ * @property {() => void} onViewAccount - Mở panel chi tiết tài khoản vi phạm.
+ */
+
+/**
+ * Modal tóm tắt báo cáo đã chuyển sang xử lý vi phạm — ngữ cảnh khi Moderator deep-link từ Reports.
+ *
+ * Hiển thị metadata (tài khoản bị báo cáo, người báo cáo) và blockquote nội dung.
+ * Footer có nút đóng và "Xem chi tiết tài khoản".
+ *
+ * @param {EscalatedReportDetailModalProps} props - Props của component.
+ * @returns {import('react').ReactElement} Modal chi tiết báo cáo escalate.
+ *
+ * @example
+ * <EscalatedReportDetailModal
+ *   open={showEscalatedModal}
+ *   reportCode="RP-4921"
+ *   username="@spammer"
+ *   detail="Spam link lừa đảo"
+ *   onClose={() => setShowEscalatedModal(false)}
+ *   onViewAccount={() => openDetailPanel()}
+ * />
+ */
 function EscalatedReportDetailModal({
   open,
   onClose,

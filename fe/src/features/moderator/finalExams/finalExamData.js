@@ -6,8 +6,32 @@ import {
 } from "@/features/exams/examQuestionTypes";
 import { createDefaultExamTermFields } from "@/features/exams/finalExam/examTermOptions";
 
+/**
+ * @fileoverview Dữ liệu, hằng số và helper nghiệp vụ cho wizard đề cuối kỳ.
+ *
+ * Cung cấp:
+ * - Cấu hình bước wizard, metadata mặc định, factory câu hỏi rỗng.
+ * - Chuẩn hóa / làm sạch nội dung câu hỏi import (loại GUID nội bộ, HTML thừa).
+ * - Map câu hỏi từ API import Markdown sang model wizard.
+ * - Kiểm tra câu hỏi đã hoàn thiện đủ điều kiện gửi duyệt.
+ *
+ * @module features/moderator/finalExams/finalExamData
+ */
+
+/**
+ * Các nhãn phương án đáp án mặc định (A–D) dùng trong wizard.
+ *
+ * @constant {ReadonlyArray<string>}
+ * @readonly
+ */
 export const ANSWER_KEYS = OPTION_LABELS.slice(0, 4);
 
+/**
+ * Cấu hình 3 bước wizard mặc định cho route Moderator thêm đề mới.
+ *
+ * @constant {ReadonlyArray<{ id: number, path: string, title: string, hint: string }>}
+ * @readonly
+ */
 export const WIZARD_STEPS = [
   {
     id: 1,
@@ -29,6 +53,16 @@ export const WIZARD_STEPS = [
   },
 ];
 
+/**
+ * Sinh danh sách bước wizard với `basePath` tùy chỉnh (add hoặc edit).
+ *
+ * @param {string} [basePath="/moderator/final-exams/add"] - Đường dẫn gốc wizard.
+ * @returns {Array<{ id: number, path: string, title: string, hint: string }>} 3 bước với path đã resolve.
+ *
+ * @example
+ * getWizardSteps('/moderator/final-exams/edit/abc-123');
+ * // => [{ path: '.../edit/abc-123' }, { path: '.../questions' }, { path: '.../review' }]
+ */
 export function getWizardSteps(basePath = "/moderator/final-exams/add") {
   return [
     { ...WIZARD_STEPS[0], path: basePath },
@@ -37,6 +71,12 @@ export function getWizardSteps(basePath = "/moderator/final-exams/add") {
   ];
 }
 
+/**
+ * Metadata đề cuối kỳ mặc định khi tạo mới wizard.
+ *
+ * @constant {object}
+ * @readonly
+ */
 export const EMPTY_FINAL_EXAM_INFO = {
   subjectCode: "",
   subjectName: "",
@@ -48,6 +88,12 @@ export const EMPTY_FINAL_EXAM_INFO = {
   totalQuestions: 50,
 };
 
+/**
+ * Tạo object câu hỏi trống với cấu trúc wizard chuẩn.
+ *
+ * @param {string} id - Định danh nội bộ câu hỏi (ví dụ `q-1`).
+ * @returns {object} Câu hỏi single-choice rỗng với 4 phương án A–D.
+ */
 export function createEmptyQuestion(id) {
   return {
     id,
@@ -63,6 +109,12 @@ export function createEmptyQuestion(id) {
   };
 }
 
+/**
+ * Parse và validate số câu hỏi từ input người dùng.
+ *
+ * @param {string | number | null | undefined} value - Giá trị nhập (ô số câu).
+ * @returns {number | null} Số nguyên dương hoặc `null` nếu không hợp lệ.
+ */
 export function parseTotalQuestions(value) {
   const parsed = Number(String(value ?? "").trim());
   if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -71,6 +123,12 @@ export function parseTotalQuestions(value) {
   return Math.floor(parsed);
 }
 
+/**
+ * Tạo mảng câu hỏi rỗng theo số lượng yêu cầu.
+ *
+ * @param {string | number} count - Số câu hỏi mong muốn.
+ * @returns {Array<object>} Mảng câu hỏi rỗng với id `q-1`, `q-2`, ...
+ */
 export function buildEmptyQuestions(count) {
   const total = parseTotalQuestions(count) ?? 1;
   return Array.from({ length: total }, (_, index) => createEmptyQuestion(`q-${index + 1}`));
@@ -80,10 +138,22 @@ const INTERNAL_GUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HTML_TAG_RE = /<[a-z][\s\S]*>/i;
 
+/**
+ * Kiểm tra chuỗi có phải GUID nội bộ (placeholder từ API) hay không.
+ *
+ * @param {string | null | undefined} value - Chuỗi cần kiểm tra.
+ * @returns {boolean} `true` nếu khớp định dạng UUID.
+ */
 export function isInternalGuid(value) {
   return INTERNAL_GUID_RE.test(String(value ?? "").trim());
 }
 
+/**
+ * Làm sạch nội dung câu hỏi import — loại GUID nội bộ và HTML placeholder thừa.
+ *
+ * @param {string | null | undefined} content - Nội dung thô từ API hoặc Markdown.
+ * @returns {string} Nội dung đã sanitize, chuỗi rỗng nếu chỉ còn GUID.
+ */
 export function sanitizeWizardQuestionContent(content) {
   const raw = String(content ?? "").trim();
   if (!raw || isInternalGuid(raw)) {
@@ -116,6 +186,14 @@ function normalizeOptionId(value) {
   return String(value ?? "").toLowerCase();
 }
 
+/**
+ * Ví dụ Markdown mẫu hiển thị trong panel import câu hỏi.
+ *
+ * Minh họa format single-choice, multi-select và câu tiếng Nhật.
+ *
+ * @constant {string}
+ * @readonly
+ */
 export const MARKDOWN_IMPORT_PLACEHOLDER = `## Câu 1
 Nội dung câu hỏi?
 
@@ -183,6 +261,15 @@ function mapQuestionOptionsToWizardAnswers(options = []) {
   };
 }
 
+/**
+ * Map danh sách câu hỏi từ API import sang model wizard nội bộ.
+ *
+ * Gán đáp án đúng, loại câu hỏi, cảnh báo import theo từng câu.
+ *
+ * @param {Array<object>} [apiQuestions=[]] - Câu hỏi trả về từ API parse Markdown.
+ * @param {Array<string>} [importWarnings=[]] - Cảnh báo import (ví dụ câu không hợp lệ).
+ * @returns {Array<object>} Câu hỏi đã map sang cấu trúc wizard.
+ */
 export function mapImportedExamQuestions(apiQuestions = [], importWarnings = []) {
   const warningsByQuestion = indexImportWarnings(importWarnings);
 
@@ -248,11 +335,23 @@ export function mapImportedExamQuestions(apiQuestions = [], importWarnings = [])
 
 const IMPORT_WARNING_QUESTION_RE = /^Câu\s+(\d+)\s*:/iu;
 
+/**
+ * Trích số thứ tự câu hỏi từ chuỗi cảnh báo import.
+ *
+ * @param {string} warning - Cảnh báo dạng `Câu 3: ...`.
+ * @returns {number | null} Số câu hoặc `null` nếu không parse được.
+ */
 export function parseImportWarningQuestionNumber(warning) {
   const match = String(warning ?? "").match(IMPORT_WARNING_QUESTION_RE);
   return match ? Number(match[1]) : null;
 }
 
+/**
+ * Nhóm cảnh báo import theo số thứ tự câu hỏi.
+ *
+ * @param {Array<string>} [warnings=[]] - Danh sách cảnh báo từ API import.
+ * @returns {Map<number, Array<string>>} Map `questionNumber → warnings[]`.
+ */
 export function indexImportWarnings(warnings = []) {
   const byQuestion = new Map();
 
@@ -270,6 +369,12 @@ export function indexImportWarnings(warnings = []) {
   return byQuestion;
 }
 
+/**
+ * Gộp danh sách cảnh báo import thành chuỗi tóm tắt hiển thị cho người dùng.
+ *
+ * @param {Array<string>} [warnings=[]] - Cảnh báo import gốc.
+ * @returns {string} Chuỗi nhiều dòng hoặc rỗng nếu không có cảnh báo.
+ */
 export function formatImportWarningSummary(warnings = []) {
   if (warnings.length === 0) {
     return "";
@@ -284,6 +389,15 @@ export function formatImportWarningSummary(warnings = []) {
     .join("\n");
 }
 
+/**
+ * Kiểm tra câu hỏi đã đủ điều kiện coi là hoàn thiện để gửi duyệt.
+ *
+ * Yêu cầu: có nội dung, ít nhất 2 phương án có text, và đáp án đúng hợp lệ
+ * (single hoặc multi-select đủ số lượng bắt buộc).
+ *
+ * @param {object} question - Câu hỏi wizard.
+ * @returns {boolean} `true` nếu câu hỏi hoàn chỉnh.
+ */
 export function isQuestionComplete(question) {
   if (!question.content?.trim()) return false;
 

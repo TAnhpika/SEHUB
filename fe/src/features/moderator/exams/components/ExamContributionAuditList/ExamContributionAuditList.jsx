@@ -4,23 +4,49 @@ import { useToast } from "@/common/Toast/ToastProvider";
 import { createExamRevisionViaApi } from "@/features/moderator/exams/moderatorExamService";
 import styles from "./ExamContributionAuditList.module.css";
 
+/**
+ * @fileoverview Danh sách nhật ký đóng góp đề của Moderator.
+ *
+ * Hiển thị từng entry (lưu nháp / gửi duyệt) kèm badge trạng thái,
+ * hành động sửa & gửi lại, tiếp tục revision, hoặc tạo bản cập nhật đề đã duyệt.
+ *
+ * @module features/moderator/exams/components/ExamContributionAuditList
+ */
+
+/**
+ * @param {string} examId - ID đề trên API.
+ * @returns {string} Route chỉnh sửa đề thực hành.
+ */
 function practiceEditPath(examId) {
   return `/moderator/practice-exams/edit/${examId}`;
 }
 
+/**
+ * @param {string} examId - ID đề trên API.
+ * @returns {string} Route chỉnh sửa đề cuối kỳ wizard.
+ */
 function finalEditPath(examId) {
   return `/moderator/final-exams/edit/${examId}`;
 }
 
 /**
- * @param {{
- *   items: Array<object>;
- *   title?: string;
- *   description?: string;
- *   emptyMessage?: string;
- *   showHistoryLink?: boolean;
- *   compact?: boolean;
- * }} props
+ * @typedef {Object} ExamContributionAuditListProps
+ * @property {Array<object>} items - Danh sách entry nhật ký đóng góp.
+ * @property {string} [title="Nhật ký đóng góp đề"] - Tiêu đề panel.
+ * @property {string} [description] - Mô tả ngắn dưới tiêu đề.
+ * @property {string} [emptyMessage] - Thông báo khi danh sách rỗng.
+ * @property {boolean} [showHistoryLink=false] - Hiện link tới trang lịch sử đầy đủ.
+ * @property {boolean} [compact=false] - Ẩn header khi nhúng compact.
+ */
+
+/**
+ * Panel danh sách nhật ký đóng góp đề với hành động theo trạng thái.
+ *
+ * @param {ExamContributionAuditListProps} props - Props của component.
+ * @returns {import('react').ReactElement} Danh sách entry audit hoặc empty state.
+ *
+ * @example
+ * <ExamContributionAuditList items={auditLog} showHistoryLink />
  */
 function ExamContributionAuditList({
   items,

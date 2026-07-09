@@ -1,6 +1,38 @@
+/**
+ * @fileoverview Gộp metadata UI tĩnh với giá live từ API `GET /api/v1/premium/plans`.
+ *
+ * @module features/premium/mergePricingPlans
+ */
+
 import { PRICING_PLANS } from "@/features/landing/PricingModal/pricingData";
 import { getBePlanCode } from "@/features/premium/premiumPlanMap";
 
+/**
+ * @typedef {Object} CheckoutPricingBreakdown
+ * @property {string} packageTitle - Tiêu đề gói hiển thị trên checkout.
+ * @property {string} tagline - Mô tả ngắn gói.
+ * @property {number} days - Số ngày hiệu lực từ API.
+ * @property {number} originalPrice - Giá gốc (baseMonthly × months).
+ * @property {number} monthlyPrice - Giá quy đổi mỗi tháng.
+ * @property {number} months - Số tháng quy đổi.
+ * @property {number} totalPrice - Tổng thanh toán từ API.
+ * @property {number} savingsAmount - Số tiền tiết kiệm so với giá gốc.
+ * @property {string|null} savingsLabel - Nhãn % tiết kiệm, hoặc `null`.
+ */
+
+/**
+ * Xây dựng object `checkout` từ giá API và metadata template UI.
+ *
+ * @param {Object} params - Tham số tính giá.
+ * @param {number} params.months - Số tháng quy đổi.
+ * @param {number} params.days - Số ngày hiệu lực.
+ * @param {number} params.monthlyPrice - Giá/tháng sau quy đổi.
+ * @param {string} params.packageTitle - Tiêu đề gói.
+ * @param {string} params.tagline - Tagline gói.
+ * @param {number} params.totalPrice - Tổng từ API.
+ * @param {number} params.baseMonthly - Giá tháng chuẩn (gói 1 tháng).
+ * @returns {CheckoutPricingBreakdown} Breakdown giá cho checkout UI.
+ */
 function buildCheckoutFromApi({
   months,
   days,
@@ -28,6 +60,13 @@ function buildCheckoutFromApi({
   };
 }
 
+/**
+ * Suy ra số tháng quy đổi từ ID gói FE hoặc `durationDays` API.
+ *
+ * @param {string} fePlanId - ID gói frontend.
+ * @param {number} durationDays - Số ngày hiệu lực từ API.
+ * @returns {number} Số tháng dùng tính giá/tháng.
+ */
 function resolveMonths(fePlanId, durationDays) {
   if (fePlanId === "trial") return 1;
   if (fePlanId === "semester") return 8;
@@ -36,8 +75,15 @@ function resolveMonths(fePlanId, durationDays) {
 }
 
 /**
- * Merges static UI metadata with live prices from GET /api/v1/premium/plans.
- * Falls back to static PRICING_PLANS when API data is missing.
+ * Gộp metadata UI tĩnh (`PRICING_PLANS`) với giá live từ API premium plans.
+ *
+ * Fallback về `PRICING_PLANS` nguyên bản khi API rỗng hoặc thiếu mã gói.
+ *
+ * @param {Array<{ code: string, priceVnd: number, durationDays: number }>|null|undefined} apiPlans - Danh sách gói từ API.
+ * @returns {Array} Mảng plan đã merge giá và `checkout` breakdown.
+ *
+ * @example
+ * const plans = mergeApiPlansWithStatic(await premiumApi.getPlans());
  */
 export function mergeApiPlansWithStatic(apiPlans) {
   if (!apiPlans?.length) {

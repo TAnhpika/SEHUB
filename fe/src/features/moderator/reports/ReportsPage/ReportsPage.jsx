@@ -44,20 +44,62 @@ import {
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import styles from "./ReportsPage.module.css";
 
+/**
+ * @fileoverview Trang xử lý báo cáo moderation — hàng chờ ba loại (cộng đồng, người dùng, đề thi).
+ *
+ * Module này cung cấp giao diện đầy đủ để:
+ * - Duyệt, lọc, tìm kiếm và phân trang hàng chờ báo cáo.
+ * - Xem chi tiết và quyết định: bỏ qua, xóa nội dung, escalate vi phạm, chuyển Admin sửa đề.
+ * - Deep-link tới báo cáo cụ thể qua query `?id=...`.
+ * - Responsive mobile: chuyển giữa danh sách và panel chi tiết.
+ *
+ * @module features/moderator/reports/ReportsPage
+ */
+
+/**
+ * Cấu hình breadcrumb hiển thị trên `ModeratorPageShell`.
+ *
+ * @constant {ReadonlyArray<{ label: string, to?: string }>}
+ * @readonly
+ */
 const REPORTS_CRUMBS = [
   { label: "Trang chủ", to: "/home" },
   { label: "Xử lý báo cáo" },
 ];
 
+/** Alias tab lọc trạng thái từ shared constants. */
 const TAB_OPTIONS = REPORT_TAB_OPTIONS;
+/** Alias tùy chọn lọc loại báo cáo. */
 const CATEGORY_OPTIONS = REPORT_CATEGORY_OPTIONS;
+/** Alias nhãn hiển thị loại báo cáo. */
 const CATEGORY_LABELS = REPORT_CATEGORY_LABELS;
 
+/**
+ * Nhãn tiếng Việt cho trạng thái báo cáo trên UI.
+ *
+ * @constant {Readonly<Record<string, string>>}
+ * @readonly
+ */
 const STATUS_LABELS = {
   pending: "Chờ xử lý",
   resolved: "Đã xử lý",
 };
 
+/**
+ * @typedef {Object} TrustScoreProps
+ * @property {number} score - Điểm trust 0–100 của tài khoản bị báo cáo.
+ */
+
+/**
+ * Hiển thị thanh progress Trust Score với màu theo ngưỡng (thấp / trung bình / cao).
+ *
+ * @param {TrustScoreProps} props - Props của component.
+ * @returns {import('react').ReactElement} Block trust score kèm thanh và giá trị số.
+ *
+ * @example
+ * <TrustScore score={25} />
+ * // => Thanh đỏ "25/100"
+ */
 function TrustScore({ score }) {
   const clamped = Math.max(0, Math.min(100, score));
   const tone =
@@ -78,6 +120,29 @@ function TrustScore({ score }) {
   );
 }
 
+/**
+ * Trang chính xử lý báo cáo moderation — container stateful cho toàn bộ luồng Moderator.
+ *
+ * **Luồng dữ liệu:**
+ * - Mount → song song tải community / exam / user reports.
+ * - `filterModerationReports` → danh sách hàng chờ theo tab, category, query.
+ * - `?id=` URL → auto-select báo cáo và đồng bộ tab trạng thái.
+ *
+ * **Hành động Moderator:**
+ * - Cộng đồng: dismiss (giữ nội dung) hoặc delete (xóa bài/bình luận).
+ * - Người dùng: dismiss hoặc escalate sang trang vi phạm.
+ * - Đề thi: dismiss hoặc forward Admin duyệt chỉnh sửa.
+ *
+ * @returns {import('react').ReactElement} Layout hai cột (hàng chờ + chi tiết) trong `ModeratorPageShell`.
+ *
+ * @example
+ * // Đăng ký route:
+ * <Route path="/moderator/reports" element={<ReportsPage />} />
+ *
+ * @example
+ * // Deep-link tới báo cáo cụ thể:
+ * // /moderator/reports?id=rp-4921
+ */
 function ReportsPage() {
   const { showToast } = useToast();
   const navigate = useNavigate();

@@ -1,21 +1,61 @@
+/**
+ * @fileoverview Dữ liệu và dịch vụ quản lý bài viết nổi bật (ghim sidebar feed) cho Moderator.
+ *
+ * Module này cung cấp:
+ * - Hằng số giới hạn ghim (`MAX_PINNED_POSTS`) và tùy chọn sắp xếp tìm kiếm.
+ * - Dữ liệu mock bài đang ghim và pool tìm kiếm.
+ * - Hàm lọc, enrich chi tiết, và gọi API `adminApi` / `postsApi` khi không mock.
+ *
+ * @module features/moderator/featured/featuredPostsData
+ * @see {@link module:features/moderator/featured/FeaturedPostsPage} — trang UI quản lý ghim
+ */
+
 import * as postsApi from "@/api/postsApi";
 import * as adminApi from "@/api/adminApi";
 import { FEATURED_POSTS_UPDATED_EVENT } from "@/features/feed/feedData";
 import { formatRelativeTimeFromApi } from "@/utils/dateTime";
 
+/**
+ * Số bài viết tối đa được ghim lên sidebar cộng đồng cùng lúc.
+ *
+ * @constant {number}
+ * @readonly
+ * @default 5
+ */
 export const MAX_PINNED_POSTS = 5;
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
+/**
+ * Tùy chọn sắp xếp kết quả tìm kiếm bài để ghim.
+ *
+ * @constant {ReadonlyArray<{ value: string, label: string }>}
+ * @readonly
+ */
 export const FEATURE_SEARCH_SORT_OPTIONS = [
   { value: "newest", label: "Mới nhất" },
   { value: "oldest", label: "Cũ nhất" },
   { value: "mostInteractions", label: "Nhiều tương tác nhất" },
 ];
 
-/** @deprecated — dùng FEATURE_SEARCH_SORT_OPTIONS */
+/**
+ * Alias deprecated của `FEATURE_SEARCH_SORT_OPTIONS` — giữ tương thích import cũ.
+ *
+ * @constant {ReadonlyArray<{ value: string, label: string }>}
+ * @deprecated Dùng `FEATURE_SEARCH_SORT_OPTIONS`.
+ * @readonly
+ */
 export const FEATURE_TAG_FILTERS = FEATURE_SEARCH_SORT_OPTIONS;
 
+/**
+ * Chuyển tag nội bộ sang nhãn danh mục hiển thị trên card bài nổi bật.
+ *
+ * @param {string} tag - Khóa tag (`document`, `hk231`, `announcement`, ...).
+ * @returns {string} Nhãn tiếng Việt; mặc định `"Cộng đồng"`.
+ *
+ * @example
+ * tagToCategoryLabel('announcement'); // => "Thông báo"
+ */
 export function tagToCategoryLabel(tag) {
   if (tag === "document") return "Tài liệu";
   if (tag === "hk231") return "Học kỳ 231";
@@ -23,7 +63,12 @@ export function tagToCategoryLabel(tag) {
   return "Cộng đồng";
 }
 
-/** Nội dung đầy đủ theo id — dùng cho panel xem chi tiết (mock) */
+/**
+ * Map nội dung chi tiết đầy đủ theo ID — bổ sung cho card list khi xem panel (mock mode).
+ *
+ * @constant {Object<string, Object>}
+ * @readonly
+ */
 export const FEATURED_POST_DETAILS = {
   "fp-1": {
     content: `Bộ tài liệu bao gồm đề thi tự luận, trắc nghiệm và đáp án chi tiết do các anh chị khóa trên tổng hợp.
@@ -162,6 +207,12 @@ Phần mô tả luồng ngoại lệ nên viết rõ, đừng gộp chung happy 
   },
 };
 
+/**
+ * Danh sách bài viết đang được ghim — dữ liệu mock ban đầu.
+ *
+ * @constant {ReadonlyArray<Object>}
+ * @readonly
+ */
 export const PINNED_POSTS_INITIAL = [
   {
     id: "fp-1",
@@ -207,6 +258,12 @@ export const PINNED_POSTS_INITIAL = [
   },
 ];
 
+/**
+ * Pool bài viết đã đăng có thể tìm kiếm để ghim — dữ liệu mock ban đầu.
+ *
+ * @constant {ReadonlyArray<Object>}
+ * @readonly
+ */
 export const SEARCH_POSTS_INITIAL = [
   {
     id: "sp-1",
@@ -275,10 +332,28 @@ export const SEARCH_POSTS_INITIAL = [
   },
 ];
 
+/**
+ * Tính tổng tương tác (likes + comments) của một bài — dùng sort `mostInteractions`.
+ *
+ * @param {Object} post - Bài viết có `likes` và `comments`.
+ * @returns {number} Tổng lượt thích và bình luận.
+ *
+ * @example
+ * getFeaturedInteractionCount({ likes: 10, comments: 5 }); // => 15
+ */
 export function getFeaturedInteractionCount(post) {
   return (post.likes ?? 0) + (post.comments ?? 0);
 }
 
+/**
+ * Bổ sung metadata chi tiết cho card bài nổi bật — merge `FEATURED_POST_DETAILS` khi mock.
+ *
+ * @param {Object} post - Card bài từ danh sách ghim hoặc tìm kiếm.
+ * @returns {Object} Bài đã enrich với `type`, `categoryLabel`, `comments` và chi tiết mock (nếu có).
+ *
+ * @example
+ * const full = enrichFeaturedPost(pinned[0]);
+ */
 export function enrichFeaturedPost(post) {
   const extra = USE_MOCK ? (FEATURED_POST_DETAILS[post.id] ?? {}) : {};
   return {
@@ -290,11 +365,35 @@ export function enrichFeaturedPost(post) {
   };
 }
 
+/**
+ * Tìm và enrich một bài theo ID từ danh sách ghim hoặc pool tìm kiếm.
+ *
+ * @param {string} id - ID bài viết.
+ * @param {Object[]} pinned - Mảng bài đang ghim.
+ * @param {Object[]} searchPool - Mảng bài ứng viên tìm kiếm.
+ * @returns {Object|null} Bài đã enrich hoặc `null` nếu không tìm thấy.
+ *
+ * @example
+ * const post = findFeaturedPost('fp-1', pinned, searchPool);
+ */
 export function findFeaturedPost(id, pinned, searchPool) {
   const raw = pinned.find((item) => item.id === id) ?? searchPool.find((item) => item.id === id);
   return raw ? enrichFeaturedPost(raw) : null;
 }
 
+/**
+ * Lọc và sắp xếp pool tìm kiếm — loại bài đã ghim, tìm theo query, sort theo tương tác/thời gian.
+ *
+ * @param {Object[]} posts - Pool bài ứng viên.
+ * @param {Object} options - Tùy chọn lọc.
+ * @param {string} options.query - Từ khóa tìm (tiêu đề, tác giả, excerpt).
+ * @param {string} [options.sort="newest"] - `newest` | `oldest` | `mostInteractions`.
+ * @param {Set<string>} options.pinnedIds - Set ID đã ghim (loại khỏi kết quả).
+ * @returns {Object[]} Mảng bài sau lọc và sắp xếp.
+ *
+ * @example
+ * filterSearchPosts(pool, { query: 'PRF192', sort: 'mostInteractions', pinnedIds });
+ */
 export function filterSearchPosts(posts, { query, sort = "newest", pinnedIds }) {
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -320,6 +419,12 @@ export function filterSearchPosts(posts, { query, sort = "newest", pinnedIds }) 
   return result;
 }
 
+/**
+ * Map DTO API sang card bài nổi bật cho UI Moderator (nội bộ).
+ *
+ * @param {Object} dto - DTO từ `adminApi` hoặc `postsApi`.
+ * @returns {Object} Card với `authorInitial`, `timeLabel`, `sortOrder`, ...
+ */
 function mapModeratorFeaturedItem(dto) {
   const createdMs = new Date(dto.createdAt).getTime();
 
@@ -340,6 +445,22 @@ function mapModeratorFeaturedItem(dto) {
   };
 }
 
+/**
+ * Tải trạng thái bài nổi bật: danh sách đang ghim và pool ứng viên tìm kiếm.
+ *
+ * Mock mode trả về `PINNED_POSTS_INITIAL` và `SEARCH_POSTS_INITIAL`.
+ * API mode gọi `adminApi.getFeaturedPosts`.
+ *
+ * @async
+ * @param {Object} [options] - Tùy chọn truy vấn.
+ * @param {string} [options.search=""] - Từ khóa tìm kiếm ứng viên (API mode).
+ * @returns {Promise<{ pinned: Object[], searchPool: Object[] }>}
+ *
+ * @throws {Error} Khi API thất bại (chế độ API thật).
+ *
+ * @example
+ * const { pinned, searchPool } = await loadFeaturedPostsState({ search: 'PRF192' });
+ */
 export async function loadFeaturedPostsState({ search = "" } = {}) {
   if (USE_MOCK) {
     return {
@@ -358,6 +479,18 @@ export async function loadFeaturedPostsState({ search = "" } = {}) {
   return { pinned, searchPool };
 }
 
+/**
+ * Tải chi tiết đầy đủ một bài nổi bật theo ID — cho panel xem trước khi ghim.
+ *
+ * @async
+ * @param {string} id - ID bài viết.
+ * @returns {Promise<Object|null>} Bài đã enrich; mock dùng `findFeaturedPost`, API gọi `postsApi.getPost`.
+ *
+ * @throws {Error} Khi API thất bại (caller có thể fallback list item).
+ *
+ * @example
+ * const detail = await loadFeaturedPostDetail('fp-1');
+ */
 export async function loadFeaturedPostDetail(id) {
   if (USE_MOCK) {
     return findFeaturedPost(id, PINNED_POSTS_INITIAL, SEARCH_POSTS_INITIAL);
@@ -385,12 +518,32 @@ export async function loadFeaturedPostDetail(id) {
   });
 }
 
+/**
+ * Đánh dấu bài featured (ghim sidebar) qua API — no-op khi mock.
+ *
+ * @async
+ * @param {string} id - ID bài viết.
+ * @param {boolean} isFeatured - `true` ghim, `false` bỏ ghim.
+ * @returns {Promise<void>}
+ *
+ * @throws {Error} Khi `postsApi.featurePost` thất bại.
+ */
 export async function setPostFeatured(id, isFeatured) {
   if (USE_MOCK) return;
   await postsApi.featurePost(id, { isFeatured });
   window.dispatchEvent(new CustomEvent(FEATURED_POSTS_UPDATED_EVENT));
 }
 
+/**
+ * Đánh dấu bài pinned (ghim đầu feed) qua API — no-op khi mock.
+ *
+ * @async
+ * @param {string} id - ID bài viết.
+ * @param {boolean} isPinned - `true` ghim feed, `false` bỏ ghim.
+ * @returns {Promise<void>}
+ *
+ * @throws {Error} Khi `postsApi.pinPost` thất bại.
+ */
 export async function setPostPinned(id, isPinned) {
   if (USE_MOCK) return;
   await postsApi.pinPost(id, { isPinned });

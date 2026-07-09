@@ -13,6 +13,21 @@ import FinalExamInfoFields from "@/features/exams/finalExam/FinalExamInfoFields"
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
 import styles from "./FinalExamInfoStep.module.css";
 
+/**
+ * @fileoverview Bước 1 wizard đề cuối kỳ — nhập metadata đề thi.
+ *
+ * Moderator nhập môn, học kỳ, kỳ học, mã đề, thời gian và số câu.
+ * Validate trước khi chuyển sang bước soạn câu hỏi; hỗ trợ lưu nháp local.
+ *
+ * @module features/moderator/finalExams/steps/FinalExamInfoStep
+ * @see {@link module:features/moderator/finalExams/finalExamData} — parse số câu hỏi
+ */
+
+/**
+ * Bước 1 wizard: form thông tin đề cuối kỳ.
+ *
+ * @returns {import('react').ReactElement} Form metadata và thanh hành động wizard.
+ */
 function FinalExamInfoStep() {
   const navigate = useNavigate();
   const { showToast } = useToast();

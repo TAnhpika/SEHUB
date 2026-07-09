@@ -27,21 +27,57 @@ import {
 } from "@/features/landing/PricingModal/pricingData";
 import styles from "./CheckoutPage.module.css";
 
+/**
+ * @fileoverview Trang checkout Premium — tạo đơn PayOS, hiển thị QR và poll trạng thái thanh toán.
+ *
+ * @module features/premium/CheckoutPage
+ */
+
+/**
+ * Thời gian đếm ngược mặc định cho phiên thanh toán (15 phút).
+ *
+ * @constant {number}
+ * @readonly
+ */
 const COUNTDOWN_SECONDS = 15 * 60;
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
+/**
+ * Định dạng giây còn lại thành `MM:SS`.
+ *
+ * @param {number} totalSeconds - Tổng giây.
+ * @returns {string} Chuỗi `MM:SS`.
+ */
 function formatTimer(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
+/**
+ * Tính số giây còn lại đến `expiredAt` của đơn hàng.
+ *
+ * @param {string|null|undefined} expiredAt - ISO timestamp hết hạn đơn.
+ * @returns {number} Giây còn lại; fallback `COUNTDOWN_SECONDS` nếu thiếu `expiredAt`.
+ */
 function resolveSecondsUntil(expiredAt) {
   if (!expiredAt) return COUNTDOWN_SECONDS;
   const diffMs = new Date(expiredAt).getTime() - Date.now();
   return Math.max(0, Math.floor(diffMs / 1000));
 }
 
+/**
+ * @typedef {Object} CopyFieldProps
+ * @property {string} label - Nhãn trường (Ngân hàng, STK, ...).
+ * @property {string} value - Giá trị cần sao chép.
+ */
+
+/**
+ * Trường thông tin chuyển khoản có nút sao chép clipboard.
+ *
+ * @param {CopyFieldProps} props - Props của component.
+ * @returns {import('react').ReactElement} Block label + value + nút copy.
+ */
 function CopyField({ label, value }) {
   const { showToast } = useToast();
 
@@ -64,6 +100,20 @@ function CopyField({ label, value }) {
   );
 }
 
+/**
+ * Trang checkout Premium — tạo đơn, hiển thị QR VietQR và poll PayOS mỗi 3 giây.
+ *
+ * **Luồng:**
+ * 1. `loadPlanById(planId)` → `createCheckoutOrder` → lưu session.
+ * 2. Poll `getCheckoutOrder` → redirect success khi `status === 'Paid'`.
+ * 3. Countdown 15 phút (hoặc theo `order.expiredAt`).
+ *
+ * @returns {import('react').ReactElement|null} Layout checkout hai cột; `null` khi đang tải plan.
+ *
+ * @example
+ * // Route: /home/premium/checkout/:planId
+ * <Route path="/home/premium/checkout/:planId" element={<CheckoutPage />} />
+ */
 function CheckoutPage() {
   const { planId } = useParams();
   const navigate = useNavigate();

@@ -1,3 +1,22 @@
+/**
+ * @fileoverview Barrel export cho module shared của hàng chờ báo cáo moderation.
+ *
+ * Re-export constants, components, hooks và tiện ích lọc/tìm kiếm dùng chung
+ * giữa `ReportsPage` và dashboard Admin.
+ *
+ * @module features/moderator/reports/shared
+ */
+
+/**
+ * Trả về thông báo mô tả kết quả xử lý báo cáo đã resolve, theo loại và resolution.
+ *
+ * @param {Object|null|undefined} report - Báo cáo đã xử lý (`status === 'resolved'`).
+ * @returns {string|null} Thông báo tiếng Việt, hoặc `null` nếu báo cáo chưa resolve.
+ *
+ * @example
+ * getReportResolutionMessage({ status: 'resolved', resolution: 'deleted' });
+ * // => 'Nội dung vi phạm đã được xóa.'
+ */
 export function getReportResolutionMessage(report) {
   if (!report || report.status !== "resolved") return null;
 

@@ -12,12 +12,39 @@ import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShe
 import { ModeratorFormSkeleton } from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
 import styles from "./AddFinalExamWizard.module.css";
 
+/**
+ * @fileoverview Wizard tạo / sửa đề cuối kỳ cho Moderator và Admin trong SEHUB.
+ *
+ * Module này cung cấp luồng 3 bước:
+ * - Bước 1: Nhập metadata đề (môn, học kỳ, mã đề, thời gian, số câu).
+ * - Bước 2: Soạn hoặc import câu hỏi trắc nghiệm.
+ * - Bước 3: Xem lại và gửi duyệt (Moderator) hoặc xuất bản trực tiếp (Admin).
+ *
+ * Hỗ trợ chế độ chỉnh sửa đề đã gửi, chỉnh sửa bản revision của đề đã public,
+ * và đồng bộ breadcrumb/tiêu đề trang qua `ModeratorPageContext`.
+ *
+ * @module features/moderator/finalExams/AddFinalExamWizard
+ * @see {@link module:features/moderator/finalExams/FinalExamWizardContext} — state wizard dùng chung
+ */
+
+/**
+ * Breadcrumb khi Moderator tạo đề cuối kỳ mới.
+ *
+ * @constant {ReadonlyArray<{ label: string, to?: string }>}
+ * @readonly
+ */
 const ADD_CRUMBS = [
   { label: "Trang chủ", to: "/home" },
   { label: "Đóng góp" },
   { label: "Thêm đề cuối kỳ" },
 ];
 
+/**
+ * Breadcrumb khi Moderator sửa đề cuối kỳ đã gửi hoặc bản cập nhật.
+ *
+ * @constant {ReadonlyArray<{ label: string, to?: string }>}
+ * @readonly
+ */
 const EDIT_CRUMBS = [
   { label: "Trang chủ", to: "/home" },
   { label: "Đóng góp" },
@@ -25,6 +52,20 @@ const EDIT_CRUMBS = [
   { label: "Sửa đề cuối kỳ" },
 ];
 
+/**
+ * @typedef {Object} WizardMetaSyncProps
+ * @property {boolean} isEditMode - `true` khi đang chỉnh sửa đề đã tồn tại.
+ * @property {boolean} isRevisionEdit - `true` khi chỉnh sửa bản nháp cập nhật của đề đã public.
+ */
+
+/**
+ * Đồng bộ tiêu đề, mô tả và breadcrumb lên `ModeratorPageShell` theo chế độ wizard.
+ *
+ * Component render `null` — chỉ chạy side-effect qua `useModeratorPage().setPageMeta`.
+ *
+ * @param {WizardMetaSyncProps} props - Props của component.
+ * @returns {null}
+ */
 function WizardMetaSync({ isEditMode, isRevisionEdit }) {
   const { setPageMeta } = useModeratorPage();
 
@@ -49,6 +90,14 @@ function WizardMetaSync({ isEditMode, isRevisionEdit }) {
   return null;
 }
 
+/**
+ * Render route nội bộ 3 bước wizard hoặc `Outlet` khi dùng route cha bên ngoài.
+ *
+ * Khi `useExamFormFlow().useInternalRoutes` bật, mount trực tiếp các step component;
+ * ngược lại delegate cho React Router `Outlet`.
+ *
+ * @returns {import('react').ReactElement} Route nội bộ hoặc outlet.
+ */
 function WizardStepRoutes() {
   const flow = useExamFormFlow();
 
@@ -65,6 +114,19 @@ function WizardStepRoutes() {
   return <Outlet />;
 }
 
+/**
+ * @typedef {Object} WizardShellProps
+ * @property {import('react').ReactNode} children - Nội dung step hiện tại.
+ */
+
+/**
+ * Bọc layout wizard (stepper + main) theo scope Admin hoặc Moderator.
+ *
+ * Admin dùng `AdminPageLayout`; Moderator dùng `ModeratorPageShell` variant wizard.
+ *
+ * @param {WizardShellProps} props - Props của component.
+ * @returns {import('react').ReactElement} Layout shell kèm stepper.
+ */
 function WizardShell({ children }) {
   const flow = useExamFormFlow();
 
@@ -99,6 +161,13 @@ function WizardShell({ children }) {
   );
 }
 
+/**
+ * Nội dung chính wizard: tải đề khi edit, hiển thị skeleton/lỗi, mount shell và routes.
+ *
+ * Tự động gọi `loadExamForEdit` khi URL có `examId`, hoặc `resetWizard` khi tạo mới.
+ *
+ * @returns {import('react').ReactElement} Skeleton, thông báo lỗi, hoặc wizard đầy đủ.
+ */
 function WizardContent() {
   const flow = useExamFormFlow();
   const { examId } = useParams();
@@ -142,6 +211,18 @@ function WizardContent() {
   );
 }
 
+/**
+ * Entry point wizard thêm / sửa đề cuối kỳ.
+ *
+ * Bọc toàn bộ cây component trong `FinalExamWizardProvider` để chia sẻ state wizard.
+ *
+ * @returns {import('react').ReactElement} Wizard đề cuối kỳ.
+ *
+ * @example
+ * // Route Moderator:
+ * // /moderator/final-exams/add
+ * // /moderator/final-exams/edit/:examId
+ */
 function AddFinalExamWizard() {
   return (
     <FinalExamWizardProvider>
