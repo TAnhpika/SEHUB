@@ -350,8 +350,40 @@
   color: var(--moderator-badge-bg);
 }
 
+.file-icon-image {
+  color: #0f766e;
+}
+
+.file-icon-docx {
+  color: #1d4ed8;
+}
+
 .file-icon-zip {
   color: var(--moderator-primary);
+}
+
+.filePreviewBtn {
+  display: flex;
+  flex: 1;
+  gap: 0.75rem;
+  align-items: center;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.previewPanel {
+  margin-top: 1rem;
+}
+
+.previewTitle {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--moderator-text-muted, #64748b);
 }
 
 .file-meta {

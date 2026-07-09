@@ -27,7 +27,7 @@ const MODE_META = {
   },
   unban: {
     title: "Mở khóa tài khoản",
-    subtitle: "Khôi phục trạng thái hoạt động cho sinh viên.",
+    subtitle: "Khôi phục trạng thái không bị khóa cho sinh viên.",
     icon: faUnlock,
     confirm: "Mở khóa",
     needsReason: true,

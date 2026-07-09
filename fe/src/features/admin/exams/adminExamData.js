@@ -7,6 +7,7 @@ import {
   mapAdminExamFormToUpdateRequest,
   mapAdminExamListItem,
   mapFinalExamWizardToCreateRequest,
+  mapFinalExamWizardToUpdateRequest,
   mapMockOcrQuestionsToCreateItems,
   mapPendingExamFromCreate,
   mapPendingExamListItem,
@@ -538,6 +539,56 @@ export async function saveAdminFinalExamFromWizard(examInfo, questions, { confir
   const listItem = mapAdminExamListItem(refreshed);
   upsertExamInStore(listItem);
   return mapAdminExamDetail(refreshed);
+}
+
+/**
+ * Admin cập nhật đề cuối kỳ qua wizard (draft, rejected hoặc revision) và xuất bản.
+ */
+export async function updateAdminFinalExamFromWizard(
+  examId,
+  examInfo,
+  questions,
+  { confirmDuplicate = false } = {},
+) {
+  const body = mapFinalExamWizardToUpdateRequest(examInfo, questions);
+
+  if (USE_MOCK) {
+    const form = {
+      typeKey: "final",
+      code: examInfo.subjectCode,
+      title: examInfo.examCode,
+      subjectName: examInfo.subjectName,
+      track: examInfo.major ?? "SE",
+      semester: String(examInfo.semesterLabel?.match(/\d+/)?.[0] ?? "5"),
+      description: body.description,
+      durationMinutes: examInfo.durationMinutes,
+      totalQuestions: questions.length,
+    };
+    return updateAdminExamViaApi(examId, form, {
+      status: "published",
+      ocrQuestions: body.questions,
+      questionsAreCreateItems: true,
+      confirmDuplicate,
+    });
+  }
+
+  await adminApi.updateExam(examId, body, confirmDuplicate);
+  await adminApi.approveExam(examId);
+  const refreshed = await adminApi.getExam(examId);
+  const listItem = mapAdminExamListItem(refreshed);
+  upsertExamInStore(listItem);
+  return mapAdminExamDetail(refreshed);
+}
+
+/**
+ * Đường dẫn sửa đề theo loại (final → wizard, practice → form).
+ */
+export function getAdminExamEditPath(exam) {
+  if (!exam?.id) return "/admin/exams";
+  if (exam.typeKey === "final") {
+    return `/admin/exams/final/edit/${exam.id}`;
+  }
+  return `/admin/exams/${exam.id}/edit`;
 }
 
 /**

@@ -229,7 +229,7 @@ export async function loadExamPapersForCourse(courseCode, pageKey) {
   }
 
   const page = await examsApi.listExams({
-    code: subjectCode,
+    subjectCode,
     type: meta.apiType,
     pageSize: 100,
   });

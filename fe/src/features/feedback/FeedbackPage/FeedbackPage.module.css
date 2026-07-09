@@ -117,6 +117,30 @@
   border-bottom-color: var(--color-primary);
 }
 
+.textarea {
+  width: 100%;
+  min-height: 7rem;
+  padding: 0.75rem 0;
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.15s ease;
+}
+
+.textarea::placeholder {
+  color: var(--color-text-subtle);
+}
+
+.textarea:focus {
+  border-bottom-color: var(--color-primary);
+}
+
 .hint {
   margin: 0;
   font-size: 0.8125rem;

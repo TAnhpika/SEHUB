@@ -136,6 +136,8 @@ export function mapProfileCard(dto, statsDto = null) {
     major: dto.major ?? "",
     semester: dto.semester ?? "",
     avatarUrl: resolveAssetUrl(dto.avatarUrl),
+    trustScore: dto.trustScore ?? null,
+    trustTier: dto.trustTier ?? null,
   };
 }
 

@@ -19,4 +19,6 @@ public sealed class UserReportDto
     public Guid? QuestionCommentId { get; init; }
     public DateTime CreatedAt { get; init; }
     public string? ResolutionNote { get; init; }
+    public int? ReportedUserTrustScore { get; init; }
+    public string? ReportedUserTrustTier { get; init; }
 }

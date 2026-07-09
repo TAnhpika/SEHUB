@@ -5,7 +5,9 @@ import {
   faArrowUpFromBracket,
   faCloudArrowUp,
   faFileArchive,
+  faFileImage,
   faFilePdf,
+  faFileWord,
   faGear,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
@@ -40,8 +42,10 @@ import {
   generateExamPaperCode,
   loadExistingExamPaperIdentifiers,
 } from "@/utils/examPaperCode";
+import PracticeAttachmentPreview from "@/features/exams/PracticeAttachmentPreview/PracticeAttachmentPreview";
 import {
   createPracticeAttachmentEntry,
+  isPreviewablePracticeAttachment,
   PRACTICE_UPLOAD_ACCEPT,
   validatePracticeUploadFile,
 } from "@/features/moderator/practiceExams/practiceExamUpload";
@@ -91,11 +95,11 @@ const MAX_FILE_MB = 50;
 
 /**
  * @typedef {Object} FileTypeIconProps
- * @property {'pdf' | 'zip'} type - Loại icon hiển thị theo extension file.
+ * @property {'pdf' | 'image' | 'docx' | 'archive'} type - Loại icon hiển thị theo extension file.
  */
 
 /**
- * Icon loại file đính kèm (PDF hoặc archive).
+ * Icon loại file đính kèm.
  *
  * @param {FileTypeIconProps} props - Props của component.
  * @returns {import('react').ReactElement} FontAwesome icon.
@@ -103,6 +107,12 @@ const MAX_FILE_MB = 50;
 function FileTypeIcon({ type }) {
   if (type === "pdf") {
     return <FontAwesomeIcon icon={faFilePdf} className={styles["file-icon-pdf"]} />;
+  }
+  if (type === "image") {
+    return <FontAwesomeIcon icon={faFileImage} className={styles["file-icon-image"]} />;
+  }
+  if (type === "docx") {
+    return <FontAwesomeIcon icon={faFileWord} className={styles["file-icon-docx"]} />;
   }
   return <FontAwesomeIcon icon={faFileArchive} className={styles["file-icon-zip"]} />;
 }
@@ -146,6 +156,12 @@ function AddPracticeExamPage() {
   const [submitting, setSubmitting] = useState(false);
   const [existingPaperCodes, setExistingPaperCodes] = useState([]);
   const [reviewCourses, setReviewCourses] = useState(REVIEW_COURSES);
+  const [previewAttachmentId, setPreviewAttachmentId] = useState(null);
+
+  const previewAttachment =
+    attachments.find((item) => item.id === previewAttachmentId)
+    ?? attachments.find((item) => isPreviewablePracticeAttachment(item.name))
+    ?? null;
 
   const subjectOptions = useMemo(
     () => getSubjectOptionsForSemester(semester, reviewCourses),
@@ -370,6 +386,9 @@ function AddPracticeExamPage() {
 
       const entry = createPracticeAttachmentEntry(file);
       setAttachments((prev) => [...prev, entry]);
+      if (isPreviewablePracticeAttachment(file.name)) {
+        setPreviewAttachmentId(entry.id);
+      }
     }
   }
 
@@ -588,7 +607,7 @@ function AddPracticeExamPage() {
                         Duyệt file từ máy tính
                       </button>
                     </p>
-                    <p className={styles.formats}>PDF, ZIP, RAR, DOCX</p>
+                    <p className={styles.formats}>PDF, ảnh, ZIP, RAR, DOCX</p>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -602,22 +621,32 @@ function AddPracticeExamPage() {
                   <ul className={styles.files}>
                     {attachments.map((file) => (
                       <li key={file.id} className={styles.file}>
-                        <div className={styles["file-icon-wrap"]}>
-                          <FileTypeIcon type={file.type} />
-                        </div>
-                        <div className={styles["file-meta"]}>
-                          <p className={styles["file-name"]}>{file.name}</p>
-                          <p className={styles["file-status"]}>
-                            {file.sizeLabel}
-                            {file.status === "done"
-                              ? file.existing
-                                ? " • File hiện có"
-                                : " • Tải lên xong"
-                              : file.status === "error"
-                                ? ` • ${file.error ?? "Lỗi tải lên"}`
-                                : ` • Đang tải... ${file.progress}%`}
-                          </p>
-                        </div>
+                        <button
+                          type="button"
+                          className={styles.filePreviewBtn}
+                          onClick={() =>
+                            isPreviewablePracticeAttachment(file.name)
+                              ? setPreviewAttachmentId(file.id)
+                              : setPreviewAttachmentId(null)
+                          }
+                        >
+                          <div className={styles["file-icon-wrap"]}>
+                            <FileTypeIcon type={file.type} />
+                          </div>
+                          <div className={styles["file-meta"]}>
+                            <p className={styles["file-name"]}>{file.name}</p>
+                            <p className={styles["file-status"]}>
+                              {file.sizeLabel}
+                              {file.status === "done"
+                                ? file.existing
+                                  ? " • File hiện có"
+                                  : " • Tải lên xong"
+                                : file.status === "error"
+                                  ? ` • ${file.error ?? "Lỗi tải lên"}`
+                                  : ` • Đang tải... ${file.progress}%`}
+                            </p>
+                          </div>
+                        </button>
                         <button
                           type="button"
                           className={styles.removeFile}
@@ -639,6 +668,16 @@ function AddPracticeExamPage() {
                       </li>
                     ))}
                   </ul>
+
+                  {previewAttachment ? (
+                    <div className={styles.previewPanel}>
+                      <p className={styles.previewTitle}>Xem trước: {previewAttachment.name}</p>
+                      <PracticeAttachmentPreview
+                        file={previewAttachment.file}
+                        fileName={previewAttachment.name}
+                      />
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className={styles.settings}>

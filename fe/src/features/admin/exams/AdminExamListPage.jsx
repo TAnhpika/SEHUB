@@ -18,6 +18,7 @@ import {
   EXAM_SEMESTERS,
   EXAM_STATUS_LABELS,
   EXAM_TRACKS,
+  getAdminExamEditPath,
   getAdminExams,
   getAdminPendingExams,
   getSemesterLabel,
@@ -435,7 +436,7 @@ function AdminExamListPage() {
                     <td className={styles.colActions}>
                       <AdminRowActions
                         viewTo={`/admin/exams/${exam.id}`}
-                        editTo={`/admin/exams/${exam.id}/edit`}
+                        editTo={getAdminExamEditPath(exam)}
                         onDelete={() => setDeleteId(exam.id)}
                       />
                     </td>

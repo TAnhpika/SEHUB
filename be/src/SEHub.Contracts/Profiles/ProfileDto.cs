@@ -23,4 +23,6 @@ public sealed class ProfileDto
     public bool? IsFollowing { get; init; }
     public DateTime MemberSince { get; init; }
     public DateTime? ProfileUpdatedAt { get; init; }
+    public int TrustScore { get; init; }
+    public string TrustTier { get; init; } = "medium";
 }

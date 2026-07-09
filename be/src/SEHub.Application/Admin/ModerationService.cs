@@ -5,6 +5,7 @@ using SEHub.Application.Feed;
 using SEHub.Application.Gamification;
 using SEHub.Application.Notifications;
 using SEHub.Application.Profiles;
+using SEHub.Application.Trust;
 using SEHub.Application.Users;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
@@ -46,6 +47,7 @@ public sealed class ModerationService : IModerationService
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMemoryCache _cache;
+    private readonly ITrustScoreService _trustScoreService;
 
     public ModerationService(
         IPostReportRepository reportRepository,
@@ -70,7 +72,8 @@ public sealed class ModerationService : IModerationService
         IWorkflowNotificationService workflowNotifications,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork,
-        IMemoryCache cache)
+        IMemoryCache cache,
+        ITrustScoreService trustScoreService)
     {
         _reportRepository = reportRepository;
         _commentReportRepository = commentReportRepository;
@@ -95,6 +98,7 @@ public sealed class ModerationService : IModerationService
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _cache = cache;
+        _trustScoreService = trustScoreService;
     }
 
     public async Task<PagedResult<ReportDto>> GetReportsAsync(int page, int pageSize, string? status, CancellationToken cancellationToken = default)
@@ -185,13 +189,14 @@ public sealed class ModerationService : IModerationService
         report.UpdatedAt = DateTime.UtcNow;
 
         Post? deletedPost = null;
+        Post? reportedPost = null;
         if (request.Action?.Equals("delete_post", StringComparison.OrdinalIgnoreCase) == true)
         {
-            var post = await _postRepository.GetByIdIncludingDeletedAsync(report.PostId, cancellationToken);
-            if (post is not null && !post.IsDeleted)
+            reportedPost = await _postRepository.GetByIdIncludingDeletedAsync(report.PostId, cancellationToken);
+            if (reportedPost is not null && !reportedPost.IsDeleted)
             {
-                await _postRepository.SoftDeleteAsync(post, actorId, cancellationToken);
-                deletedPost = post;
+                await _postRepository.SoftDeleteAsync(reportedPost, actorId, cancellationToken);
+                deletedPost = reportedPost;
             }
         }
 
@@ -205,6 +210,12 @@ public sealed class ModerationService : IModerationService
                 deletedPost.Id,
                 deletedPost.AuthorId,
                 cancellationToken);
+        }
+
+        reportedPost ??= await _postRepository.GetByIdIncludingDeletedAsync(report.PostId, cancellationToken);
+        if (reportedPost is not null)
+        {
+            _trustScoreService.InvalidateCache(reportedPost.AuthorId);
         }
 
         return await MapReportAsync(report, cancellationToken);
@@ -530,6 +541,8 @@ public sealed class ModerationService : IModerationService
             actorId,
             cancellationToken);
 
+        _trustScoreService.InvalidateCache(userId);
+
         return await MapViolatingUserAsync(userId, cancellationToken);
     }
 
@@ -680,6 +693,8 @@ public sealed class ModerationService : IModerationService
             actorId,
             cancellationToken);
 
+        _trustScoreService.InvalidateCache(userId);
+
         return await MapViolatingUserAsync(userId, cancellationToken);
     }
 
@@ -708,6 +723,8 @@ public sealed class ModerationService : IModerationService
 
         var actorId = _currentUser.UserId;
         await _workflowNotifications.NotifyUserUnbannedAsync(userId, actorId, cancellationToken);
+
+        _trustScoreService.InvalidateCache(userId);
 
         return await MapViolatingUserAsync(userId, cancellationToken);
     }
@@ -792,6 +809,14 @@ public sealed class ModerationService : IModerationService
         var usersById = ((await _userRepository.GetByIdsAsync(userIds, cancellationToken)) ?? [])
             .ToDictionary(u => u.Id);
 
+        var trustByUserId = new Dictionary<Guid, (int Score, string Tier)>();
+        foreach (var authorId in authorIds)
+        {
+            var trust = await _trustScoreService.GetForUserAsync(authorId, cancellationToken);
+            var publicTrust = TrustScoreCalculator.ToPublic(trust);
+            trustByUserId[authorId] = (publicTrust.Score, publicTrust.Tier);
+        }
+
         var dtos = new List<ReportDto>(reports.Count);
         foreach (var report in reports)
         {
@@ -801,6 +826,14 @@ public sealed class ModerationService : IModerationService
             if (post is not null)
             {
                 usersById.TryGetValue(post.AuthorId, out author);
+            }
+
+            int? reportedTrustScore = null;
+            string? reportedTrustTier = null;
+            if (author is not null && trustByUserId.TryGetValue(author.Id, out var authorTrust))
+            {
+                reportedTrustScore = authorTrust.Score;
+                reportedTrustTier = authorTrust.Tier;
             }
 
             dtos.Add(new ReportDto
@@ -824,7 +857,9 @@ public sealed class ModerationService : IModerationService
                     {
                         Id = author.Id,
                         Username = author.Username,
-                        DisplayName = author.DisplayName
+                        DisplayName = author.DisplayName,
+                        TrustScore = reportedTrustScore,
+                        TrustTier = reportedTrustTier,
                     },
                 CreatedAt = report.CreatedAt,
                 ResolvedAt = report.Status != ReportStatus.Pending ? report.UpdatedAt : null
@@ -866,6 +901,14 @@ public sealed class ModerationService : IModerationService
         var usersById = ((await _userRepository.GetByIdsAsync(userIds, cancellationToken)) ?? [])
             .ToDictionary(u => u.Id);
 
+        var trustByUserId = new Dictionary<Guid, (int Score, string Tier)>();
+        foreach (var authorId in authorIds)
+        {
+            var trust = await _trustScoreService.GetForUserAsync(authorId, cancellationToken);
+            var publicTrust = TrustScoreCalculator.ToPublic(trust);
+            trustByUserId[authorId] = (publicTrust.Score, publicTrust.Tier);
+        }
+
         var dtos = new List<ReportDto>(reports.Count);
         foreach (var report in reports)
         {
@@ -876,6 +919,14 @@ public sealed class ModerationService : IModerationService
             if (comment is not null)
             {
                 usersById.TryGetValue(comment.AuthorId, out author);
+            }
+
+            int? reportedTrustScore = null;
+            string? reportedTrustTier = null;
+            if (author is not null && trustByUserId.TryGetValue(author.Id, out var authorTrust))
+            {
+                reportedTrustScore = authorTrust.Score;
+                reportedTrustTier = authorTrust.Tier;
             }
 
             var reasonText = string.IsNullOrWhiteSpace(report.Detail)
@@ -905,7 +956,9 @@ public sealed class ModerationService : IModerationService
                     {
                         Id = author.Id,
                         Username = author.Username,
-                        DisplayName = author.DisplayName
+                        DisplayName = author.DisplayName,
+                        TrustScore = reportedTrustScore,
+                        TrustTier = reportedTrustTier,
                     },
                 CreatedAt = report.CreatedAt,
                 ResolvedAt = report.Status != ReportStatus.Pending ? report.UpdatedAt : null

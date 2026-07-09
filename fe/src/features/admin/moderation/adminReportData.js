@@ -174,6 +174,8 @@ export function mapCommunityReportForQueue(report) {
     reportedUserProfile: {
       username: reportedUsername,
       initial: reportedUser.replace("@", "").slice(0, 2).toUpperCase() || "?",
+      trustScore: report.reportedUserTrustScore ?? null,
+      trustTier: report.reportedUserTrustTier ?? null,
     },
   };
 }

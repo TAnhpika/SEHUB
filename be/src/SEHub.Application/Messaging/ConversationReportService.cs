@@ -2,8 +2,10 @@ using Microsoft.Extensions.Caching.Memory;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Notifications;
+using SEHub.Application.Trust;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Messaging;
+using SEHub.Contracts.Trust;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
@@ -24,6 +26,7 @@ public sealed class ConversationReportService : IConversationReportService
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMemoryCache _cache;
+    private readonly ITrustScoreService _trustScoreService;
 
     public ConversationReportService(
         IConversationReportRepository reportRepository,
@@ -32,7 +35,8 @@ public sealed class ConversationReportService : IConversationReportService
         IWorkflowNotificationService workflowNotifications,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork,
-        IMemoryCache cache)
+        IMemoryCache cache,
+        ITrustScoreService trustScoreService)
     {
         _reportRepository = reportRepository;
         _conversationRepository = conversationRepository;
@@ -41,6 +45,7 @@ public sealed class ConversationReportService : IConversationReportService
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _cache = cache;
+        _trustScoreService = trustScoreService;
     }
 
     public async Task ReportAsync(
@@ -170,9 +175,18 @@ public sealed class ConversationReportService : IConversationReportService
         report.ResolutionNote = request.ResolutionNote?.Trim();
         report.UpdatedAt = DateTime.UtcNow;
 
+        var reportedUserId = report.Conversation?.Participants
+            .FirstOrDefault(p => p.UserId != report.ReporterId)
+            ?.UserId;
+
         await _reportRepository.UpdateAsync(report, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         _cache.Remove(ModerationCacheKeys.Stats);
+
+        if (reportedUserId is Guid reportedId)
+        {
+            _trustScoreService.InvalidateCache(reportedId);
+        }
 
         return await MapAsync(report, cancellationToken);
     }
@@ -200,6 +214,13 @@ public sealed class ConversationReportService : IConversationReportService
             ? await _userRepository.GetByIdAsync(userId, cancellationToken)
             : null;
 
+        TrustScorePublicDto? publicTrust = null;
+        if (reportedUserId is Guid trustUserId)
+        {
+            var trust = await _trustScoreService.GetForUserAsync(trustUserId, cancellationToken);
+            publicTrust = TrustScoreCalculator.ToPublic(trust);
+        }
+
         return new ConversationReportDto
         {
             Id = report.Id,
@@ -215,6 +236,8 @@ public sealed class ConversationReportService : IConversationReportService
             ReportedDisplayName = reportedUser?.DisplayName,
             CreatedAt = report.CreatedAt,
             ResolutionNote = report.ResolutionNote,
+            ReportedUserTrustScore = publicTrust?.Score,
+            ReportedUserTrustTier = publicTrust?.Tier,
         };
     }
 }

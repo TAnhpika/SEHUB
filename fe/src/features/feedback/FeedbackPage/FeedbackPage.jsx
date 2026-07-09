@@ -24,7 +24,7 @@ function FeedbackPage() {
   const { showToast } = useToast();
   const fileInputRef = useRef(null);
 
-  const [username, setUsername] = useState(user?.username ?? "");
+  const [username] = useState(user?.username ?? "");
   const [errorDescription, setErrorDescription] = useState("");
   const [files, setFiles] = useState([]);
   const [fileError, setFileError] = useState("");
@@ -67,7 +67,6 @@ function FeedbackPage() {
   }
 
   function handleClearForm() {
-    setUsername(user?.username ?? "");
     setErrorDescription("");
     setFiles([]);
     setFileError("");
@@ -150,10 +149,14 @@ function FeedbackPage() {
               type="text"
               className={styles.input}
               value={username}
-              onChange={(event) => setUsername(event.target.value)}
+              readOnly
+              aria-readonly="true"
               placeholder="Câu trả lời của bạn"
               required
             />
+            <p className={styles.hint}>
+              Username lấy từ tài khoản đang đăng nhập để trao quà chính xác.
+            </p>
           </label>
         </section>
 
@@ -165,13 +168,14 @@ function FeedbackPage() {
                 *
               </span>
             </span>
-            <input
+            <textarea
               id="feedback-error"
-              type="text"
-              className={styles.input}
+              className={styles.textarea}
               value={errorDescription}
               onChange={(event) => setErrorDescription(event.target.value)}
-              placeholder="Câu trả lời của bạn"
+              placeholder="Mô tả chi tiết lỗi bạn gặp phải..."
+              rows={5}
+              maxLength={4000}
               required
             />
           </label>

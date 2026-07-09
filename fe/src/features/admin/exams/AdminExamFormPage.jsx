@@ -38,6 +38,13 @@ import {
 } from "@/features/admin/exams/adminExamData";
 import examStyles from "@/features/admin/exams/AdminExam.module.css";
 import formStyles from "@/features/admin/exams/AdminExamFormPage.module.css";
+import PracticeAttachmentPreview from "@/features/exams/PracticeAttachmentPreview/PracticeAttachmentPreview";
+import {
+  createPracticeAttachmentEntry,
+  isPreviewablePracticeAttachment,
+  PRACTICE_UPLOAD_ACCEPT,
+  validatePracticeUploadFile,
+} from "@/features/moderator/practiceExams/practiceExamUpload";
 import questionStyles from "@/features/moderator/finalExams/steps/FinalExamQuestionsStep.module.css";
 import styles from "@/features/admin/shared/adminPage.module.css";
 
@@ -115,6 +122,22 @@ function AdminExamFormPage() {
     String(FINAL_EXAM_DEFAULTS.maxQuestions),
   );
   const [finalInputMode, setFinalInputMode] = useState("upload");
+  const [practicePreviewId, setPracticePreviewId] = useState(null);
+
+  const practicePreviewAttachment =
+    form.attachments.find((item) => item.id === practicePreviewId)
+    ?? form.attachments.find((item) => isPreviewablePracticeAttachment(item.name))
+    ?? null;
+
+  useEffect(() => {
+    if (!isEdit || loadingExam) {
+      return;
+    }
+
+    if (exam?.typeKey === "final") {
+      navigate(`/admin/exams/final/edit/${id}`, { replace: true });
+    }
+  }, [exam?.typeKey, id, isEdit, loadingExam, navigate]);
 
   useEffect(() => {
     if (!isEdit) {
@@ -270,13 +293,28 @@ function AdminExamFormPage() {
     if (!fileList?.length) return;
 
     if (isPractice) {
-      const next = Array.from(fileList).map((file, index) => ({
-        id: `f-${Date.now()}-${index}`,
-        name: file.name,
-        size: file.size,
-        file,
-      }));
-      patchForm({ attachments: [...form.attachments, ...next] });
+      const next = [];
+      for (const file of Array.from(fileList)) {
+        const validationError = validatePracticeUploadFile(file);
+        if (validationError) {
+          showToast(validationError);
+          continue;
+        }
+        const entry = createPracticeAttachmentEntry(file);
+        next.push({
+          id: entry.id,
+          name: entry.name,
+          size: file.size,
+          file,
+          type: entry.type,
+        });
+        if (isPreviewablePracticeAttachment(file.name)) {
+          setPracticePreviewId(entry.id);
+        }
+      }
+      if (next.length > 0) {
+        patchForm({ attachments: [...form.attachments, ...next] });
+      }
       event.target.value = "";
       return;
     }
@@ -809,11 +847,11 @@ function AdminExamFormPage() {
                     : "Kéo thả hoặc chọn file đề từ máy tính"}
                 </span>
                 <span className={styles.uploadHint}>
-                  PDF, PNG, JPG, ZIP, DOCX — tối đa 50MB · Có thể chọn nhiều file
+                  PDF, ảnh, ZIP, RAR, DOCX — tối đa 50MB (ảnh 10MB) · Có thể chọn nhiều file
                 </span>
                 <input
                   type="file"
-                  accept=".pdf,image/*,.zip,.docx"
+                  accept={PRACTICE_UPLOAD_ACCEPT}
                   multiple
                   style={{ marginTop: "0.5rem" }}
                   onChange={handleFileChange}
@@ -823,7 +861,17 @@ function AdminExamFormPage() {
                 <ul className={formStyles.fileList}>
                   {form.attachments.map((f) => (
                     <li key={f.id} className={formStyles.fileItem}>
-                      <span>{f.name}</span>
+                      <button
+                        type="button"
+                        className={formStyles.filePreviewTrigger}
+                        onClick={() =>
+                          isPreviewablePracticeAttachment(f.name)
+                            ? setPracticePreviewId(f.id)
+                            : setPracticePreviewId(null)
+                        }
+                      >
+                        {f.name}
+                      </button>
                       <button
                         type="button"
                         className={formStyles.fileRemove}
@@ -834,6 +882,17 @@ function AdminExamFormPage() {
                     </li>
                   ))}
                 </ul>
+              ) : null}
+              {practicePreviewAttachment ? (
+                <div className={formStyles.previewPanel}>
+                  <p className={formStyles.previewTitle}>
+                    Xem trước: {practicePreviewAttachment.name}
+                  </p>
+                  <PracticeAttachmentPreview
+                    file={practicePreviewAttachment.file}
+                    fileName={practicePreviewAttachment.name}
+                  />
+                </div>
               ) : null}
             </label>
 

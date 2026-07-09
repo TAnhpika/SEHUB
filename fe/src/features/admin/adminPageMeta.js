@@ -124,6 +124,14 @@ export const ADMIN_SCREENS = [
     phase: "GĐ1",
   },
   {
+    id: "feedback",
+    path: "/admin/feedback",
+    title: "Phản hồi / Báo lỗi",
+    subtitle: "Báo cáo lỗi từ sinh viên — xem ảnh đính kèm và cập nhật trạng thái xử lý.",
+    group: "Kiểm duyệt",
+    phase: "GĐ1",
+  },
+  {
     id: "payments",
     path: "/admin/payments",
     title: "Thanh toán PayOS",

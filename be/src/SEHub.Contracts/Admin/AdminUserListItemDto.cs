@@ -12,4 +12,6 @@ public sealed class AdminUserListItemDto
     public int Points { get; init; }
     public string? LevelName { get; init; }
     public DateTime CreatedAt { get; init; }
+    public int TrustScore { get; init; }
+    public string TrustTier { get; init; } = "medium";
 }

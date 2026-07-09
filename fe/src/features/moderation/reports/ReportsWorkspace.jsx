@@ -16,6 +16,7 @@ import { useToast } from "@/common/Toast/ToastProvider";
 import { ACTION_LOADING } from "@/utils/actionLoadingLabels";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import StatusBadge from "@/features/admin/shared/StatusBadge";
+import TrustScoreBadge from "@/common/TrustScore/TrustScoreBadge";
 import { getAdminUserDetailUrl } from "@/features/admin/adminMockData";
 import {
   REPORT_STATUS_LABELS,
@@ -710,6 +711,14 @@ function ReportsWorkspace({ portal = "admin" }) {
                       <dd>{selected.code}</dd>
                     </div>
                   </dl>
+
+                  {selected.reportedUser?.trustScore != null ? (
+                    <TrustScoreBadge
+                      score={selected.reportedUser.trustScore}
+                      tier={selected.reportedUser.trustTier}
+                      variant="staff"
+                    />
+                  ) : null}
                 </div>
 
                 <footer className={modStyles.detailActions}>
@@ -816,6 +825,14 @@ function ReportsWorkspace({ portal = "admin" }) {
                       <dd>{selected.reason}</dd>
                     </div>
                   </dl>
+
+                  {(selected.reportedUserTrustScore ?? selected.reportedUserProfile?.trustScore) != null ? (
+                    <TrustScoreBadge
+                      score={selected.reportedUserTrustScore ?? selected.reportedUserProfile?.trustScore}
+                      tier={selected.reportedUserTrustTier ?? selected.reportedUserProfile?.trustTier}
+                      variant="staff"
+                    />
+                  ) : null}
                 </div>
 
                 <footer className={modStyles.detailActions}>

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
-import { saveAdminFinalExamFromWizard } from "@/features/admin/exams/adminExamData";
+import { saveAdminFinalExamFromWizard, updateAdminFinalExamFromWizard } from "@/features/admin/exams/adminExamData";
 import { useExamFormFlow } from "@/features/exams/examFormFlow";
 import {
   ApiError,
@@ -82,6 +82,19 @@ function FinalExamReviewStep() {
 
     async function send(confirmDuplicate = false) {
       if (isEditMode && editingExamId) {
+        if (publishesDirectly) {
+          await updateAdminFinalExamFromWizard(editingExamId, examInfo, questions, {
+            confirmDuplicate,
+          });
+          showToast(
+            isRevisionEdit
+              ? "Đã cập nhật và xuất bản bản revision. Đề public đã được thay thế."
+              : "Đề thi cuối kỳ đã được cập nhật và xuất bản.",
+          );
+          navigate(flow.examsListPath);
+          return;
+        }
+
         await resubmitFinalExamViaApi(editingExamId, examInfo, questions, {
           isRevision: isRevisionEdit,
         });
@@ -112,7 +125,7 @@ function FinalExamReviewStep() {
     try {
       await send(false);
     } catch (error) {
-      if (!isEditMode && error instanceof ApiError && error.status === 409) {
+      if (error instanceof ApiError && error.status === 409) {
         const confirmed = await confirm({
           title: "Đề trùng nội dung",
           description: isAdminFlow
@@ -143,8 +156,12 @@ function FinalExamReviewStep() {
       : "Đang gửi..."
     : isEditMode
       ? isRevisionEdit
-        ? "Gửi bản cập nhật"
-        : "Gửi lại Admin duyệt"
+        ? isAdminFlow
+          ? "Cập nhật & xuất bản"
+          : "Gửi bản cập nhật"
+        : isAdminFlow
+          ? "Cập nhật & xuất bản"
+          : "Gửi lại Admin duyệt"
       : isAdminFlow
         ? "Xuất bản"
         : "Gửi duyệt";

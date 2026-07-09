@@ -251,11 +251,15 @@ function extractDocumentSubjectCode(dto) {
 
 const EXAM_CODES_PAGE_SIZE = 500;
 
+function readExamListSubjectCode(item) {
+  return item?.subjectCode ?? item?.SubjectCode ?? item?.code ?? item?.Code;
+}
+
 function collectSubjectCodesFromExamItems(items = []) {
   const codes = new Set();
 
   for (const item of items) {
-    const code = canonicalCatalogSubjectCode(item?.code);
+    const code = canonicalCatalogSubjectCode(readExamListSubjectCode(item));
     if (code) {
       codes.add(code);
     }

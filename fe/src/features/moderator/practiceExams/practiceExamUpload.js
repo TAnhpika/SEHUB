@@ -10,12 +10,13 @@
 import { ApiError } from "@/api/httpClient";
 
 /**
- * Chuỗi `accept` cho input file — PDF, ZIP, RAR, DOCX.
+ * Chuỗi `accept` cho input file — PDF, ảnh, ZIP, RAR, DOCX.
  *
  * @constant {string}
  * @readonly
  */
-export const PRACTICE_UPLOAD_ACCEPT = ".pdf,.zip,.rar,.docx";
+export const PRACTICE_UPLOAD_ACCEPT =
+  ".pdf,.zip,.rar,.docx,.png,.jpg,.jpeg,.webp,image/*";
 
 /**
  * Giới hạn dung lượng file upload (50 MB).
@@ -26,14 +27,60 @@ export const PRACTICE_UPLOAD_ACCEPT = ".pdf,.zip,.rar,.docx";
 export const PRACTICE_UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 
 /**
+ * Giới hạn dung lượng ảnh (10 MB).
+ *
+ * @constant {number}
+ * @readonly
+ */
+export const PRACTICE_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+
+const ALLOWED_EXTENSIONS = [".pdf", ".zip", ".rar", ".docx", ".png", ".jpg", ".jpeg", ".webp"];
+const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp"];
+const ARCHIVE_EXTENSIONS = [".zip", ".rar"];
+const PREVIEWABLE_EXTENSIONS = [".pdf", ".docx", ...IMAGE_EXTENSIONS];
+
+/**
+ * Lấy extension từ tên file.
+ *
+ * @param {string} fileName
+ * @returns {string}
+ */
+export function getPracticeFileExtension(fileName) {
+  return `.${String(fileName ?? "").split(".").pop()?.toLowerCase() ?? ""}`;
+}
+
+/**
  * Suy ra loại icon hiển thị từ tên file.
  *
  * @param {string} fileName - Tên file gốc.
- * @returns {'pdf' | 'zip'} `'pdf'` nếu extension pdf, ngược lại `'zip'`.
+ * @returns {'pdf' | 'image' | 'docx' | 'archive'}
  */
 export function getPracticeFileType(fileName) {
-  const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
-  return ext === "pdf" ? "pdf" : "zip";
+  const ext = getPracticeFileExtension(fileName);
+  if (ext === ".pdf") return "pdf";
+  if (IMAGE_EXTENSIONS.includes(ext)) return "image";
+  if (ext === ".docx") return "docx";
+  return "archive";
+}
+
+/**
+ * File có hỗ trợ preview inline không (PDF, ảnh, DOCX).
+ *
+ * @param {string} fileName
+ * @returns {boolean}
+ */
+export function isPreviewablePracticeAttachment(fileName) {
+  return PREVIEWABLE_EXTENSIONS.includes(getPracticeFileExtension(fileName));
+}
+
+/**
+ * File là archive đính kèm (ZIP/RAR) — không preview.
+ *
+ * @param {string} fileName
+ * @returns {boolean}
+ */
+export function isArchivePracticeAttachment(fileName) {
+  return ARCHIVE_EXTENSIONS.includes(getPracticeFileExtension(fileName));
 }
 
 /**
@@ -43,13 +90,18 @@ export function getPracticeFileType(fileName) {
  * @returns {string | null} Thông báo lỗi tiếng Việt hoặc `null` nếu hợp lệ.
  */
 export function validatePracticeUploadFile(file) {
-  const ext = `.${file.name.split(".").pop()?.toLowerCase() ?? ""}`;
-  const allowed = [".pdf", ".zip", ".rar", ".docx"];
-  if (!allowed.includes(ext)) {
-    return "Chỉ hỗ trợ PDF, ZIP, RAR, DOCX.";
+  const ext = getPracticeFileExtension(file.name);
+  if (!ALLOWED_EXTENSIONS.includes(ext)) {
+    return "Chỉ hỗ trợ PDF, ảnh (PNG/JPG/WEBP), ZIP, RAR, DOCX.";
   }
-  if (file.size > PRACTICE_UPLOAD_MAX_BYTES) {
-    return `File "${file.name}" vượt quá 50 MB.`;
+
+  const maxBytes = IMAGE_EXTENSIONS.includes(ext)
+    ? PRACTICE_IMAGE_MAX_BYTES
+    : PRACTICE_UPLOAD_MAX_BYTES;
+
+  if (file.size > maxBytes) {
+    const limitMb = Math.round(maxBytes / (1024 * 1024));
+    return `File "${file.name}" vượt quá ${limitMb} MB.`;
   }
   return null;
 }

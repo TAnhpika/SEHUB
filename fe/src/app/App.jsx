@@ -67,6 +67,7 @@ const AdminGamificationConfigPage = lazy(() => import("@/features/admin/gamifica
 const AdminChatbotPage = lazy(() => import("@/features/admin/chatbot/AdminChatbotPage"));
 const AdminPermissionsPage = lazy(() => import("@/features/admin/permissions/AdminPermissionsPage"));
 const AdminActivityLogPage = lazy(() => import("@/features/admin/activity/AdminActivityLogPage"));
+const AdminFeedbackPage = lazy(() => import("@/features/admin/feedback/AdminFeedbackPage"));
 
 const AddPracticeExamPage = lazy(() => import("@/features/moderator/practiceExams/AddPracticeExamPage/AddPracticeExamPage"));
 const ModeratorExamContributionHistoryPage = lazy(() => import("@/features/moderator/exams/ModeratorExamContributionHistoryPage/ModeratorExamContributionHistoryPage"));
@@ -299,6 +300,7 @@ function App() {
                 <Route path="exams" element={<AdminExamListPage />} />
                 <Route path="exams/new" element={<AdminExamNewPage />} />
                 <Route path="exams/new/final/*" element={<AdminAddFinalExamWizard />} />
+                <Route path="exams/final/edit/:examId/*" element={<AdminAddFinalExamWizard />} />
                 <Route path="exams/new/practice" element={<AdminAddPracticeExamPage />} />
                 <Route path="exams/pending" element={<AdminExamPendingPage />} />
                 <Route
@@ -324,6 +326,7 @@ function App() {
                 <Route path="settings/chatbot" element={<AdminChatbotPage />} />
                 <Route path="permissions" element={<AdminPermissionsPage />} />
                 <Route path="activity" element={<AdminActivityLogPage />} />
+                <Route path="feedback" element={<AdminFeedbackPage />} />
               </Route>
             </Route>
             <Route element={<ModeratorRoute />}>

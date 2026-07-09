@@ -7,6 +7,7 @@ import { useAuth } from "@/context";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import { StaffModalDetailSkeleton } from "@/common/Skeleton/StaffSkeleton";
 import StatusBadge from "@/features/admin/shared/StatusBadge";
+import TrustScoreBadge from "@/common/TrustScore/TrustScoreBadge";
 import DashboardBadge from "@/features/admin/dashboard/DashboardBadge";
 import { ACTIVITY_BADGE_VARIANT } from "@/features/admin/dashboard/dashboardConstants";
 import dash from "@/features/admin/dashboard/AdminDashboardPage.module.css";
@@ -206,7 +207,7 @@ function AdminUserDetailPage() {
           <div className={detailStyles.profileBadges}>
             <StatusBadge
               status={user.status}
-              label={user.status === "active" ? "Hoạt động" : "Đã khóa"}
+              label={user.status === "active" ? "Không bị khóa" : "Đã khóa"}
             />
             <span className={styles.badgePrimary}>{user.roleLabel}</span>
             {user.plan !== "—" ? (
@@ -280,16 +281,42 @@ function AdminUserDetailPage() {
           <span className={styles.statValue}>{user.examsCompleted}</span>
         </article>
         <article className={styles.statCard}>
-          <span className={styles.statLabel}>Tài liệu tải</span>
-          <span className={styles.statValue}>{user.documentsCount ?? "—"}</span>
-        </article>
-        <article className={styles.statCard}>
           <span className={styles.statLabel}>Token AI</span>
           <span className={styles.statValue}>
             {user.aiTokens != null ? user.aiTokens.toLocaleString("vi-VN") : "—"}
           </span>
         </article>
       </div>
+
+      {user.trust ? (
+        <section className={`${styles.panel} ${detailStyles.trustPanel}`}>
+          <h2 className={styles.panelTitle}>Điểm tin cậy</h2>
+          <div className={styles.divider} />
+          <TrustScoreBadge
+            score={user.trust.score}
+            tier={user.trust.tier}
+            variant="staff"
+          />
+          <dl className={detailStyles.trustBreakdown}>
+            <div>
+              <dt>Ứng xử</dt>
+              <dd>{user.trust.conductScore}</dd>
+            </div>
+            <div>
+              <dt>Kiến thức</dt>
+              <dd>{user.trust.competenceScore}</dd>
+            </div>
+            <div>
+              <dt>Gắn kết</dt>
+              <dd>{user.trust.engagementScore}</dd>
+            </div>
+            <div>
+              <dt>Độ tin cậy dữ liệu</dt>
+              <dd>{user.trust.confidence}</dd>
+            </div>
+          </dl>
+        </section>
+      ) : null}
 
       <div className={styles.twoCol}>
         <div className={detailStyles.mainCol}>
@@ -463,9 +490,6 @@ function AdminUserDetailPage() {
           <h2 className={styles.panelTitle}>Thao tác tài khoản</h2>
           <div className={styles.divider} />
           <div className={styles.actionStack}>
-            <Button look="outline" fullWidth onClick={() => openAction("resetPassword")}>
-              Gửi email reset mật khẩu
-            </Button>
             {canUnban ? (
               <Button fullWidth onClick={() => openAction("unban")}>
                 Mở khóa vĩnh viễn

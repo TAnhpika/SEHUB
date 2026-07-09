@@ -3,6 +3,7 @@ import {
   faChartLine,
   faClipboardCheck,
   faClipboardList,
+  faCommentDots,
   faCreditCard,
   faFileLines,
   faRobot,
@@ -93,6 +94,13 @@ const ADMIN_NAV_TEMPLATE = [
             label: "Bài nộp thực hành",
             to: "/admin/moderation/practice-submissions",
             badgeKey: "practice-submissions",
+            badgeTone: "amber",
+          },
+          {
+            id: "feedback",
+            label: "Phản hồi / Báo lỗi",
+            to: "/admin/feedback",
+            badgeKey: "feedback",
             badgeTone: "amber",
           },
         ],
@@ -192,6 +200,7 @@ export function resolveAdminPageTitle(pathname) {
   if (pathname.includes("/exams/edit")) return "Sửa đề thi";
   if (pathname.startsWith("/admin/moderation/content")) return "Bài viết chờ duyệt";
   if (pathname.startsWith("/admin/moderation/practice-submissions")) return "Bài nộp thực hành";
+  if (pathname.startsWith("/admin/feedback")) return "Phản hồi / Báo lỗi";
   if (pathname.startsWith("/admin/moderation")) return "Báo cáo chờ";
   return "Quản trị";
 }

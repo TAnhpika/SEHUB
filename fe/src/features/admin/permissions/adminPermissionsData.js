@@ -230,7 +230,8 @@ function mapUserToCandidate(user) {
     initial: user.displayName?.charAt(0)?.toUpperCase() ?? user.username.charAt(0).toUpperCase(),
     rank: user.levelName ?? "Bronze",
     points: user.points ?? 0,
-    trustScore: 70,
+    trustScore: user.trustScore ?? 70,
+    trustTier: user.trustTier ?? "medium",
     note: user.plan === "Premium" ? "Tài khoản Premium" : undefined,
   };
 }

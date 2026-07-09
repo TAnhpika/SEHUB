@@ -112,6 +112,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IUserBlockRepository, UserBlockRepository>();
         services.AddScoped<IConversationReportRepository, ConversationReportRepository>();
+        services.AddScoped<ITrustSignalReadRepository, TrustSignalReadRepository>();
         services.AddScoped<IExamAttachmentRepository, ExamAttachmentRepository>();
         services.AddScoped<IPostImageRepository, PostImageRepository>();
         services.AddScoped<IChatNotifier, NullChatNotifier>();
@@ -124,6 +125,8 @@ public static class DependencyInjection
         services.AddScoped<IPdfPageExtractor, PdfPageExtractor>();
 
         services.Configure<CloudinaryOptions>(configuration.GetSection(CloudinaryOptions.SectionName));
+        services.Configure<SEHub.Application.Trust.TrustScoreOptions>(
+            configuration.GetSection(SEHub.Application.Trust.TrustScoreOptions.SectionName));
         services.AddSingleton<ICdnFolderSettings, CdnFolderSettings>();
         services.AddScoped<IImageCdnStorageService, CloudinaryStorageService>();
 
