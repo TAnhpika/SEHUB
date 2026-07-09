@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faShieldHalved,
-  faUserCheck,
   faUserPlus,
   faUserShield,
 } from "@fortawesome/free-solid-svg-icons";
@@ -36,7 +35,7 @@ function AdminPermissionsPage() {
   const [permissionsState, setPermissionsState] = useState({
     moderators: [],
     candidates: [],
-    stats: { activeMods: 0, candidates: 0, permissionCount: MOD_PERMISSIONS.length, totalHandled: 0 },
+    stats: { activeMods: 0, candidates: 0, permissionCount: MOD_PERMISSIONS.length },
     audit: [],
   });
   const [loading, setLoading] = useState(true);
@@ -146,7 +145,7 @@ function AdminPermissionsPage() {
         title="Phân quyền Mod"
         breadcrumbs={[{ label: "Dashboard", to: "/admin" }, { label: "Phân quyền Mod" }]}
       >
-        <StaffStatsStripSkeleton count={4} aria-label="Đang tải thống kê phân quyền" />
+        <StaffStatsStripSkeleton count={3} aria-label="Đang tải thống kê phân quyền" />
         <div className={permStyles.layout}>
           <StaffAuditListSkeleton aria-label="Đang tải danh sách moderator" />
           <StaffAuditListSkeleton aria-label="Đang tải danh sách ứng viên" />
@@ -184,14 +183,6 @@ function AdminPermissionsPage() {
           <p className={permStyles.statLabel}>Phạm vi quyền</p>
           <p className={permStyles.statValue}>{stats.permissionCount}</p>
           <p className={permStyles.statHint}>module kiểm duyệt</p>
-        </div>
-        <div className={permStyles.statCard}>
-          <span className={permStyles.statIcon} aria-hidden>
-            <FontAwesomeIcon icon={faUserCheck} />
-          </span>
-          <p className={permStyles.statLabel}>Báo cáo đã xử lý</p>
-          <p className={permStyles.statValue}>{stats.totalHandled}</p>
-          <p className={permStyles.statHint}>tổng Mod hiện tại</p>
         </div>
       </div>
 
@@ -243,17 +234,11 @@ function AdminPermissionsPage() {
                     <p className={permStyles.userMeta}>
                       <code>@{mod.username}</code> · {mod.email}
                     </p>
-                    <div className={permStyles.modStats}>
-                      <span className={permStyles.modStat}>
-                        {mod.reportsHandled} báo cáo
-                      </span>
-                      <span className={permStyles.modStat}>
-                        {mod.postsReviewed} bài duyệt
-                      </span>
-                      <span className={permStyles.modStat}>
-                        Gán {mod.grantedAt}
-                      </span>
-                    </div>
+                    {mod.grantedAt ? (
+                      <div className={permStyles.modStats}>
+                        <span className={permStyles.modStat}>Gán {mod.grantedAt}</span>
+                      </div>
+                    ) : null}
                   </div>
                   <div className={permStyles.cardActions}>
                     <button
