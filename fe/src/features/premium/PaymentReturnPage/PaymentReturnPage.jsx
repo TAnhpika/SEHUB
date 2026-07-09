@@ -3,9 +3,40 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import * as premiumApi from "@/api/premiumApi";
 import { getFePlanId } from "@/features/premium/premiumPlanMap";
 
+/**
+ * @fileoverview Trang callback PayOS — poll trạng thái đơn sau redirect từ cổng thanh toán.
+ *
+ * @module features/premium/PaymentReturnPage
+ */
+
+/**
+ * Khoảng thời gian giữa các lần poll đơn hàng (ms).
+ *
+ * @constant {number}
+ * @readonly
+ */
 const POLL_INTERVAL_MS = 2000;
+
+/**
+ * Số lần poll tối đa trước khi chuyển sang trạng thái chờ xác nhận thủ công.
+ *
+ * @constant {number}
+ * @readonly
+ */
 const MAX_POLL_ATTEMPTS = 20;
 
+/**
+ * Trang trung gian xử lý return URL từ PayOS (`?orderId=...`).
+ *
+ * Poll `premiumApi.getOrder` tối đa 20 lần; nếu chưa `Paid` → redirect success
+ * với `manualConfirmRequired: true`.
+ *
+ * @returns {import('react').ReactElement} Spinner, thông báo lỗi, hoặc redirect.
+ *
+ * @example
+ * // Route callback PayOS:
+ * <Route path="/home/premium/return" element={<PaymentReturnPage />} />
+ */
 function PaymentReturnPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();

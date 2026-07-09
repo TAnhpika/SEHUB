@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel modal chi tiết tài khoản vi phạm — hiển thị thông tin, lịch sử và gỡ khóa tạm.
+ *
+ * @module features/moderator/violations/components/ViolatingAccountDetailPanel
+ */
+
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLockOpen, faTriangleExclamation, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "@/common/Modal/Modal";
@@ -6,6 +12,49 @@ import { ModeratorModalDetailSkeleton } from "@/features/moderator/components/Mo
 import { STATUS_META } from "@/features/moderator/violations/violationsData";
 import styles from "./ViolatingAccountDetailPanel.module.css";
 
+/**
+ * @typedef {Object} ViolatingAccountDetail
+ * @property {string} displayName - Tên hiển thị sinh viên.
+ * @property {string} username - Tên đăng nhập (không có `@`).
+ * @property {string} [email] - Email liên hệ.
+ * @property {string} studentId - Mã sinh viên hoặc thông tin chuyên ngành/kỳ.
+ * @property {number} [points] - Điểm gamification.
+ * @property {number} violations - Tổng số lần vi phạm.
+ * @property {number} [warningCount] - Số lần đã cảnh báo.
+ * @property {number} [tempBanCount] - Số lần khóa tạm.
+ * @property {string} status - Trạng thái: `locked`, `warning`, `normal`.
+ * @property {string} [banReason] - Lý do khóa/cảnh báo gần nhất.
+ * @property {Array<{ id: string, actionLabel: string, reason: string, actorUsername: string, createdAt: string, until?: string }>} [history] - Lịch sử xử lý.
+ */
+
+/**
+ * @typedef {Object} ViolatingAccountDetailPanelProps
+ * @property {boolean} open - Điều khiển hiển thị modal.
+ * @property {ViolatingAccountDetail|null} detail - Dữ liệu chi tiết tài khoản; `null` khi chưa tải.
+ * @property {boolean} loading - `true` khi đang fetch chi tiết.
+ * @property {() => void} onClose - Đóng panel/modal.
+ * @property {() => void} onUnban - Gỡ khóa tạm (chỉ khi `status === 'locked'`).
+ * @property {boolean} [unbanLoading] - Trạng thái loading nút gỡ khóa.
+ */
+
+/**
+ * Modal hiển thị chi tiết tài khoản vi phạm: thông tin cá nhân, thống kê vi phạm và lịch sử xử lý.
+ *
+ * Chỉ hiện nút "Gỡ khóa tạm" khi tài khoản đang ở trạng thái `locked`.
+ * Khóa vĩnh viễn do Admin xử lý — ghi chú hiển thị ở cuối panel.
+ *
+ * @param {ViolatingAccountDetailPanelProps} props - Props của component.
+ * @returns {import('react').ReactElement} Modal chi tiết vi phạm.
+ *
+ * @example
+ * <ViolatingAccountDetailPanel
+ *   open={Boolean(detailId)}
+ *   detail={accountDetail}
+ *   loading={detailLoading}
+ *   onClose={() => setDetailId(null)}
+ *   onUnban={handleUnban}
+ * />
+ */
 function ViolatingAccountDetailPanel({ open, detail, loading, onClose, onUnban, unbanLoading }) {
   const statusMeta = STATUS_META[detail?.status] ?? STATUS_META.normal;
   const canUnban = detail?.status === "locked";

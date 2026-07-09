@@ -6,15 +6,38 @@ import { Modal } from "@/common/Modal/Modal";
 import styles from "./PremiumRefundModal.module.css";
 
 /**
- * @param {{
- *   open: boolean;
- *   orderCode: string | null;
- *   lastPaidAt?: string | null;
- *   onClose: () => void;
- *   onSubmit: (payload: { reason: string }) => void | Promise<void>;
- *   error?: string;
- *   submitting?: boolean;
- * }} props
+ * @fileoverview Modal yêu cầu hoàn tiền Premium trong vòng 24 giờ sau thanh toán.
+ *
+ * @module features/premium/PremiumRefundModal
+ */
+
+/**
+ * @typedef {Object} PremiumRefundModalProps
+ * @property {boolean} open - Điều khiển hiển thị modal.
+ * @property {string|null} orderCode - Mã đơn thanh toán cần hoàn tiền.
+ * @property {string|null} [lastPaidAt] - ISO timestamp lần thanh toán gần nhất.
+ * @property {() => void} onClose - Đóng modal.
+ * @property {(payload: { reason: string }) => void|Promise<void>} onSubmit - Gửi yêu cầu hoàn tiền.
+ * @property {string} [error] - Thông báo lỗi hiển thị dưới form.
+ * @property {boolean} [submitting] - Trạng thái đang gửi.
+ */
+
+/**
+ * Modal form yêu cầu hoàn tiền Premium — chỉ trong 24h, cần lý do tối thiểu 10 ký tự.
+ *
+ * Gói Premium vẫn hoạt động cho đến khi admin duyệt hoàn tiền.
+ *
+ * @param {PremiumRefundModalProps} props - Props của component.
+ * @returns {import('react').ReactElement|null} Modal hoàn tiền, hoặc `null` khi đóng/thiếu orderCode.
+ *
+ * @example
+ * <PremiumRefundModal
+ *   open={refundOpen}
+ *   orderCode="ORD-123"
+ *   lastPaidAt="2026-07-09T10:00:00Z"
+ *   onClose={() => setRefundOpen(false)}
+ *   onSubmit={({ reason }) => requestPremiumRefund({ orderCode, reason })}
+ * />
  */
 function PremiumRefundModal({
   open,

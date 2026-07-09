@@ -1,12 +1,38 @@
+/**
+ * @fileoverview Trang mock đơn giản quản lý tài khoản vi phạm (phiên bản cũ / prototype).
+ *
+ * Trang production dùng `ViolatingAccountsPage`; module này giữ lại UI mock với dữ liệu cứng
+ * để demo nhanh luồng cảnh báo / khóa 7 ngày.
+ *
+ * @module features/moderator/violations/ModeratorViolationsPage
+ * @deprecated Dùng {@link module:features/moderator/violations/ViolatingAccountsPage} thay thế.
+ */
+
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import styles from "@/features/moderator/shared/moderatorPage.module.css";
 
+/**
+ * Dữ liệu mock tài khoản vi phạm cho prototype UI.
+ *
+ * @constant {ReadonlyArray<{ username: string, reports: number, lastReason: string }>}
+ * @readonly
+ */
 const VIOLATORS = [
   { username: "spam_bot_01", reports: 5, lastReason: "Spam" },
   { username: "user_xyz", reports: 2, lastReason: "Nội dung không phù hợp" },
 ];
 
+/**
+ * Trang prototype tài khoản vi phạm — bảng mock với nút cảnh báo và khóa 7 ngày.
+ *
+ * Mỗi hành động chỉ hiển thị toast mock, không gọi API thật.
+ *
+ * @returns {import('react').ReactElement} Layout trang moderator đơn giản.
+ *
+ * @example
+ * <Route path="/moderator/violations-mock" element={<ModeratorViolationsPage />} />
+ */
 function ModeratorViolationsPage() {
   const { showToast } = useToast();
 

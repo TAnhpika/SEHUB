@@ -26,12 +26,38 @@ import {
   stripQuestionImageMarkup,
 } from "@/utils/examQuestionContent";
 
+/**
+ * @fileoverview Mapper chuyển đổi DTO admin/moderation từ API sang shape UI nội bộ của SEHUB.
+ *
+ * Module này tập trung vào ba nhóm nghiệp vụ chính:
+ * - Quản trị người dùng, thanh toán, voucher, dashboard.
+ * - Duyệt và biên tập đề thi cuối kỳ/thực hành.
+ * - Đồng bộ các object moderation/report sang format FE thống nhất.
+ *
+ * @module api/adminMapper
+ */
+
+/**
+ * @typedef {Object} AdminMapperMetaOptions
+ * @property {string} [fileName] - Tên file override khi map đề chờ duyệt.
+ * @property {string} [submittedBy] - Người nộp override từ context FE.
+ * @property {boolean} [urgent] - Đánh dấu ưu tiên xử lý.
+ * @property {string} [githubGuide] - Hướng dẫn GitHub đã tách riêng.
+ * @property {boolean} [pinExam] - Có ghim đề thực hành sau khi duyệt hay không.
+ */
+
 const ROLE_MAP = {
   student: "student",
   moderator: "moderator",
   admin: "admin",
 };
 
+/**
+ * Format ngày cho màn hình admin theo chuẩn `YYYY-MM-DD`.
+ *
+ * @param {string|null|undefined} dateStr - Chuỗi ngày từ API.
+ * @returns {string} Ngày đã format hoặc `—` nếu thiếu/không hợp lệ.
+ */
 function formatAdminDate(dateStr) {
   if (!dateStr) return "—";
   const date = new Date(dateStr);
@@ -40,6 +66,12 @@ function formatAdminDate(dateStr) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+/**
+ * Format ngày giờ cho màn hình admin theo chuẩn `YYYY-MM-DD HH:mm:ss`.
+ *
+ * @param {string|null|undefined} dateStr - Chuỗi ngày giờ từ API.
+ * @returns {string} Ngày giờ đã format hoặc `—` nếu thiếu/không hợp lệ.
+ */
 function formatAdminDateTime(dateStr) {
   if (!dateStr) return "—";
   const date = new Date(dateStr);
@@ -48,20 +80,44 @@ function formatAdminDateTime(dateStr) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
+/**
+ * Chuẩn hóa role backend sang role key FE.
+ *
+ * @param {string|null|undefined} role - Role từ API.
+ * @returns {'student'|'moderator'|'admin'} Role đã chuẩn hóa cho UI/route guard.
+ */
 function mapRole(role) {
   return ROLE_MAP[String(role ?? "Student").toLowerCase()] ?? "student";
 }
 
+/**
+ * Suy ra mã môn ngắn từ category tài liệu.
+ *
+ * @param {string|null|undefined} category - Tên category hoặc metadata tài liệu.
+ * @returns {string} Subject code viết hoa; mặc định `SE`.
+ */
 function extractSubjectCode(category) {
   const match = category?.match(/^([A-Z0-9]+)/i);
   return match?.[1]?.toUpperCase() ?? "SE";
 }
 
+/**
+ * Gắn nhãn quyền truy cập tài liệu theo access tier backend.
+ *
+ * @param {string|null|undefined} accessTier - Tầng truy cập từ API.
+ * @returns {string} Nhãn hiển thị cho admin.
+ */
 function mapAccessTierLabel(accessTier) {
   if (accessTier === "PremiumFull") return "Premium";
   return "Free (3 trang)";
 }
 
+/**
+ * Chuẩn hóa trạng thái đề thi backend sang status FE của admin.
+ *
+ * @param {string|null|undefined} status - Trạng thái gốc từ API.
+ * @returns {'published'|'pending_approval'|'rejected'|'draft'} Status FE cho UI quản trị.
+ */
 function mapExamStatus(status) {
   const value = String(status ?? "").toLowerCase();
   if (value === "published") return "published";
@@ -71,10 +127,22 @@ function mapExamStatus(status) {
   return "draft";
 }
 
+/**
+ * Xác định loại đề để route đúng form/luồng xử lý.
+ *
+ * @param {string|null|undefined} examType - Loại đề từ API.
+ * @returns {'practice'|'final'} Key loại đề phía FE.
+ */
 function mapExamTypeKey(examType) {
   return String(examType ?? "").toLowerCase() === "practice" ? "practice" : "final";
 }
 
+/**
+ * Chuẩn hóa trạng thái giao dịch thanh toán sang enum FE.
+ *
+ * @param {string|null|undefined} status - Trạng thái giao dịch từ backend.
+ * @returns {string} Status FE phục vụ badge/bộ lọc admin.
+ */
 function mapPaymentStatus(status) {
   const value = String(status ?? "").toLowerCase();
   if (value === "paid") return "activated";
@@ -89,6 +157,14 @@ function mapPaymentStatus(status) {
   return "pending_payment";
 }
 
+/**
+ * Suy luận FE plan ID từ dữ liệu API thanh toán/subscription.
+ *
+ * Ưu tiên map trực tiếp qua `planCode`; nếu không có thì suy luận từ `planName`.
+ *
+ * @param {{planCode?: string|null, planName?: string|null}} params - Dữ liệu plan từ API.
+ * @returns {'trial'|'semester'|'full'} FE plan ID gần đúng nhất.
+ */
 function inferPlanIdFromApi({ planCode, planName }) {
   const code = String(planCode ?? "").toLowerCase();
   if (code && FE_ID_BY_PLAN_CODE[code]) {
@@ -105,10 +181,22 @@ function inferPlanIdFromApi({ planCode, planName }) {
   return "trial";
 }
 
+/**
+ * Suy luận FE plan ID chỉ từ tên gói.
+ *
+ * @param {string|null|undefined} planName - Tên gói từ backend hoặc UI.
+ * @returns {'trial'|'semester'|'full'} FE plan ID gần đúng nhất.
+ */
 function inferPlanIdFromName(planName) {
   return inferPlanIdFromApi({ planName });
 }
 
+/**
+ * Tạo slug an toàn cho badge/rank/rule.
+ *
+ * @param {string|null|undefined} value - Chuỗi nguồn.
+ * @returns {string} Slug lower-case dùng cho FE.
+ */
 function slugify(value) {
   return String(value ?? "")
     .trim()
@@ -117,6 +205,12 @@ function slugify(value) {
     .replace(/^-+|-+$/g, "");
 }
 
+/**
+ * Map DTO người dùng admin list sang card/table row của FE.
+ *
+ * @param {Object} dto - User DTO từ API admin.
+ * @returns {Object} User item đã chuẩn hóa cho danh sách quản trị.
+ */
 export function mapAdminUserListItem(dto) {
   const role = mapRole(dto.role);
 
@@ -137,6 +231,12 @@ export function mapAdminUserListItem(dto) {
   };
 }
 
+/**
+ * Map DTO người dùng chi tiết sang object phục vụ drawer/detail panel.
+ *
+ * @param {Object} dto - User detail DTO từ API admin.
+ * @returns {Object} Chi tiết người dùng đã chuẩn hóa cho FE.
+ */
 export function mapAdminUserDetail(dto) {
   const role = mapRole(dto.role);
   const listItem = mapAdminUserListItem({
@@ -175,6 +275,15 @@ function readExamPaperCode(dto) {
   return dto.paperCode ?? dto.title ?? "";
 }
 
+/**
+ * Map DTO đề thi sang item danh sách quản trị.
+ *
+ * Chuẩn hóa tên môn, mã đề, tệp đính kèm, trạng thái và metadata revision để các màn hình
+ * pending/published/rejected dùng lại cùng một cấu trúc.
+ *
+ * @param {Object} dto - Exam DTO từ API admin/moderation.
+ * @returns {Object} Exam list item thân thiện với UI.
+ */
 export function mapAdminExamListItem(dto) {
   const typeKey = mapExamTypeKey(dto.examType);
   const status = mapExamStatus(dto.status);
@@ -228,6 +337,15 @@ export function mapAdminExamListItem(dto) {
   };
 }
 
+/**
+ * Map một câu hỏi review từ API sang model FE của trang xem/duyệt đề.
+ *
+ * Hỗ trợ cả dữ liệu mới (`correctOptionIds`) lẫn field legacy (`correct`, `correctOptionId`).
+ *
+ * @param {Object} question - DTO câu hỏi từ API.
+ * @param {number} [index=0] - Index fallback khi dữ liệu không có `orderIndex`.
+ * @returns {Object} Câu hỏi FE đã chuẩn hóa, gồm lựa chọn đúng và cờ multi-select.
+ */
 export function mapAdminReviewQuestion(question, index = 0) {
   const options = question.options ?? [];
   const optionTexts = options.map((opt) =>
@@ -277,6 +395,12 @@ export function mapAdminReviewQuestion(question, index = 0) {
   };
 }
 
+/**
+ * Map DTO đề thi chi tiết sang object FE với danh sách câu hỏi đã chuẩn hóa.
+ *
+ * @param {Object} dto - Exam detail DTO từ API.
+ * @returns {Object} Dữ liệu chi tiết đề thi phục vụ trang xem/chỉnh sửa admin.
+ */
 export function mapAdminExamDetail(dto) {
   const base = mapAdminExamListItem(dto);
 
@@ -304,6 +428,14 @@ function getWizardOptionLabels(question) {
   return labels.length > 0 ? labels : WIZARD_ANSWER_KEYS.slice(0, 4);
 }
 
+/**
+ * Chuyển câu hỏi từ wizard FE sang payload tạo đề backend.
+ *
+ * Bỏ qua câu hỏi rỗng và chuẩn hóa lựa chọn đúng cho cả single choice lẫn multi-select.
+ *
+ * @param {Array<Object>} questions - Danh sách câu hỏi dạng wizard FE.
+ * @returns {Array<Object>} Payload câu hỏi sẵn sàng gửi API tạo đề.
+ */
 export function mapWizardQuestionsToCreateItems(questions) {
   return questions
     .filter(
@@ -341,6 +473,13 @@ export function mapWizardQuestionsToCreateItems(questions) {
     });
 }
 
+/**
+ * Chuyển dữ liệu wizard đề cuối kỳ sang request tạo mới backend.
+ *
+ * @param {Object} examInfo - Metadata đề thi từ bước thông tin.
+ * @param {Array<Object>} questions - Danh sách câu hỏi wizard.
+ * @returns {Object} Payload tạo đề cuối kỳ.
+ */
 export function mapFinalExamWizardToCreateRequest(examInfo, questions) {
   const subjectCode =
     normalizeCourseSubjectCode(examInfo.subjectCode) ?? examInfo.subjectCode.trim();
@@ -360,6 +499,14 @@ export function mapFinalExamWizardToCreateRequest(examInfo, questions) {
   };
 }
 
+/**
+ * Chuyển dữ liệu wizard đề cuối kỳ sang payload resubmit/revision.
+ *
+ * @param {Object} examInfo - Metadata đề thi từ wizard.
+ * @param {Array<Object>} questions - Danh sách câu hỏi wizard.
+ * @param {{isRevision?: boolean}} [options={}] - Cờ cho biết đây là đề revision.
+ * @returns {Object} Payload resubmit đề cuối kỳ.
+ */
 export function mapFinalExamWizardToResubmitRequest(examInfo, questions, { isRevision = false } = {}) {
   const title = isRevision
     ? resolvePublicExamName({
@@ -377,6 +524,12 @@ export function mapFinalExamWizardToResubmitRequest(examInfo, questions, { isRev
   };
 }
 
+/**
+ * Map DTO đề thi chi tiết sang state đầu vào cho wizard FE.
+ *
+ * @param {Object} dto - DTO đề thi chi tiết từ API.
+ * @returns {Object} State khởi tạo cho wizard chỉnh sửa/resubmit.
+ */
 export function mapExamDetailToWizard(dto) {
   const rawQuestions = dto.questions ?? dto.questionsData ?? [];
   const wizardQuestions = mapImportedExamQuestions(rawQuestions);
@@ -467,6 +620,14 @@ function resolveCorrectOptionIds(question, options) {
   return options[0]?.id ? [String(options[0].id)] : [];
 }
 
+/**
+ * Chuẩn hóa danh sách câu hỏi OCR/mock sang payload tạo đề backend.
+ *
+ * Dùng cho luồng import từ OCR hoặc dữ liệu AI/mock, đảm bảo ảnh câu hỏi được giữ trong `content`.
+ *
+ * @param {Array<Object>} questions - Danh sách câu hỏi thô từ OCR/mock.
+ * @returns {Array<Object>} Payload câu hỏi đã chuẩn hóa cho backend.
+ */
 export function mapMockOcrQuestionsToCreateItems(questions) {
   return (questions ?? []).map((question, index) => {
     const options = (question.options ?? []).map(normalizeCreateExamOption);
@@ -492,6 +653,13 @@ export function mapMockOcrQuestionsToCreateItems(questions) {
   });
 }
 
+/**
+ * Chuyển form tạo đề admin sang request tạo mới backend.
+ *
+ * @param {Object} form - Form FE của admin.
+ * @param {{questions?: Array<Object>}} [options={}] - Danh sách câu hỏi đã chuẩn hóa.
+ * @returns {Object} Payload tạo đề mới.
+ */
 export function mapAdminExamFormToCreateRequest(form, { questions = [] } = {}) {
   const githubGuide =
     form.githubGuide ??
@@ -515,6 +683,13 @@ export function mapAdminExamFormToCreateRequest(form, { questions = [] } = {}) {
   };
 }
 
+/**
+ * Chuyển form sửa đề admin sang request cập nhật backend.
+ *
+ * @param {Object} form - Form FE hiện tại.
+ * @param {{questions?: Array<Object>|null}} [options={}] - Câu hỏi cập nhật nếu có.
+ * @returns {Object} Payload update đề.
+ */
 export function mapAdminExamFormToUpdateRequest(form, { questions = null } = {}) {
   const subjectCode =
     normalizeCourseSubjectCode(form.code) ?? String(form.code ?? "").trim();
@@ -534,6 +709,12 @@ export function mapAdminExamFormToUpdateRequest(form, { questions = null } = {})
   return body;
 }
 
+/**
+ * Chuyển form đề thực hành sang payload tạo mới backend.
+ *
+ * @param {Object} form - Practice exam form FE.
+ * @returns {Object} Payload tạo đề thực hành.
+ */
 export function mapPracticeExamFormToCreateRequest(form) {
   const githubGuide =
     form.githubGuide ??
@@ -557,6 +738,15 @@ export function mapPracticeExamFormToCreateRequest(form) {
   };
 }
 
+/**
+ * Map đề đang chờ duyệt sang item hàng chờ admin.
+ *
+ * Có thể bổ sung metadata từ FE như tên file, người nộp hoặc cờ ưu tiên.
+ *
+ * @param {Object} dto - Pending exam DTO từ API.
+ * @param {AdminMapperMetaOptions} [meta={}] - Metadata bổ sung từ FE.
+ * @returns {Object} Pending exam item dùng cho list/detail.
+ */
 export function mapPendingExamListItem(dto, meta = {}) {
   const base = mapAdminExamListItem(dto);
   const primaryAttachment = base.attachments?.[0];
@@ -592,6 +782,12 @@ const EXAM_REJECT_REASON_LOOKUP = {
   other: "Lý do khác",
 };
 
+/**
+ * Map DTO đề bị từ chối sang item FE có nhãn lý do đầy đủ.
+ *
+ * @param {Object} dto - Rejected exam DTO từ API.
+ * @returns {Object} Rejected exam item cho tab/history bị từ chối.
+ */
 export function mapRejectedExamFromApi(dto) {
   const base = mapPendingExamListItem(dto);
   const reasonCode = dto.rejectionReasonCode ?? "";
@@ -608,6 +804,12 @@ export function mapRejectedExamFromApi(dto) {
   };
 }
 
+/**
+ * Map DTO đề đã duyệt sang item FE cho lịch sử phê duyệt.
+ *
+ * @param {Object} dto - Approved exam DTO từ API.
+ * @returns {Object} Approved exam item.
+ */
 export function mapApprovedExamFromApi(dto) {
   const base = mapPendingExamListItem(dto);
   return {
@@ -617,6 +819,13 @@ export function mapApprovedExamFromApi(dto) {
   };
 }
 
+/**
+ * Chuyển form resubmit đề thực hành sang payload backend.
+ *
+ * @param {Object} payload - Dữ liệu form FE.
+ * @param {{isRevision?: boolean}} [options={}] - Có phải revision của đề cũ hay không.
+ * @returns {Object} Payload resubmit đề thực hành.
+ */
 export function mapPracticeExamFormToResubmitRequest(payload, { isRevision = false } = {}) {
   const title = isRevision
     ? resolvePublicExamName({
@@ -634,6 +843,12 @@ export function mapPracticeExamFormToResubmitRequest(payload, { isRevision = fal
   };
 }
 
+/**
+ * Map chi tiết đề thực hành từ API về form FE để chỉnh sửa/resubmit.
+ *
+ * @param {Object} dto - Practice exam detail DTO.
+ * @returns {Object} Form state đã được tách subject/title/attachments.
+ */
 export function mapPracticeExamDetailToForm(dto) {
   const subjectCode = isBareSubjectCode(readExamSubjectCode(dto))
     ? (normalizeCourseSubjectCode(readExamSubjectCode(dto)) ?? readExamSubjectCode(dto))
@@ -674,6 +889,13 @@ function githubGuideFromDescription(description) {
   return parts.length > 1 ? parts.slice(1).join("\n\n") : "";
 }
 
+/**
+ * Map response tạo đề sang item pending để FE chèn ngay vào queue hiện tại.
+ *
+ * @param {Object} dto - DTO phản hồi từ API sau khi tạo đề.
+ * @param {AdminMapperMetaOptions} [payload={}] - Metadata FE vừa submit.
+ * @returns {Object} Pending exam item.
+ */
 export function mapPendingExamFromCreate(dto, payload = {}) {
   return mapPendingExamListItem(dto, {
     submittedBy: payload.submittedBy,
@@ -683,6 +905,12 @@ export function mapPendingExamFromCreate(dto, payload = {}) {
   });
 }
 
+/**
+ * Map DTO tài liệu sang item danh sách quản trị tài liệu.
+ *
+ * @param {Object} dto - Document DTO từ API.
+ * @returns {Object} Document item cho admin table.
+ */
 export function mapAdminDocumentListItem(dto) {
   const subject = extractSubjectCode(dto.category);
 
@@ -706,6 +934,12 @@ export function mapAdminDocumentListItem(dto) {
   };
 }
 
+/**
+ * Map audit log liên quan thanh toán sang item FE.
+ *
+ * @param {Object} dto - Payment audit log DTO.
+ * @returns {Object} Audit log item với username mục tiêu đã trích xuất nếu có.
+ */
 export function mapPaymentAuditLogItem(dto) {
   const action = String(dto.action ?? "")
     .trim()
@@ -741,6 +975,12 @@ export function mapPaymentAuditLogItem(dto) {
   };
 }
 
+/**
+ * Map DTO giao dịch thanh toán sang item danh sách admin payments.
+ *
+ * @param {Object} dto - Payment DTO từ API.
+ * @returns {Object} Payment item đã chuẩn hóa.
+ */
 export function mapAdminPaymentListItem(dto) {
   const mappedStatus = mapPaymentStatus(dto.status);
 
@@ -786,6 +1026,12 @@ export {
   mapModerationUiStatus,
 } from "./contentModerationMapper";
 
+/**
+ * Map DTO báo cáo community/user sang item danh sách báo cáo admin.
+ *
+ * @param {Object} dto - Report DTO từ API.
+ * @returns {Object} Report item cho admin report queue.
+ */
 export function mapAdminReportListItem(dto) {
   const status = mapReportStatus(dto.status);
 
@@ -822,6 +1068,12 @@ export function mapAdminReportListItem(dto) {
   };
 }
 
+/**
+ * Map DTO người dùng bị khóa sang item FE cho tab banned users.
+ *
+ * @param {Object} dto - Ban record DTO từ API.
+ * @returns {Object} Banned user item đã chuẩn hóa thời hạn và loại khóa.
+ */
 export function mapAdminBannedUser(dto) {
   const banType = String(dto.banType ?? "").toLowerCase();
   const type = banType.includes("permanent") ? "permanent" : "temporary";
@@ -873,6 +1125,12 @@ function mapViolationHistoryItem(dto) {
   };
 }
 
+/**
+ * Map user vi phạm sang item FE cho màn moderator/admin xử lý vi phạm.
+ *
+ * @param {Object} dto - Violating user DTO từ API.
+ * @returns {Object} Dữ liệu người dùng vi phạm cho list/detail.
+ */
 export function mapViolatingUser(dto) {
   const displayName = dto.displayName ?? dto.username ?? "Unknown";
   const username = dto.username ?? "unknown";
@@ -904,6 +1162,12 @@ export function mapViolatingUser(dto) {
   };
 }
 
+/**
+ * Map chi tiết user vi phạm, bổ sung lịch sử xử lý.
+ *
+ * @param {Object} dto - Violating user detail DTO.
+ * @returns {Object} Dữ liệu chi tiết gồm history.
+ */
 export function mapViolatingUserDetail(dto) {
   return {
     ...mapViolatingUser(dto),
@@ -912,6 +1176,13 @@ export function mapViolatingUserDetail(dto) {
   };
 }
 
+/**
+ * Map cấu hình level/rank backend sang tier FE.
+ *
+ * @param {Object} dto - Level config DTO.
+ * @param {number} index - Thứ tự trong danh sách để tạo `sortOrder`.
+ * @returns {Object} Rank tier dùng cho trang quản lý rank/voucher.
+ */
 export function mapLevelConfigToRankTier(dto, index) {
   const slug = slugify(dto.name) || `rank-${index + 1}`;
 
@@ -931,6 +1202,12 @@ export function mapLevelConfigToRankTier(dto, index) {
   };
 }
 
+/**
+ * Map badge DTO từ backend admin sang shape FE.
+ *
+ * @param {Object} dto - Badge DTO từ API.
+ * @returns {Object} Badge admin item.
+ */
 export function mapBadgeAdminDto(dto) {
   let meta = {};
   if (dto.conditionJson) {
@@ -962,6 +1239,12 @@ export function mapBadgeAdminDto(dto) {
   };
 }
 
+/**
+ * Chuyển badge FE sang payload tạo mới backend.
+ *
+ * @param {Object} data - Dữ liệu badge từ form FE.
+ * @returns {Object} Payload tạo badge.
+ */
 export function mapBadgeToCreateRequest(data) {
   const now = new Date().toISOString();
   return {
@@ -982,6 +1265,12 @@ export function mapBadgeToCreateRequest(data) {
   };
 }
 
+/**
+ * Chuyển badge FE sang payload cập nhật backend.
+ *
+ * @param {Object} badge - Badge hiện tại trên FE.
+ * @returns {Object} Payload cập nhật badge.
+ */
 export function mapBadgeToUpdateRequest(badge) {
   return {
     name: badge.name,
@@ -1026,6 +1315,12 @@ function mapPointRuleEventToBe(eventType) {
   return POINT_RULE_EVENT_TO_BE[eventType] ?? eventType;
 }
 
+/**
+ * Map point rule DTO từ backend sang object FE.
+ *
+ * @param {Object} dto - Point rule DTO.
+ * @returns {Object} Point rule item cho admin settings.
+ */
 export function mapPointRuleAdminDto(dto) {
   const slug = dto.code ?? "";
   const eventType = mapPointRuleEventToFe(dto.eventType ?? "");
@@ -1043,6 +1338,12 @@ export function mapPointRuleAdminDto(dto) {
   };
 }
 
+/**
+ * Chuyển point rule FE sang payload tạo mới backend.
+ *
+ * @param {Object} data - Dữ liệu point rule từ FE.
+ * @returns {Object} Payload tạo point rule.
+ */
 export function mapPointRuleToCreateRequest(data) {
   return {
     code: data.slug,
@@ -1053,6 +1354,12 @@ export function mapPointRuleToCreateRequest(data) {
   };
 }
 
+/**
+ * Chuyển point rule FE sang payload cập nhật backend.
+ *
+ * @param {Object} rule - Point rule hiện tại trên FE.
+ * @returns {Object} Payload cập nhật point rule.
+ */
 export function mapPointRuleToUpdateRequest(rule) {
   return {
     eventType: mapPointRuleEventToBe(rule.eventType),
@@ -1062,6 +1369,12 @@ export function mapPointRuleToUpdateRequest(rule) {
   };
 }
 
+/**
+ * Chuyển danh sách rank tiers FE sang payload cập nhật levels backend.
+ *
+ * @param {Array<Object>} ranks - Danh sách tier/rank trên FE.
+ * @returns {{levels: Array<Object>}} Payload cập nhật levels.
+ */
 export function mapRankTiersToUpdateLevelsRequest(ranks) {
   return {
     levels: ranks.map((rank) => ({
@@ -1072,6 +1385,16 @@ export function mapRankTiersToUpdateLevelsRequest(ranks) {
   };
 }
 
+/**
+ * Trộn số liệu dashboard live API vào mock payload hiện có.
+ *
+ * Cách làm này giữ nguyên cấu trúc UI mock nhưng thay các giá trị có thể lấy từ backend.
+ *
+ * @param {Object} mockPayload - Dashboard payload nền của FE.
+ * @param {Object|null|undefined} stats - Số liệu live từ API.
+ * @param {Object} [extras={}] - Dữ liệu phụ như số tài liệu hay pending reports.
+ * @returns {Object} Payload dashboard đã merge.
+ */
 export function mergeDashboardStats(mockPayload, stats, extras = {}) {
   if (!stats) return mockPayload;
 
@@ -1158,6 +1481,12 @@ export function mergeDashboardStats(mockPayload, stats, extras = {}) {
   };
 }
 
+/**
+ * Map voucher DTO sang item danh sách voucher admin.
+ *
+ * @param {Object} dto - Voucher DTO từ API.
+ * @returns {Object} Voucher item đã chuẩn hóa thời gian và trạng thái.
+ */
 export function mapAdminVoucherListItem(dto) {
   return {
     id: dto.id,
@@ -1173,6 +1502,12 @@ export function mapAdminVoucherListItem(dto) {
   };
 }
 
+/**
+ * Map DTO thống kê voucher sang object FE.
+ *
+ * @param {Object} dto - Voucher stats DTO.
+ * @returns {Object} Thống kê voucher đã chuẩn hóa với đủ nhóm FE cần dùng.
+ */
 export function mapAdminVoucherStats(dto) {
   return {
     total: dto.total ?? 0,
@@ -1184,6 +1519,12 @@ export function mapAdminVoucherStats(dto) {
   };
 }
 
+/**
+ * Map payload chart dashboard sang cấu trúc FE cho biểu đồ tăng trưởng/doanh thu/traffic.
+ *
+ * @param {Object} dto - Dashboard charts DTO từ API.
+ * @returns {Object} Bộ dữ liệu chart đã chuẩn hóa.
+ */
 export function mapDashboardCharts(dto) {
   const toTraffic = (series) => ({
     data: (series?.data ?? []).map((point) => ({
@@ -1227,6 +1568,12 @@ export function mapDashboardCharts(dto) {
   };
 }
 
+/**
+ * Map audit log tổng quát admin sang item timeline FE.
+ *
+ * @param {Object} dto - Audit log DTO.
+ * @returns {Object} Audit log item đã format thời gian.
+ */
 export function mapAdminAuditLogItem(dto) {
   return {
     id: dto.id,
@@ -1237,6 +1584,12 @@ export function mapAdminAuditLogItem(dto) {
   };
 }
 
+/**
+ * Map user activity DTO sang item hiển thị hoạt động gần đây.
+ *
+ * @param {Object} dto - Activity DTO từ API.
+ * @returns {Object} Activity item cho timeline/list.
+ */
 export function mapAdminUserActivityItem(dto) {
   return {
     id: dto.id,

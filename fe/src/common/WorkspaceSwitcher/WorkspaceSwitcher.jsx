@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Bộ chuyển workspace giữa Admin, Moderator và Student trong SEHUB.
+ *
+ * Component này hiển thị danh sách các workspace mà người dùng hiện tại được phép truy
+ * cập, giúp staff chuyển nhanh giữa khu vực quản trị, kiểm duyệt và giao diện sinh viên.
+ *
+ * @module common/WorkspaceSwitcher/WorkspaceSwitcher
+ * @see {@link module:common/WorkspaceSwitcher/workspaceConfig} - Cấu hình workspace và quyền truy cập.
+ */
+
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useAuth } from "@/context";
@@ -8,13 +18,32 @@ import {
 import styles from "@/common/WorkspaceSwitcher/WorkspaceSwitcher.module.css";
 
 /**
- * @param {{
- *   onNavigate?: () => void;
- *   showHeading?: boolean;
- *   heading?: string;
- *   showCurrent?: boolean;
- *   variant?: "panel" | "sidebar-dark" | "sidebar-mod" | "menu-compact";
- * }} props
+ * @typedef {Object} WorkspaceSwitcherProps
+ * @property {() => void} [onNavigate] - Callback chạy sau khi người dùng chọn workspace (ví dụ: đóng menu cha).
+ * @property {boolean} [showHeading=true] - Hiển thị hay ẩn tiêu đề khu vực switcher.
+ * @property {string} [heading='Chuyển khu vực'] - Tiêu đề hiển thị phía trên danh sách workspace.
+ * @property {boolean} [showCurrent=true] - Có hiển thị workspace hiện tại trong danh sách hay không.
+ * @property {'panel' | 'sidebar-dark' | 'sidebar-mod' | 'menu-compact'} [variant='panel'] - Biến thể giao diện để tái sử dụng trong panel, sidebar và menu compact.
+ */
+
+/**
+ * Hiển thị danh sách workspace người dùng có thể truy cập.
+ *
+ * Hành vi chính:
+ * - tự xác định workspace hiện tại từ `pathname`,
+ * - lọc danh sách theo role đăng nhập,
+ * - ẩn toàn bộ component nếu chỉ còn 1 workspace khả dụng,
+ * - tùy chọn ẩn workspace hiện tại để menu gọn hơn.
+ *
+ * @param {WorkspaceSwitcherProps} props - Props điều khiển cách hiển thị danh sách workspace.
+ * @returns {import('react').ReactElement | null} Danh sách chuyển workspace hoặc `null` nếu không cần hiển thị.
+ *
+ * @example
+ * <WorkspaceSwitcher
+ *   variant="menu-compact"
+ *   showHeading={false}
+ *   onNavigate={() => setMenuOpen(false)}
+ * />
  */
 function WorkspaceSwitcher({
   onNavigate,

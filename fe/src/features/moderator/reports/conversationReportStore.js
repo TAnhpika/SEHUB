@@ -1,3 +1,12 @@
+/**
+ * @fileoverview Store báo cáo người dùng (tin nhắn hội thoại + tài khoản) cho Moderator.
+ *
+ * Gộp hai nguồn API (`listConversationReports`, `listUserReports`), map sang model UI thống nhất,
+ * và cung cấp hàm resolve / escalate sang trang vi phạm.
+ *
+ * @module features/moderator/reports/conversationReportStore
+ */
+
 import * as adminApi from "@/api/adminApi";
 import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 import { MODERATION_QUEUE_FETCH_SIZE } from "@/features/moderator/reports/shared/reportCategoryConstants";
@@ -91,6 +100,15 @@ function mapUserApiReport(dto) {
   });
 }
 
+/**
+ * Tải và gộp báo cáo hội thoại + báo cáo tài khoản người dùng.
+ *
+ * Kết quả sắp xếp mới nhất trước theo `createdAtIso`. Trả về mảng rỗng khi mock.
+ *
+ * @param {Object} [options] - Tùy chọn tải.
+ * @param {number} [options.pageSize=ADMIN_API_PAGE_SIZE] - Số bản ghi mỗi nguồn API.
+ * @returns {Promise<Array>} Danh sách báo cáo `category: 'user'`.
+ */
 export async function getConversationReports({ pageSize = ADMIN_API_PAGE_SIZE } = {}) {
   if (USE_MOCK) {
     return [];
@@ -109,11 +127,29 @@ export async function getConversationReports({ pageSize = ADMIN_API_PAGE_SIZE } 
   return items;
 }
 
+/**
+ * Tìm một báo cáo người dùng theo ID trong queue đã tải.
+ *
+ * @param {string} id - ID báo cáo cần tìm.
+ * @returns {Promise<Object|null>} Báo cáo khớp, hoặc `null` nếu không có.
+ */
 export async function findConversationReportById(id) {
   const items = await getConversationReports({ pageSize: MODERATION_QUEUE_FETCH_SIZE });
   return items.find((item) => item.id === id) ?? null;
 }
 
+/**
+ * Đánh dấu báo cáo người dùng đã xử lý qua Admin API.
+ *
+ * Dispatch sự kiện `sehubs-conversation-reports-changed` và `sehubs-user-reports-changed`
+ * sau khi resolve thành công.
+ *
+ * @param {string} id - ID báo cáo.
+ * @param {string} resolution - Ghi chú/kết quả xử lý (ví dụ `ignored`, `escalated_violations`).
+ * @param {'conversation'|'account'} [userReportType='conversation'] - Loại báo cáo.
+ * @returns {Promise<Object|null>} DTO đã map, hoặc `null` khi mock.
+ * @throws {Error} Khi API thất bại.
+ */
 export async function resolveConversationReport(id, resolution, userReportType = "conversation") {
   if (USE_MOCK) {
     return null;
@@ -135,6 +171,16 @@ export async function resolveConversationReport(id, resolution, userReportType =
   return userReportType === "account" ? mapUserApiReport(dto) : mapConversationApiReport(dto);
 }
 
+/**
+ * Leo thang báo cáo người dùng sang luồng xử lý tài khoản vi phạm.
+ *
+ * Gọi `adminApi.escalateUserReportToViolations` và dispatch sự kiện refresh queue.
+ *
+ * @param {string} id - ID báo cáo cần escalate.
+ * @param {'conversation'|'account'} [userReportType='conversation'] - Nguồn báo cáo.
+ * @returns {Promise<Object|null>} Kết quả API (có thể chứa `userId`), hoặc `null` khi mock.
+ * @throws {Error} Khi API thất bại.
+ */
 export async function escalateUserReportToViolations(id, userReportType = "conversation") {
   if (USE_MOCK) {
     return null;
@@ -149,4 +195,5 @@ export async function escalateUserReportToViolations(id, userReportType = "conve
   return result;
 }
 
+/** Re-export metadata lý do báo cáo từ `reportsData`. */
 export { REASON_META };

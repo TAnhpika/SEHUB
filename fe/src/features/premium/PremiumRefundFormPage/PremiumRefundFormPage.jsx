@@ -15,6 +15,28 @@ import {
 } from "@/features/premium/PremiumRefundFormPage/refundFormData";
 import styles from "@/features/feedback/FeedbackPage/FeedbackPage.module.css";
 
+/**
+ * @fileoverview Trang form thông tin ngân hàng nhận hoàn tiền Premium sau khi admin duyệt.
+ *
+ * Truy cập qua query `?order=<orderCode>`. Yêu cầu upload ảnh chứng từ chuyển khoản.
+ *
+ * @module features/premium/PremiumRefundFormPage
+ */
+
+/**
+ * Trang điền thông tin tài khoản ngân hàng nhận hoàn tiền Premium.
+ *
+ * **Luồng:**
+ * 1. Đọc `order` từ query → `getRefundForm(orderCode)`.
+ * 2. Nếu `bankDetailsSubmitted` → hiển thị thông báo đã gửi.
+ * 3. Ngược lại → form username, ngân hàng, STK, ảnh CK → `submitRefundBankDetails`.
+ *
+ * @returns {import('react').ReactElement} Trang form hoặc redirect/loading state.
+ *
+ * @example
+ * // Route: /home/premium/refund?order=ORD-123
+ * <Route path="/home/premium/refund" element={<PremiumRefundFormPage />} />
+ */
 function PremiumRefundFormPage() {
   const { user } = useAuth();
   const { showToast } = useToast();

@@ -1,13 +1,54 @@
+/**
+ * @fileoverview Dữ liệu tĩnh, hằng số cấu hình và hàm lọc/sắp xếp cho luồng kiểm duyệt bài viết (pre-moderation).
+ *
+ * Module này cung cấp:
+ * - Kích thước phân trang client-side cho hàng đợi và lịch sử duyệt bài.
+ * - Metadata trạng thái, loại nội dung và tùy chọn sắp xếp/lọc tab.
+ * - Bộ dữ liệu mock (`CONTENT_QUEUE_MOCK`, `CONTENT_HISTORY_MOCK`) khi `VITE_USE_MOCK=true`.
+ * - Hàm lọc, đếm và tìm kiếm bài viết trên mảng in-memory (mock mode).
+ *
+ * @module features/moderator/content/contentModerationData
+ * @see {@link module:features/moderator/content/contentModerationService} — tầng gọi API thật
+ * @see {@link module:features/moderator/content/contentModerationStore} — hooks React tiêu thụ dữ liệu
+ */
+
+/**
+ * Số bài viết hiển thị mỗi trang trên trang hàng đợi duyệt (`ContentModerationPage`).
+ *
+ * @constant {number}
+ * @readonly
+ * @default 4
+ */
 export const CONTENT_QUEUE_PAGE_SIZE = 4;
+
+/**
+ * Số bài viết hiển thị mỗi trang trên trang lịch sử duyệt (`ContentModerationHistoryPage`).
+ *
+ * @constant {number}
+ * @readonly
+ * @default 5
+ */
 export const CONTENT_HISTORY_PAGE_SIZE = 5;
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
+/**
+ * Tùy chọn sắp xếp danh sách bài viết theo thời gian gửi (`sortOrder`).
+ *
+ * @constant {ReadonlyArray<{ value: string, label: string }>}
+ * @readonly
+ */
 export const SORT_OPTIONS = [
   { value: "newest", label: "Mới nhất trước" },
   { value: "oldest", label: "Cũ nhất trước" },
 ];
 
+/**
+ * Các tab lọc trạng thái trên trang lịch sử duyệt bài viết.
+ *
+ * @constant {ReadonlyArray<{ id: string, label: string }>}
+ * @readonly
+ */
 export const HISTORY_STATUS_TABS = [
   { id: "pending", label: "Đang chờ" },
   { id: "approved", label: "Đã duyệt" },
@@ -15,20 +56,44 @@ export const HISTORY_STATUS_TABS = [
   { id: "all", label: "Tất cả" },
 ];
 
+/**
+ * Metadata hiển thị badge loại nội dung kiểm duyệt.
+ *
+ * @constant {Object<string, { label: string, tone: string }>}
+ * @readonly
+ */
 export const TYPE_META = {
   post: { label: "Bài viết", tone: "primary" },
 };
 
-/** Trạng thái pre-moderation bài viết (SEHUB_PhanTichNghiepVu §C) */
+/**
+ * Metadata badge trạng thái pre-moderation bài viết (SEHUB_PhanTichNghiepVu §C).
+ *
+ * @constant {Object<string, { label: string, tone: string }>}
+ * @readonly
+ */
 export const STATUS_META = {
   pending: { label: "Chờ duyệt", tone: "warning" },
   approved: { label: "Đã duyệt", tone: "success" },
   rejected: { label: "Đã từ chối", tone: "danger" },
 };
 
+/**
+ * Lý do từ chối mặc định khi Moderator không nhập lý do cụ thể.
+ *
+ * @constant {string}
+ * @readonly
+ */
 export const DEFAULT_REJECT_REASON = "Không đáp ứng quy định nội dung cộng đồng SEHUB.";
 
-/** Bài viết sinh viên gửi — chờ duyệt trước khi hiển thị trên feed (mock) */
+/**
+ * Danh sách bài viết sinh viên đang chờ duyệt — dữ liệu mock cho hàng đợi kiểm duyệt.
+ *
+ * Mỗi phần tử mô phỏng payload đầy đủ: tiêu đề, nội dung, ảnh, file đính kèm, tác giả, `status: "pending"`.
+ *
+ * @constant {ReadonlyArray<Object>}
+ * @readonly
+ */
 export const CONTENT_QUEUE_MOCK = [
   {
     id: "cq-1",
@@ -247,7 +312,14 @@ Mọi người dùng cẩn thận, đối chiếu thêm slide nhé!`,
   },
 ];
 
-/** Bài đã qua kiểm duyệt — lịch sử (mock) */
+/**
+ * Danh sách bài viết đã qua kiểm duyệt — dữ liệu mock cho lịch sử (approved, rejected, pending gửi lại).
+ *
+ * Các bài `approved`/`rejected` có thêm object `moderation` ghi nhận quyết định của Moderator.
+ *
+ * @constant {ReadonlyArray<Object>}
+ * @readonly
+ */
 export const CONTENT_HISTORY_MOCK = [
   {
     id: "ch-1",
@@ -405,10 +477,25 @@ Xin hỏi lịch thi chính thức MAE101 kỳ Summer 2025 và phòng thi FE ạ
   },
 ];
 
+/**
+ * Ghép hàng đợi và lịch sử mock thành một mảng duy nhất — dùng khởi tạo localStorage mock.
+ *
+ * @returns {Object[]} Mảng gồm tất cả bài trong `CONTENT_QUEUE_MOCK` và `CONTENT_HISTORY_MOCK`.
+ *
+ * @example
+ * const items = buildDefaultContentItems();
+ * // => 11 bài (6 pending queue + 5 history)
+ */
 export function buildDefaultContentItems() {
   return [...CONTENT_QUEUE_MOCK, ...CONTENT_HISTORY_MOCK];
 }
 
+/**
+ * Ghép các trường văn bản của bài viết thành chuỗi tìm kiếm lowercase (nội bộ).
+ *
+ * @param {Object} item - Bài viết kiểm duyệt.
+ * @returns {string} Chuỗi haystack dùng cho `filterContentItems`.
+ */
 function buildItemHaystack(item) {
   return [
     item.title,
@@ -429,6 +516,22 @@ function buildItemHaystack(item) {
     .toLowerCase();
 }
 
+/**
+ * Lọc và sắp xếp danh sách bài viết kiểm duyệt trên client (mock mode).
+ *
+ * Chỉ giữ bài `type === "post"`. Lọc theo `status`, tìm kiếm full-text trên haystack,
+ * sắp xếp theo `sortOrder` tăng/giảm.
+ *
+ * @param {Object[]} items - Mảng bài viết nguồn.
+ * @param {Object} [options] - Tùy chọn lọc.
+ * @param {string} [options.status="all"] - Trạng thái: `pending` | `approved` | `rejected` | `all`.
+ * @param {string} [options.query=""] - Từ khóa tìm kiếm (tiêu đề, tác giả, tag, ...).
+ * @param {string} [options.sort="newest"] - `newest` hoặc `oldest`.
+ * @returns {Object[]} Mảng bài đã lọc và sắp xếp.
+ *
+ * @example
+ * filterContentItems(items, { status: 'pending', query: 'PRF192', sort: 'newest' });
+ */
 export function filterContentItems(items, { status = "all", query = "", sort = "newest" }) {
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -446,11 +549,30 @@ export function filterContentItems(items, { status = "all", query = "", sort = "
   return result;
 }
 
-/** Hàng đợi — chỉ bài chờ duyệt */
+/**
+ * Lọc hàng đợi duyệt — wrapper của `filterContentItems` với `status: "pending"`.
+ *
+ * @param {Object[]} items - Mảng bài viết nguồn.
+ * @param {Object} options - Tùy chọn `query` và `sort` (không cần truyền `status`).
+ * @returns {Object[]} Chỉ các bài đang chờ duyệt.
+ *
+ * @example
+ * const queue = filterContentQueue(items, { sort: 'newest', query: '' });
+ */
 export function filterContentQueue(items, options) {
   return filterContentItems(items, { ...options, status: "pending" });
 }
 
+/**
+ * Đếm số bài theo từng trạng thái kiểm duyệt — dùng hiển thị metric trên lịch sử (mock mode).
+ *
+ * @param {Object[]} items - Mảng bài viết.
+ * @returns {{ pending: number, approved: number, rejected: number, all: number }} Số lượng theo trạng thái.
+ *
+ * @example
+ * const counts = countContentByStatus(items);
+ * // => { pending: 2, approved: 2, rejected: 2, all: 6 }
+ */
 export function countContentByStatus(items) {
   return {
     pending: items.filter((item) => item.status === "pending").length,

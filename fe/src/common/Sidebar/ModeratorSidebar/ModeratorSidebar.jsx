@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Sidebar điều hướng chính cho workspace Moderator SEHUB.
+ *
+ * Sidebar này hiển thị các nhóm chức năng kiểm duyệt, badge số lượng công việc chờ,
+ * thương hiệu khu vực và overlay đóng menu trên màn hình nhỏ. Dữ liệu badge được làm
+ * mới từ cache/API và đồng bộ qua các custom event của luồng moderation.
+ *
+ * @module common/Sidebar/ModeratorSidebar
+ * @see {@link module:features/moderator/moderatorNavData} - Cấu hình mục menu và badge.
+ */
+
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -16,6 +27,47 @@ import styles from "./ModeratorSidebar.module.css";
 const STATS_EVENT = "sehub-moderator-stats-updated";
 const EXAM_REPORTS_EVENT = "sehubs-exam-reports-changed";
 
+/**
+ * @typedef {Object} ModeratorSidebarNavItem
+ * @property {string} id - Mã định danh mục menu.
+ * @property {string} label - Nhãn hiển thị trên sidebar.
+ * @property {string} to - Đường dẫn điều hướng của mục.
+ * @property {boolean} end - Xác định nav chỉ active khi khớp chính xác.
+ * @property {string} [badgeKey] - Khóa ánh xạ sang object badge count.
+ * @property {import('@fortawesome/fontawesome-svg-core').IconDefinition} [icon] - Icon Font Awesome của mục.
+ */
+
+/**
+ * @typedef {Object} ModeratorSidebarBadgeCounts
+ * @property {number} reports - Số báo cáo cộng đồng đang chờ moderator xử lý.
+ * @property {number} content - Số bài viết đang chờ duyệt trước khi công khai.
+ */
+
+/**
+ * @typedef {Object} NavItemLinkProps
+ * @property {ModeratorSidebarNavItem} item - Cấu hình mục điều hướng cần render.
+ * @property {string} pathname - Pathname hiện tại từ router để xác định active state.
+ * @property {ModeratorSidebarBadgeCounts} badgeCounts - Số lượng công việc chờ theo từng badge key.
+ * @property {() => void} onNavigate - Callback đóng sidebar sau khi chuyển trang trên mobile.
+ */
+
+/**
+ * Render một mục điều hướng trong sidebar moderator.
+ *
+ * Nếu mục có `badgeKey` và số lượng tương ứng lớn hơn 0, component sẽ hiển thị badge
+ * cảnh báo để nhấn mạnh hàng đợi công việc cần xử lý.
+ *
+ * @param {NavItemLinkProps} props - Props của mục nav.
+ * @returns {import('react').ReactElement} Phần tử `<li>` chứa `NavLink` và badge tùy chọn.
+ *
+ * @example
+ * <NavItemLink
+ *   item={MODERATOR_NAV_SECTIONS[0].items[0]}
+ *   pathname="/moderator/reports"
+ *   badgeCounts={{ reports: 3, content: 1 }}
+ *   onNavigate={() => setSidebarOpen(false)}
+ * />
+ */
 function NavItemLink({ item, pathname, badgeCounts, onNavigate }) {
   const active = isModeratorNavActive(item, pathname);
   const badgeCount = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
@@ -47,6 +99,20 @@ function NavItemLink({ item, pathname, badgeCounts, onNavigate }) {
   );
 }
 
+/**
+ * Sidebar chính của moderator, chịu trách nhiệm:
+ * - khóa cuộn body khi menu mobile mở,
+ * - tải và đồng bộ badge hàng đợi moderation,
+ * - render các nhóm điều hướng từ `MODERATOR_NAV_SECTIONS`.
+ *
+ * Badge được refresh khi:
+ * - component mount,
+ * - nhận event cập nhật thống kê moderation,
+ * - nhận event thay đổi báo cáo đề thi,
+ * - hoặc storage thay đổi giữa các tab.
+ *
+ * @returns {import('react').ReactElement} Sidebar moderator kèm overlay mobile khi mở menu.
+ */
 function ModeratorSidebar() {
   const { pathname } = useLocation();
   const { sidebarOpen, setSidebarOpen } = useModeratorPage();
@@ -80,6 +146,11 @@ function ModeratorSidebar() {
     };
   }, []);
 
+  /**
+   * Đóng sidebar sau khi điều hướng trên thiết bị nhỏ để trả lại không gian nội dung.
+   *
+   * @returns {void}
+   */
   function handleNavClick() {
     if (window.innerWidth <= 1024) {
       setSidebarOpen(false);

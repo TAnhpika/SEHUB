@@ -5,6 +5,25 @@ import { useExamFormFlow } from "@/features/exams/examFormFlow";
 import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWizardContext";
 import styles from "./ExamWizardStepper.module.css";
 
+/**
+ * @fileoverview Sidebar stepper hiển thị tiến trình 3 bước wizard đề cuối kỳ.
+ *
+ * Cho phép điều hướng giữa các bước đã hoàn thành, hiển thị ghi chú revision,
+ * và liên kết nhanh tới lịch sử đóng góp đề hoặc danh sách đề Admin.
+ *
+ * @module features/moderator/finalExams/components/ExamWizardStepper
+ */
+
+/**
+ * Sidebar stepper 3 bước wizard đề cuối kỳ.
+ *
+ * Xác định bước hiện tại theo `location.pathname`, disable các bước chưa tới.
+ *
+ * @returns {import('react').ReactElement} Aside stepper với danh sách bước và link lịch sử.
+ *
+ * @example
+ * <ExamWizardStepper />
+ */
 function ExamWizardStepper() {
   const location = useLocation();
   const navigate = useNavigate();

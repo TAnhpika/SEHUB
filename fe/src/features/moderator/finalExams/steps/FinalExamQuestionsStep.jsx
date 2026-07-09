@@ -21,6 +21,22 @@ import QuestionEditorCard from "@/features/moderator/finalExams/components/Quest
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
 import styles from "./FinalExamQuestionsStep.module.css";
 
+/**
+ * @fileoverview Bước 2 wizard đề cuối kỳ — nhập / import câu hỏi trắc nghiệm.
+ *
+ * Hỗ trợ:
+ * - Soạn thủ công từng câu qua `QuestionEditorCard`.
+ * - Import Markdown hoặc OCR (mock) từ file.
+ * - Theo dõi tiến độ hoàn thiện và lưu nháp đóng góp.
+ *
+ * @module features/moderator/finalExams/steps/FinalExamQuestionsStep
+ */
+
+/**
+ * Bước 2 wizard: soạn hoặc import danh sách câu hỏi.
+ *
+ * @returns {import('react').ReactElement | null} Giao diện nhập câu hỏi hoặc `null` khi chưa có câu active.
+ */
 function FinalExamQuestionsStep() {
   const navigate = useNavigate();
   const { showToast } = useToast();

@@ -25,8 +25,28 @@ import {
 } from "@/utils/premiumSubscription";
 import styles from "./PaymentSuccessPage.module.css";
 
+/**
+ * @fileoverview Trang xác nhận thanh toán Premium thành công — poll kích hoạt và hiển thị chi tiết giao dịch.
+ *
+ * @module features/premium/PaymentSuccessPage
+ */
+
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
+/**
+ * Trang kết quả thanh toán Premium sau redirect từ PayOS hoặc checkout polling.
+ *
+ * **Luồng kích hoạt:**
+ * - `paidThisSession` / `mockConfirm` → kích hoạt ngay.
+ * - Ngược lại → `pollPremiumActivation(orderId)` với retry thủ công.
+ * - Trạng thái: `pending` → `active` hoặc `waiting` (cần admin xác nhận webhook).
+ *
+ * @returns {import('react').ReactElement|null} Card kết quả thanh toán; `null` khi đang tải plan.
+ *
+ * @example
+ * // Route: /home/premium/success/:planId
+ * <Route path="/home/premium/success/:planId" element={<PaymentSuccessPage />} />
+ */
 function PaymentSuccessPage() {
   const { planId } = useParams();
   const location = useLocation();
