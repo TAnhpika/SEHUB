@@ -1,13 +1,36 @@
+/**
+ * @fileoverview Trang quản lý bài nổi bật legacy (mock đơn giản) — prototype trước `FeaturedPostsPage`.
+ *
+ * Hiển thị danh sách ứng viên ghim tĩnh với chọn một bài và toast mock.
+ * Trang production dùng `/moderator/featured` → `FeaturedPostsPage`.
+ *
+ * @module features/moderator/featured/ModeratorFeaturedPage
+ */
+
 import { useState } from "react";
 import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import styles from "@/features/moderator/shared/moderatorPage.module.css";
 
+/**
+ * Danh sách bài ứng viên ghim mock cho trang legacy.
+ *
+ * @constant {ReadonlyArray<{ id: string, title: string, author: string, likes: number }>}
+ * @readonly
+ */
 const CANDIDATES = [
   { id: "1", title: "Tips ôn PRF192 trong 1 tuần", author: "minhanh_dev", likes: 128 },
   { id: "2", title: "Review môn SWP391 — checklist", author: "anhcoding12345", likes: 95 },
 ];
 
+/**
+ * Trang ghim bài nổi bật legacy — chọn một bài và lưu mock qua toast.
+ *
+ * @returns {import('react').ReactElement} Layout trang moderator đơn giản.
+ *
+ * @example
+ * <Route path="/moderator/featured-legacy" element={<ModeratorFeaturedPage />} />
+ */
 function ModeratorFeaturedPage() {
   const { showToast } = useToast();
   const [featuredId, setFeaturedId] = useState("1");
@@ -53,4 +76,10 @@ function ModeratorFeaturedPage() {
   );
 }
 
+/**
+ * Export mặc định trang bài nổi bật legacy.
+ *
+ * @type {typeof ModeratorFeaturedPage}
+ * @default
+ */
 export default ModeratorFeaturedPage;

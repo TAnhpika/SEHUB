@@ -1,3 +1,17 @@
+/**
+ * @fileoverview Trang hàng đợi duyệt bài viết pre-moderation dành cho Moderator SEHUB.
+ *
+ * Module này cung cấp giao diện đầy đủ để:
+ * - Xem, tìm kiếm, sắp xếp và phân trang bài viết sinh viên gửi chờ duyệt.
+ * - Chọn nhiều bài (checkbox) để duyệt hoặc từ chối hàng loạt.
+ * - Xem chi tiết bài (ảnh bìa, nội dung, file đính kèm) trong panel bên phải.
+ * - Hỗ trợ layout mobile: chuyển giữa danh sách và chi tiết.
+ *
+ * @module features/moderator/content/ContentModerationPage
+ * @see {@link module:features/moderator/content/contentModerationStore} — hook `useContentModerationQueue`
+ * @see {@link module:features/moderator/content/components/ContentPostDetailPanel} — panel chi tiết
+ */
+
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faCheck, faFilePdf, faImage, faRotateRight, faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -7,15 +21,49 @@ import { useToast } from "@/common/Toast/ToastProvider";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import ModeratorToolbar from "@/features/moderator/components/ModeratorToolbar/ModeratorToolbar";
 import ContentPostDetailPanel from "@/features/moderator/content/components/ContentPostDetailPanel/ContentPostDetailPanel";
+import {
+    ModeratorContentQueueTableSkeleton,
+    ModeratorDetailSkeleton,
+} from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
 import { CONTENT_QUEUE_PAGE_SIZE, filterContentQueue, SORT_OPTIONS } from "@/features/moderator/content/contentModerationData";
 import { useContentModerationDetail, useContentModerationQueue } from "@/features/moderator/content/contentModerationStore";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import styles from "./ContentModerationPage.module.css";
 
+/**
+ * Cấu hình breadcrumb trên `ModeratorPageShell` cho trang hàng đợi duyệt.
+ *
+ * @constant {ReadonlyArray<{ label: string, to?: string }>}
+ * @readonly
+ */
 const CONTENT_CRUMBS = [{ label: "Trang chủ", to: "/home" }, { label: "Kiểm duyệt", to: "/moderator/content" }, { label: "Duyệt bài viết" }];
 
+/**
+ * Thời gian debounce (ms) ô tìm kiếm trước khi cập nhật `search` trong store.
+ *
+ * @constant {number}
+ * @readonly
+ * @default 350
+ */
 const SEARCH_DEBOUNCE_MS = 350;
 
+/**
+ * Trang hàng đợi duyệt bài viết — container stateful cho luồng pre-moderation.
+ *
+ * **Luồng dữ liệu:**
+ * - `searchInput` → debounce → `setSearch` → `useContentModerationQueue` → `items`.
+ * - `filterContentQueue` → phân trang client → `pageItems`.
+ * - `focusedId` → `useContentModerationDetail` → `ContentPostDetailPanel`.
+ *
+ * **Hành động Moderator:**
+ * - Duyệt/từ chối đơn hoặc hàng loạt qua `approveItems` / `rejectItems`.
+ *
+ * @param {{ portal?: 'admin' | 'moderator' }} [props]
+ * @returns {import('react').ReactElement} Layout workspace với bảng, bulk bar và panel chi tiết.
+ *
+ * @example
+ * <Route path="/moderator/content" element={<ContentModerationPage />} />
+ */
 function ContentModerationPage({ portal = "moderator" }) {
     const { showToast } = useToast();
     const { items, loading, error, sort, setSort, search, setSearch, refresh, approveItems, rejectItems } = useContentModerationQueue();
@@ -75,6 +123,12 @@ function ContentModerationPage({ portal = "moderator" }) {
         }
     }, [filtered, focusedId]);
 
+    /**
+     * Tạo handler onChange cho `FilterDropdown`: cập nhật state và reset trang về 1.
+     *
+     * @param {import('react').Dispatch<import('react').SetStateAction<string>>} setter - Hàm setState (ví dụ `setSort`).
+     * @returns {(value: string) => void} Callback nhận giá trị mới từ dropdown.
+     */
     function handleFilterChange(setter) {
         return (value) => {
             setter(value);
@@ -82,6 +136,13 @@ function ContentModerationPage({ portal = "moderator" }) {
         };
     }
 
+    /**
+     * Bật/tắt chọn một hàng trong bảng (checkbox); không lan sự kiện click lên `<tr>`.
+     *
+     * @param {string} id - ID bài viết.
+     * @param {import('react').ChangeEvent<HTMLInputElement>} event - Sự kiện checkbox.
+     * @returns {void}
+     */
     function toggleRow(id, event) {
         event.stopPropagation();
         setSelectedIds((prev) => {
@@ -92,6 +153,12 @@ function ContentModerationPage({ portal = "moderator" }) {
         });
     }
 
+    /**
+     * Chọn/bỏ chọn tất cả bài trên trang hiện tại (header checkbox).
+     *
+     * @param {import('react').ChangeEvent<HTMLInputElement>} event - Sự kiện checkbox header.
+     * @returns {void}
+     */
     function togglePageRows(event) {
         event.stopPropagation();
         setSelectedIds((prev) => {
@@ -105,6 +172,12 @@ function ContentModerationPage({ portal = "moderator" }) {
         });
     }
 
+    /**
+     * Xóa các ID khỏi `selectedIds` sau duyệt/từ chối; đóng panel nếu bài đang focus bị xử lý.
+     *
+     * @param {string[]} ids - ID bài đã duyệt hoặc từ chối.
+     * @returns {void}
+     */
     function clearSelection(ids) {
         setSelectedIds((prev) => {
             const next = new Set(prev);
@@ -116,6 +189,15 @@ function ContentModerationPage({ portal = "moderator" }) {
         }
     }
 
+    /**
+     * Duyệt một hoặc nhiều bài viết qua `approveItems` từ store.
+     *
+     * @async
+     * @param {string[]} ids - ID bài cần duyệt.
+     * @returns {Promise<void>}
+     *
+     * @throws {Error} Lỗi từ store/API — hiển thị toast.
+     */
     async function handleApprove(ids) {
         if (acting || ids.length === 0) return;
         setPendingAction({ type: "approve", ids });
@@ -130,6 +212,15 @@ function ContentModerationPage({ portal = "moderator" }) {
         }
     }
 
+    /**
+     * Từ chối một hoặc nhiều bài viết qua `rejectItems` từ store.
+     *
+     * @async
+     * @param {string[]} ids - ID bài cần từ chối.
+     * @returns {Promise<void>}
+     *
+     * @throws {Error} Lỗi từ store/API — hiển thị toast.
+     */
     async function handleReject(ids) {
         if (acting || ids.length === 0) return;
         setPendingAction({ type: "reject", ids });
@@ -144,6 +235,12 @@ function ContentModerationPage({ portal = "moderator" }) {
         }
     }
 
+    /**
+     * Làm mới hàng đợi: xóa selection, đóng panel, reset trang và gọi `refresh`.
+     *
+     * @async
+     * @returns {Promise<void>}
+     */
     async function handleRefresh() {
         setSelectedIds(new Set());
         setFocusedId(null);
@@ -156,6 +253,12 @@ function ContentModerationPage({ portal = "moderator" }) {
         }
     }
 
+    /**
+     * Mở panel chi tiết cho bài được chọn trong bảng.
+     *
+     * @param {string} id - ID bài viết.
+     * @returns {void}
+     */
     function focusItem(id) {
         setFocusedId(id);
     }
@@ -226,14 +329,11 @@ function ContentModerationPage({ portal = "moderator" }) {
                                         <th>Thời gian</th>
                                     </tr>
                                 </thead>
+                                {loading ? (
+                                    <ModeratorContentQueueTableSkeleton />
+                                ) : (
                                 <tbody>
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan={4} className={styles.empty}>
-                                                Đang tải hàng đợi duyệt...
-                                            </td>
-                                        </tr>
-                                    ) : error ? (
+                                    {error ? (
                                         <tr>
                                             <td colSpan={4} className={styles.empty} role="alert">
                                                 {error}
@@ -312,6 +412,7 @@ function ContentModerationPage({ portal = "moderator" }) {
                                         })
                                     )}
                                 </tbody>
+                                )}
                             </table>
                         </div>
 
@@ -342,7 +443,7 @@ function ContentModerationPage({ portal = "moderator" }) {
                             </button>
                         ) : null}
                         {detailLoading && focusedId ? (
-                            <div className={styles.empty}>Đang tải chi tiết bài viết...</div>
+                            <ModeratorDetailSkeleton aria-label="Đang tải chi tiết bài viết" />
                         ) : (
                             <ContentPostDetailPanel
                                 item={focusedItem}
@@ -385,4 +486,14 @@ function ContentModerationPage({ portal = "moderator" }) {
     );
 }
 
+/**
+ * Export mặc định trang hàng đợi duyệt bài viết cho router Moderator.
+ *
+ * @type {typeof ContentModerationPage}
+ * @default
+ *
+ * @example
+ * import ContentModerationPage from './ContentModerationPage/ContentModerationPage';
+ * <Route path="content" element={<ContentModerationPage />} />
+ */
 export default ContentModerationPage;

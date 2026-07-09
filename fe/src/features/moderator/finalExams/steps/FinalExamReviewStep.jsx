@@ -16,6 +16,23 @@ import { useFinalExamWizard } from "@/features/moderator/finalExams/FinalExamWiz
 import WizardBottomActions from "@/features/moderator/finalExams/components/WizardBottomActions";
 import styles from "./FinalExamReviewStep.module.css";
 
+/**
+ * @fileoverview Bước 3 wizard đề cuối kỳ — xem lại và gửi duyệt / xuất bản.
+ *
+ * Hiển thị tóm tắt metadata, preview 5 câu đầu, xử lý:
+ * - Gửi duyệt Admin (Moderator).
+ * - Xuất bản trực tiếp (Admin).
+ * - Gửi lại / gửi bản revision khi chỉnh sửa đề đã tồn tại.
+ * - Xác nhận khi đề trùng nội dung SHA-256 (HTTP 409).
+ *
+ * @module features/moderator/finalExams/steps/FinalExamReviewStep
+ */
+
+/**
+ * Bước 3 wizard: xem lại đề và submit xuất bản / gửi duyệt.
+ *
+ * @returns {import('react').ReactElement} Tóm tắt đề và nút gửi.
+ */
 function FinalExamReviewStep() {
   const navigate = useNavigate();
   const { showToast } = useToast();

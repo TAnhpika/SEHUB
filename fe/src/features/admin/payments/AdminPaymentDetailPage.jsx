@@ -4,6 +4,7 @@ import Button from "@/common/Button/Button";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
+import { StaffModalDetailSkeleton } from "@/common/Skeleton/StaffSkeleton";
 import AdminBackLink from "@/features/admin/shared/AdminBackLink";
 import StatusBadge from "@/features/admin/shared/StatusBadge";
 import AdminRefundModal from "@/features/admin/payments/AdminRefundModal";
@@ -79,7 +80,7 @@ function AdminPaymentDetailPage() {
           { label: "Thanh toán", to: "/admin/payments" },
         ]}
       >
-        <p className={styles.empty}>Đang tải giao dịch...</p>
+        <StaffModalDetailSkeleton aria-label="Đang tải giao dịch" />
       </AdminPageLayout>
     );
   }

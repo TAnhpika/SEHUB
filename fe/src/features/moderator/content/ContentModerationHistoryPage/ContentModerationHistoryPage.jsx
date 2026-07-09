@@ -1,3 +1,15 @@
+/**
+ * @fileoverview Trang lịch sử duyệt bài viết — theo dõi bài chờ, đã duyệt và đã từ chối.
+ *
+ * Module này cung cấp:
+ * - Metric cards đếm số bài theo trạng thái (mock client-side hoặc API `loadModerationCounts`).
+ * - Tab lọc trạng thái đồng bộ query URL (`?tab=`, `?id=`).
+ * - Bảng lịch sử kèm panel chi tiết và deep-link mở bài cụ thể.
+ *
+ * @module features/moderator/content/ContentModerationHistoryPage
+ * @see {@link module:features/moderator/content/contentModerationStore} — `useContentModerationHistory`
+ */
+
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -16,6 +28,10 @@ import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShe
 import ModeratorToolbar from "@/features/moderator/components/ModeratorToolbar/ModeratorToolbar";
 import ContentPostDetailPanel from "@/features/moderator/content/components/ContentPostDetailPanel/ContentPostDetailPanel";
 import {
+  ModeratorContentHistoryTableSkeleton,
+  ModeratorDetailSkeleton,
+} from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
+import {
   CONTENT_HISTORY_PAGE_SIZE,
   countContentByStatus,
   filterContentItems,
@@ -33,19 +49,62 @@ import {
 } from "@/features/moderator/content/contentModerationStore";
 import styles from "./ContentModerationHistoryPage.module.css";
 
+/**
+ * Breadcrumb điều hướng trang lịch sử duyệt bài viết.
+ *
+ * @constant {ReadonlyArray<{ label: string, to?: string }>}
+ * @readonly
+ */
 const HISTORY_CRUMBS = [
   { label: "Trang chủ", to: "/home" },
   { label: "Kiểm duyệt", to: "/moderator/content" },
   { label: "Lịch sử duyệt bài" },
 ];
 
+/**
+ * Thời gian debounce (ms) ô tìm kiếm trước khi cập nhật `search`.
+ *
+ * @constant {number}
+ * @readonly
+ * @default 350
+ */
 const SEARCH_DEBOUNCE_MS = 350;
 
+/**
+ * @typedef {Object} StatusBadgeProps
+ * @property {string} status - Khóa trạng thái: `pending` | `approved` | `rejected`.
+ */
+
+/**
+ * Hiển thị badge trạng thái kiểm duyệt bài viết theo `STATUS_META`.
+ *
+ * @param {StatusBadgeProps} props - Props component.
+ * @returns {import('react').ReactElement} `ModeratorBadge` với nhãn và tone tương ứng.
+ *
+ * @example
+ * <StatusBadge status="approved" />
+ */
 function StatusBadge({ status }) {
   const meta = STATUS_META[status] ?? STATUS_META.pending;
   return <ModeratorBadge label={meta.label} tone={meta.tone} dot />;
 }
 
+/**
+ * Trang lịch sử duyệt bài viết — metric, tab lọc, bảng và panel chi tiết.
+ *
+ * **Deep-link URL:**
+ * - `?tab=pending|approved|rejected|all` — chọn tab khi mount.
+ * - `?id={postId}` — focus bài và đồng bộ tab theo `status` của bài.
+ *
+ * @returns {import('react').ReactElement} Layout trang lịch sử kiểm duyệt.
+ *
+ * @example
+ * <Route path="/moderator/content/history" element={<ContentModerationHistoryPage />} />
+ *
+ * @example
+ * // Deep-link mở bài đã từ chối:
+ * // /moderator/content/history?tab=rejected&id=ch-3
+ */
 function ContentModerationHistoryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState("all");
@@ -141,6 +200,12 @@ function ContentModerationHistoryPage() {
     }
   }, [filtered, focusedId]);
 
+  /**
+   * Đổi tab trạng thái, reset trang và cập nhật query `tab` (xóa `id`).
+   *
+   * @param {string} nextTab - ID tab từ `HISTORY_STATUS_TABS`.
+   * @returns {void}
+   */
   function handleTabChange(nextTab) {
     setTab(nextTab);
     setPage(1);
@@ -155,6 +220,12 @@ function ContentModerationHistoryPage() {
     );
   }
 
+  /**
+   * Tạo handler onChange cho `FilterDropdown` — cập nhật state và reset trang.
+   *
+   * @param {import('react').Dispatch<import('react').SetStateAction<string>>} setter - Hàm setState.
+   * @returns {(value: string) => void}
+   */
   function handleFilterChange(setter) {
     return (value) => {
       setter(value);
@@ -162,6 +233,12 @@ function ContentModerationHistoryPage() {
     };
   }
 
+  /**
+   * Chọn bài trong bảng và đồng bộ `id` + `tab` lên URL.
+   *
+   * @param {string} id - ID bài viết.
+   * @returns {void}
+   */
   function focusItem(id) {
     setFocusedId(id);
     setSearchParams(
@@ -272,14 +349,11 @@ function ContentModerationHistoryPage() {
                     <th>Thời gian</th>
                   </tr>
                 </thead>
+                {loading ? (
+                  <ModeratorContentHistoryTableSkeleton />
+                ) : (
                 <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={4} className={styles.empty}>
-                        Đang tải lịch sử duyệt...
-                      </td>
-                    </tr>
-                  ) : error ? (
+                  {error ? (
                     <tr>
                       <td colSpan={4} className={styles.empty} role="alert">
                         {error}
@@ -341,6 +415,7 @@ function ContentModerationHistoryPage() {
                     })
                   )}
                 </tbody>
+                )}
               </table>
             </div>
 
@@ -361,7 +436,7 @@ function ContentModerationHistoryPage() {
 
           <aside className={styles.detailCol} aria-label="Chi tiết bài viết">
             {detailLoading && focusedId ? (
-              <div className={styles.empty}>Đang tải chi tiết bài viết...</div>
+              <ModeratorDetailSkeleton aria-label="Đang tải chi tiết bài viết" />
             ) : (
               <ContentPostDetailPanel item={focusedItemResolved} mode="history" />
             )}
@@ -372,4 +447,10 @@ function ContentModerationHistoryPage() {
   );
 }
 
+/**
+ * Export mặc định trang lịch sử duyệt bài viết.
+ *
+ * @type {typeof ContentModerationHistoryPage}
+ * @default
+ */
 export default ContentModerationHistoryPage;

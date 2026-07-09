@@ -17,7 +17,23 @@ import { getPlanById } from "@/features/landing/PricingModal/pricingData";
 import logoSrc from "@/img/logo.png";
 import styles from "./LandingPage.module.css";
 
+/**
+ * @fileoverview Landing page công khai của SEHUB với hero banner, điểm nổi bật, thống kê và CTA Premium.
+ *
+ * Trang này là entry marketing chính cho guest user trước khi đăng ký hoặc mở modal bảng giá.
+ *
+ * @module features/landing/LandingPage
+ */
+
 const SEMESTER_PLAN = getPlanById("semester");
+
+/**
+ * @typedef {Object} LandingFeatureItem
+ * @property {import('@fortawesome/fontawesome-svg-core').IconDefinition} icon - Icon minh họa cho tính năng.
+ * @property {string} iconClass - Tên class màu/icon variant trong CSS module.
+ * @property {string} title - Tiêu đề ngắn của tính năng.
+ * @property {string} desc - Mô tả lợi ích chính cho sinh viên.
+ */
 
 const FEATURES = [
   {
@@ -46,6 +62,12 @@ const FEATURES = [
   },
 ];
 
+/**
+ * @typedef {Object} LandingStatItem
+ * @property {string} value - Giá trị thống kê hiển thị nổi bật.
+ * @property {string} label - Nhãn diễn giải cho chỉ số.
+ */
+
 const STATS = [
   { value: "500+", label: "Bộ đề cập nhật" },
   { value: "2.000+", label: "Sinh viên" },
@@ -53,10 +75,26 @@ const STATS = [
   { value: "26", label: "Kết nối" },
 ];
 
+/**
+ * Cuộn mượt đến một section trên landing page theo `id`.
+ *
+ * Dùng cho CTA "Xem chi tiết" để đưa người dùng từ hero xuống phần nội dung bên dưới.
+ *
+ * @param {string} id - ID của phần tử đích trong DOM.
+ * @returns {void}
+ *
+ * @example
+ * scrollToSection('features');
+ */
 function scrollToSection(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+/**
+ * Landing page dành cho guest user: giới thiệu hệ sinh thái SEHUB và mở modal bảng giá Premium.
+ *
+ * @returns {import('react').ReactElement} Cây giao diện landing page hoàn chỉnh.
+ */
 function LandingPage() {
   const [pricingOpen, setPricingOpen] = useState(false);
 

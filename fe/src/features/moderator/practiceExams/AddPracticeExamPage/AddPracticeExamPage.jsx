@@ -18,6 +18,7 @@ import { saveAdminPracticeExamFromPayload } from "@/features/admin/exams/adminEx
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import { useExamFormFlow } from "@/features/exams/examFormFlow";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
+import { ModeratorFormSkeleton } from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
 import ExamContributionAuditList from "@/features/moderator/exams/components/ExamContributionAuditList/ExamContributionAuditList";
 import {
   ApiError,
@@ -47,12 +48,34 @@ import {
 import { loadReviewCourses, REVIEW_COURSES } from "@/features/review/ReviewQuestionsPage/reviewData";
 import styles from "./AddPracticeExamPage.module.css";
 
+/**
+ * @fileoverview Trang tạo / sửa đề thực hành cho Moderator và Admin.
+ *
+ * Moderator upload file đề (PDF/ZIP/RAR/DOCX), mô tả yêu cầu, ghim đề,
+ * lưu nháp hoặc gửi Admin duyệt. Hỗ trợ tab nhật ký đóng góp, chỉnh sửa đề bị từ chối,
+ * và gửi bản revision của đề đã public.
+ *
+ * @module features/moderator/practiceExams/AddPracticeExamPage
+ */
+
+/**
+ * Breadcrumb khi Moderator thêm đề thực hành mới.
+ *
+ * @constant {ReadonlyArray<{ label: string, to?: string }>}
+ * @readonly
+ */
 const MOD_PRACTICE_CRUMBS = [
   { label: "Trang chủ", to: "/home" },
   { label: "Đóng góp" },
   { label: "Thêm đề thực hành" },
 ];
 
+/**
+ * Breadcrumb khi Moderator sửa đề thực hành đã gửi.
+ *
+ * @constant {ReadonlyArray<{ label: string, to?: string }>}
+ * @readonly
+ */
 const EDIT_PRACTICE_CRUMBS = [
   { label: "Trang chủ", to: "/home" },
   { label: "Đóng góp" },
@@ -60,9 +83,23 @@ const EDIT_PRACTICE_CRUMBS = [
   { label: "Sửa đề thực hành" },
 ];
 
+/** @constant {string} Chuỗi `accept` cho input file đính kèm. */
 const ACCEPTED_TYPES = PRACTICE_UPLOAD_ACCEPT;
+
+/** @constant {number} Giới hạn dung lượng file hiển thị trên UI (MB). */
 const MAX_FILE_MB = 50;
 
+/**
+ * @typedef {Object} FileTypeIconProps
+ * @property {'pdf' | 'zip'} type - Loại icon hiển thị theo extension file.
+ */
+
+/**
+ * Icon loại file đính kèm (PDF hoặc archive).
+ *
+ * @param {FileTypeIconProps} props - Props của component.
+ * @returns {import('react').ReactElement} FontAwesome icon.
+ */
 function FileTypeIcon({ type }) {
   if (type === "pdf") {
     return <FontAwesomeIcon icon={faFilePdf} className={styles["file-icon-pdf"]} />;
@@ -70,6 +107,11 @@ function FileTypeIcon({ type }) {
   return <FontAwesomeIcon icon={faFileArchive} className={styles["file-icon-zip"]} />;
 }
 
+/**
+ * Trang thêm / sửa đề thực hành — form upload, lưu nháp, gửi duyệt hoặc xuất bản Admin.
+ *
+ * @returns {import('react').ReactElement} Form đề thực hành bọc trong page shell phù hợp scope.
+ */
 function AddPracticeExamPage() {
   const navigate = useNavigate();
   const { examId: routeExamId } = useParams();
@@ -381,7 +423,7 @@ function AddPracticeExamPage() {
   ];
 
   const pageBody = loadingExam ? (
-    <p className={styles.hint}>Đang tải đề...</p>
+    <ModeratorFormSkeleton aria-label="Đang tải đề thực hành" />
   ) : loadExamError ? (
     <p className={styles.hint}>{loadExamError}</p>
   ) : (

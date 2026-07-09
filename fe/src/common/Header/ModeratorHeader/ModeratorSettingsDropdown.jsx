@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Dropdown lối tắt nghiệp vụ dành cho Moderator trong header SEHUB.
+ *
+ * Panel này gom các tuyến điều hướng moderator hay dùng nhất như xử lý báo cáo,
+ * duyệt bài và theo dõi tài khoản vi phạm để giảm số lần mở sidebar khi thao tác nhanh.
+ *
+ * @module common/Header/ModeratorHeader/ModeratorSettingsDropdown
+ * @see {@link module:common/Header/ModeratorHeader/moderatorHeaderData} - Nguồn dữ liệu lối tắt moderator.
+ */
+
 import { useEffect, useId, useRef } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -6,6 +16,31 @@ import { MODERATOR_QUICK_LINKS } from "./moderatorHeaderData";
 import headerStyles from "./ModeratorHeader.module.css";
 import styles from "./ModeratorHeaderDropdown.module.css";
 
+/**
+ * @typedef {Object} ModeratorSettingsDropdownProps
+ * @property {boolean} open - Trạng thái panel đang mở hay đóng.
+ * @property {() => void} onToggle - Callback mở/đóng panel khi nhấn nút bánh răng.
+ * @property {() => void} onClose - Callback đóng panel khi chọn item, click ngoài hoặc nhấn Escape.
+ */
+
+/**
+ * Dropdown chứa các lối tắt điều hướng dành riêng cho moderator.
+ *
+ * Panel được đóng tự động khi:
+ * - click ra ngoài vùng dropdown,
+ * - nhấn phím `Escape`,
+ * - hoặc chọn một mục điều hướng.
+ *
+ * @param {ModeratorSettingsDropdownProps} props - Props điều khiển trạng thái của dropdown.
+ * @returns {import('react').ReactElement} Nút bánh răng và panel lối tắt moderator.
+ *
+ * @example
+ * <ModeratorSettingsDropdown
+ *   open={openPanel === "settings"}
+ *   onToggle={() => setOpenPanel("settings")}
+ *   onClose={() => setOpenPanel(null)}
+ * />
+ */
 function ModeratorSettingsDropdown({ open, onToggle, onClose }) {
   const rootRef = useRef(null);
   const panelId = useId();

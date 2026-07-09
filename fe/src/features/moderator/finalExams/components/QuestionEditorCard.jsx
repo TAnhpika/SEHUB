@@ -12,6 +12,34 @@ import {
 } from "@/features/exams/examQuestionTypes";
 import styles from "./QuestionEditorCard.module.css";
 
+/**
+ * @fileoverview Form soạn một câu hỏi trắc nghiệm trong wizard đề cuối kỳ.
+ *
+ * Hỗ trợ single-choice, multi-select, thêm/xóa phương án, rich text nội dung,
+ * giải thích đáp án và hiển thị cảnh báo import.
+ *
+ * @module features/moderator/finalExams/components/QuestionEditorCard
+ */
+
+/**
+ * @typedef {Object} QuestionEditorCardProps
+ * @property {number} questionNumber - Số thứ tự câu hiển thị (1-based).
+ * @property {object} question - Object câu hỏi wizard (content, answers, correctAnswer, ...).
+ * @property {Array<string>} [importWarnings=[]] - Cảnh báo từ bước import Markdown/OCR.
+ * @property {(patch: object) => void} onChange - Cập nhật một phần câu hỏi.
+ * @property {(key: string, text: string) => void} onAnswerChange - Cập nhật text phương án.
+ * @property {(key: string) => void} onCorrectAnswerChange - Chọn đáp án đúng (single).
+ * @property {(answers: string[]) => void} onCorrectAnswersChange - Chọn đáp án đúng (multi).
+ * @property {() => void} onToggleExplanation - Bật/tắt khối giải thích.
+ * @property {(() => void) | undefined} onRemove - Xóa câu hỏi (undefined để ẩn nút xóa).
+ */
+
+/**
+ * Card editor soạn một câu hỏi trắc nghiệm đầy đủ.
+ *
+ * @param {QuestionEditorCardProps} props - Props của component.
+ * @returns {import('react').ReactElement} Form câu hỏi với rich text và phương án.
+ */
 function QuestionEditorCard({
   questionNumber,
   question,

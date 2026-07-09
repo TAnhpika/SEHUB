@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Cấu hình root app và toàn bộ cây route của SEHUB FE.
+ *
+ * Module này tập trung:
+ * - Bọc các provider nền (`ThemeProvider`, `AuthProvider`, toast, confirm dialog).
+ * - Khai báo lazy routes cho khu vực guest, authenticated, Premium, Admin và Moderator.
+ * - Áp các route guard như `PrivateRoute`, `PremiumRoute`, `AdminRoute`, `ModeratorRoute`.
+ *
+ * @module app/App
+ */
+
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ToastProvider } from "@/common/Toast/ToastProvider";
@@ -96,10 +107,31 @@ const PremiumRefundFormPage = lazy(() => import("@/features/premium/PremiumRefun
 const SupportPage = lazy(() => import("@/features/support/SupportPage/SupportPage"));
 const ChatbotAdvisorPage = lazy(() => import("@/features/chatbot/ChatbotAdvisorPage/ChatbotAdvisorPage"));
 
+/**
+ * Fallback dùng trong lúc lazy route đang tải hoặc auth bootstrap chưa sẵn sàng.
+ *
+ * @returns {import('react').ReactElement} Skeleton/fallback cho toàn route tree.
+ */
 function RouteFallback() {
   return <AuthBootstrapFallback />;
 }
 
+/**
+ * Component gốc của ứng dụng web SEHUB.
+ *
+ * Cây route được phân tầng như sau:
+ * - Guest/public: landing, support, login/register/forgot-password.
+ * - Community/public-like: đọc feed, đề, tài liệu; một số thao tác làm bài bị chặn bởi `PremiumRoute`.
+ * - Authenticated `/home`: workspace chính của user sau đăng nhập.
+ * - Premium-only: AI Advisor, My Learning, focus exam flows.
+ * - Admin/Moderator: khu vực quản trị và kiểm duyệt riêng.
+ *
+ * @returns {import('react').ReactElement} Root app với router và toàn bộ provider nền.
+ *
+ * @example
+ * import { createRoot } from "react-dom/client";
+ * createRoot(document.getElementById("root")).render(<App />);
+ */
 function App() {
   return (
     <ThemeProvider>

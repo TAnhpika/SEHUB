@@ -26,6 +26,32 @@ import {
 } from "@/utils/premiumSubscription";
 import styles from "./PricingContent.module.css";
 
+/**
+ * @fileoverview Nội dung bảng giá Premium — danh sách gói, so sánh tính năng và hoàn tiền.
+ *
+ * Dùng chung cho `PremiumPage` (authenticated) và landing page (guest với `requireLogin`).
+ *
+ * @module features/premium/PricingContent
+ */
+
+/**
+ * @typedef {Object} ComparisonCellValue
+ * @property {'check'|'cross'|'text'} type - Loại ô so sánh.
+ * @property {string} [text] - Nội dung text khi `type === 'text'`.
+ * @property {boolean} [highlight] - Highlight ô Premium.
+ */
+
+/**
+ * @typedef {Object} ComparisonCellProps
+ * @property {ComparisonCellValue} value - Giá trị ô so sánh Free vs Premium.
+ */
+
+/**
+ * Render một ô trong bảng so sánh tính năng (check / cross / text).
+ *
+ * @param {ComparisonCellProps} props - Props của component.
+ * @returns {import('react').ReactElement} Icon hoặc nhãn text.
+ */
 function ComparisonCell({ value }) {
   if (value.type === "check") {
     return (
@@ -52,6 +78,28 @@ function ComparisonCell({ value }) {
   );
 }
 
+/**
+ * @typedef {Object} PricingContentProps
+ * @property {boolean} [requireLogin=false] - `true` trên landing: chọn gói sẽ redirect login.
+ * @property {() => void} [onGuestRedirect] - Callback trước khi redirect guest tới `/login`.
+ */
+
+/**
+ * Component nội dung bảng giá Premium: banner trạng thái, thẻ gói, bảng so sánh và modal hoàn tiền.
+ *
+ * Khi user đã Premium: hiển thị banner hết hạn, nút gia hạn và yêu cầu hoàn tiền (nếu đủ điều kiện).
+ *
+ * @param {PricingContentProps} props - Props của component.
+ * @returns {import('react').ReactElement} Fragment chứa banner, plans grid và comparison table.
+ *
+ * @example
+ * // Trang authenticated:
+ * <PricingContent />
+ *
+ * @example
+ * // Landing guest:
+ * <PricingContent requireLogin onGuestRedirect={() => setModalOpen(false)} />
+ */
 function PricingContent({ requireLogin = false, onGuestRedirect }) {
   const navigate = useNavigate();
   const { showCountdownToast, showToast } = useToast();

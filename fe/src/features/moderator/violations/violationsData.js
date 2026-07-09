@@ -1,9 +1,31 @@
+/**
+ * @fileoverview Tầng dữ liệu và nghiệp vụ tài khoản vi phạm cho Moderator.
+ *
+ * Cung cấp hằng số UI (thời hạn khóa, trạng thái, hạng), tiện ích tính lock info,
+ * lọc/phân trang danh sách và API warn/ban/unban.
+ *
+ * @module features/moderator/violations/violationsData
+ * @see {@link module:features/moderator/violations/ViolatingAccountsPage}
+ */
+
 import * as adminApi from "@/api/adminApi";
 import { mapViolatingUser, mapViolatingUserDetail } from "@/api/adminMapper";
 
+/**
+ * Số tài khoản vi phạm mỗi trang trên bảng Moderator.
+ *
+ * @constant {number}
+ * @readonly
+ * @default 10
+ */
 export const VIOLATIONS_PAGE_SIZE = 10;
 
-/** Moderator: khóa tạm 1 / 7 / 30 ngày — mức nghiêm trọng tăng dần (§2.4) */
+/**
+ * Tùy chọn thời hạn khóa tạm Moderator: 1 / 7 / 30 ngày với mức nghiêm trọng tăng dần (§2.4).
+ *
+ * @constant {ReadonlyArray<{ value: number, label: string, severity: string, severityLabel: string, description: string }>}
+ * @readonly
+ */
 export const LOCK_DURATION_OPTIONS = [
   {
     value: 1,
@@ -28,11 +50,22 @@ export const LOCK_DURATION_OPTIONS = [
   },
 ];
 
+/**
+ * Tra cứu metadata mức nghiêm trọng khóa theo số ngày.
+ *
+ * @param {number} days - Số ngày khóa (1, 7, hoặc 30).
+ * @returns {Object} Phần tử từ `LOCK_DURATION_OPTIONS`; mặc định mức 1 ngày nếu không khớp.
+ */
 export function getLockSeverityMeta(days) {
   return LOCK_DURATION_OPTIONS.find((option) => option.value === days) ?? LOCK_DURATION_OPTIONS[0];
 }
 
-/** Map mức khóa → tone ModeratorBadge (đồng bộ panel) */
+/**
+ * Map mức khóa (`mild` / `moderate` / `severe`) → tone `ModeratorBadge`.
+ *
+ * @param {string} severity - Khóa mức độ từ `LOCK_DURATION_OPTIONS`.
+ * @returns {string} Tone badge: `warning`, `bronze`, hoặc `danger`.
+ */
 export function getLockSeverityTone(severity) {
   const tones = {
     mild: "warning",
@@ -60,6 +93,28 @@ function formatRemainingDuration(remainingMs) {
   return `${days} ngày`;
 }
 
+/**
+ * @typedef {Object} AccountLockInfo
+ * @property {boolean} isActive - Đang bị khóa tạm và chưa hết hạn.
+ * @property {boolean} [expired] - Khóa đã hết hạn nhưng status vẫn `locked`.
+ * @property {string|null} statusLabel - Nhãn badge trạng thái khóa.
+ * @property {string|null} detailLabel - Dòng mô tả chi tiết (thời gian còn lại).
+ * @property {number} [remainingMs] - Milliseconds còn lại đến `lockedUntil`.
+ * @property {number} [lockDurationDays] - Số ngày khóa ban đầu.
+ * @property {string} [severity] - Khóa mức độ: `mild`, `moderate`, `severe`.
+ * @property {string} [severityLabel] - Nhãn tiếng Việt mức nghiêm trọng.
+ */
+
+/**
+ * Tính thông tin khóa tạm hiện tại của tài khoản (active / expired / không khóa).
+ *
+ * @param {Object} account - Tài khoản vi phạm (`status`, `lockedUntil`, `lockDurationDays`).
+ * @param {number} [now=Date.now()] - Timestamp tham chiếu (dùng cho test).
+ * @returns {AccountLockInfo} Thông tin render badge và chi tiết khóa.
+ *
+ * @example
+ * getAccountLockInfo({ status: 'locked', lockedUntil: '2026-07-15', lockDurationDays: 7 });
+ */
 export function getAccountLockInfo(account, now = Date.now()) {
   if (account.status !== "locked" || !account.lockedUntil) {
     return { isActive: false, statusLabel: null, detailLabel: null };
@@ -95,6 +150,13 @@ export function getAccountLockInfo(account, now = Date.now()) {
   };
 }
 
+/**
+ * Tạo object cập nhật state sau khi khóa tạm tài khoản.
+ *
+ * @param {number} days - Số ngày khóa (1, 7, hoặc 30).
+ * @param {Date} [fromDate=new Date()] - Thời điểm bắt đầu khóa.
+ * @returns {Object} Patch: `status: 'locked'`, `lockDurationDays`, `lockedUntil`, `lastAction`.
+ */
 export function buildLockUpdate(days, fromDate = new Date()) {
   return {
     status: "locked",
@@ -105,6 +167,12 @@ export function buildLockUpdate(days, fromDate = new Date()) {
   };
 }
 
+/**
+ * Tạo object cập nhật state sau khi cảnh báo (warn) tài khoản.
+ *
+ * @param {Date} [fromDate=new Date()] - Thời điểm cảnh báo.
+ * @returns {Object} Patch: `status: 'warning'`, xóa lock fields, `lastAction: 'warning'`.
+ */
 export function buildWarningUpdate(fromDate = new Date()) {
   return {
     status: "warning",
@@ -115,6 +183,12 @@ export function buildWarningUpdate(fromDate = new Date()) {
   };
 }
 
+/**
+ * Tùy chọn lọc trạng thái tài khoản trên bảng vi phạm.
+ *
+ * @constant {ReadonlyArray<{ value: string, label: string }>}
+ * @readonly
+ */
 export const STATUS_OPTIONS = [
   { value: "all", label: "Trạng thái (Tất cả)" },
   { value: "locked", label: "Bị khóa" },
@@ -122,6 +196,12 @@ export const STATUS_OPTIONS = [
   { value: "normal", label: "Bình thường" },
 ];
 
+/**
+ * Tùy chọn lọc hạng gamification trên bảng vi phạm.
+ *
+ * @constant {ReadonlyArray<{ value: string, label: string }>}
+ * @readonly
+ */
 export const RANK_OPTIONS = [
   { value: "all", label: "Hạng (Tất cả)" },
   { value: "bronze", label: "Hạng Đồng" },
@@ -130,18 +210,36 @@ export const RANK_OPTIONS = [
   { value: "platinum", label: "Hạng Bạch kim" },
 ];
 
+/**
+ * Tùy chọn sắp xếp danh sách tài khoản vi phạm.
+ *
+ * @constant {ReadonlyArray<{ value: string, label: string }>}
+ * @readonly
+ */
 export const SORT_OPTIONS = [
   { value: "violations-desc", label: "Sắp xếp: Số lần vi phạm ↓" },
   { value: "violations-asc", label: "Sắp xếp: Số lần vi phạm ↑" },
   { value: "name-asc", label: "Sắp xếp: Tên A-Z" },
 ];
 
+/**
+ * Metadata nhãn và tone badge theo trạng thái tài khoản.
+ *
+ * @constant {Readonly<Record<string, { label: string, tone: string }>>}
+ * @readonly
+ */
 export const STATUS_META = {
   locked: { label: "Bị khóa", tone: "danger" },
   warning: { label: "Cảnh báo", tone: "warning" },
   normal: { label: "Bình thường", tone: "success" },
 };
 
+/**
+ * Metadata nhãn và tone huy hiệu hạng thành viên.
+ *
+ * @constant {Readonly<Record<string, { label: string, tone: string }>>}
+ * @readonly
+ */
 export const RANK_META = {
   bronze: { label: "Hạng Đồng", tone: "bronze" },
   silver: { label: "Hạng Bạc", tone: "silver" },
@@ -149,6 +247,12 @@ export const RANK_META = {
   platinum: { label: "Hạng Bạch kim", tone: "gold" },
 };
 
+/**
+ * Lý do khóa mặc định khi Moderator không nhập lý do tùy chỉnh.
+ *
+ * @constant {string}
+ * @readonly
+ */
 export const DEFAULT_BAN_REASON = "Vi phạm quy định cộng đồng SEHUB.";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
@@ -231,8 +335,29 @@ function buildMockAccounts() {
   return list;
 }
 
+/**
+ * Danh sách mock tài khoản vi phạm (~45 bản ghi) khi `VITE_USE_MOCK=true`.
+ *
+ * @constant {ReadonlyArray<Object>}
+ * @readonly
+ */
 export const VIOLATING_ACCOUNTS_MOCK = buildMockAccounts();
 
+/**
+ * @typedef {Object} FilterViolatingAccountsOptions
+ * @property {string} query - Từ khóa tìm kiếm (tên, username, email, mã SV).
+ * @property {string} status - Lọc trạng thái; `all` để bỏ lọc.
+ * @property {string} rank - Lọc hạng; `all` để bỏ lọc.
+ * @property {string} sort - Khóa sắp xếp từ `SORT_OPTIONS`.
+ */
+
+/**
+ * Lọc và sắp xếp danh sách tài khoản vi phạm theo bộ lọc UI.
+ *
+ * @param {Array} accounts - Danh sách tài khoản gốc.
+ * @param {FilterViolatingAccountsOptions} options - Bộ lọc hiện tại.
+ * @returns {Array} Tài khoản đã lọc và sắp xếp.
+ */
 export function filterViolatingAccounts(accounts, { query, status, rank, sort }) {
   const keyword = query.trim().toLowerCase();
 
@@ -258,6 +383,33 @@ export function filterViolatingAccounts(accounts, { query, status, rank, sort })
   return result;
 }
 
+/**
+ * @typedef {Object} LoadViolatingAccountsOptions
+ * @property {number} [page=1] - Trang (1-based).
+ * @property {number} [pageSize=VIOLATIONS_PAGE_SIZE] - Kích thước trang.
+ * @property {string} [search] - Từ khóa tìm kiếm.
+ * @property {string} [status='all'] - Lọc trạng thái.
+ * @property {string} [rank='all'] - Lọc hạng.
+ * @property {string} [sort='violations-desc'] - Khóa sắp xếp.
+ */
+
+/**
+ * @typedef {Object} LoadViolatingAccountsResult
+ * @property {Array} items - Tài khoản trên trang hiện tại.
+ * @property {number} page - Trang hiện tại.
+ * @property {number} pageSize - Kích thước trang.
+ * @property {number} totalCount - Tổng số tài khoản.
+ * @property {number} totalPages - Tổng số trang.
+ * @property {boolean} hasNextPage - Còn trang sau.
+ * @property {boolean} hasPreviousPage - Có trang trước.
+ */
+
+/**
+ * Tải danh sách tài khoản vi phạm có phân trang (API hoặc mock).
+ *
+ * @param {LoadViolatingAccountsOptions} [options] - Tùy chọn phân trang và lọc.
+ * @returns {Promise<LoadViolatingAccountsResult>} Kết quả phân trang.
+ */
 export async function loadViolatingAccounts({
   page = 1,
   pageSize = VIOLATIONS_PAGE_SIZE,
@@ -313,6 +465,13 @@ export async function loadViolatingAccounts({
   };
 }
 
+/**
+ * Tải chi tiết một tài khoản vi phạm (thông tin mở rộng + lịch sử xử lý).
+ *
+ * @param {string} userId - ID tài khoản.
+ * @returns {Promise<Object>} Chi tiết tài khoản đã map.
+ * @throws {Error} Khi không tìm thấy (mock) hoặc API lỗi.
+ */
 export async function loadViolatingAccountDetail(userId) {
   if (USE_MOCK) {
     const account = VIOLATING_ACCOUNTS_MOCK.find((item) => item.id === userId);
@@ -330,6 +489,13 @@ export async function loadViolatingAccountDetail(userId) {
   return mapViolatingUserDetail(detail);
 }
 
+/**
+ * Gửi cảnh báo (warn) tới tài khoản vi phạm — không khóa tài khoản.
+ *
+ * @param {string} userId - ID tài khoản.
+ * @param {string} [reason=''] - Lý do cảnh báo.
+ * @returns {Promise<Object>} Tài khoản đã cập nhật (hoặc patch mock).
+ */
 export async function submitViolatingAccountWarning(userId, reason = "") {
   if (USE_MOCK) {
     return { ...buildWarningUpdate(), reason };
@@ -339,6 +505,14 @@ export async function submitViolatingAccountWarning(userId, reason = "") {
   return mapViolatingUser(updated);
 }
 
+/**
+ * Khóa tạm tài khoản vi phạm theo thời hạn 1 / 7 / 30 ngày.
+ *
+ * @param {string} userId - ID tài khoản.
+ * @param {number} durationDays - Số ngày khóa.
+ * @param {string} [reason=DEFAULT_BAN_REASON] - Lý do khóa.
+ * @returns {Promise<Object>} Tài khoản đã cập nhật (hoặc patch mock).
+ */
 export async function submitViolatingAccountBan(userId, durationDays, reason = DEFAULT_BAN_REASON) {
   if (USE_MOCK) {
     return buildLockUpdate(durationDays);
@@ -351,6 +525,13 @@ export async function submitViolatingAccountBan(userId, durationDays, reason = D
   return mapViolatingUser(updated);
 }
 
+/**
+ * Gỡ khóa tạm tài khoản vi phạm (chỉ Moderator — khóa vĩnh viễn do Admin).
+ *
+ * @param {string} userId - ID tài khoản.
+ * @param {string} [note=''] - Ghi chú khi gỡ khóa.
+ * @returns {Promise<Object>} Tài khoản đã cập nhật (hoặc patch mock).
+ */
 export async function submitViolatingAccountUnban(userId, note = "") {
   if (USE_MOCK) {
     return buildWarningUpdate();

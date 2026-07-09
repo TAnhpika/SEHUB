@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Header điều hướng trên cùng cho khu vực Moderator SEHUB.
+ *
+ * Header này hiển thị breadcrumb theo route hiện tại, nút mở sidebar mobile, cụm
+ * tiện ích nhanh (lối tắt và thông báo), cùng menu hồ sơ cho moderator/admin đang
+ * truy cập workspace kiểm duyệt.
+ *
+ * @module common/Header/ModeratorHeader
+ * @see {@link module:features/moderator/moderatorNavData} - Resolve tiêu đề trang moderator.
+ */
+
 import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -18,6 +29,21 @@ import ThemeSwitcher from "@/common/ThemeSwitcher/ThemeSwitcher";
 import HeaderProfileMenu, { HeaderProfileLogoutItem } from "@/common/Header/shared/HeaderProfileMenu";
 import styles from "./ModeratorHeader.module.css";
 
+/**
+ * Header chính của layout moderator.
+ *
+ * Thành phần này đồng bộ các hành vi UI sau:
+ * - suy ra tiêu đề breadcrumb từ pathname hiện tại,
+ * - mở sidebar trên mobile,
+ * - điều phối panel lối tắt/thông báo sao cho chỉ một panel mở tại một thời điểm,
+ * - đóng menu hồ sơ khi blur ra ngoài,
+ * - đăng xuất và điều hướng về `/login`.
+ *
+ * @returns {import('react').ReactElement} Thanh header moderator với breadcrumb, quick actions và menu tài khoản.
+ *
+ * @example
+ * <ModeratorHeader />
+ */
 function ModeratorHeader() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -34,6 +60,11 @@ function ModeratorHeader() {
   const initial = user?.initial ?? displayName.charAt(0).toUpperCase();
   const [openPanel, setOpenPanel] = useState(null);
 
+  /**
+   * Đăng xuất người dùng hiện tại khỏi workspace moderator và quay về màn hình đăng nhập.
+   *
+   * @returns {void}
+   */
   function handleLogout() {
     setMenuOpen(false);
     logout();

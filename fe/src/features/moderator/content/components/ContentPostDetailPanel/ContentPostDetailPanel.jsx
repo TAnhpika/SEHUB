@@ -1,3 +1,12 @@
+/**
+ * @fileoverview Panel chi tiết bài viết dùng chung cho kiểm duyệt, lịch sử và bài nổi bật.
+ *
+ * Hiển thị đầy đủ: tiêu đề, nội dung rich text, ảnh bìa/inline, file đính kèm, metadata tác giả,
+ * bản ghi quyết định kiểm duyệt, và footer hành động (duyệt/từ chối/ghim) tùy `mode`.
+ *
+ * @module features/moderator/content/components/ContentPostDetailPanel
+ */
+
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -21,17 +30,53 @@ import RichTextContent from "@/common/RichTextEditor/RichTextContent";
 import { STATUS_META, TYPE_META } from "@/features/moderator/content/contentModerationData";
 import styles from "./ContentPostDetailPanel.module.css";
 
+/**
+ * @typedef {Object} AttachmentIconProps
+ * @property {string} type - Loại file: `pdf` | `zip` | khác.
+ */
+
+/**
+ * Chọn icon FontAwesome phù hợp theo loại file đính kèm.
+ *
+ * @param {AttachmentIconProps} props - Props component.
+ * @returns {import('@fortawesome/fontawesome-svg-core').IconDefinition} Icon definition.
+ */
 function AttachmentIcon({ type }) {
   if (type === "pdf") return faFilePdf;
   if (type === "zip") return faFileArchive;
   return faFile;
 }
 
+/**
+ * @typedef {Object} DetailStatusBadgeProps
+ * @property {string} status - Trạng thái kiểm duyệt bài viết.
+ */
+
+/**
+ * Badge trạng thái trong header panel chi tiết.
+ *
+ * @param {DetailStatusBadgeProps} props - Props component.
+ * @returns {import('react').ReactElement}
+ */
 function StatusBadge({ status }) {
   const meta = STATUS_META[status] ?? STATUS_META.pending;
   return <ModeratorBadge label={meta.label} tone={meta.tone} dot />;
 }
 
+/**
+ * @typedef {Object} ModerationRecordProps
+ * @property {Object} item - Bài viết có thể chứa `moderation`, `resubmission`, `status`.
+ */
+
+/**
+ * Hiển thị khối ghi nhận quyết định kiểm duyệt hoặc banner "Gửi duyệt lại".
+ *
+ * - `pending` + `resubmission`: banner vàng gửi lại sau reject.
+ * - `approved` / `rejected`: box xanh/đỏ với tên mod, thời gian, ghi chú/lý do.
+ *
+ * @param {ModerationRecordProps} props - Props component.
+ * @returns {import('react').ReactElement|null} Khối moderation hoặc `null` nếu pending thường.
+ */
 function ModerationRecord({ item }) {
   if (item.status === "pending") {
     if (item.resubmission) {
@@ -85,18 +130,35 @@ function ModerationRecord({ item }) {
 }
 
 /**
- * @param {{
- *   item: object | null,
- *   mode?: 'queue' | 'history' | 'featured',
- *   isPinned?: boolean,
- *   canPin?: boolean,
- *   onApprove?: (id: string) => void,
- *   onReject?: (id: string) => void,
- *   isApproving?: boolean,
- *   isRejecting?: boolean,
- *   onPin?: (id: string) => void,
- *   onUnpin?: (id: string) => void,
- * }} props
+ * @typedef {Object} ContentPostDetailPanelProps
+ * @property {Object|null} item - Bài viết chi tiết; `null` hiển thị empty state.
+ * @property {'queue'|'history'|'featured'} [mode='queue'] - Chế độ UI và hành động footer.
+ * @property {boolean} [isPinned=false] - Bài đang ghim (mode `featured`).
+ * @property {boolean} [canPin=true] - Còn slot ghim (mode `featured`).
+ * @property {(id: string) => void} [onApprove] - Callback duyệt bài (mode `queue`).
+ * @property {(id: string) => void} [onReject] - Callback từ chối bài (mode `queue`).
+ * @property {boolean} [isApproving=false] - Đang gọi API duyệt.
+ * @property {boolean} [isRejecting=false] - Đang gọi API từ chối.
+ * @property {(id: string) => void} [onPin] - Callback ghim bài (mode `featured`).
+ * @property {(id: string) => void} [onUnpin] - Callback bỏ ghim (mode `featured`).
+ */
+
+/**
+ * Panel xem chi tiết bài viết — dùng trong hàng đợi, lịch sử và quản lý bài nổi bật.
+ *
+ * @param {ContentPostDetailPanelProps} props - Props panel.
+ * @returns {import('react').ReactElement} Panel chi tiết hoặc empty state hướng dẫn chọn bài.
+ *
+ * @example
+ * <ContentPostDetailPanel
+ *   item={focusedItem}
+ *   mode="queue"
+ *   onApprove={(id) => handleApprove([id])}
+ *   onReject={(id) => handleReject([id])}
+ * />
+ *
+ * @example
+ * <ContentPostDetailPanel item={post} mode="featured" isPinned canPin onPin={handlePin} />
  */
 function ContentPostDetailPanel({
   item,
@@ -352,4 +414,10 @@ function ContentPostDetailPanel({
   );
 }
 
+/**
+ * Export mặc định panel chi tiết bài viết kiểm duyệt.
+ *
+ * @type {typeof ContentPostDetailPanel}
+ * @default
+ */
 export default ContentPostDetailPanel;

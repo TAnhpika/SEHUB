@@ -1,3 +1,16 @@
+/**
+ * @fileoverview Tầng dữ liệu báo cáo cộng đồng cho Moderator — tải, map, lọc và xử lý qua Admin API.
+ *
+ * Module này cung cấp:
+ * - Hằng số tab trạng thái và metadata lý do báo cáo (`REASON_META`).
+ * - Mapper từ DTO Admin → model UI Moderator (`mapAdminReportToModeratorCommunityReport`).
+ * - Hàm tải phân trang, resolve (dismiss/delete) và đếm badge pending.
+ * - Dữ liệu mock khi `VITE_USE_MOCK=true`.
+ *
+ * @module features/moderator/reports/reportsData
+ * @see {@link module:features/admin/moderation/adminReportData}
+ */
+
 import * as adminApi from "@/api/adminApi";
 import { mapAdminReportListItem } from "@/api/adminMapper";
 import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
@@ -15,15 +28,27 @@ import { isValidGuid } from "@/features/feed/postUtils";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
-/** Số báo cáo chờ từ API — tránh fallback mock (3) làm badge nhấp nháy. */
+/** @type {number|null} Số báo cáo chờ từ API — tránh fallback mock (3) làm badge nhấp nháy. */
 let cachedPendingReportsCount = null;
 
+/**
+ * Danh sách tab lọc theo trạng thái báo cáo (dùng ở UI lọc nâng cao).
+ *
+ * @constant {ReadonlyArray<{ value: string, label: string }>}
+ * @readonly
+ */
 export const REPORT_STATUS_TABS = [
   { value: "all", label: "Tất cả" },
   { value: "pending", label: "Chờ xử lý" },
   { value: "resolved", label: "Đã xử lý" },
 ];
 
+/**
+ * Metadata nhãn và tone màu cho từng lý do báo cáo (cộng đồng + đề thi + mở rộng).
+ *
+ * @constant {Readonly<Record<string, { label: string, tone: string }>>}
+ * @readonly
+ */
 export const REASON_META = {
   ...COMMUNITY_REPORT_REASON_META,
   harmful: { label: "Nội dung độc hại", tone: "muted" },
@@ -36,6 +61,12 @@ export const REASON_META = {
   other: COMMUNITY_REPORT_REASON_META.other,
 };
 
+/**
+ * Dữ liệu mock báo cáo cộng đồng dùng khi `VITE_USE_MOCK=true`.
+ *
+ * @constant {ReadonlyArray<Object>}
+ * @readonly
+ */
 export const REPORTS_MOCK = [
   {
     id: "rp-4921",
@@ -123,6 +154,13 @@ export const REPORTS_MOCK = [
   },
 ];
 
+/**
+ * Lọc danh sách báo cáo theo tab trạng thái.
+ *
+ * @param {Array} reports - Danh sách báo cáo gốc.
+ * @param {string} statusTab - `all`, `pending`, hoặc `resolved`.
+ * @returns {Array} Báo cáo đã lọc; trả về nguyên mảng nếu `statusTab === 'all'`.
+ */
 export function filterReports(reports, statusTab) {
   if (statusTab === "all") return reports;
   return reports.filter((report) => report.status === statusTab);
@@ -134,7 +172,13 @@ function getReportSortTimestamp(report) {
   return Number.isNaN(ms) ? 0 : ms;
 }
 
-/** Pending: FIFO (cũ trước). Resolved/all: mới trước. */
+/**
+ * Sắp xếp báo cáo theo thời gian: pending FIFO (cũ trước), resolved/all mới trước.
+ *
+ * @param {Array} reports - Danh sách báo cáo cần sắp xếp (không mutate mảng gốc).
+ * @param {string} [tab='all'] - Tab hiện tại; `pending` dùng thứ tự FIFO.
+ * @returns {Array} Mảng báo cáo đã sắp xếp.
+ */
 export function sortModeratorReports(reports, tab = "all") {
   return [...reports].sort((a, b) => {
     const aMs = getReportSortTimestamp(a);
@@ -180,6 +224,12 @@ function mergeResolvedCommunityReport(reports, resolvedReport) {
   return [resolvedReport, ...next];
 }
 
+/**
+ * Map DTO báo cáo Admin sang model UI Moderator (category `community`).
+ *
+ * @param {Object} adminReport - Báo cáo từ Admin API sau `mapAdminReportListItem`.
+ * @returns {Object} Báo cáo định dạng Moderator với `category: 'community'`.
+ */
 export function mapAdminReportToModeratorCommunityReport(adminReport) {
   const reporter = adminReport.reporter ?? "unknown";
   const reportedUser = adminReport.reportedUser ?? reporter;
@@ -219,10 +269,39 @@ export function mapAdminReportToModeratorCommunityReport(adminReport) {
   };
 }
 
+/**
+ * Trả về bản sao mock báo cáo cộng đồng kèm `category: 'community'`.
+ *
+ * @returns {Array} Danh sách mock reports.
+ */
 export function getCommunityReportsMock() {
   return REPORTS_MOCK.map((report) => ({ ...report, category: "community" }));
 }
 
+/**
+ * @typedef {Object} LoadModeratorCommunityReportsOptions
+ * @property {number} [page=1] - Trang API (1-based).
+ * @property {number} [pageSize] - Kích thước trang; mặc định `ADMIN_API_PAGE_SIZE`.
+ * @property {string} [status] - Lọc trạng thái: `all`, `pending`, `resolved`.
+ */
+
+/**
+ * @typedef {Object} LoadModeratorCommunityReportsResult
+ * @property {Array} items - Báo cáo đã map sang model Moderator.
+ * @property {number} totalCount - Tổng số báo cáo trên server.
+ * @property {number} page - Trang hiện tại.
+ * @property {boolean} hasMore - Còn trang tiếp theo hay không.
+ */
+
+/**
+ * Tải danh sách báo cáo cộng đồng từ Admin API (hoặc mock).
+ *
+ * Trang 1 cập nhật `cachedPendingReportsCount` cho badge navigation.
+ *
+ * @param {LoadModeratorCommunityReportsOptions} [options] - Tùy chọn phân trang và lọc.
+ * @returns {Promise<LoadModeratorCommunityReportsResult>} Kết quả phân trang.
+ * @throws {Error} Khi API thất bại (không mock).
+ */
 export async function loadModeratorCommunityReports(options = {}) {
   if (USE_MOCK) {
     return {
@@ -281,6 +360,15 @@ async function resolveModeratorCommunityReportViaApi(id, action, kind = "post") 
   }
 }
 
+/**
+ * Resolve báo cáo cộng đồng qua API rồi tải lại danh sách, chèn báo cáo vừa resolve lên đầu.
+ *
+ * @param {string} id - ID báo cáo (GUID).
+ * @param {'dismiss'|'delete'} action - Hành động: bỏ qua hoặc xóa nội dung.
+ * @param {'post'|'comment'} [kind='post'] - Loại nội dung bị báo cáo.
+ * @returns {Promise<Array|null>} Danh sách báo cáo mới, hoặc `null` khi mock.
+ * @throws {Error} Khi ID không hợp lệ hoặc API trả 404.
+ */
 export async function reloadModeratorCommunityReportsAfterResolve(id, action, kind = "post") {
   const resolvedReport = await resolveModeratorCommunityReportViaApi(id, action, kind);
   if (!resolvedReport) {
@@ -291,12 +379,25 @@ export async function reloadModeratorCommunityReportsAfterResolve(id, action, ki
   return mergeResolvedCommunityReport(list, resolvedReport);
 }
 
+/**
+ * Đồng bộ cache số báo cáo pending (badge) từ nguồn bên ngoài.
+ *
+ * Bỏ qua khi đang dùng mock.
+ *
+ * @param {number} count - Số báo cáo chờ xử lý mới nhất.
+ * @returns {void}
+ */
 export function syncCachedPendingReportsCount(count) {
   if (!USE_MOCK) {
     cachedPendingReportsCount = count;
   }
 }
 
+/**
+ * Lấy số báo cáo cộng đồng đang chờ xử lý từ cache (hoặc đếm mock).
+ *
+ * @returns {number} Số báo cáo pending; `0` nếu chưa tải lần nào.
+ */
 export function getCommunityReportsPendingCount() {
   if (USE_MOCK) {
     return REPORTS_MOCK.filter((report) => report.status === "pending").length;
@@ -304,6 +405,12 @@ export function getCommunityReportsPendingCount() {
   return cachedPendingReportsCount ?? 0;
 }
 
+/**
+ * Tải và cache số báo cáo pending từ `adminApi.getModerationStats()`.
+ *
+ * @returns {Promise<number>} Số báo cáo chờ xử lý.
+ * @throws {Error} Khi API thất bại (không mock).
+ */
 export async function loadCommunityReportsPendingCount() {
   if (USE_MOCK) {
     return getCommunityReportsPendingCount();

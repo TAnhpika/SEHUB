@@ -1,3 +1,15 @@
+/**
+ * @fileoverview Trang quản lý bài viết nổi bật — ghim/bỏ ghim bài lên sidebar feed cộng đồng.
+ *
+ * Module này cung cấp:
+ * - Cột trái: danh sách bài đang ghim (tối đa `MAX_PINNED_POSTS`).
+ * - Cột giữa: tìm kiếm và sắp xếp ứng viên ghim.
+ * - Cột phải: `ContentPostDetailPanel` mode `featured` xem trước nội dung.
+ *
+ * @module features/moderator/featured/FeaturedPostsPage
+ * @see {@link module:features/moderator/featured/featuredPostsData} — dữ liệu và API ghim
+ */
+
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -10,6 +22,7 @@ import {
 import { useToast } from "@/common/Toast/ToastProvider";
 import ContentPostDetailPanel from "@/features/moderator/content/components/ContentPostDetailPanel/ContentPostDetailPanel";
 import ModeratorEmptyState from "@/features/moderator/components/ModeratorEmptyState/ModeratorEmptyState";
+import { ModeratorFeaturedWorkspaceSkeleton } from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import {
   enrichFeaturedPost,
@@ -26,16 +39,47 @@ import {
 } from "@/features/moderator/featured/featuredPostsData";
 import styles from "./FeaturedPostsPage.module.css";
 
+/** @constant {boolean} Bật mock khi `VITE_USE_MOCK=true`. */
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+
+/** @constant {string} Sự kiện cập nhật thống kê sidebar Moderator sau khi ghim. */
 const STATS_EVENT = "sehub-moderator-stats-updated";
+
+/**
+ * Thời gian debounce (ms) ô tìm kiếm bài ứng viên ghim (API mode).
+ *
+ * @constant {number}
+ * @readonly
+ * @default 350
+ */
 const SEARCH_DEBOUNCE_MS = 350;
 
+/**
+ * Breadcrumb trang quản lý bài viết nổi bật.
+ *
+ * @constant {ReadonlyArray<{ label: string, to?: string }>}
+ * @readonly
+ */
 const FEATURED_CRUMBS = [
   { label: "Trang chủ", to: "/home" },
   { label: "Kiểm duyệt", to: "/moderator/content" },
   { label: "Bài viết nổi bật" },
 ];
 
+/**
+ * @typedef {Object} PinnedCardProps
+ * @property {Object} post - Card bài đang ghim.
+ * @property {boolean} isSelected - Bài đang được chọn xem chi tiết.
+ * @property {(id: string) => void} onSelect - Callback chọn bài.
+ * @property {(id: string) => void} onUnpin - Callback bỏ ghim.
+ */
+
+/**
+ * Card hiển thị một bài đang ghim trong cột trái.
+ *
+ * @param {PinnedCardProps} props - Props component.
+ * @returns {import('react').ReactElement} Article có thể click để xem chi tiết.
+ */
 function PinnedCard({ post, isSelected, onSelect, onUnpin }) {
   return (
     <article
@@ -94,6 +138,21 @@ function PinnedCard({ post, isSelected, onSelect, onUnpin }) {
   );
 }
 
+/**
+ * @typedef {Object} SearchResultCardProps
+ * @property {Object} post - Card bài ứng viên từ tìm kiếm.
+ * @property {boolean} isSelected - Bài đang được chọn xem chi tiết.
+ * @property {boolean} canPin - Còn slot ghim (`pinned.length < MAX_PINNED_POSTS`).
+ * @property {(id: string) => void} onSelect - Callback chọn bài.
+ * @property {(id: string) => void} onPin - Callback ghim bài.
+ */
+
+/**
+ * Card kết quả tìm kiếm bài có thể ghim.
+ *
+ * @param {SearchResultCardProps} props - Props component.
+ * @returns {import('react').ReactElement} Article với nút "Ghim bài".
+ */
 function SearchResultCard({ post, isSelected, canPin, onSelect, onPin }) {
   return (
     <article
@@ -141,6 +200,19 @@ function SearchResultCard({ post, isSelected, canPin, onSelect, onPin }) {
   );
 }
 
+/**
+ * Trang quản lý bài viết nổi bật — ghim tối đa 5 bài lên sidebar feed.
+ *
+ * **Luồng dữ liệu:**
+ * - `query` debounce → `loadFeaturedPostsState` (API) hoặc filter client (mock).
+ * - `selectedId` → `loadFeaturedPostDetail` hoặc `findFeaturedPost` → panel chi tiết.
+ * - `handlePin` / `handleUnpin` → `setPostFeatured` (API) hoặc cập nhật state local (mock).
+ *
+ * @returns {import('react').ReactElement} Workspace 3 cột: ghim, tìm kiếm, chi tiết.
+ *
+ * @example
+ * <Route path="/moderator/featured" element={<FeaturedPostsPage />} />
+ */
 function FeaturedPostsPage() {
   const { showToast } = useToast();
   const [pinned, setPinned] = useState(USE_MOCK ? PINNED_POSTS_INITIAL : []);
@@ -228,6 +300,12 @@ function FeaturedPostsPage() {
     setSelectedId(null);
   }, [query, sort]);
 
+  /**
+   * Bỏ ghim bài — chuyển từ `pinned` về `searchPool` và gọi API nếu không mock.
+   *
+   * @param {string} id - ID bài cần bỏ ghim.
+   * @returns {void}
+   */
   function handleUnpin(id) {
     const post = pinned.find((item) => item.id === id);
     if (!post) return;
@@ -252,6 +330,12 @@ function FeaturedPostsPage() {
       .catch((err) => showToast(err.message ?? "Không bỏ ghim được bài viết.", "error"));
   }
 
+  /**
+   * Ghim bài từ kết quả tìm kiếm — kiểm tra giới hạn `MAX_PINNED_POSTS` trước khi thực hiện.
+   *
+   * @param {string} id - ID bài cần ghim.
+   * @returns {void}
+   */
   function handlePin(id) {
     if (!canPinMore) {
       showToast(`Chỉ được ghim tối đa ${MAX_PINNED_POSTS} bài.`);
@@ -292,7 +376,7 @@ function FeaturedPostsPage() {
       description="Ghim các tài liệu và thông báo quan trọng lên đầu bảng tin cộng đồng. Nhấp bài viết để xem chi tiết trước khi ghim."
       crumbs={FEATURED_CRUMBS}
     >
-      {loading ? <p>Đang tải bài viết…</p> : null}
+      {loading ? <ModeratorFeaturedWorkspaceSkeleton /> : (
       <div className={styles.workspace}>
         <div className={styles.mainGrid}>
           <section className={styles.pinnedColumn} aria-labelledby="pinned-heading">
@@ -391,8 +475,15 @@ function FeaturedPostsPage() {
           />
         </aside>
       </div>
+      )}
     </ModeratorPageShell>
   );
 }
 
+/**
+ * Export mặc định trang quản lý bài viết nổi bật.
+ *
+ * @type {typeof FeaturedPostsPage}
+ * @default
+ */
 export default FeaturedPostsPage;

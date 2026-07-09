@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Dữ liệu và helper cho các dropdown trong `ModeratorHeader`.
+ *
+ * Module này định nghĩa:
+ * - các lối tắt nghiệp vụ dành cho moderator,
+ * - danh sách thông báo fallback dựa trên badge hàng đợi,
+ * - helper tải thông báo và số lượng chưa đọc từ API nếu có.
+ *
+ * @module common/Header/ModeratorHeader/moderatorHeaderData
+ */
+
 import {
   faClipboardCheck,
   faClipboardList,
@@ -10,7 +21,37 @@ import { mapNotificationPage } from "@/api/notificationsMapper";
 import { getPendingPracticeSubmissionCount } from "@/features/exams/practiceExamSubmissions";
 import { getModeratorNavBadgeCounts } from "@/features/moderator/moderatorNavData";
 
-/** Lối tắt nghiệp vụ kiểm duyệt — Moderator không cấu hình hệ thống (§2.4) */
+/**
+ * @typedef {Object} ModeratorQuickLink
+ * @property {string} id - Mã định danh lối tắt.
+ * @property {string} label - Tên thao tác hiển thị trên dropdown.
+ * @property {string} description - Mô tả ngắn về nghiệp vụ moderator tại đích đến.
+ * @property {string} to - Route điều hướng khi chọn lối tắt.
+ * @property {import('@fortawesome/fontawesome-svg-core').IconDefinition} icon - Icon Font Awesome đại diện cho lối tắt.
+ */
+
+/**
+ * @typedef {Object} ModeratorHeaderNotification
+ * @property {string} id - Mã định danh của thông báo/header item.
+ * @property {string} title - Tiêu đề tóm tắt công việc chờ.
+ * @property {string} detail - Mô tả nghiệp vụ cần moderator xử lý.
+ * @property {string} time - Nhãn thời gian hoặc trạng thái hiển thị.
+ * @property {string} to - Route điều hướng đến hàng đợi chi tiết.
+ */
+
+/**
+ * Danh sách lối tắt chính trong header moderator.
+ *
+ * Moderator chỉ nhận các lối tắt phục vụ vận hành kiểm duyệt; không bao gồm cấu hình
+ * hệ thống theo phân quyền nghiệp vụ nội bộ (§2.4).
+ *
+ * @constant {ReadonlyArray<ModeratorQuickLink>}
+ * @readonly
+ *
+ * @example
+ * MODERATOR_QUICK_LINKS.find((item) => item.id === "reports")?.to;
+ * // => "/moderator/reports"
+ */
 export const MODERATOR_QUICK_LINKS = [
   {
     id: "reports",
@@ -49,7 +90,19 @@ export const MODERATOR_QUICK_LINKS = [
   },
 ];
 
-/** Thông báo hàng đợi kiểm duyệt — báo cáo, duyệt bài, nộp TH */
+/**
+ * Xây dựng danh sách thông báo fallback từ badge moderation và số bài nộp thực hành.
+ *
+ * Đây là nguồn dữ liệu cục bộ giúp header vẫn hiển thị công việc chờ ngay cả khi
+ * API thông báo chưa sẵn sàng hoặc trả lỗi. Các nhóm việc chính gồm báo cáo cộng đồng,
+ * duyệt bài viết và chấm bài nộp thực hành.
+ *
+ * @returns {Array<ModeratorHeaderNotification>} Danh sách thông báo dành cho dropdown moderator.
+ *
+ * @example
+ * const notifications = buildModeratorNotifications();
+ * notifications.map((item) => item.title);
+ */
 export function buildModeratorNotifications() {
   const badges = getModeratorNavBadgeCounts();
   const practicePending = getPendingPracticeSubmissionCount();
@@ -88,6 +141,15 @@ export function buildModeratorNotifications() {
   return items;
 }
 
+/**
+ * Chuẩn hóa các notification từ API chung sang shape dùng trong header moderator.
+ *
+ * Chỉ các loại `moderation` và `examreview` mới được giữ lại vì chúng phản ánh trực
+ * tiếp hàng đợi công việc của moderator.
+ *
+ * @param {Array<{ id: string | number, type?: string, title: string, body?: string, time: string, linkUrl?: string }>} items - Danh sách notification đã qua mapper tầng API.
+ * @returns {Array<ModeratorHeaderNotification>} Danh sách đã lọc và chuẩn hóa cho UI header.
+ */
 function mapModeratorWorkflowNotifications(items) {
   return items
     .filter((item) => item.type === "moderation" || item.type === "examreview")
@@ -100,6 +162,16 @@ function mapModeratorWorkflowNotifications(items) {
     }));
 }
 
+/**
+ * Tải danh sách thông báo moderator từ API và fallback về badge queue khi cần.
+ *
+ * Luồng xử lý:
+ * - gọi `getNotifications` trang đầu,
+ * - map về domain notification của header moderator,
+ * - nếu không có item workflow phù hợp hoặc API lỗi thì fallback sang `buildModeratorNotifications()`.
+ *
+ * @returns {Promise<Array<ModeratorHeaderNotification>>} Promise trả về danh sách thông báo để render dropdown.
+ */
 export async function loadModeratorNotifications() {
   try {
     const page = await getNotifications({ page: 1, pageSize: 20 });
@@ -114,10 +186,23 @@ export async function loadModeratorNotifications() {
   return buildModeratorNotifications();
 }
 
+/**
+ * Đếm số thông báo chưa đọc theo dữ liệu fallback cục bộ.
+ *
+ * @returns {number} Tổng số mục thông báo hiện có trong fallback queue.
+ */
 export function getModeratorUnreadCount() {
   return buildModeratorNotifications().length;
 }
 
+/**
+ * Tải tổng số chưa đọc cho header moderator.
+ *
+ * Ưu tiên số unread do API trả về. Nếu API lỗi hoặc không có dữ liệu hợp lệ, module
+ * sẽ dùng `getModeratorUnreadCount()` để giữ badge luôn có ý nghĩa với nghiệp vụ.
+ *
+ * @returns {Promise<number>} Promise tổng số thông báo chưa đọc hoặc việc chờ cần hiển thị trên badge.
+ */
 export async function loadModeratorUnreadCount() {
   try {
     const unread = await getNotificationUnreadCount();
