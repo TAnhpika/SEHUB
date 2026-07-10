@@ -1,5 +1,6 @@
 .panel {
-  padding: 1.25rem 1.5rem;
+  width: 100%;
+  padding: 1rem 1.25rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
@@ -7,104 +8,170 @@
 }
 
 .header {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.headerTop {
+  margin: 0;
+  align-self: flex-start;
 }
 
 .title {
+  margin: 0;
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-text);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 
 .subtitle {
-  margin-top: 0.25rem;
-  font-size: 0.8125rem;
-  color: var(--color-text-subtle);
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--heatmap-label, var(--color-text-subtle));
 }
 
 .empty {
-  font-size: 0.875rem;
-  line-height: 1.6;
+  font-size: 0.8125rem;
+  line-height: 1.5;
   color: var(--color-text-muted);
 }
 
 .chart {
-  --heatmap-cell: 12px;
-  --heatmap-gap: 3px;
-  --heatmap-grid-width: calc(
-    26 * var(--heatmap-cell) + 25 * var(--heatmap-gap)
-  );
+  --heatmap-gap: 4px;
+  --heatmap-weeks: 26;
+  --heatmap-axis: 1.75rem;
+  --heatmap-min-cell: 12px;
+  --heatmap-max-cell: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
   width: 100%;
-  min-width: 0;
-  overflow-x: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
 }
 
-.months {
+.chartBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem 1rem;
+  align-items: start;
+  width: 100%;
+  min-width: calc(
+    var(--heatmap-axis) + 0.5rem + var(--heatmap-weeks) * var(--heatmap-min-cell) +
+      (var(--heatmap-weeks) - 1) * var(--heatmap-gap) + 11rem
+  );
+}
+
+.plotColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  width: 100%;
+  container-type: inline-size;
+  container-name: heatmap-plot;
+  --heatmap-cell: clamp(
+    var(--heatmap-min-cell),
+    calc(
+      (
+          100cqi - var(--heatmap-axis) - 0.5rem -
+            (var(--heatmap-weeks) - 1) * var(--heatmap-gap)
+        ) / var(--heatmap-weeks)
+    ),
+    var(--heatmap-max-cell)
+  );
+  --heatmap-grid-width: calc(
+    var(--heatmap-weeks) * var(--heatmap-cell) + (var(--heatmap-weeks) - 1) * var(--heatmap-gap)
+  );
+  --heatmap-grid-height: calc(7 * var(--heatmap-cell) + 6 * var(--heatmap-gap));
+  justify-self: stretch;
+}
+
+.plot {
+  display: grid;
+  grid-template-areas:
+    ". months"
+    "days grid"
+    ". legend";
+  grid-template-columns: var(--heatmap-axis) minmax(0, 1fr);
+  column-gap: 0.5rem;
+  row-gap: 0.375rem;
+  width: 100%;
+  max-width: 100%;
+}
+
+.monthRow {
+  grid-area: months;
   position: relative;
   width: var(--heatmap-grid-width);
   max-width: 100%;
   height: 1rem;
-  margin-left: calc(1.75rem + 0.5rem);
-  margin-bottom: 0.5rem;
 }
 
-.month {
+.monthLabel {
   position: absolute;
   top: 0;
   left: calc(var(--week-index) * (var(--heatmap-cell) + var(--heatmap-gap)));
-  font-size: 0.6875rem;
+  font-size: 12px;
   line-height: 1rem;
-  color: var(--color-text-subtle);
+  color: var(--heatmap-label, #7d8590);
   white-space: nowrap;
 }
 
-.grid-wrap {
+.dayLabels {
+  grid-area: days;
+  display: grid;
+  grid-template-rows: repeat(7, var(--heatmap-cell));
+  gap: var(--heatmap-gap);
+  height: var(--heatmap-grid-height);
+  align-self: start;
+}
+
+.dayLabel {
   display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  width: fit-content;
-  max-width: 100%;
-}
-
-.days {
-  position: relative;
-  flex-shrink: 0;
-  width: 1.75rem;
-  height: calc(7 * var(--heatmap-cell) + 6 * var(--heatmap-gap));
-}
-
-.day {
-  position: absolute;
-  left: 0;
-  top: calc(var(--row-index) * (var(--heatmap-cell) + var(--heatmap-gap)));
+  align-items: center;
   height: var(--heatmap-cell);
-  font-size: 0.6875rem;
+  font-size: 12px;
   line-height: var(--heatmap-cell);
-  color: var(--color-text-subtle);
+  color: var(--heatmap-label, #7d8590);
 }
 
 .grid {
-  display: flex;
+  grid-area: grid;
+  display: grid;
+  grid-template-rows: repeat(7, var(--heatmap-cell));
+  grid-auto-flow: column;
+  grid-auto-columns: var(--heatmap-cell);
   gap: var(--heatmap-gap);
   width: var(--heatmap-grid-width);
   max-width: 100%;
-}
-
-.column {
-  display: flex;
-  flex-direction: column;
-  gap: var(--heatmap-gap);
-  flex: 0 0 var(--heatmap-cell);
+  height: var(--heatmap-grid-height);
+  justify-self: start;
 }
 
 .cell,
-.legend-cell {
+.legendCell {
   display: block;
   width: var(--heatmap-cell);
   height: var(--heatmap-cell);
+  border-radius: 3px;
   box-sizing: border-box;
-  border-radius: 2px;
-  flex-shrink: 0;
+  border: none;
+  outline: none;
+  flex: none;
+}
+
+.cell {
+  cursor: pointer;
+}
+
+.cell:hover,
+.cell:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
 }
 
 .l0 {
@@ -121,21 +188,99 @@
 
 .l3 {
   background: var(--heatmap-scale-3);
-  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.35);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(5.5rem, 1fr));
+  gap: 0.625rem 0.75rem;
+  min-width: 11rem;
+  align-self: center;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25rem;
+  min-height: 3.5rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--color-surface-muted, rgba(148, 163, 184, 0.08));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 8px);
+}
+
+.statValue {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--color-text);
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--heatmap-label, var(--color-text-subtle));
 }
 
 .legend {
+  grid-area: legend;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: var(--heatmap-gap);
-  margin-top: 0.75rem;
-  font-size: 0.6875rem;
-  color: var(--color-text-subtle);
+  width: var(--heatmap-grid-width);
+  max-width: 100%;
+  justify-self: start;
+  margin-top: 0.125rem;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--heatmap-label, #7d8590);
+}
+
+.legendCell {
+  width: var(--heatmap-cell);
+  height: var(--heatmap-cell);
+  cursor: default;
 }
 
 @media (max-width: 768px) {
   .panel {
-    padding: 1rem;
+    padding: 0.875rem 1rem;
+  }
+
+  .chartBody {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .headerTop {
+    margin-bottom: 0;
+  }
+
+  .stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    min-width: 0;
+    width: 100%;
+    align-self: stretch;
+  }
+
+  .stat {
+    min-height: 3rem;
+    padding: 0.5625rem 0.625rem;
+  }
+
+  .statValue {
+    font-size: 1.125rem;
+  }
+
+  .statLabel {
+    font-size: 0.6875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
