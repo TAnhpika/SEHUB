@@ -93,6 +93,7 @@ public static class DependencyInjection
         services.AddScoped<IGamificationEventInboxRepository, GamificationEventInboxRepository>();
         services.AddScoped<IRewardRuleRepository, RewardRuleRepository>();
         services.AddScoped<IRankRewardVoucherRepository, RankRewardVoucherRepository>();
+        services.AddScoped<IPartnerVoucherRepository, PartnerVoucherRepository>();
         services.AddScoped<IUserLevelHistoryRepository, UserLevelHistoryRepository>();
         services.AddScoped<ILeaderboardRepository, LeaderboardRepository>();
         services.AddScoped<IMissionRepository, MissionRepository>();

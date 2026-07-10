@@ -398,6 +398,36 @@ export function revokeVoucher(id) {
   return apiRequest(`/api/v1/admin/vouchers/${id}/revoke`, { method: "PATCH" });
 }
 
+export function listPartnerVouchers(params = {}) {
+  return apiRequest(`/api/v1/admin/partner-vouchers${buildQuery(params)}`);
+}
+
+export function listPartnerVoucherTypes() {
+  return apiRequest("/api/v1/admin/partner-vouchers/types");
+}
+
+export function getPartnerVoucherInventory() {
+  return apiRequest("/api/v1/admin/partner-vouchers/inventory");
+}
+
+export function importPartnerVouchers(body) {
+  return apiRequest("/api/v1/admin/partner-vouchers/import", {
+    method: "POST",
+    body,
+  });
+}
+
+export function assignPartnerVoucher(body) {
+  return apiRequest("/api/v1/admin/partner-vouchers/assign", {
+    method: "POST",
+    body,
+  });
+}
+
+export function revokePartnerVoucher(id) {
+  return apiRequest(`/api/v1/admin/partner-vouchers/${id}/revoke`, { method: "PATCH" });
+}
+
 export function getDashboardCharts(params = {}) {
   return apiRequest(`/api/v1/admin/dashboard/charts${buildQuery(params)}`);
 }

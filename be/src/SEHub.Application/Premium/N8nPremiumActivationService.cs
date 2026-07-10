@@ -40,6 +40,7 @@ public sealed class N8nPremiumActivationService : IN8nPremiumActivationService
     private readonly IPaymentAuditLogRepository _auditLogRepository;
     private readonly ISubscriptionService _subscriptionService;
     private readonly IPaymentConfirmationNotifier _paymentConfirmationNotifier;
+    private readonly IPartnerVoucherService _partnerVoucherService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<N8NPremiumActivationDto> _validator;
     private readonly AiTokenLimitSettings _aiTokenLimits;
@@ -51,6 +52,7 @@ public sealed class N8nPremiumActivationService : IN8nPremiumActivationService
         IPaymentAuditLogRepository auditLogRepository,
         ISubscriptionService subscriptionService,
         IPaymentConfirmationNotifier paymentConfirmationNotifier,
+        IPartnerVoucherService partnerVoucherService,
         IUnitOfWork unitOfWork,
         IValidator<N8NPremiumActivationDto> validator,
         IOptions<AiTokenLimitSettings> aiTokenLimits)
@@ -61,6 +63,7 @@ public sealed class N8nPremiumActivationService : IN8nPremiumActivationService
         _auditLogRepository = auditLogRepository;
         _subscriptionService = subscriptionService;
         _paymentConfirmationNotifier = paymentConfirmationNotifier;
+        _partnerVoucherService = partnerVoucherService;
         _unitOfWork = unitOfWork;
         _validator = validator;
         _aiTokenLimits = aiTokenLimits.Value;
@@ -130,6 +133,7 @@ public sealed class N8nPremiumActivationService : IN8nPremiumActivationService
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await _subscriptionService.ActivateSubscriptionAsync(user.Id, plan.Id, cancellationToken);
+            await _partnerVoucherService.TryAssignForPaidOrderAsync(order.Id, cancellationToken);
         }
 
         var subscription = await _subscriptionService.GetStatusAsync(user.Id, cancellationToken);

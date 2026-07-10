@@ -1,70 +1,82 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTicket } from "@fortawesome/free-solid-svg-icons";
+import { faFileImport } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/common/Button/Button";
-import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
+import { useToast } from "@/common/Toast/ToastProvider";
 import * as adminApi from "@/api/adminApi";
-import { getAdminUserDetailUrl } from "@/features/admin/adminMockData";
-import AdminGrantVoucherModal from "@/features/admin/vouchers/AdminGrantVoucherModal";
-import {
-  loadAdminVoucherGrants,
-  loadStudentsForVoucherGrant,
-  grantVoucherToUser,
-  revokeVoucherGrant,
-} from "@/features/admin/vouchers/adminVoucherData";
-import {
-  getVoucherTemplate,
-  VOUCHER_SOURCE_LABELS,
-  VOUCHER_STATUS_META,
-  VOUCHER_TEMPLATES,
-} from "@/features/admin/vouchers/adminVoucherPolicy";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
-import { StaffGenericTableSkeleton } from "@/common/Skeleton/StaffSkeleton";
 import AdminTableFooter from "@/features/admin/shared/AdminTableFooter";
+import StatusBadge from "@/features/admin/shared/StatusBadge";
 import { ADMIN_PAGE_SIZES } from "@/features/admin/shared/adminPaginationConstants";
 import { useAdminPagination } from "@/features/admin/shared/useAdminPagination";
-import StatusBadge from "@/features/admin/shared/StatusBadge";
+import { StaffGenericTableSkeleton } from "@/common/Skeleton/StaffSkeleton";
+import AdminGrantVoucherModal from "@/features/admin/vouchers/AdminGrantVoucherModal";
+import ImportPartnerVoucherModal from "@/features/admin/vouchers/ImportPartnerVoucherModal";
+import {
+  assignPartnerVoucherToUser,
+  grantVoucherToUser,
+  importPartnerVoucherCodes,
+  loadAdminVoucherGrants,
+  loadPartnerVoucherInventory,
+  loadPartnerVoucherTypes,
+  loadStudentsForVoucherGrant,
+  revokePartnerVoucherGrant,
+  revokeVoucherGrant,
+} from "@/features/admin/vouchers/adminVoucherData";
+import { VOUCHER_STATUS_META } from "@/features/admin/vouchers/adminVoucherPolicy";
 import voucherStyles from "@/features/admin/vouchers/AdminVouchers.module.css";
 import styles from "@/features/admin/shared/adminPage.module.css";
 
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+const PARTNER_STATUS_OPTIONS = [
+  { value: "all", label: "Tất cả" },
+  { value: "available", label: "Trong kho" },
+  { value: "assigned", label: "Đã gán" },
+  { value: "revoked", label: "Đã thu hồi" },
+];
 
-const STATUS_FILTER_OPTIONS = [
-  { value: "all", label: "Tất cả trạng thái" },
+const RANK_STATUS_OPTIONS = [
+  { value: "all", label: "Tất cả" },
   { value: "active", label: "Đang hiệu lực" },
   { value: "used", label: "Đã dùng" },
   { value: "expired", label: "Hết hạn" },
   { value: "revoked", label: "Đã thu hồi" },
 ];
 
-const SOURCE_FILTER_OPTIONS = [
-  { value: "all", label: "Tất cả nguồn" },
-  { value: "manual", label: "Admin thủ công" },
-  { value: "payment", label: "Sau thanh toán" },
-  { value: "rank", label: "Thưởng rank" },
-];
-
 function AdminVoucherPage() {
   const { showToast } = useToast();
   const { user } = useAuth();
-  const [loading, setLoading] = useState(!USE_MOCK);
-  const [grants, setGrants] = useState(USE_MOCK ? [] : []);
-  const [stats, setStats] = useState({
+  const [tab, setTab] = useState("ftes");
+  const [loading, setLoading] = useState(true);
+  const [partnerItems, setPartnerItems] = useState([]);
+  const [partnerStats, setPartnerStats] = useState({
+    availableFtes20: 0,
+    availableFtes100: 0,
+    availableTotal: 0,
+    assigned: 0,
+    revoked: 0,
+    total: 0,
+  });
+  const [rankItems, setRankItems] = useState([]);
+  const [rankStats, setRankStats] = useState({
     total: 0,
     active: 0,
     used: 0,
     expired: 0,
     revoked: 0,
-    manual: 0,
   });
   const [students, setStudents] = useState([]);
   const [levels, setLevels] = useState([]);
+  const [partnerTypes, setPartnerTypes] = useState([]);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importError, setImportError] = useState("");
+  const [importing, setImporting] = useState(false);
   const [grantOpen, setGrantOpen] = useState(false);
+  const [grantMode, setGrantMode] = useState("partner");
   const [grantError, setGrantError] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [sourceFilter, setSourceFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -74,27 +86,33 @@ function AdminVoucherPage() {
     async function load() {
       setLoading(true);
       try {
-        const [voucherData, studentList] = await Promise.all([
+        const [partnerData, rankData, studentList, types] = await Promise.all([
+          loadPartnerVoucherInventory({
+            status: statusFilter !== "all" && tab === "ftes" ? statusFilter : undefined,
+            typeCode: typeFilter !== "all" ? typeFilter : undefined,
+            search: search.trim() || undefined,
+          }),
           loadAdminVoucherGrants({
-            status: statusFilter !== "all" ? statusFilter : undefined,
+            status: statusFilter !== "all" && tab === "rank" ? statusFilter : undefined,
             search: search.trim() || undefined,
           }),
           loadStudentsForVoucherGrant(),
+          loadPartnerVoucherTypes(),
         ]);
 
-        if (!cancelled) {
-          setGrants(voucherData.items);
-          setStats(voucherData.stats);
-          setStudents(studentList);
-        }
+        if (cancelled) return;
+        setPartnerItems(partnerData.items);
+        setPartnerStats(partnerData.stats);
+        setRankItems(rankData.items);
+        setRankStats(rankData.stats);
+        setStudents(studentList);
+        setPartnerTypes(types);
 
-        if (!USE_MOCK && !cancelled) {
-          const levelRows = await adminApi.getGamificationLevels();
-          setLevels(levelRows ?? []);
-        }
+        const levelRows = await adminApi.getGamificationLevels();
+        if (!cancelled) setLevels(levelRows ?? []);
       } catch (error) {
         if (!cancelled) {
-          showToast(error.message ?? "Không tải được danh sách voucher.", "error");
+          showToast(error.message ?? "Không tải được dữ liệu voucher.", "error");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -105,38 +123,59 @@ function AdminVoucherPage() {
     return () => {
       cancelled = true;
     };
-  }, [refreshKey, statusFilter, search, showToast]);
+  }, [refreshKey, statusFilter, typeFilter, search, tab, showToast]);
 
-  const filtered = useMemo(() => {
-    if (!USE_MOCK) return grants;
-
-    const q = search.trim().toLowerCase();
-    return grants.filter((grant) => {
-      if (statusFilter !== "all" && grant.status !== statusFilter) return false;
-      if (sourceFilter !== "all" && grant.source !== sourceFilter) return false;
-      if (!q) return true;
-      const template = getVoucherTemplate(grant.templateId);
-      return (
-        grant.username.toLowerCase().includes(q) ||
-        grant.code?.toLowerCase().includes(q) ||
-        grant.reason?.toLowerCase().includes(q) ||
-        (template?.label.toLowerCase().includes(q) ?? false)
-      );
-    });
-  }, [grants, statusFilter, sourceFilter, search]);
-
-  const grantPage = useAdminPagination(filtered, ADMIN_PAGE_SIZES.vouchers, [
+  const partnerPage = useAdminPagination(partnerItems, ADMIN_PAGE_SIZES.vouchers, [
     statusFilter,
-    sourceFilter,
+    typeFilter,
     search,
     refreshKey,
+    tab,
+  ]);
+  const rankPage = useAdminPagination(rankItems, ADMIN_PAGE_SIZES.vouchers, [
+    statusFilter,
+    search,
+    refreshKey,
+    tab,
   ]);
 
   function refresh() {
     setRefreshKey((key) => key + 1);
   }
 
+  async function handleImportSubmit({ typeCode, codes }) {
+    setImporting(true);
+    setImportError("");
+    const result = await importPartnerVoucherCodes({ typeCode, codes });
+    setImporting(false);
+    if (!result.ok) {
+      setImportError(result.message);
+      return;
+    }
+    setImportOpen(false);
+    refresh();
+    showToast(
+      `Import ${result.imported} mã · bỏ trùng ${result.duplicatesSkipped} · không hợp lệ ${result.invalid}. Kho còn ${result.remainingAvailable}.`,
+    );
+  }
+
   async function handleGrantSubmit(payload) {
+    if (grantMode === "partner") {
+      const result = await assignPartnerVoucherToUser({
+        userId: payload.userId,
+        typeCode: payload.typeCode,
+      });
+      if (!result.ok) {
+        setGrantError(result.message ?? "Không cấp được mã FTES.");
+        return;
+      }
+      setGrantError("");
+      setGrantOpen(false);
+      refresh();
+      showToast(`Đã cấp mã FTES cho @${payload.username}.`);
+      return;
+    }
+
     const result = await grantVoucherToUser({
       ...payload,
       grantedBy: user?.username ?? "admin_sehub",
@@ -148,69 +187,123 @@ function AdminVoucherPage() {
     setGrantError("");
     setGrantOpen(false);
     refresh();
-    showToast(`Đã cấp voucher cho @${payload.username}.`);
+    showToast(`Đã cấp voucher rank cho @${payload.username}.`);
   }
 
-  async function handleRevoke(id) {
-    const result = await revokeVoucherGrant(id, user?.username ?? "admin_sehub");
+  async function handleRevokePartner(id) {
+    const result = await revokePartnerVoucherGrant(id);
+    if (!result.ok) {
+      showToast(result.message ?? "Không thể thu hồi mã FTES.");
+      return;
+    }
+    refresh();
+    showToast("Đã thu hồi mã FTES.");
+  }
+
+  async function handleRevokeRank(id) {
+    const result = await revokeVoucherGrant(id);
     if (!result.ok) {
       showToast(result.message ?? "Không thể thu hồi voucher.");
       return;
     }
     refresh();
-    showToast("Đã thu hồi voucher.");
+    showToast("Đã thu hồi voucher rank.");
   }
+
+  const poolEmpty = partnerStats.availableTotal === 0;
 
   return (
     <AdminPageLayout
       title="Quản lý voucher"
-      breadcrumbs={[
-        { label: "Dashboard", to: "/admin" },
-        { label: "Quản lý voucher" },
-      ]}
+      breadcrumbs={[{ label: "Dashboard", to: "/admin" }, { label: "Quản lý voucher" }]}
       actions={
-        <Button onClick={() => setGrantOpen(true)}>
-          <FontAwesomeIcon icon={faTicket} />
-          Cấp voucher
-        </Button>
+        <div className={voucherStyles.actionRow}>
+          <Button
+            look="outline"
+            onClick={() => {
+              setGrantMode("rank");
+              setGrantOpen(true);
+            }}
+          >
+            Cấp voucher rank
+          </Button>
+          <Button
+            look="outline"
+            onClick={() => {
+              setGrantMode("partner");
+              setGrantOpen(true);
+            }}
+          >
+            Cấp bù FTES
+          </Button>
+          <Button onClick={() => setImportOpen(true)}>
+            <FontAwesomeIcon icon={faFileImport} />
+            Import mã FTES
+          </Button>
+        </div>
       }
     >
       <p className={voucherStyles.flowNote}>
-        <strong>Luồng cấp voucher:</strong> Admin cấp → voucher gắn vào tài khoản → SV thấy tại{" "}
-        <em>Voucher của tôi</em> + thông báo in-app.
-        {USE_MOCK
-          ? " Gói Premium tự động cấp FTES sau PayOS — Admin chỉ can thiệp khi bù lỗi / event."
-          : " Voucher rank thưởng giảm % Premium theo level Gamification."}
+        <strong>Mã FTES:</strong> Admin import vào kho → SV mua Premium <code>8m</code> (20%) /{" "}
+        <code>4y</code> (100%) được gán tự động khi Paid.{" "}
+        <strong>Voucher rank:</strong> giảm % checkout Premium SEHUB (Gold/Platinum) — tách biệt.
       </p>
 
       <div className={voucherStyles.kpiStrip}>
         <div className={voucherStyles.kpiCard}>
-          <span className={voucherStyles.kpiLabel}>Tổng đã cấp</span>
-          <strong className={voucherStyles.kpiValue}>{stats.total}</strong>
+          <span className={voucherStyles.kpiLabel}>Kho FTES 20%</span>
+          <strong className={voucherStyles.kpiValue}>{partnerStats.availableFtes20}</strong>
         </div>
         <div className={voucherStyles.kpiCard}>
-          <span className={voucherStyles.kpiLabel}>Đang hiệu lực</span>
-          <strong className={voucherStyles.kpiValue}>{stats.active}</strong>
-          <span className={voucherStyles.kpiHint}>SV có thể dùng</span>
+          <span className={voucherStyles.kpiLabel}>Kho FTES 100%</span>
+          <strong className={voucherStyles.kpiValue}>{partnerStats.availableFtes100}</strong>
+        </div>
+        <div className={`${voucherStyles.kpiCard} ${poolEmpty ? voucherStyles.kpiWarn : ""}`}>
+          <span className={voucherStyles.kpiLabel}>Tổng còn trong kho</span>
+          <strong className={voucherStyles.kpiValue}>{partnerStats.availableTotal}</strong>
+          {poolEmpty ? <span className={voucherStyles.kpiHint}>Hết kho — cần import</span> : null}
         </div>
         <div className={voucherStyles.kpiCard}>
-          <span className={voucherStyles.kpiLabel}>Đã dùng</span>
-          <strong className={voucherStyles.kpiValue}>{stats.used}</strong>
+          <span className={voucherStyles.kpiLabel}>FTES đã gán</span>
+          <strong className={voucherStyles.kpiValue}>{partnerStats.assigned}</strong>
         </div>
-        {USE_MOCK ? (
-          <div className={voucherStyles.kpiCard}>
-            <span className={voucherStyles.kpiLabel}>Admin cấp tay</span>
-            <strong className={voucherStyles.kpiValue}>{stats.manual}</strong>
-          </div>
-        ) : null}
         <div className={voucherStyles.kpiCard}>
-          <span className={voucherStyles.kpiLabel}>Đã thu hồi</span>
-          <strong className={voucherStyles.kpiValue}>{stats.revoked}</strong>
+          <span className={voucherStyles.kpiLabel}>Rank đang hiệu lực</span>
+          <strong className={voucherStyles.kpiValue}>{rankStats.active}</strong>
         </div>
       </div>
 
+      <div className={voucherStyles.tabRow} role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "ftes"}
+          className={tab === "ftes" ? voucherStyles.tabActive : voucherStyles.tab}
+          onClick={() => {
+            setTab("ftes");
+            setStatusFilter("all");
+          }}
+        >
+          Kho mã FTES
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "rank"}
+          className={tab === "rank" ? voucherStyles.tabActive : voucherStyles.tab}
+          onClick={() => {
+            setTab("rank");
+            setStatusFilter("all");
+          }}
+        >
+          Voucher rank SEHUB
+        </button>
+      </div>
+
       <section className={styles.panel}>
-        <h2 className={styles.panelTitle}>Danh sách voucher đã gắn</h2>
+        <h2 className={styles.panelTitle}>
+          {tab === "ftes" ? "Mã FTES trong hệ thống" : "Voucher rank đã cấp"}
+        </h2>
         <div className={styles.divider} />
 
         <div className={voucherStyles.filters}>
@@ -218,7 +311,7 @@ function AdminVoucherPage() {
             <span className={voucherStyles.filterLabel}>Tìm kiếm</span>
             <input
               className={styles.input}
-              placeholder={USE_MOCK ? "@username, mã voucher, lý do…" : "@username…"}
+              placeholder={tab === "ftes" ? "Mã FTES…" : "@username…"}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -230,24 +323,25 @@ function AdminVoucherPage() {
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
             >
-              {STATUS_FILTER_OPTIONS.map((option) => (
+              {(tab === "ftes" ? PARTNER_STATUS_OPTIONS : RANK_STATUS_OPTIONS).map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
             </select>
           </label>
-          {USE_MOCK ? (
+          {tab === "ftes" ? (
             <label className={voucherStyles.filterField}>
-              <span className={voucherStyles.filterLabel}>Nguồn cấp</span>
+              <span className={voucherStyles.filterLabel}>Loại</span>
               <select
                 className={styles.select}
-                value={sourceFilter}
-                onChange={(event) => setSourceFilter(event.target.value)}
+                value={typeFilter}
+                onChange={(event) => setTypeFilter(event.target.value)}
               >
-                {SOURCE_FILTER_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+                <option value="all">Tất cả</option>
+                {partnerTypes.map((type) => (
+                  <option key={type.code} value={type.code}>
+                    {type.label}
                   </option>
                 ))}
               </select>
@@ -260,22 +354,108 @@ function AdminVoucherPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Sinh viên</th>
-                  <th>{USE_MOCK ? "Loại voucher" : "Level / Giảm giá"}</th>
-                  {USE_MOCK ? <th>Mã</th> : null}
-                  {USE_MOCK ? <th>Nguồn</th> : null}
-                  <th>Trạng thái</th>
-                  <th>Cấp lúc</th>
-                  <th>Hết hạn</th>
-                  <th />
+                  <th colSpan={6}>Đang tải…</th>
                 </tr>
               </thead>
-              <StaffGenericTableSkeleton
-                columns={USE_MOCK ? 8 : 6}
-                aria-label="Đang tải danh sách voucher"
-              />
+              <StaffGenericTableSkeleton columns={6} aria-label="Đang tải danh sách voucher" />
             </table>
           </div>
+        ) : tab === "ftes" ? (
+          <>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Mã</th>
+                    <th>Loại</th>
+                    <th>Trạng thái</th>
+                    <th>Sinh viên</th>
+                    <th>Import / Gán</th>
+                    <th>Hết hạn</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {partnerPage.pageItems.length > 0 ? (
+                    partnerPage.pageItems.map((item) => {
+                      const statusMeta = VOUCHER_STATUS_META[item.status] ?? {
+                        status: "draft",
+                        label: item.status,
+                      };
+                      const userUrl = item.assignedUserId
+                        ? `/admin/users/${item.assignedUserId}`
+                        : null;
+                      return (
+                        <tr key={item.id}>
+                          <td>
+                            <span className={voucherStyles.codePill}>{item.code}</span>
+                          </td>
+                          <td>
+                            {item.typeLabel || item.typeCode}
+                            <span className={voucherStyles.partnerTag}>FTES</span>
+                          </td>
+                          <td>
+                            <StatusBadge status={statusMeta.status} label={statusMeta.label} />
+                          </td>
+                          <td className={styles.cellMain}>
+                            {item.assignedUsername ? (
+                              userUrl ? (
+                                <Link to={userUrl} className={styles.link}>
+                                  @{item.assignedUsername}
+                                </Link>
+                              ) : (
+                                `@${item.assignedUsername}`
+                              )
+                            ) : (
+                              "—"
+                            )}
+                            {item.assignedDisplayName ? (
+                              <span className={styles.cellSub}>{item.assignedDisplayName}</span>
+                            ) : null}
+                          </td>
+                          <td>
+                            {item.importedAt}
+                            {item.assignedAt && item.assignedAt !== "—" ? (
+                              <span className={styles.cellSub}>gán {item.assignedAt}</span>
+                            ) : null}
+                          </td>
+                          <td>{item.expiresAt}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className={voucherStyles.revokeBtn}
+                              disabled={
+                                item.status !== "available" && item.status !== "assigned"
+                              }
+                              onClick={() => handleRevokePartner(item.id)}
+                            >
+                              Thu hồi
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={7} style={{ color: "#434655", padding: "1.5rem" }}>
+                        Chưa có mã FTES. Hãy import lô mã partner.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <AdminTableFooter
+              rangeStart={partnerPage.rangeStart}
+              rangeEnd={partnerPage.rangeEnd}
+              total={partnerPage.total}
+              unit="mã"
+              currentPage={partnerPage.safePage}
+              totalPages={partnerPage.totalPages}
+              onPageChange={partnerPage.handlePageChange}
+              ariaLabel="Phân trang mã FTES"
+            />
+          </>
         ) : (
           <>
             <div className={styles.tableWrap}>
@@ -283,9 +463,7 @@ function AdminVoucherPage() {
                 <thead>
                   <tr>
                     <th>Sinh viên</th>
-                    <th>{USE_MOCK ? "Loại voucher" : "Level / Giảm giá"}</th>
-                    {USE_MOCK ? <th>Mã</th> : null}
-                    {USE_MOCK ? <th>Nguồn</th> : null}
+                    <th>Level / Giảm giá</th>
                     <th>Trạng thái</th>
                     <th>Cấp lúc</th>
                     <th>Hết hạn</th>
@@ -293,15 +471,13 @@ function AdminVoucherPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {grantPage.pageItems.length > 0 ? (
-                    grantPage.pageItems.map((grant) => {
-                      const template = USE_MOCK ? getVoucherTemplate(grant.templateId) : null;
-                      const userUrl = getAdminUserDetailUrl(grant.username);
+                  {rankPage.pageItems.length > 0 ? (
+                    rankPage.pageItems.map((grant) => {
+                      const userUrl = grant.userId ? `/admin/users/${grant.userId}` : null;
                       const statusMeta = VOUCHER_STATUS_META[grant.status] ?? {
                         status: "draft",
                         label: grant.status,
                       };
-
                       return (
                         <tr key={grant.id}>
                           <td className={styles.cellMain}>
@@ -312,50 +488,22 @@ function AdminVoucherPage() {
                             ) : (
                               `@${grant.username}`
                             )}
-                            {USE_MOCK ? (
-                              <span className={styles.cellSub}>{grant.reason}</span>
-                            ) : (
-                              <span className={styles.cellSub}>{grant.displayName}</span>
-                            )}
+                            <span className={styles.cellSub}>{grant.displayName}</span>
                           </td>
                           <td>
-                            {USE_MOCK ? (
-                              <>
-                                {template?.label ?? grant.templateId}
-                                {template?.partner ? (
-                                  <span className={voucherStyles.partnerTag}>{template.partner}</span>
-                                ) : null}
-                              </>
-                            ) : (
-                              <>
-                                {grant.levelName} · −{grant.discountPercent}%
-                              </>
-                            )}
+                            {grant.levelName} · −{grant.discountPercent}%
                           </td>
-                          {USE_MOCK ? (
-                            <td>
-                              <span className={voucherStyles.codePill}>{grant.code}</span>
-                            </td>
-                          ) : null}
-                          {USE_MOCK ? (
-                            <td>{VOUCHER_SOURCE_LABELS[grant.source]}</td>
-                          ) : null}
                           <td>
                             <StatusBadge status={statusMeta.status} label={statusMeta.label} />
                           </td>
-                          <td>
-                            {grant.grantedAt}
-                            {USE_MOCK ? (
-                              <span className={styles.cellSub}>bởi {grant.grantedBy}</span>
-                            ) : null}
-                          </td>
+                          <td>{grant.grantedAt}</td>
                           <td>{grant.expiresAt}</td>
                           <td>
                             <button
                               type="button"
                               className={voucherStyles.revokeBtn}
                               disabled={grant.status !== "active"}
-                              onClick={() => handleRevoke(grant.id)}
+                              onClick={() => handleRevokeRank(grant.id)}
                             >
                               Thu hồi
                             </button>
@@ -365,54 +513,46 @@ function AdminVoucherPage() {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={USE_MOCK ? 8 : 6} style={{ color: "#434655", padding: "1.5rem" }}>
-                        Chưa có voucher phù hợp bộ lọc.
+                      <td colSpan={6} style={{ color: "#434655", padding: "1.5rem" }}>
+                        Chưa có voucher rank phù hợp bộ lọc.
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
-
             <AdminTableFooter
-              rangeStart={grantPage.rangeStart}
-              rangeEnd={grantPage.rangeEnd}
-              total={grantPage.total}
+              rangeStart={rankPage.rangeStart}
+              rangeEnd={rankPage.rangeEnd}
+              total={rankPage.total}
               unit="voucher"
-              currentPage={grantPage.safePage}
-              totalPages={grantPage.totalPages}
-              onPageChange={grantPage.handlePageChange}
-              ariaLabel="Phân trang voucher"
+              currentPage={rankPage.safePage}
+              totalPages={rankPage.totalPages}
+              onPageChange={rankPage.handlePageChange}
+              ariaLabel="Phân trang voucher rank"
             />
           </>
         )}
       </section>
 
-      {USE_MOCK ? (
-        <section className={styles.panel}>
-          <h2 className={styles.panelTitle}>Mẫu voucher hệ thống</h2>
-          <p className={styles.panelDesc}>
-            Template dùng khi cấp thủ công hoặc tự động sau thanh toán / lên rank.
-          </p>
-          <div className={voucherStyles.templateGrid}>
-            {VOUCHER_TEMPLATES.map((template) => (
-              <article key={template.id} className={voucherStyles.templateCard}>
-                <h3 className={voucherStyles.templateCardTitle}>{template.label}</h3>
-                <p className={voucherStyles.templateCardMeta}>
-                  {template.discountLabel} · {template.validityDays} ngày · {template.scope}
-                </p>
-                <p className={voucherStyles.templateCardDesc}>{template.description}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      <ImportPartnerVoucherModal
+        open={importOpen}
+        types={partnerTypes}
+        error={importError}
+        submitting={importing}
+        onClose={() => {
+          setImportOpen(false);
+          setImportError("");
+        }}
+        onSubmit={handleImportSubmit}
+      />
 
       <AdminGrantVoucherModal
         open={grantOpen}
+        mode={grantMode}
         students={students}
         levels={levels}
-        useMock={USE_MOCK}
+        partnerTypes={partnerTypes}
         onClose={() => {
           setGrantOpen(false);
           setGrantError("");

@@ -235,3 +235,144 @@
   line-height: 1.45;
   color: var(--moderator-text-muted);
 }
+
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.tabRow {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.tab,
+.tabActive {
+  padding: 0.45rem 0.9rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid var(--moderator-border);
+  background: var(--moderator-surface);
+  color: var(--moderator-text-muted);
+  cursor: pointer;
+}
+
+.tabActive {
+  color: #1e40af;
+  background: #eff6ff;
+  border-color: rgba(37, 99, 235, 0.35);
+}
+
+.kpiWarn {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.importTextarea {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--moderator-text);
+  resize: vertical;
+  background: var(--moderator-surface);
+  border: 1px solid var(--moderator-border);
+  border-radius: 10px;
+}
+
+.filePick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--moderator-text-muted);
+}
+
+.importPreview {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--moderator-text-muted);
+}
+
+.formError {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: #b91c1c;
+}
+
+.grantRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.searchBox {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--moderator-border);
+  border-radius: 10px;
+  background: var(--moderator-surface);
+}
+
+.searchBox input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  color: var(--moderator-text);
+}
+
+.studentList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 180px;
+  overflow: auto;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.studentOption {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--moderator-text);
+}
+
+.studentOptionActive,
+.studentOption:hover {
+  background: #eff6ff;
+  border-color: rgba(37, 99, 235, 0.25);
+}
+
+.studentAvatar {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  color: #1e40af;
+  background: #dbeafe;
+  border-radius: 8px;
+}
+
+.studentMeta {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--moderator-text-muted);
+}
+

@@ -15,6 +15,10 @@ export function getMyVouchers() {
   return apiRequest("/api/v1/gamification/vouchers");
 }
 
+export function getMyPartnerVouchers() {
+  return apiRequest("/api/v1/me/partner-vouchers");
+}
+
 export function getMyDailyMissions() {
   return apiRequest("/api/v1/gamification/me/daily-missions");
 }
@@ -93,5 +97,18 @@ export function mapRankVoucherDto(dto) {
     status: dto.status ?? dto.Status ?? "Unknown",
     expiresAt: dto.expiresAt ?? dto.ExpiresAt,
     grantedAt: dto.grantedAt ?? dto.GrantedAt,
+  };
+}
+
+export function mapPartnerVoucherDto(dto) {
+  return {
+    id: dto.id ?? dto.Id,
+    code: dto.code ?? dto.Code ?? "",
+    typeLabel: dto.typeLabel ?? dto.TypeLabel ?? "",
+    discountPercent: dto.discountPercent ?? dto.DiscountPercent ?? 0,
+    partnerName: dto.partnerName ?? dto.PartnerName ?? "FTES",
+    status: dto.status ?? dto.Status ?? "Unknown",
+    expiresAt: dto.expiresAt ?? dto.ExpiresAt,
+    assignedAt: dto.assignedAt ?? dto.AssignedAt,
   };
 }

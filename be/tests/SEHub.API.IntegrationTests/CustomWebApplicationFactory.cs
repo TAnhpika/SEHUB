@@ -182,6 +182,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
         await context.Database.EnsureCreatedAsync();
         await SubjectSeedData.SyncAsync(context, NullLogger.Instance);
+        await PartnerVoucherSeedData.SyncAsync(context, NullLogger.Instance);
 
         foreach (var role in new[] { RoleNames.Student, RoleNames.Moderator, RoleNames.Admin })
         {
@@ -457,6 +458,24 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 Name = "1 Month",
                 DurationDays = 30,
                 PriceVnd = 48000,
+                CreatedAt = DateTime.UtcNow
+            });
+            context.SubscriptionPlans.Add(new SubscriptionPlan
+            {
+                Id = Guid.Parse("33333333-3333-3333-3333-333333333334"),
+                Code = "8m",
+                Name = "8 Months",
+                DurationDays = 240,
+                PriceVnd = 200000,
+                CreatedAt = DateTime.UtcNow
+            });
+            context.SubscriptionPlans.Add(new SubscriptionPlan
+            {
+                Id = Guid.Parse("33333333-3333-3333-3333-333333333335"),
+                Code = "4y",
+                Name = "4 Years",
+                DurationDays = 1460,
+                PriceVnd = 650000,
                 CreatedAt = DateTime.UtcNow
             });
         }

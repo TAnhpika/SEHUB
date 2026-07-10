@@ -134,6 +134,7 @@ public static class DependencyInjection
         services.AddScoped<IAdminPaymentService, AdminPaymentService>();
         services.AddScoped<IAdminGamificationService, AdminGamificationService>();
         services.AddScoped<IAdminVoucherService, AdminVoucherService>();
+        services.AddScoped<IPartnerVoucherService, PartnerVoucherService>();
         services.AddScoped<IAdminAuditLogService, AdminAuditLogService>();
         services.AddScoped<IAdminExportService, AdminExportService>();
         services.AddScoped<IAdminOverviewService, AdminOverviewService>();

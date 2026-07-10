@@ -48,6 +48,9 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<GamificationEventInbox> GamificationEventInboxes => Set<GamificationEventInbox>();
     public DbSet<RewardRule> RewardRules => Set<RewardRule>();
     public DbSet<RankRewardVoucher> RankRewardVouchers => Set<RankRewardVoucher>();
+    public DbSet<PartnerVoucherType> PartnerVoucherTypes => Set<PartnerVoucherType>();
+    public DbSet<PartnerVoucherCode> PartnerVoucherCodes => Set<PartnerVoucherCode>();
+    public DbSet<SubscriptionPlanPartnerReward> SubscriptionPlanPartnerRewards => Set<SubscriptionPlanPartnerReward>();
     public DbSet<UserLevelHistory> UserLevelHistories => Set<UserLevelHistory>();
     public DbSet<DailyMission> DailyMissions => Set<DailyMission>();
     public DbSet<WeeklyMission> WeeklyMissions => Set<WeeklyMission>();

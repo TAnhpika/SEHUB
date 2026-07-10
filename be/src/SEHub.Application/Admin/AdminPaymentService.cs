@@ -19,6 +19,7 @@ public sealed class AdminPaymentService : IAdminPaymentService
     private readonly IUserRepository _userRepository;
     private readonly IPaymentConfirmationNotifier _paymentConfirmationNotifier;
     private readonly IPremiumRefundService _premiumRefundService;
+    private readonly IPartnerVoucherService _partnerVoucherService;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -29,6 +30,7 @@ public sealed class AdminPaymentService : IAdminPaymentService
         IUserRepository userRepository,
         IPaymentConfirmationNotifier paymentConfirmationNotifier,
         IPremiumRefundService premiumRefundService,
+        IPartnerVoucherService partnerVoucherService,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
@@ -38,6 +40,7 @@ public sealed class AdminPaymentService : IAdminPaymentService
         _userRepository = userRepository;
         _paymentConfirmationNotifier = paymentConfirmationNotifier;
         _premiumRefundService = premiumRefundService;
+        _partnerVoucherService = partnerVoucherService;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -105,6 +108,7 @@ public sealed class AdminPaymentService : IAdminPaymentService
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         await _subscriptionService.ActivateSubscriptionAsync(order.UserId, order.PlanId, cancellationToken);
+        await _partnerVoucherService.TryAssignForPaidOrderAsync(orderId, cancellationToken);
 
         var user = await _userRepository.GetByIdAsync(order.UserId, cancellationToken);
         var subscription = await _subscriptionService.GetStatusAsync(order.UserId, cancellationToken);

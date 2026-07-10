@@ -345,7 +345,7 @@
 
 .voucherItem {
   display: grid;
-  grid-template-columns: auto auto 1fr;
+  grid-template-columns: auto auto 1fr auto;
   gap: 0.25rem 0.5rem;
   align-items: baseline;
   padding: 0.5rem 0.625rem;
@@ -363,6 +363,17 @@
 .voucherDiscount {
   font-weight: 700;
   color: var(--color-primary);
+}
+
+.copyBtn {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--color-border-light);
+  border-radius: 6px;
 }
 
 .voucherMeta {

@@ -159,6 +159,12 @@ public interface IWorkflowNotificationService
         string username,
         string description,
         CancellationToken cancellationToken = default);
+
+    Task NotifyAdminsPartnerVoucherPoolEmptyAsync(
+        string typeCode,
+        string planCode,
+        Guid paymentOrderId,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class WorkflowNotificationService : IWorkflowNotificationService
@@ -699,6 +705,23 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             "/admin/feedback",
             submitterUserId,
             feedbackId,
+            cancellationToken);
+    }
+
+    public async Task NotifyAdminsPartnerVoucherPoolEmptyAsync(
+        string typeCode,
+        string planCode,
+        Guid paymentOrderId,
+        CancellationToken cancellationToken = default)
+    {
+        await NotifyRoleMembersAsync(
+            [RoleNames.Admin],
+            NotificationType.Moderation,
+            "Kho mã FTES đã hết",
+            $"Đơn Premium ({planCode}) cần {typeCode} nhưng kho trống. Hãy import thêm mã.",
+            "/admin/vouchers",
+            null,
+            paymentOrderId,
             cancellationToken);
     }
 
