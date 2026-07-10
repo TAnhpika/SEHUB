@@ -249,12 +249,30 @@
     position: fixed;
     top: 0;
     left: 0;
-    width: min(280px, 85vw);
+    width: min(262px, 82vw);
     transform: translateX(-100%);
     transition: transform 0.22s ease;
   }
 
   .sidebarOpen {
     transform: translateX(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: min(256px, 80vw);
+  }
+}
+
+@media (max-width: 640px) {
+  .sidebar {
+    width: min(252px, 79vw);
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    width: min(248px, 78vw);
   }
 }

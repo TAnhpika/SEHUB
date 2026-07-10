@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SEHUB — Responsive Preview</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b1220;
+        --panel: #111827;
+        --border: #1f2937;
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --accent: #60a5fa;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      .toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: end;
+        padding: 1rem 1.25rem;
+        background: rgba(11, 18, 32, 0.95);
+        border-bottom: 1px solid var(--border);
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        min-width: 12rem;
+      }
+      label { font-size: 0.75rem; color: var(--muted); }
+      input, select, button { font: inherit; }
+      input, select {
+        padding: 0.55rem 0.7rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        color: var(--text);
+      }
+      input { min-width: 18rem; }
+      button {
+        padding: 0.55rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        color: var(--text);
+        cursor: pointer;
+      }
+      button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #0f172a;
+        font-weight: 600;
+      }
+      .hint {
+        width: 100%;
+        font-size: 0.8125rem;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1rem;
+        padding: 1rem 1.25rem 2rem;
+      }
+      .device {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--panel);
+      }
+      .device-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding: 0.65rem 0.85rem;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.8125rem;
+      }
+      .device-name { font-weight: 600; }
+      .device-size { color: var(--muted); }
+      .frame-wrap {
+        overflow: auto;
+        background: #020617;
+        padding: 0.75rem;
+      }
+      .frame {
+        margin: 0 auto;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #fff;
+      }
+      iframe {
+        display: block;
+        width: 100%;
+        border: 0;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <div class="field" style="flex: 1">
+        <label for="path">Đường dẫn trang</label>
+        <input id="path" type="text" value="/community" />
+      </div>
+      <div class="field">
+        <label for="preset">Trang mẫu</label>
+        <select id="preset">
+          <option value="/">Landing</option>
+          <option value="/community" selected>Feed</option>
+          <option value="/profile">Profile</option>
+          <option value="/home/search">Tìm kiếm</option>
+          <option value="/support">Support</option>
+        </select>
+      </div>
+      <button class="primary" id="reload">Tải lại</button>
+      <button id="open-single">Mở từng màn hình</button>
+      <p class="hint">
+        Breakpoint: shell 1024px · tablet 768px · phone 640px · phone-sm 480px.
+        FE: <code>http://localhost:5173</code>
+      </p>
+    </div>
+    <div class="grid" id="grid"></div>
+    <script>
+      const DEVICES = [
+        { name: "Desktop XL", width: 1440, height: 900 },
+        { name: "Laptop / Shell", width: 1024, height: 768 },
+        { name: "Tablet", width: 768, height: 1024 },
+        { name: "Phone", width: 640, height: 900 },
+        { name: "Phone SM", width: 480, height: 844 },
+        { name: "iPhone SE", width: 375, height: 667 },
+      ];
+      const pathInput = document.getElementById("path");
+      const presetSelect = document.getElementById("preset");
+      const grid = document.getElementById("grid");
+      const origin = window.location.origin;
+      function normalizePath(value) {
+        const trimmed = (value || "/").trim();
+        return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+      }
+      function buildUrl() {
+        return `${origin}${normalizePath(pathInput.value)}`;
+      }
+      function renderDevices() {
+        const url = buildUrl();
+        grid.innerHTML = DEVICES.map((d) => `
+          <section class="device">
+            <div class="device-head">
+              <span class="device-name">${d.name}</span>
+              <span class="device-size">${d.width} × ${d.height}</span>
+            </div>
+            <div class="frame-wrap">
+              <div class="frame" style="width:${d.width}px">
+                <iframe title="${d.name}" src="${url}" width="${d.width}" height="${d.height}" loading="lazy"></iframe>
+              </div>
+            </div>
+          </section>
+        `).join("");
+      }
+      document.getElementById("reload").addEventListener("click", renderDevices);
+      document.getElementById("open-single").addEventListener("click", () => {
+        window.open(`responsive-preview-single.html?path=${encodeURIComponent(normalizePath(pathInput.value))}&device=tablet`, "_blank");
+      });
+      presetSelect.addEventListener("change", () => {
+        pathInput.value = presetSelect.value;
+        renderDevices();
+      });
+      pathInput.addEventListener("keydown", (e) => { if (e.key === "Enter") renderDevices(); });
+      renderDevices();
+    </script>
+  </body>
+</html>
