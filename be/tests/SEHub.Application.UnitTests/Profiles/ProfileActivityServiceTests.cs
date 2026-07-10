@@ -32,6 +32,8 @@ public sealed class ProfileActivityServiceTests
     [InlineData(3, 2)]
     [InlineData(5, 2)]
     [InlineData(6, 3)]
+    [InlineData(9, 3)]
+    [InlineData(10, 4)]
     public void ToHeatmapLevel_MapsCounts(int count, int expectedLevel)
     {
         ProfileActivityService.ToHeatmapLevel(count).Should().Be(expectedLevel);

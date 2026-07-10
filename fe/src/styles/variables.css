@@ -183,6 +183,7 @@
   --heatmap-scale-2: #40c463;
   --heatmap-scale-3: #30a14e;
   --heatmap-scale-4: #216e39;
+  --heatmap-label: #57606a;
 }
 
 [data-theme="dark"] {
@@ -294,9 +295,10 @@
 
   --skeleton-base: #334155;
   --skeleton-shine: #475569;
-  --heatmap-empty: #1e293b;
-  --heatmap-scale-1: rgba(37, 99, 235, 0.25);
-  --heatmap-scale-2: rgba(37, 99, 235, 0.45);
-  --heatmap-scale-3: rgba(37, 99, 235, 0.65);
-  --heatmap-scale-4: rgba(37, 99, 235, 0.85);
+  --heatmap-empty: #161b22;
+  --heatmap-scale-1: #0e4429;
+  --heatmap-scale-2: #006d32;
+  --heatmap-scale-3: #26a641;
+  --heatmap-scale-4: #39d353;
+  --heatmap-label: #7d8590;
 }
