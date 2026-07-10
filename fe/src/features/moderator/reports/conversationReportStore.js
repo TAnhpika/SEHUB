@@ -51,7 +51,8 @@ function toModeratorReport(entry) {
       username: reportedUsername,
       initial: toReportInitials(reportedUsername),
       joinedAt: "—",
-      trustScore: 50,
+      trustScore: entry.reportedUserTrustScore ?? entry.trustScore ?? null,
+      trustTier: entry.reportedUserTrustTier ?? entry.trustTier ?? null,
     },
     resolution: entry.resolution ?? entry.resolutionNote ?? null,
   };
@@ -77,6 +78,8 @@ function mapConversationApiReport(dto) {
     reporterUsername: dto.reporterUsername,
     createdAt: dto.createdAt,
     resolutionNote: dto.resolutionNote,
+    reportedUserTrustScore: dto.reportedUserTrustScore,
+    reportedUserTrustTier: dto.reportedUserTrustTier,
     snippet: dto.detail?.length > 72 ? `${dto.detail.slice(0, 72)}…` : dto.detail,
   });
 }
@@ -96,6 +99,8 @@ function mapUserApiReport(dto) {
     reporterUsername: dto.reporterUsername,
     createdAt: dto.createdAt,
     resolutionNote: dto.resolutionNote,
+    reportedUserTrustScore: dto.reportedUserTrustScore,
+    reportedUserTrustTier: dto.reportedUserTrustTier,
     snippet: detail.length > 72 ? `${detail.slice(0, 72)}…` : detail,
   });
 }

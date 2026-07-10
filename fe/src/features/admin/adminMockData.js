@@ -167,8 +167,15 @@ export function getDashboardPending() {
       id: "p4",
       label: "Bài nộp TH chờ chấm",
       count: badges["practice-submissions"],
-      to: "/admin/exams/submissions",
+      to: "/admin/moderation/practice-submissions",
       urgent: badges["practice-submissions"] > 0,
+    },
+    {
+      id: "p6",
+      label: "Bài viết chờ duyệt",
+      count: badges["pending-posts"] ?? 0,
+      to: "/admin/moderation/content",
+      urgent: (badges["pending-posts"] ?? 0) > 0,
     },
     {
       id: "p5",
@@ -186,7 +193,7 @@ export const ADMIN_DASHBOARD_PENDING = getDashboardPending();
 export const ADMIN_QUICK_LINKS = [
   { to: "/admin/users", label: "Quản lý tài khoản", desc: "Khóa vĩnh viễn, reset MK" },
   { to: "/admin/exams/pending", label: "Duyệt đề Mod", desc: "Đề chờ phê duyệt" },
-  { to: "/admin/moderation", label: "Báo cáo", desc: "Hàng chờ xử lý" },
+  { to: "/admin/moderation", label: "Workspace kiểm duyệt", desc: "Báo cáo, bài viết, bài nộp TH" },
   { to: "/admin/documents", label: "Quản lý tài liệu", desc: "Free 3 trang / Premium full" },
   { to: "/admin/payments", label: "Thanh toán PayOS", desc: "Xác nhận & cộng token" },
   { to: "/admin/permissions", label: "Phân quyền Mod", desc: "Gán/thu hồi Mod" },

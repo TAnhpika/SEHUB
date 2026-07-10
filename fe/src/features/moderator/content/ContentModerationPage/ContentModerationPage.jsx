@@ -27,6 +27,7 @@ import {
 } from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
 import { CONTENT_QUEUE_PAGE_SIZE, filterContentQueue, SORT_OPTIONS } from "@/features/moderator/content/contentModerationData";
 import { useContentModerationDetail, useContentModerationQueue } from "@/features/moderator/content/contentModerationStore";
+import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import styles from "./ContentModerationPage.module.css";
 
 /**
@@ -57,12 +58,13 @@ const SEARCH_DEBOUNCE_MS = 350;
  * **Hành động Moderator:**
  * - Duyệt/từ chối đơn hoặc hàng loạt qua `approveItems` / `rejectItems`.
  *
+ * @param {{ portal?: 'admin' | 'moderator' }} [props]
  * @returns {import('react').ReactElement} Layout workspace với bảng, bulk bar và panel chi tiết.
  *
  * @example
  * <Route path="/moderator/content" element={<ContentModerationPage />} />
  */
-function ContentModerationPage() {
+function ContentModerationPage({ portal = "moderator" }) {
     const { showToast } = useToast();
     const { items, loading, error, sort, setSort, search, setSearch, refresh, approveItems, rejectItems } = useContentModerationQueue();
     const [page, setPage] = useState(1);
@@ -261,12 +263,7 @@ function ContentModerationPage() {
         setFocusedId(id);
     }
 
-    return (
-        <ModeratorPageShell
-            title="Hàng đợi duyệt bài viết"
-            description="Duyệt bài viết sinh viên gửi trước khi hiển thị trên cộng đồng. Bài Rejected có thể được gửi duyệt lại."
-            crumbs={CONTENT_CRUMBS}
-        >
+    const workspaceBody = (
             <section className={styles.card}>
                 <div className={styles.toolbarBlock}>
                     <ModeratorToolbar
@@ -460,6 +457,31 @@ function ContentModerationPage() {
                     </aside>
                 </div>
             </section>
+    );
+
+    if (portal === "admin") {
+        return (
+            <AdminPageLayout
+                title="Bài viết chờ duyệt"
+                subtitle="Duyệt bài viết sinh viên gửi trước khi hiển thị trên cộng đồng. Bài Rejected có thể được gửi duyệt lại."
+                breadcrumbs={[
+                    { label: "Dashboard", to: "/admin" },
+                    { label: "Kiểm duyệt", to: "/admin/moderation" },
+                    { label: "Bài viết chờ duyệt" },
+                ]}
+            >
+                {workspaceBody}
+            </AdminPageLayout>
+        );
+    }
+
+    return (
+        <ModeratorPageShell
+            title="Hàng đợi duyệt bài viết"
+            description="Duyệt bài viết sinh viên gửi trước khi hiển thị trên cộng đồng. Bài Rejected có thể được gửi duyệt lại."
+            crumbs={CONTENT_CRUMBS}
+        >
+            {workspaceBody}
         </ModeratorPageShell>
     );
 }

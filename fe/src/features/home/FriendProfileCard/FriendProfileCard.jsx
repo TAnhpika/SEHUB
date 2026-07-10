@@ -6,6 +6,7 @@ import {
 import FollowButton from "@/features/social/FollowButton/FollowButton";
 import MessageUserButton from "@/features/social/MessageUserButton/MessageUserButton";
 import UserAvatar from "@/common/UserAvatar/UserAvatar";
+import TrustScoreBadge from "@/common/TrustScore/TrustScoreBadge";
 import { getRankBadgeStyleClass, getRankDisplay } from "@/utils/rankDisplay";
 import rankStyles from "@/utils/rankDisplay.module.css";
 import styles from "./FriendProfileCard.module.css";
@@ -80,6 +81,10 @@ function FriendProfileCard({
         />
         <MessageUserButton userId={profile.userId} className={styles["message-btn"]} />
       </div>
+
+      {profile.trustScore != null ? (
+        <TrustScoreBadge score={profile.trustScore} tier={profile.trustTier} />
+      ) : null}
 
       <div className={styles.progress}>
         <div className={styles["progress-head"]}>

@@ -19,6 +19,7 @@ public sealed class N8nPremiumActivationServiceTests
     private readonly Mock<IPaymentAuditLogRepository> _auditLogRepository = new();
     private readonly Mock<ISubscriptionService> _subscriptionService = new();
     private readonly Mock<IPaymentConfirmationNotifier> _paymentConfirmationNotifier = new();
+    private readonly Mock<IPartnerVoucherService> _partnerVoucherService = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
     private static readonly Guid UserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -125,6 +126,7 @@ public sealed class N8nPremiumActivationServiceTests
         _auditLogRepository.Object,
         _subscriptionService.Object,
         _paymentConfirmationNotifier.Object,
+        _partnerVoucherService.Object,
         _unitOfWork.Object,
         new N8nPremiumActivationValidator(),
         Microsoft.Extensions.Options.Options.Create(new AiTokenLimitSettings

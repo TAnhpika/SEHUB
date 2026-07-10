@@ -10,6 +10,7 @@ import { StaffDetailSkeleton } from "@/common/Skeleton/StaffSkeleton";
 import StatusBadge from "@/features/admin/shared/StatusBadge";
 import {
   EXAM_STATUS_LABELS,
+  getAdminExamEditPath,
   getAdminExamById,
   getExamQuestions,
   getExamSubmissions,
@@ -19,6 +20,8 @@ import {
   removeAdminExamViaApi,
 } from "@/features/admin/exams/adminExamData";
 import examStyles from "@/features/admin/exams/AdminExam.module.css";
+import AdminExamQuestionViewer from "@/features/admin/exams/AdminExamQuestionViewer";
+import ExamAttachmentViewer from "@/features/exams/ExamAttachmentViewer/ExamAttachmentViewer";
 import styles from "@/features/admin/shared/adminPage.module.css";
 import { getExamListPaperLabel, getExamSubjectCode } from "@/utils/examDisplay";
 import { getPrimaryExamAttachment } from "@/utils/examAssetUrl";
@@ -121,7 +124,7 @@ function AdminExamDetailPage() {
       ]}
       actions={
         <>
-          <Button look="outline" to={`/admin/exams/${exam.id}/edit`}>
+          <Button look="outline" to={getAdminExamEditPath(exam)}>
             Sửa
           </Button>
           <Button look="outline" type="button" onClick={handleDelete} disabled={deleteLoading}>
@@ -218,35 +221,13 @@ function AdminExamDetailPage() {
         <section className={styles.panel} style={{ marginTop: "1rem" }}>
           <h2 className={styles.panelTitle}>Ngân hàng câu hỏi</h2>
           <p className={styles.panelDesc}>Xem trước đáp án đúng (Admin)</p>
-          <ul className={examStyles.questionList}>
-            {questions.map((q, index) => (
-              <li key={q.id ?? index} className={examStyles.questionItem}>
-                <p className={examStyles.questionText}>
-                  Câu {q.id ?? index + 1}. {q.text}
-                  {q.isMulti ? (
-                    <span className={examStyles.multiBadge}>
-                      Chọn {q.requiredSelectCount} đáp án
-                    </span>
-                  ) : null}
-                </p>
-                <ol className={examStyles.optionList}>
-                  {q.options.map((opt, i) => (
-                    <li
-                      key={`${q.id ?? index}-${i}`}
-                      className={
-                        q.correctIndices?.includes(i) || i === q.correct
-                          ? examStyles.optionCorrect
-                          : undefined
-                      }
-                    >
-                      {String.fromCharCode(65 + i)}. {opt}
-                      {q.correctIndices?.includes(i) || i === q.correct ? " ✓" : ""}
-                    </li>
-                  ))}
-                </ol>
-              </li>
-            ))}
-          </ul>
+          <AdminExamQuestionViewer questions={questions} />
+        </section>
+      ) : null}
+
+      {exam.typeKey === "practice" && exam.attachments?.length > 0 ? (
+        <section className={styles.panel} style={{ marginTop: "1rem" }}>
+          <ExamAttachmentViewer examApiId={exam.id} attachments={exam.attachments} />
         </section>
       ) : null}
 
@@ -255,7 +236,7 @@ function AdminExamDetailPage() {
           <h2 className={styles.panelTitle}>Bài nộp GitHub (Thực hành)</h2>
           <p className={styles.panelDesc}>
             Sinh viên Premium nộp link repo — Admin/Mod chấm Đã xem / Đạt / Không đạt (§3.4).{" "}
-            <Link to="/admin/exams/submissions" className={styles.link}>
+            <Link to="/admin/moderation/practice-submissions" className={styles.link}>
               Xem tất cả bài nộp thực hành
             </Link>
           </p>
@@ -315,7 +296,7 @@ function AdminExamDetailPage() {
         <section className={styles.panel} style={{ marginTop: "1rem" }}>
           <p className={styles.hint}>
             Chưa có câu hỏi OCR.{" "}
-            <Link to={`/admin/exams/${exam.id}/edit`} className={styles.link}>
+            <Link to={getAdminExamEditPath(exam)} className={styles.link}>
               Upload & OCR
             </Link>
           </p>

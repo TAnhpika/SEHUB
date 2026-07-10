@@ -4,6 +4,7 @@ using SEHub.Application.Abstractions.Repositories;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Users;
 using SEHub.Application.Notifications;
+using SEHub.Application.Trust;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
@@ -25,6 +26,7 @@ public sealed class UserReportService : IUserReportService
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMemoryCache _cache;
+    private readonly ITrustScoreService _trustScoreService;
 
     public UserReportService(
         IUserReportRepository reportRepository,
@@ -34,7 +36,8 @@ public sealed class UserReportService : IUserReportService
         IWorkflowNotificationService workflowNotifications,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork,
-        IMemoryCache cache)
+        IMemoryCache cache,
+        ITrustScoreService trustScoreService)
     {
         _reportRepository = reportRepository;
         _userRepository = userRepository;
@@ -44,6 +47,7 @@ public sealed class UserReportService : IUserReportService
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _cache = cache;
+        _trustScoreService = trustScoreService;
     }
 
     public async Task ReportAsync(
@@ -241,6 +245,7 @@ public sealed class UserReportService : IUserReportService
         await _reportRepository.UpdateAsync(report, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         _cache.Remove(ModerationCacheKeys.Stats);
+        _trustScoreService.InvalidateCache(report.ReportedUserId);
 
         return await MapAsync(report, cancellationToken);
     }
@@ -271,6 +276,8 @@ public sealed class UserReportService : IUserReportService
     {
         var reporter = await _userRepository.GetByIdAsync(report.ReporterId, cancellationToken);
         var reportedUser = await _userRepository.GetByIdAsync(report.ReportedUserId, cancellationToken);
+        var trust = await _trustScoreService.GetForUserAsync(report.ReportedUserId, cancellationToken);
+        var publicTrust = TrustScoreCalculator.ToPublic(trust);
 
         return new UserReportDto
         {
@@ -291,6 +298,8 @@ public sealed class UserReportService : IUserReportService
             QuestionCommentId = report.QuestionCommentId,
             CreatedAt = report.CreatedAt,
             ResolutionNote = report.ResolutionNote,
+            ReportedUserTrustScore = publicTrust.Score,
+            ReportedUserTrustTier = publicTrust.Tier,
         };
     }
 }

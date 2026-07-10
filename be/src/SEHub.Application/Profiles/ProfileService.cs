@@ -2,6 +2,7 @@ using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
 using SEHub.Application.Storage;
+using SEHub.Application.Trust;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Profiles;
 using SEHub.Domain.Exceptions;
@@ -34,6 +35,7 @@ public sealed class ProfileService : IProfileService
     private readonly ICdnFolderSettings _cdnFolders;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ITrustScoreService _trustScoreService;
 
     public ProfileService(
         IUserRepository userRepository,
@@ -49,7 +51,8 @@ public sealed class ProfileService : IProfileService
         IImageCdnStorageService cdnStorage,
         ICdnFolderSettings cdnFolders,
         ICurrentUserService currentUser,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ITrustScoreService trustScoreService)
     {
         _userRepository = userRepository;
         _profileRepository = profileRepository;
@@ -65,6 +68,7 @@ public sealed class ProfileService : IProfileService
         _cdnFolders = cdnFolders;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _trustScoreService = trustScoreService;
     }
 
     public async Task<ProfileDto> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
@@ -241,6 +245,9 @@ public sealed class ProfileService : IProfileService
             isFollowing = await _followRepository.ExistsAsync(viewerId.Value, userId, cancellationToken);
         }
 
+        var trust = await _trustScoreService.GetForUserAsync(userId, cancellationToken);
+        var publicTrust = TrustScoreCalculator.ToPublic(trust);
+
         return new ProfileDto
         {
             UserId = userId,
@@ -268,7 +275,9 @@ public sealed class ProfileService : IProfileService
             FollowingCount = followingCount,
             IsFollowing = isFollowing,
             MemberSince = user.CreatedAt,
-            ProfileUpdatedAt = profile?.UpdatedAt ?? profile?.CreatedAt
+            ProfileUpdatedAt = profile?.UpdatedAt ?? profile?.CreatedAt,
+            TrustScore = publicTrust.Score,
+            TrustTier = publicTrust.Tier,
         };
     }
 

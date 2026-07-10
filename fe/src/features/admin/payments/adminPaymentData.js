@@ -10,7 +10,6 @@ import {
   activatePremiumFromPayment,
   revokePremiumFromPayment,
 } from "@/features/admin/users/adminUserStore";
-import { grantVoucherFromPayment } from "@/features/admin/vouchers/adminVoucherData";
 import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
 import * as adminApi from "@/api/adminApi";
 import { mapAdminPaymentListItem, mapPaymentAuditLogItem } from "@/api/adminMapper";
@@ -296,18 +295,10 @@ export function confirmPayOsPayment(paymentId, adminUsername = "admin_sehub") {
     payosOrderId: payment.payosOrderId,
   });
 
-  const voucherResult = grantVoucherFromPayment({
-    username: payment.username,
-    planId: payment.planId,
-    payosOrderId: payment.payosOrderId,
-  });
-
   let message = premiumResult.ok
     ? premiumResult.message
     : `Đã xác nhận PayOS — lưu ý: ${premiumResult.message}`;
-  if (voucherResult.ok) {
-    message += ` · ${voucherResult.message}`;
-  }
+  message += " · Mã FTES (nếu có) do BE gán tự động khi Paid.";
 
   return {
     ok: true,

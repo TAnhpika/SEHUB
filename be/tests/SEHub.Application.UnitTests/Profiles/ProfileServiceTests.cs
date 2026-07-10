@@ -5,7 +5,9 @@ using SEHub.Application.Feed;
 using SEHub.Application.Models;
 using SEHub.Application.Profiles;
 using SEHub.Application.Storage;
+using SEHub.Application.Trust;
 using SEHub.Contracts.Profiles;
+using SEHub.Contracts.Trust;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Exceptions;
 
@@ -27,8 +29,16 @@ public sealed class ProfileServiceTests
     private readonly Mock<ICdnFolderSettings> _cdnFolders = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    private readonly Mock<ITrustScoreService> _trustScoreService = new();
 
     private static readonly Guid UserId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+
+    public ProfileServiceTests()
+    {
+        _trustScoreService
+            .Setup(s => s.GetForUserAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TrustScoreDto { Score = 75, Tier = "medium", Confidence = "medium" });
+    }
 
     private ProfileService CreateSut()
     {
@@ -47,7 +57,8 @@ public sealed class ProfileServiceTests
             _cdnStorage.Object,
             _cdnFolders.Object,
             _currentUser.Object,
-            _unitOfWork.Object);
+            _unitOfWork.Object,
+            _trustScoreService.Object);
     }
 
     [Fact]

@@ -24,6 +24,7 @@ using SEHub.Application.Premium.Validators;
 using SEHub.Application.Profiles;
 using SEHub.Application.Profiles.Validators;
 using SEHub.Application.Subjects;
+using SEHub.Application.Trust;
 using SEHub.Application.Users;
 using SEHub.Application.Messaging;
 using SEHub.Application.Notifications;
@@ -120,6 +121,8 @@ public static class DependencyInjection
         services.AddScoped<IWorkflowNotificationService, WorkflowNotificationService>();
         services.AddScoped<IUserBlockService, UserBlockService>();
         services.AddScoped<IUserReportService, UserReportService>();
+        services.AddSingleton<TrustScoreCalculator>();
+        services.AddScoped<ITrustScoreService, TrustScoreService>();
 
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
         services.AddScoped<IAdminDashboardChartsService, AdminDashboardChartsService>();
@@ -131,6 +134,7 @@ public static class DependencyInjection
         services.AddScoped<IAdminPaymentService, AdminPaymentService>();
         services.AddScoped<IAdminGamificationService, AdminGamificationService>();
         services.AddScoped<IAdminVoucherService, AdminVoucherService>();
+        services.AddScoped<IPartnerVoucherService, PartnerVoucherService>();
         services.AddScoped<IAdminAuditLogService, AdminAuditLogService>();
         services.AddScoped<IAdminExportService, AdminExportService>();
         services.AddScoped<IAdminOverviewService, AdminOverviewService>();

@@ -76,14 +76,6 @@ export const ADMIN_SCREENS = [
     phase: "GĐ1",
   },
   {
-    id: "practice-submissions",
-    path: "/admin/exams/submissions",
-    title: "Bài nộp thực hành",
-    subtitle: "Xem & chấm bài nộp GitHub (Đã xem / Đạt / Chưa đạt).",
-    group: "Nội dung",
-    phase: "GĐ1",
-  },
-  {
     id: "documents",
     path: "/admin/documents",
     title: "Quản lý tài liệu",
@@ -100,11 +92,27 @@ export const ADMIN_SCREENS = [
     phase: "GĐ1",
   },
   {
+    id: "practice-submissions",
+    path: "/admin/moderation/practice-submissions",
+    title: "Bài nộp thực hành",
+    subtitle: "Xem & chấm bài nộp GitHub (Đã xem / Đạt / Chưa đạt).",
+    group: "Kiểm duyệt",
+    phase: "GĐ1",
+  },
+  {
+    id: "content-moderation",
+    path: "/admin/moderation/content",
+    title: "Bài viết chờ duyệt",
+    subtitle: "Pre-moderation bài viết sinh viên trước khi hiển thị công khai.",
+    group: "Kiểm duyệt",
+    phase: "GĐ1",
+  },
+  {
     id: "moderation",
     path: "/admin/moderation",
     title: "Hàng chờ báo cáo",
     subtitle: "Xem bài bị báo cáo, quyết định xóa nội dung, giữ nguyên hoặc khóa tài khoản vi phạm.",
-    group: "Nội dung",
+    group: "Kiểm duyệt",
     phase: "GĐ1",
   },
   {
@@ -113,6 +121,14 @@ export const ADMIN_SCREENS = [
     title: "Chi tiết báo cáo",
     subtitle: "Deep link vào workspace báo cáo đã chọn.",
     group: "Nội dung",
+    phase: "GĐ1",
+  },
+  {
+    id: "feedback",
+    path: "/admin/feedback",
+    title: "Phản hồi / Báo lỗi",
+    subtitle: "Báo cáo lỗi từ sinh viên — xem ảnh đính kèm và cập nhật trạng thái xử lý.",
+    group: "Kiểm duyệt",
     phase: "GĐ1",
   },
   {

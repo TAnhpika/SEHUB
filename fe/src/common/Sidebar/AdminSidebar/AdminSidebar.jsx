@@ -21,9 +21,30 @@ function matchNavPath(pathname, to, end = false) {
   return pathname === to || pathname.startsWith(`${to}/`);
 }
 
+const MODERATION_RESERVED_SEGMENTS = new Set(["content", "practice-submissions", "banned"]);
+
+function isModerationReportsPath(pathname) {
+  if (pathname === "/admin/moderation") return true;
+  if (!pathname.startsWith("/admin/moderation/")) return false;
+  const segment = pathname.slice("/admin/moderation/".length).split("/")[0];
+  return !MODERATION_RESERVED_SEGMENTS.has(segment);
+}
+
 function isNavItemActive(item, pathname, searchParams) {
   if (item.id === "banned") {
     return pathname === "/admin/moderation/banned";
+  }
+  if (item.id === "moderation") {
+    return isModerationReportsPath(pathname);
+  }
+  if (item.id === "pending-posts") {
+    return pathname.startsWith("/admin/moderation/content");
+  }
+  if (item.id === "practice-submissions") {
+    return pathname.startsWith("/admin/moderation/practice-submissions");
+  }
+  if (item.id === "feedback") {
+    return pathname.startsWith("/admin/feedback");
   }
   if (item.id === "users") {
     return pathname === "/admin/users" || pathname.startsWith("/admin/users/");

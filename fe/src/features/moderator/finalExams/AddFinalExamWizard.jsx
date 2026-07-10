@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { Outlet, Route, Routes, useParams } from "react-router-dom";
+import { Outlet, Route, Routes, useNavigate, useParams } from "react-router-dom";
+import * as adminApi from "@/api/adminApi";
 import { useExamFormFlow } from "@/features/exams/examFormFlow";
 import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import { useModeratorPage } from "@/features/moderator/context/ModeratorPageContext";
@@ -10,6 +11,7 @@ import FinalExamQuestionsStep from "@/features/moderator/finalExams/steps/FinalE
 import FinalExamReviewStep from "@/features/moderator/finalExams/steps/FinalExamReviewStep";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import { ModeratorFormSkeleton } from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
+import { createExamRevisionViaApi } from "@/features/moderator/exams/moderatorExamService";
 import styles from "./AddFinalExamWizard.module.css";
 
 /**
@@ -129,18 +131,38 @@ function WizardStepRoutes() {
  */
 function WizardShell({ children }) {
   const flow = useExamFormFlow();
+  const { isEditMode, isRevisionEdit } = useFinalExamWizard();
 
   if (flow.scope === "admin") {
-    return (
-      <AdminPageLayout
-        title="Thêm đề cuối kỳ"
-        subtitle="Nhập thông tin, câu hỏi và xuất bản trực tiếp."
-        breadcrumbs={[
+    const title = isEditMode
+      ? isRevisionEdit
+        ? "Cập nhật đề đã xuất bản"
+        : "Sửa đề cuối kỳ"
+      : "Thêm đề cuối kỳ";
+    const subtitle = isEditMode
+      ? isRevisionEdit
+        ? "Chỉnh sửa bản revision và xuất bản thay thế đề đang public."
+        : "Chỉnh sửa thông tin và câu hỏi, sau đó xuất bản."
+      : "Nhập thông tin, câu hỏi và xuất bản trực tiếp.";
+
+    const breadcrumbs = isEditMode
+      ? [
+          { label: "Dashboard", to: "/admin" },
+          { label: "Quản lý đề thi", to: "/admin/exams" },
+          { label: "Sửa đề cuối kỳ" },
+        ]
+      : [
           { label: "Dashboard", to: "/admin" },
           { label: "Quản lý đề thi", to: "/admin/exams" },
           { label: "Thêm mới", to: flow.examsNewPath },
           { label: "Đề cuối kỳ" },
-        ]}
+        ];
+
+    return (
+      <AdminPageLayout
+        title={title}
+        subtitle={subtitle}
+        breadcrumbs={breadcrumbs}
         hidePageHeader={false}
       >
         <div className={styles.layout}>
@@ -170,6 +192,7 @@ function WizardShell({ children }) {
  */
 function WizardContent() {
   const flow = useExamFormFlow();
+  const navigate = useNavigate();
   const { examId } = useParams();
   const {
     loadExamForEdit,
@@ -183,13 +206,38 @@ function WizardContent() {
   useEffect(() => {
     if (!examId) {
       resetWizard();
-      return;
+      return undefined;
     }
 
-    loadExamForEdit(examId).catch(() => {
+    let cancelled = false;
+
+    async function initEdit() {
+      if (flow.scope === "admin") {
+        const dto = await adminApi.getExam(examId);
+        if (cancelled) return;
+
+        const isPublished = String(dto.status ?? "").toLowerCase() === "published";
+        const isRevision = Boolean(dto.revisionOfExamId);
+        if (isPublished && !isRevision) {
+          const revision = await createExamRevisionViaApi(examId);
+          if (cancelled) return;
+          const revisionId = revision.id ?? revision.Id;
+          navigate(`${flow.finalExamEditPathPrefix}/${revisionId}`, { replace: true });
+          return;
+        }
+      }
+
+      await loadExamForEdit(examId);
+    }
+
+    initEdit().catch(() => {
       /* error surfaced via loadExamError */
     });
-  }, [examId, loadExamForEdit, resetWizard]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [examId, flow.finalExamEditPathPrefix, flow.scope, loadExamForEdit, navigate, resetWizard]);
 
   if (examId && loadingExam) {
     return <ModeratorFormSkeleton aria-label="Đang tải đề để chỉnh sửa" />;

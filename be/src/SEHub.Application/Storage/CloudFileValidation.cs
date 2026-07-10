@@ -22,12 +22,21 @@ public static class CloudFileValidation
         "application/vnd.rar",
         "application/x-rar-compressed",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/webp",
         "application/octet-stream"
     };
 
     private static readonly HashSet<string> ExamAttachmentExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".pdf", ".zip", ".rar", ".docx"
+        ".pdf", ".zip", ".rar", ".docx", ".png", ".jpg", ".jpeg", ".webp"
+    };
+
+    private static readonly HashSet<string> ExamAttachmentImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".png", ".jpg", ".jpeg", ".webp"
     };
 
     private static readonly HashSet<string> ImageContentTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -51,13 +60,17 @@ public static class CloudFileValidation
     public static void EnsureValidExamAttachment(string contentType, long fileSizeBytes, string fileName)
     {
         EnsureFileName(fileName);
-        EnsureSize(fileSizeBytes, MaxExamAttachmentSizeBytes);
 
         var extension = Path.GetExtension(fileName);
         if (string.IsNullOrWhiteSpace(extension) || !ExamAttachmentExtensions.Contains(extension))
         {
             throw new DomainException(ErrorCodes.InvalidFileType);
         }
+
+        var maxBytes = ExamAttachmentImageExtensions.Contains(extension)
+            ? MaxImageSizeBytes
+            : MaxExamAttachmentSizeBytes;
+        EnsureSize(fileSizeBytes, maxBytes);
 
         var normalizedContentType = contentType?.Trim() ?? string.Empty;
         if (string.IsNullOrEmpty(normalizedContentType)

@@ -1,0 +1,69 @@
+.frameWrap {
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f8fafc;
+  min-height: 360px;
+}
+
+.frame {
+  width: 100%;
+  min-height: 480px;
+  border: 0;
+  display: block;
+}
+
+.imageWrap {
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 8px;
+  overflow: auto;
+  background: #f8fafc;
+  padding: 0.75rem;
+  max-height: 520px;
+}
+
+.image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.docxWrap {
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.75rem;
+  max-height: 520px;
+  overflow: auto;
+}
+
+.docxContainer {
+  min-height: 200px;
+}
+
+.docxPage {
+  margin-bottom: 0.5rem;
+}
+
+.fileCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border: 1px dashed var(--border-subtle, #cbd5e1);
+  border-radius: 8px;
+  text-align: center;
+  color: #334155;
+}
+
+.loading,
+.error {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.error {
+  color: #b91c1c;
+}

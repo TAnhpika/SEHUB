@@ -18,7 +18,7 @@ export const ADMIN_EXAM_FLOW = {
   publishesDirectly: true,
   basePath: "/admin",
   finalExamPath: "/admin/exams/new/final",
-  finalExamEditPathPrefix: null,
+  finalExamEditPathPrefix: "/admin/exams/final/edit",
   practiceExamPath: "/admin/exams/new/practice",
   examsListPath: "/admin/exams",
   examsNewPath: "/admin/exams/new",

@@ -4,7 +4,8 @@ import { faDownload, faFileLines } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { downloadExamAttachment, fetchExamAttachmentBlobUrl } from "@/api/examsApi";
 import { formatFileSize } from "@/features/exams/practiceSession";
-import { isPdfAttachment } from "@/utils/examAssetUrl";
+import PracticeAttachmentPreview from "@/features/exams/PracticeAttachmentPreview/PracticeAttachmentPreview";
+import { isPreviewablePracticeAttachment } from "@/features/moderator/practiceExams/practiceExamUpload";
 import styles from "./ExamAttachmentViewer.module.css";
 
 function ExamAttachmentViewer({ examApiId, attachments = [] }) {
@@ -16,7 +17,8 @@ function ExamAttachmentViewer({ examApiId, attachments = [] }) {
   const [downloading, setDownloading] = useState(false);
 
   const activeAttachment = attachments[activeIndex] ?? null;
-  const canPreviewPdf = isPdfAttachment(activeAttachment);
+  const activeName = activeAttachment?.name ?? activeAttachment?.originalFileName ?? "";
+  const canPreview = isPreviewablePracticeAttachment(activeName);
 
   useEffect(() => {
     setActiveIndex(0);
@@ -41,7 +43,7 @@ function ExamAttachmentViewer({ examApiId, attachments = [] }) {
       try {
         objectUrl = await fetchExamAttachmentBlobUrl(examApiId, activeAttachment.id, {
           contentType: activeAttachment.contentType,
-          fileName: activeAttachment.name,
+          fileName: activeName,
         });
         if (cancelled) {
           URL.revokeObjectURL(objectUrl);
@@ -67,7 +69,7 @@ function ExamAttachmentViewer({ examApiId, attachments = [] }) {
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [examApiId, activeAttachment?.id]);
+  }, [activeAttachment?.id, activeName, examApiId]);
 
   if (!examApiId || attachments.length === 0) {
     return null;
@@ -78,9 +80,9 @@ function ExamAttachmentViewer({ examApiId, attachments = [] }) {
 
     setDownloading(true);
     try {
-      await downloadExamAttachment(examApiId, activeAttachment.id, activeAttachment.name, {
+      await downloadExamAttachment(examApiId, activeAttachment.id, activeName, {
         contentType: activeAttachment.contentType,
-        fileName: activeAttachment.name,
+        fileName: activeName,
       });
     } catch {
       showToast("Không tải được file đề. Vui lòng thử lại.");
@@ -94,7 +96,7 @@ function ExamAttachmentViewer({ examApiId, attachments = [] }) {
       <div className={styles.header}>
         <div>
           <h2 className={styles.title}>File đề gốc</h2>
-          <p className={styles.fileName}>{activeAttachment?.name ?? "Đề đính kèm"}</p>
+          <p className={styles.fileName}>{activeName || "Đề đính kèm"}</p>
           {(activeAttachment?.fileSize ?? activeAttachment?.size) ? (
             <p className={styles.meta}>
               {formatFileSize(activeAttachment.fileSize ?? activeAttachment.size)}
@@ -125,7 +127,7 @@ function ExamAttachmentViewer({ examApiId, attachments = [] }) {
               className={`${styles.tab} ${index === activeIndex ? styles.tabActive : ""}`}
               onClick={() => setActiveIndex(index)}
             >
-              {attachment.name}
+              {attachment.name ?? attachment.originalFileName}
             </button>
           ))}
         </div>
@@ -135,21 +137,15 @@ function ExamAttachmentViewer({ examApiId, attachments = [] }) {
 
       {!loading && error ? <p className={styles.error}>{error}</p> : null}
 
-      {!loading && !error && blobUrl && canPreviewPdf ? (
-        <div className={styles.frameWrap}>
-          <iframe
-            title={activeAttachment?.name ?? "Xem trước đề thi"}
-            src={blobUrl}
-            className={styles.frame}
-          />
-        </div>
+      {!loading && !error && blobUrl && canPreview ? (
+        <PracticeAttachmentPreview blobUrl={blobUrl} fileName={activeName} />
       ) : null}
 
-      {!loading && !error && blobUrl && !canPreviewPdf ? (
+      {!loading && !error && blobUrl && !canPreview ? (
         <div className={styles.fileCard}>
           <FontAwesomeIcon icon={faFileLines} size="2x" color="#004ac6" />
           <p>
-            File <strong>{activeAttachment?.name}</strong> không hỗ trợ xem trực tiếp trên trình duyệt.
+            File <strong>{activeName}</strong> không hỗ trợ xem trực tiếp trên trình duyệt.
             Bấm <strong>Tải xuống</strong> để mở file trên máy.
           </p>
         </div>

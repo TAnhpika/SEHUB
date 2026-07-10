@@ -127,11 +127,11 @@ Nhánh `Hau_Authen_BE` là bản tích hợp lớn: social Phase 2–3, chat Sig
 |-----------|-----|---------|
 | Thông báo (chuông + badge) | ✅ ~80% | REST + SignalR; types: follow, message, like, … |
 | Discord | 🟠 ~20% | Link/footer UI, không tích hợp OAuth |
-| Gửi phản hồi | 🟠 ~30% | `FeedbackPage` có UI; **không thấy API gửi feedback** |
+| Gửi phản hồi | ✅ ~95% | `FeedbackPage` + `feedbackApi` → `UserFeedbacks`; admin xử lý tại `/admin/feedback` |
 | Tích điểm (+10 post, +2 like) | ✅ BE | `GamificationService`; streak +20 / badge auto: **chưa đủ** |
 | Rank Bronze→Platinum | 🟡 | Level config admin API; voucher rank: xem mục 9 |
 
-**File tham chiếu:** `NotificationDropdown.jsx`, `GamificationService.cs`, `FeedbackPage.jsx`
+**File tham chiếu:** `NotificationDropdown.jsx`, `GamificationService.cs`, `FeedbackPage.jsx`, `AdminFeedbackPage.jsx`, `FeedbackController.cs`
 
 ---
 
@@ -266,7 +266,7 @@ codegraph impact "feedData.js"
 | 6 | Heatmap hoạt động từ stats API | Trung bình |
 | 7 | Badge auto-unlock theo hành vi | Trung bình |
 | 8 | AI token sync server (align spec 1 vs 100 lượt) | Trung bình |
-| 9 | Feedback form → API | Nhỏ |
+| 9 | Feedback form → API + admin queue | Hoàn thành |
 | 10 | Voucher tự động theo rank (không chỉ admin mock) | Trung bình |
 | 11 | Moderator featured / content queue 100% API | Trung bình |
 

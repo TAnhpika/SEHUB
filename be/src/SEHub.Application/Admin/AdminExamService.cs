@@ -295,7 +295,10 @@ public sealed class AdminExamService : IAdminExamService
         var published = await _examRepository.GetByIdAsync(publishedExamId, includeQuestions: true, cancellationToken: cancellationToken)
             ?? throw new NotFoundException("Exam", publishedExamId);
 
-        EnsureModeratorOwnsExamInstance(published);
+        if (!_currentUser.IsModeratorOrAdmin || _currentUser.Role != RoleNames.Admin)
+        {
+            EnsureModeratorOwnsExamInstance(published);
+        }
 
         if (published.Status != ExamStatus.Published)
         {

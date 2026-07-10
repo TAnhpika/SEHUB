@@ -11,6 +11,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import ProfileCardMenu from "@/features/profile/ProfileCard/ProfileCardMenu";
 import ProfileInteractionActions from "@/features/social/ProfileInteractionActions/ProfileInteractionActions";
+import TrustScoreBadge from "@/common/TrustScore/TrustScoreBadge";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import { getRankBadgeStyleClass, getRankDisplay } from "@/utils/rankDisplay";
 import rankStyles from "@/utils/rankDisplay.module.css";
@@ -156,6 +157,10 @@ function ProfileCard({
 
       {!isOwner && profile.userId && onFollowChange ? (
         <ProfileInteractionActions profile={profile} onFollowChange={onFollowChange} />
+      ) : null}
+
+      {profile.trustScore != null ? (
+        <TrustScoreBadge score={profile.trustScore} tier={profile.trustTier} />
       ) : null}
 
       <div className={styles.stats}>

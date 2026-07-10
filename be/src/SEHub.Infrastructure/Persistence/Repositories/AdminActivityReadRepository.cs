@@ -239,6 +239,21 @@ public sealed class AdminActivityReadRepository : IAdminActivityReadRepository
         var perSourceLimit = Math.Max(limit / 5, 20);
         var events = new List<AdminAuditLogItemDto>();
 
+        var adminRoleId = await _context.Roles
+            .AsNoTracking()
+            .Where(r => r.Name == RoleNames.Admin)
+            .Select(r => r.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var adminUserIds = adminRoleId == Guid.Empty
+            ? new HashSet<Guid>()
+            : (await _context.UserRoles
+                .AsNoTracking()
+                .Where(ur => ur.RoleId == adminRoleId)
+                .Select(ur => ur.UserId)
+                .ToListAsync(cancellationToken))
+            .ToHashSet();
+
         var postReports = await _context.PostReports
             .AsNoTracking()
             .Where(r => r.Status != ReportStatus.Pending)
@@ -249,6 +264,7 @@ public sealed class AdminActivityReadRepository : IAdminActivityReadRepository
                 r.Id,
                 r.Status,
                 r.PostId,
+                r.ResolvedById,
                 At = r.UpdatedAt ?? r.CreatedAt,
             })
             .ToListAsync(cancellationToken);
@@ -257,7 +273,8 @@ public sealed class AdminActivityReadRepository : IAdminActivityReadRepository
             r.Id,
             "REPORT_RESOLVED",
             $"Báo cáo đã xử lý — bài viết #{ShortId(r.PostId)} — {FormatReportStatus(r.Status)}",
-            r.At)));
+            r.At,
+            ResolveActorRoleLabel(r.ResolvedById, adminUserIds))));
 
         var commentReports = await _context.CommentReports
             .AsNoTracking()
@@ -269,6 +286,7 @@ public sealed class AdminActivityReadRepository : IAdminActivityReadRepository
                 r.Id,
                 r.Status,
                 r.CommentId,
+                r.ResolvedById,
                 At = r.UpdatedAt ?? r.CreatedAt,
             })
             .ToListAsync(cancellationToken);
@@ -277,7 +295,8 @@ public sealed class AdminActivityReadRepository : IAdminActivityReadRepository
             r.Id,
             "REPORT_RESOLVED",
             $"Báo cáo đã xử lý — bình luận #{ShortId(r.CommentId)} — {FormatReportStatus(r.Status)}",
-            r.At)));
+            r.At,
+            ResolveActorRoleLabel(r.ResolvedById, adminUserIds))));
 
         var userReports = await _context.UserReports
             .AsNoTracking()
@@ -289,6 +308,7 @@ public sealed class AdminActivityReadRepository : IAdminActivityReadRepository
                 r.Id,
                 r.Status,
                 r.ReportedUserId,
+                r.ResolvedById,
                 At = r.UpdatedAt ?? r.CreatedAt,
             })
             .ToListAsync(cancellationToken);
@@ -297,7 +317,8 @@ public sealed class AdminActivityReadRepository : IAdminActivityReadRepository
             r.Id,
             "REPORT_RESOLVED",
             $"Báo cáo đã xử lý — tài khoản #{ShortId(r.ReportedUserId)} — {FormatReportStatus(r.Status)}",
-            r.At)));
+            r.At,
+            ResolveActorRoleLabel(r.ResolvedById, adminUserIds))));
 
         var conversationReports = await _context.ConversationReports
             .AsNoTracking()
@@ -309,6 +330,7 @@ public sealed class AdminActivityReadRepository : IAdminActivityReadRepository
                 r.Id,
                 r.Status,
                 r.ConversationId,
+                r.ResolvedById,
                 At = r.UpdatedAt ?? r.CreatedAt,
             })
             .ToListAsync(cancellationToken);
@@ -317,7 +339,8 @@ public sealed class AdminActivityReadRepository : IAdminActivityReadRepository
             r.Id,
             "REPORT_RESOLVED",
             $"Báo cáo đã xử lý — hội thoại #{ShortId(r.ConversationId)} — {FormatReportStatus(r.Status)}",
-            r.At)));
+            r.At,
+            ResolveActorRoleLabel(r.ResolvedById, adminUserIds))));
 
         var questionReports = await _context.QuestionReports
             .AsNoTracking()
@@ -329,6 +352,7 @@ public sealed class AdminActivityReadRepository : IAdminActivityReadRepository
                 r.Id,
                 r.Status,
                 r.QuestionId,
+                r.ResolvedById,
                 At = r.UpdatedAt ?? r.CreatedAt,
             })
             .ToListAsync(cancellationToken);
@@ -337,7 +361,8 @@ public sealed class AdminActivityReadRepository : IAdminActivityReadRepository
             r.Id,
             "REPORT_RESOLVED",
             $"Báo cáo đã xử lý — câu hỏi #{ShortId(r.QuestionId)} — {FormatReportStatus(r.Status)}",
-            r.At)));
+            r.At,
+            ResolveActorRoleLabel(r.ResolvedById, adminUserIds))));
 
         return events;
     }
@@ -386,16 +411,20 @@ public sealed class AdminActivityReadRepository : IAdminActivityReadRepository
         Guid id,
         string action,
         string detail,
-        DateTime createdAt) =>
+        DateTime createdAt,
+        string actorRole = "mod") =>
         new()
         {
             Id = id,
             Type = "report",
             Action = action,
             Detail = detail,
-            Text = $"{action} — mod: {detail}",
+            Text = $"{action} — {actorRole}: {detail}",
             CreatedAt = createdAt,
         };
+
+    private static string ResolveActorRoleLabel(Guid? actorUserId, IReadOnlySet<Guid> adminUserIds) =>
+        actorUserId is Guid userId && adminUserIds.Contains(userId) ? "admin" : "mod";
 
     private static string BuildExamRejectionDetail(string label, string? reasonDetail)
     {

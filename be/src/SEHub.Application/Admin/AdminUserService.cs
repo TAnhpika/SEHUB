@@ -1,5 +1,6 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Trust;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
 using SEHub.Domain.Entities;
@@ -29,6 +30,7 @@ public sealed class AdminUserService : IAdminUserService
     private readonly IPaymentAuditLogRepository _auditLogRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ITrustScoreService _trustScoreService;
 
     public AdminUserService(
         IUserRepository userRepository,
@@ -41,7 +43,8 @@ public sealed class AdminUserService : IAdminUserService
         IPostReportRepository reportRepository,
         IPaymentAuditLogRepository auditLogRepository,
         ICurrentUserService currentUser,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ITrustScoreService trustScoreService)
     {
         _userRepository = userRepository;
         _subscriptionRepository = subscriptionRepository;
@@ -54,6 +57,7 @@ public sealed class AdminUserService : IAdminUserService
         _auditLogRepository = auditLogRepository;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _trustScoreService = trustScoreService;
     }
 
     public async Task<PagedResult<AdminUserListItemDto>> GetUsersAsync(int page, int pageSize, string? search, CancellationToken cancellationToken = default)
@@ -66,6 +70,7 @@ public sealed class AdminUserService : IAdminUserService
         {
             var subscription = await _subscriptionRepository.GetActiveByUserIdAsync(user.Id, cancellationToken);
             var level = await _levelConfigRepository.GetForPointsAsync(user.Points, cancellationToken);
+            var trust = await _trustScoreService.GetForUserAsync(user.Id, cancellationToken);
             items.Add(new AdminUserListItemDto
             {
                 Id = user.Id,
@@ -77,7 +82,9 @@ public sealed class AdminUserService : IAdminUserService
                 IsPremium = subscription is not null && subscription.IsActive && subscription.EndAt > DateTime.UtcNow,
                 Points = user.Points,
                 LevelName = level?.Name ?? user.LevelName,
-                CreatedAt = user.CreatedAt
+                CreatedAt = user.CreatedAt,
+                TrustScore = trust.Score,
+                TrustTier = trust.Tier,
             });
         }
 
@@ -284,6 +291,7 @@ public sealed class AdminUserService : IAdminUserService
         var examsCompleted = await _examAttemptRepository.CountSubmittedByUserIdAsync(user.Id, cancellationToken);
         var reportsFiled = await _reportRepository.CountByReporterIdAsync(user.Id, cancellationToken);
         var reportsAgainst = await _reportRepository.CountAgainstAuthorIdAsync(user.Id, cancellationToken);
+        var trust = await _trustScoreService.GetForUserAsync(user.Id, cancellationToken);
 
         return new AdminUserDetailDto
         {
@@ -308,7 +316,8 @@ public sealed class AdminUserService : IAdminUserService
             PostsCount = postsCount,
             ExamsCompleted = examsCompleted,
             ReportsFiled = reportsFiled,
-            ReportsAgainst = reportsAgainst
+            ReportsAgainst = reportsAgainst,
+            Trust = trust,
         };
     }
 }

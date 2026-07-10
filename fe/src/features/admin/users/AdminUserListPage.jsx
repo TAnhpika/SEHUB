@@ -165,7 +165,7 @@ function AdminUserListPage() {
               aria-label="Lọc trạng thái"
             >
               <option value="all">Tất cả trạng thái</option>
-              <option value="active">Đang hoạt động</option>
+              <option value="active">Không bị khóa</option>
               <option value="banned">Đã khóa</option>
             </select>
             <div className={styles.filterActions}>
@@ -233,7 +233,7 @@ function AdminUserListPage() {
                   <td>
                     <StatusBadge
                       status={user.status}
-                      label={user.status === "active" ? "Hoạt động" : "Đã khóa"}
+                      label={user.status === "active" ? "Không bị khóa" : "Đã khóa"}
                     />
                   </td>
                   <td>{user.joinedAt}</td>

@@ -227,6 +227,8 @@ export function mapAdminUserListItem(dto) {
     points: dto.points ?? 0,
     levelName: dto.levelName ?? null,
     streakCount: dto.streakCount ?? 0,
+    trustScore: dto.trustScore ?? null,
+    trustTier: dto.trustTier ?? null,
     apiId: dto.id,
   };
 }
@@ -264,6 +266,16 @@ export function mapAdminUserDetail(dto) {
     examsCompleted: dto.examsCompleted ?? 0,
     reportsFiled: dto.reportsFiled ?? 0,
     reportsAgainst: dto.reportsAgainst ?? 0,
+    trust: dto.trust
+      ? {
+          score: dto.trust.score,
+          tier: dto.trust.tier,
+          conductScore: dto.trust.conductScore,
+          competenceScore: dto.trust.competenceScore,
+          engagementScore: dto.trust.engagementScore,
+          confidence: dto.trust.confidence,
+        }
+      : null,
   };
 }
 
@@ -493,6 +505,20 @@ export function mapFinalExamWizardToCreateRequest(examInfo, questions) {
   return {
     subjectCode,
     paperCode: paperCode || `${subjectCode} — Cuối kỳ`,
+    examType: "Final",
+    description: `${examInfo.subjectName ?? subjectCode} · ${examInfo.durationMinutes} phút`,
+    questions: mapWizardQuestionsToCreateItems(questions),
+  };
+}
+
+export function mapFinalExamWizardToUpdateRequest(examInfo, questions) {
+  const subjectCode =
+    normalizeCourseSubjectCode(examInfo.subjectCode) ?? examInfo.subjectCode.trim();
+  const paperCode = examInfo.examCode?.trim() || `${subjectCode} — Cuối kỳ`;
+
+  return {
+    subjectCode,
+    paperCode,
     examType: "Final",
     description: `${examInfo.subjectName ?? subjectCode} · ${examInfo.durationMinutes} phút`,
     questions: mapWizardQuestionsToCreateItems(questions),
@@ -1047,6 +1073,8 @@ export function mapAdminReportListItem(dto) {
     reporterId: dto.reporter?.id ?? null,
     reportedUser: dto.reportedUser?.username ?? "unknown",
     reportedUserId: dto.reportedUser?.id ?? null,
+    reportedUserTrustScore: dto.reportedUser?.trustScore ?? null,
+    reportedUserTrustTier: dto.reportedUser?.trustTier ?? null,
     status,
     urgent: false,
     createdAt: formatAdminDateTime(dto.createdAt),

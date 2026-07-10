@@ -22,4 +22,6 @@ public sealed class ReportUserSummaryDto
     public Guid Id { get; init; }
     public string Username { get; init; } = string.Empty;
     public string DisplayName { get; init; } = string.Empty;
+    public int? TrustScore { get; init; }
+    public string? TrustTier { get; init; }
 }

@@ -7,6 +7,34 @@ import {
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
+const MOD_GRANT_DATES_KEY = "sehub:moderator-grant-dates";
+
+function readModGrantDates() {
+  try {
+    const raw = localStorage.getItem(MOD_GRANT_DATES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeModGrantDate(username, date = new Date().toISOString().slice(0, 10)) {
+  const dates = readModGrantDates();
+  dates[username] = date;
+  localStorage.setItem(MOD_GRANT_DATES_KEY, JSON.stringify(dates));
+}
+
+function removeModGrantDate(username) {
+  const dates = readModGrantDates();
+  delete dates[username];
+  localStorage.setItem(MOD_GRANT_DATES_KEY, JSON.stringify(dates));
+}
+
+function resolveGrantedAt(username, fallback = null) {
+  if (USE_MOCK) return fallback;
+  return readModGrantDates()[username] ?? null;
+}
+
 /** Mock store phân quyền Moderator — Admin gán/thu hồi */
 
 export const MOD_PERMISSIONS = [
@@ -17,7 +45,7 @@ export const MOD_PERMISSIONS = [
   { id: "featured", label: "Gắn nổi bật", desc: "Đề / bài viết nổi bật feed" },
 ];
 
-/** @type {Array<{ username: string, email: string, displayName: string, initial: string, grantedAt: string, grantedBy: string, reportsHandled: number, postsReviewed: number }>} */
+/** @type {Array<{ username: string, email: string, displayName: string, initial: string, grantedAt: string, grantedBy: string }>} */
 let moderatorsStore = [
   {
     username: "mod_sehub",
@@ -26,8 +54,6 @@ let moderatorsStore = [
     initial: "N",
     grantedAt: "2026-03-15",
     grantedBy: "admin_sehub",
-    reportsHandled: 47,
-    postsReviewed: 128,
   },
 ];
 
@@ -90,7 +116,6 @@ export function getPermissionsStats() {
     activeMods: moderatorsStore.length,
     candidates: getModeratorCandidates().length,
     permissionCount: MOD_PERMISSIONS.length,
-    totalHandled: moderatorsStore.reduce((s, m) => s + m.reportsHandled, 0),
   };
 }
 
@@ -108,17 +133,17 @@ export function addModeratorDirect(
   }
 
   const initial = displayName?.charAt(0)?.toUpperCase() ?? username.charAt(0).toUpperCase();
+  const grantedAt = new Date().toISOString().slice(0, 10);
   const entry = {
     username,
     email,
     displayName,
     initial,
-    grantedAt: new Date().toISOString().slice(0, 10),
+    grantedAt,
     grantedBy: adminUsername,
-    reportsHandled: 0,
-    postsReviewed: 0,
   };
   moderatorsStore = [...moderatorsStore, entry];
+  if (!USE_MOCK) writeModGrantDate(username, grantedAt);
   candidatesStore = candidatesStore.filter((c) => c.username !== username);
 
   auditStore = [
@@ -147,17 +172,17 @@ export function grantModerator(username, adminUsername = "admin_sehub") {
     return { ok: false, message: "Tài khoản đã có quyền Mod." };
   }
 
+  const grantedAt = new Date().toISOString().slice(0, 10);
   const entry = {
     username: candidate.username,
     email: candidate.email,
     displayName: candidate.displayName,
     initial: candidate.initial,
-    grantedAt: new Date().toISOString().slice(0, 10),
+    grantedAt,
     grantedBy: adminUsername,
-    reportsHandled: 0,
-    postsReviewed: 0,
   };
   moderatorsStore = [...moderatorsStore, entry];
+  if (!USE_MOCK) writeModGrantDate(username, grantedAt);
   candidatesStore = candidatesStore.filter((c) => c.username !== username);
 
   const audit = {
@@ -180,6 +205,7 @@ export function revokeModerator(username, adminUsername = "admin_sehub") {
   if (!mod) return { ok: false, message: "Không tìm thấy Moderator." };
 
   moderatorsStore = moderatorsStore.filter((m) => m.username !== username);
+  if (!USE_MOCK) removeModGrantDate(username);
   candidatesStore = [
     {
       username: mod.username,
@@ -215,10 +241,8 @@ function mapUserToModerator(user) {
     email: user.email,
     displayName: user.displayName,
     initial: user.displayName?.charAt(0)?.toUpperCase() ?? user.username.charAt(0).toUpperCase(),
-    grantedAt: user.joinedAt ?? "—",
+    grantedAt: resolveGrantedAt(user.username),
     grantedBy: "Admin",
-    reportsHandled: 0,
-    postsReviewed: 0,
   };
 }
 
@@ -230,7 +254,8 @@ function mapUserToCandidate(user) {
     initial: user.displayName?.charAt(0)?.toUpperCase() ?? user.username.charAt(0).toUpperCase(),
     rank: user.levelName ?? "Bronze",
     points: user.points ?? 0,
-    trustScore: 70,
+    trustScore: user.trustScore ?? 70,
+    trustTier: user.trustTier ?? "medium",
     note: user.plan === "Premium" ? "Tài khoản Premium" : undefined,
   };
 }
@@ -266,7 +291,6 @@ export async function loadPermissionsData() {
       activeMods: moderators.length,
       candidates: candidates.length,
       permissionCount: MOD_PERMISSIONS.length,
-      totalHandled: 0,
     },
     audit: getPermissionsAudit(),
   };
@@ -285,6 +309,7 @@ export async function grantModeratorViaApi(username, adminUsername = "admin_sehu
 
   await patchAdminUserViaApi(user.id, { role: "Moderator" });
   patchUserRole(username, "moderator");
+  writeModGrantDate(username);
   pushPermissionAudit({
     at: new Date().toISOString(),
     action: "grant",
@@ -309,6 +334,7 @@ export async function revokeModeratorViaApi(username, adminUsername = "admin_seh
 
   await patchAdminUserViaApi(user.id, { role: "Student" });
   patchUserRole(username, "student");
+  removeModGrantDate(username);
   pushPermissionAudit({
     at: new Date().toISOString(),
     action: "revoke",

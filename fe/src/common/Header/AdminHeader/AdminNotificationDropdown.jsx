@@ -10,10 +10,42 @@ import {
 } from "@/features/admin/adminHeaderNotifications";
 import styles from "./AdminHeader.module.css";
 
+function NotificationSection({ label, items, urgentLabel, onNavigate }) {
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className={styles.notifPanelSection}>
+      <p
+        className={`${styles.notifPanelSectionLabel} ${
+          urgentLabel ? styles.notifPanelSectionUrgent : ""
+        }`}
+      >
+        {label}
+      </p>
+      <ul className={styles.notifList}>
+        {items.map((item) => (
+          <li key={item.id}>
+            <Link
+              to={item.to}
+              className={`${styles.notifItem} ${item.urgent ? styles.notifItemUrgent : ""}`}
+              onClick={onNavigate}
+            >
+              <span className={styles.notifItemTitle}>{item.title}</span>
+              {item.desc ? <span className={styles.notifItemDesc}>{item.desc}</span> : null}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function AdminNotificationDropdown() {
   const location = useLocation();
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState(() => getAdminHeaderNotifications());
+  const [payload, setPayload] = useState(() => getAdminHeaderNotifications());
   const [unreadCount, setUnreadCount] = useState(() => getAdminNotificationCount());
   const rootRef = useRef(null);
   const panelId = useId();
@@ -21,9 +53,9 @@ function AdminNotificationDropdown() {
   useEffect(() => {
     let cancelled = false;
     Promise.all([loadAdminHeaderNotifications(), loadAdminNotificationCount()]).then(
-      ([items, count]) => {
+      ([nextPayload, count]) => {
         if (!cancelled) {
-          setNotifications(items);
+          setPayload(nextPayload);
           setUnreadCount(count);
         }
       },
@@ -61,8 +93,10 @@ function AdminNotificationDropdown() {
     setOpen(false);
   }, [location.pathname]);
 
-  const actionItems = notifications.filter((item) => item.kind === "action");
-  const activityItems = notifications.filter((item) => item.kind === "activity");
+  const { adminTasks, moderatorQueue, activity, counts } = payload;
+  const hasContent =
+    adminTasks.length > 0 || moderatorQueue.length > 0 || activity.length > 0;
+  const closePanel = () => setOpen(false);
 
   return (
     <div className={styles.toolDropdown} ref={rootRef}>
@@ -99,46 +133,46 @@ function AdminNotificationDropdown() {
             </div>
           </header>
 
-          {notifications.length === 0 ? (
+          {!hasContent ? (
             <p className={styles.notifPanelEmpty}>Không có việc cần xử lý — hệ thống ổn định.</p>
           ) : (
             <div className={styles.notifPanelBody}>
-              {actionItems.length > 0 ? (
-                <section className={styles.notifPanelSection}>
-                  <p className={`${styles.notifPanelSectionLabel} ${styles.notifPanelSectionUrgent}`}>
-                    Cần xử lý
-                  </p>
-                  <ul className={styles.notifList}>
-                    {actionItems.map((item) => (
-                      <li key={item.id}>
-                        <Link
-                          to={item.to}
-                          className={`${styles.notifItem} ${
-                            item.urgent ? styles.notifItemUrgent : ""
-                          }`}
-                          onClick={() => setOpen(false)}
-                        >
-                          <span className={styles.notifItemTitle}>{item.title}</span>
-                          {item.desc ? (
-                            <span className={styles.notifItemDesc}>{item.desc}</span>
-                          ) : null}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+              {adminTasks.length > 0 ? (
+                <NotificationSection
+                  label={
+                    counts.adminPending > 0
+                      ? `Việc Admin (${counts.adminPending})`
+                      : "Việc Admin"
+                  }
+                  items={adminTasks}
+                  urgentLabel
+                  onNavigate={closePanel}
+                />
+              ) : moderatorQueue.length > 0 ? (
+                <p className={styles.notifPanelEmpty}>Không có việc Admin cần xử lý.</p>
               ) : null}
 
-              {activityItems.length > 0 ? (
+              <NotificationSection
+                label={
+                  counts.moderatorPending > 0
+                    ? `Hàng chờ Moderator (${counts.moderatorPending})`
+                    : "Hàng chờ Moderator"
+                }
+                items={moderatorQueue}
+                urgentLabel={false}
+                onNavigate={closePanel}
+              />
+
+              {activity.length > 0 ? (
                 <section className={styles.notifPanelSection}>
                   <p className={styles.notifPanelSectionLabel}>Hoạt động gần đây</p>
                   <ul className={styles.notifList}>
-                    {activityItems.map((item) => (
+                    {activity.map((item) => (
                       <li key={item.id}>
                         <Link
                           to={item.to}
                           className={styles.notifItem}
-                          onClick={() => setOpen(false)}
+                          onClick={closePanel}
                         >
                           <span className={styles.notifItemTitle}>{item.title}</span>
                           {item.time ? (
@@ -154,11 +188,7 @@ function AdminNotificationDropdown() {
           )}
 
           <footer className={styles.notifPanelFoot}>
-            <Link
-              to="/admin/activity"
-              className={styles.toolPanelLink}
-              onClick={() => setOpen(false)}
-            >
+            <Link to="/admin/activity" className={styles.toolPanelLink} onClick={closePanel}>
               Xem nhật ký đầy đủ
             </Link>
           </footer>

@@ -1,3 +1,5 @@
+using SEHub.Contracts.Trust;
+
 namespace SEHub.Contracts.Admin;
 
 public sealed class AdminUserDetailDto
@@ -24,4 +26,5 @@ public sealed class AdminUserDetailDto
     public int ExamsCompleted { get; init; }
     public int ReportsFiled { get; init; }
     public int ReportsAgainst { get; init; }
+    public TrustScoreDto? Trust { get; init; }
 }

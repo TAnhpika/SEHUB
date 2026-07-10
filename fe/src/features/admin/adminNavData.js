@@ -1,10 +1,11 @@
 import {
   faBook,
   faChartLine,
+  faClipboardCheck,
   faClipboardList,
+  faCommentDots,
   faCreditCard,
   faFileLines,
-  faFlag,
   faRobot,
   faTicket,
   faTrophy,
@@ -65,23 +66,44 @@ const ADMIN_NAV_TEMPLATE = [
             badgeKey: "exam-pending",
             badgeTone: "amber",
           },
-          {
-            id: "practice-submissions",
-            label: "Bài nộp thực hành",
-            to: "/admin/exams/submissions",
-            badgeKey: "practice-submissions",
-            badgeTone: "amber",
-          },
         ],
       },
       { id: "documents", label: "Quản lý tài liệu", to: "/admin/documents", icon: faBook },
       {
-        id: "moderation",
-        label: "Hàng chờ báo cáo",
-        to: "/admin/moderation",
-        icon: faFlag,
-        badgeKey: "moderation",
-        badgeTone: "urgent",
+        type: "group",
+        id: "moderation-ops",
+        label: "Kiểm duyệt",
+        icon: faClipboardCheck,
+        items: [
+          {
+            id: "moderation",
+            label: "Báo cáo chờ",
+            to: "/admin/moderation",
+            badgeKey: "moderation",
+            badgeTone: "urgent",
+          },
+          {
+            id: "pending-posts",
+            label: "Bài viết chờ duyệt",
+            to: "/admin/moderation/content",
+            badgeKey: "pending-posts",
+            badgeTone: "amber",
+          },
+          {
+            id: "practice-submissions",
+            label: "Bài nộp thực hành",
+            to: "/admin/moderation/practice-submissions",
+            badgeKey: "practice-submissions",
+            badgeTone: "amber",
+          },
+          {
+            id: "feedback",
+            label: "Phản hồi / Báo lỗi",
+            to: "/admin/feedback",
+            badgeKey: "feedback",
+            badgeTone: "amber",
+          },
+        ],
       },
     ],
   },
@@ -176,5 +198,9 @@ export function resolveAdminPageTitle(pathname) {
   if (pathname === "/admin") return "Dashboard";
   if (pathname.includes("/exams/new")) return "Tạo đề thi";
   if (pathname.includes("/exams/edit")) return "Sửa đề thi";
+  if (pathname.startsWith("/admin/moderation/content")) return "Bài viết chờ duyệt";
+  if (pathname.startsWith("/admin/moderation/practice-submissions")) return "Bài nộp thực hành";
+  if (pathname.startsWith("/admin/feedback")) return "Phản hồi / Báo lỗi";
+  if (pathname.startsWith("/admin/moderation")) return "Báo cáo chờ";
   return "Quản trị";
 }

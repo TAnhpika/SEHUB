@@ -9,13 +9,14 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "@/common/Modal/Modal";
-import { getMyVouchers, loadLevelCatalog, mapRankVoucherDto } from "@/api/gamificationApi";
+import { getMyPartnerVouchers, getMyVouchers, loadLevelCatalog, mapPartnerVoucherDto, mapRankVoucherDto } from "@/api/gamificationApi";
 import { getRankDisplay, getRankIconClass, normalizeRankKey } from "@/utils/rankDisplay";
 import rankStyles from "@/utils/rankDisplay.module.css";
 import styles from "./RankLadderModal.module.css";
 
 function formatVoucherStatus(status) {
-  if (status === "Active") return "Đang dùng được";
+  if (status === "Active" || status === "Assigned") return "Đang dùng được";
+  if (status === "Available") return "Trong kho";
   if (status === "Used") return "Đã sử dụng";
   if (status === "Expired") return "Đã hết hạn";
   if (status === "Revoked") return "Đã thu hồi";
@@ -38,8 +39,10 @@ function getTierState(tier, points, currentLevelName) {
 function RankLadderModal({ open, onClose, profile, isOwner = false }) {
   const [levels, setLevels] = useState([]);
   const [vouchers, setVouchers] = useState([]);
+  const [partnerVouchers, setPartnerVouchers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
 
   const points = profile?.stats?.points ?? 0;
   const currentRank = getRankDisplay(profile?.level);
@@ -60,18 +63,25 @@ function RankLadderModal({ open, onClose, profile, isOwner = false }) {
         const mappedLevels = await loadLevelCatalog({ force: true });
 
         let mappedVouchers = [];
+        let mappedPartner = [];
         if (isOwner) {
           try {
-            const voucherDtos = await getMyVouchers();
+            const [voucherDtos, partnerDtos] = await Promise.all([
+              getMyVouchers(),
+              getMyPartnerVouchers(),
+            ]);
             mappedVouchers = (voucherDtos ?? []).map(mapRankVoucherDto);
+            mappedPartner = (partnerDtos ?? []).map(mapPartnerVoucherDto);
           } catch {
             mappedVouchers = [];
+            mappedPartner = [];
           }
         }
 
         if (!cancelled) {
           setLevels(mappedLevels);
           setVouchers(mappedVouchers);
+          setPartnerVouchers(mappedPartner);
           if (mappedLevels.length === 0) {
             setError("Chưa có cấu hình cấp độ trên hệ thống.");
           }
@@ -81,6 +91,7 @@ function RankLadderModal({ open, onClose, profile, isOwner = false }) {
           setError(err.message ?? "Không tải được bảng cấp độ.");
           setLevels([]);
           setVouchers([]);
+          setPartnerVouchers([]);
         }
       } finally {
         if (!cancelled) {
@@ -198,20 +209,37 @@ function RankLadderModal({ open, onClose, profile, isOwner = false }) {
         </ol>
       )}
 
-      {isOwner && !loading && !error && vouchers.length > 0 ? (
+      {isOwner && !loading && !error && partnerVouchers.length > 0 ? (
         <section className={styles.vouchers}>
           <h3 className={styles.vouchersTitle}>
             <FontAwesomeIcon icon={faTicket} />
-            Voucher rank của bạn
+            Mã FTES của bạn
           </h3>
           <ul className={styles.voucherList}>
-            {vouchers.map((voucher) => (
+            {partnerVouchers.map((voucher) => (
               <li key={voucher.id} className={styles.voucherItem}>
-                <span className={styles.voucherLevel}>{voucher.levelName}</span>
-                <span className={styles.voucherDiscount}>FTES -{voucher.discountPercent}%</span>
+                <span className={styles.voucherLevel}>{voucher.typeLabel || "FTES"}</span>
+                <span className={styles.voucherDiscount}>
+                  <code>{voucher.code}</code>
+                </span>
                 <span className={styles.voucherMeta}>
                   {formatVoucherStatus(voucher.status)} · hết hạn {formatDateVi(voucher.expiresAt)}
                 </span>
+                <button
+                  type="button"
+                  className={styles.copyBtn}
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(voucher.code);
+                      setCopiedId(voucher.id);
+                      window.setTimeout(() => setCopiedId(null), 1500);
+                    } catch {
+                      /* ignore */
+                    }
+                  }}
+                >
+                  {copiedId === voucher.id ? "Đã copy" : "Copy mã"}
+                </button>
               </li>
             ))}
           </ul>
@@ -222,9 +250,29 @@ function RankLadderModal({ open, onClose, profile, isOwner = false }) {
             className={styles.premiumLink}
             onClick={onClose}
           >
-            Dùng voucher tại FTES
+            Đổi mã trên FTES
             <FontAwesomeIcon icon={faChevronRight} />
           </a>
+        </section>
+      ) : null}
+
+      {isOwner && !loading && !error && vouchers.length > 0 ? (
+        <section className={styles.vouchers}>
+          <h3 className={styles.vouchersTitle}>
+            <FontAwesomeIcon icon={faTicket} />
+            Voucher rank (giảm Premium SEHUB)
+          </h3>
+          <ul className={styles.voucherList}>
+            {vouchers.map((voucher) => (
+              <li key={voucher.id} className={styles.voucherItem}>
+                <span className={styles.voucherLevel}>{voucher.levelName}</span>
+                <span className={styles.voucherDiscount}>−{voucher.discountPercent}% Premium</span>
+                <span className={styles.voucherMeta}>
+                  {formatVoucherStatus(voucher.status)} · hết hạn {formatDateVi(voucher.expiresAt)}
+                </span>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
 
