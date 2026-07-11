@@ -146,3 +146,46 @@
 .historyLink:hover {
   text-decoration: underline;
 }
+
+@media (max-width: 1024px) {
+  .stepper {
+    padding: 1.25rem 1.5rem;
+  }
+
+  .title {
+    margin-bottom: 1.25rem;
+    font-size: 1.25rem;
+  }
+
+  .list {
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .stepper {
+    padding: 1rem 1.125rem;
+  }
+
+  .title {
+    margin-bottom: 1rem;
+    font-size: 1.125rem;
+  }
+
+  .list {
+    gap: 1rem;
+    padding-left: 0.5rem;
+  }
+
+  .list::before {
+    left: 0.6875rem;
+  }
+
+  .stepHint {
+    font-size: 0.8125rem;
+  }
+
+  .historyLink {
+    margin-top: 1.25rem;
+  }
+}

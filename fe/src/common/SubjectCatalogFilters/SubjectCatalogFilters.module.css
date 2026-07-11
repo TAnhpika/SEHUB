@@ -80,11 +80,16 @@
   }
 
   .track {
+    flex-direction: column;
+    align-items: stretch;
     gap: 0.375rem;
   }
 
   .pill {
-    padding: 0.375rem 0.75rem;
-    font-size: 0.75rem;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+    white-space: normal;
+    text-align: center;
   }
 }

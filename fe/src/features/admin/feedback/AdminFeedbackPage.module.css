@@ -185,3 +185,38 @@
   color: var(--color-text);
   background: var(--color-surface-muted);
 }
+
+@media (max-width: 640px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filterSelect,
+  .searchInput {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .descriptionCell {
+    max-width: none;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+  }
+
+  .detailHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .statusActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .statusBtn {
+    width: 100%;
+    min-width: 0;
+  }
+}

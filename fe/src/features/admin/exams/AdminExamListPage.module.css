@@ -167,3 +167,28 @@
 .paginationWrap > * {
   margin-top: 0 !important;
 }
+
+@media (max-width: 640px) {
+  .filterRow,
+  .searchRow,
+  .selectGroup,
+  .metaActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .searchInput {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .selectField,
+  .selectField select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .resultChip {
+    align-self: flex-start;
+  }
+}

@@ -350,3 +350,30 @@
     align-items: center;
   }
 }
+
+@media (max-width: 640px) {
+  .page {
+    padding-inline: 0;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+  }
+
+  .summary,
+  .gateway {
+    padding: 1rem;
+  }
+
+  .gateway-body {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .qr,
+  .qr-box,
+  .qr-image {
+    max-width: 100%;
+    height: auto;
+  }
+}

@@ -103,9 +103,15 @@
     height: 0;
     overflow: visible;
     z-index: 50;
+    pointer-events: none;
     padding: 0;
     border: none;
     background: transparent;
+  }
+
+  .col-left-drawer-open {
+    z-index: 99;
+    pointer-events: auto;
   }
 
   .col-right {

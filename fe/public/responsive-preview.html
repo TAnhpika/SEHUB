@@ -120,17 +120,37 @@
       <div class="field">
         <label for="preset">Trang mẫu</label>
         <select id="preset">
-          <option value="/">Landing</option>
-          <option value="/community" selected>Feed</option>
-          <option value="/profile">Profile</option>
-          <option value="/home/search">Tìm kiếm</option>
-          <option value="/support">Support</option>
+          <optgroup label="Guest">
+            <option value="/">Landing</option>
+            <option value="/login">Login</option>
+            <option value="/register">Register</option>
+            <option value="/support">Support</option>
+          </optgroup>
+          <optgroup label="Community">
+            <option value="/community" selected>Feed</option>
+          </optgroup>
+          <optgroup label="Home">
+            <option value="/home">Home</option>
+            <option value="/home/search">Search</option>
+            <option value="/home/documents">Documents</option>
+            <option value="/home/messages">Messages</option>
+            <option value="/home/final-exam">Final exam</option>
+            <option value="/home/my-learning">My learning</option>
+            <option value="/home/advisor">Advisor</option>
+            <option value="/home/premium">Premium</option>
+          </optgroup>
+          <optgroup label="Staff">
+            <option value="/admin">Admin</option>
+            <option value="/moderator/reports">Moderator reports</option>
+            <option value="/moderator/violations">Violations</option>
+          </optgroup>
         </select>
       </div>
       <button class="primary" id="reload">Tải lại</button>
       <button id="open-single">Mở từng màn hình</button>
+      <a class="btn-link" id="open-regression" href="responsive-preview-regression.html" style="padding:0.55rem 0.85rem;font:inherit;font-size:0.875rem;font-weight:600;color:var(--text);text-decoration:none;background:var(--panel);border:1px solid var(--border);border-radius:8px;">Regression checklist</a>
       <p class="hint">
-        Breakpoint: shell 1024px · tablet 768px · phone 640px · phone-sm 480px.
+        Breakpoint: shell 1024px · nav 900px · tablet 768px · phone 640px · phone-sm 480px.
         FE: <code>http://localhost:5173</code>
       </p>
     </div>
@@ -144,10 +164,15 @@
         { name: "Phone SM", width: 480, height: 844 },
         { name: "iPhone SE", width: 375, height: 667 },
       ];
+      const params = new URLSearchParams(window.location.search);
       const pathInput = document.getElementById("path");
       const presetSelect = document.getElementById("preset");
       const grid = document.getElementById("grid");
       const origin = window.location.origin;
+      if (params.get("path")) {
+        pathInput.value = params.get("path");
+        presetSelect.value = pathInput.value;
+      }
       function normalizePath(value) {
         const trimmed = (value || "/").trim();
         return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;

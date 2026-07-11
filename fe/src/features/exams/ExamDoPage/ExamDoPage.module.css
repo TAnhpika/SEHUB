@@ -927,7 +927,7 @@
   border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
 }
 
-@media (max-width: 960px) {
+@media (max-width: 768px) {
   .info-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

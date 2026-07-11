@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SEHUB — Responsive Regression</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b1220;
+        --panel: #111827;
+        --border: #1f2937;
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --accent: #60a5fa;
+        --ok: #4ade80;
+        --warn: #fbbf24;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+      }
+      .toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        background: rgba(11, 18, 32, 0.96);
+        border-bottom: 1px solid var(--border);
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 700;
+      }
+      .toolbar p {
+        width: 100%;
+        margin: 0;
+        font-size: 0.8125rem;
+        color: var(--muted);
+      }
+      button, a.btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.5rem 0.8rem;
+        font: inherit;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text);
+        text-decoration: none;
+        cursor: pointer;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+      }
+      button.primary, a.btn.primary {
+        color: #0f172a;
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      code {
+        font-size: 0.8125rem;
+        color: #93c5fd;
+      }
+      .content {
+        padding: 1rem 1.25rem 2rem;
+      }
+      .group {
+        margin-bottom: 1.5rem;
+      }
+      .group h2 {
+        margin: 0 0 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8125rem;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      th, td {
+        padding: 0.65rem 0.85rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+      }
+      th {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        background: #0f172a;
+      }
+      tr:last-child td { border-bottom: none; }
+      .path {
+        font-family: ui-monospace, monospace;
+        color: #93c5fd;
+      }
+      .tag {
+        display: inline-block;
+        padding: 0.125rem 0.45rem;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        border-radius: 999px;
+      }
+      .tag-auth { color: #fcd34d; background: rgba(251, 191, 36, 0.15); }
+      .tag-public { color: #86efac; background: rgba(34, 197, 94, 0.12); }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+      }
+      .actions a, .actions button {
+        padding: 0.35rem 0.55rem;
+        font-size: 0.6875rem;
+      }
+      .devices {
+        margin-top: 1rem;
+        font-size: 0.75rem;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <h1>Responsive Regression — SEHUB</h1>
+      <a class="btn" href="responsive-preview.html">Multi-device</a>
+      <a class="btn" href="responsive-preview-single.html?device=iphone-se&path=/">Single preview</a>
+      <button type="button" class="primary" id="copyOverflow">Copy overflow script</button>
+      <p>
+        Breakpoints: shell <code>1024</code> · nav <code>900</code> · tablet <code>768</code> · phone <code>640</code> · sm <code>480</code> · SE <code>375</code>.
+        Routes có tag <span class="tag tag-auth">auth</span> cần đăng nhập trong cùng origin trước khi preview iframe load đủ dữ liệu.
+      </p>
+    </div>
+    <div class="content" id="content"></div>
+    <script>
+      const OVERFLOW_SCRIPT = `({
+  vw: innerWidth,
+  sw: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),
+  overflowX: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) > innerWidth + 2
+})`;
+
+      const DEVICES = [
+        { id: "iphone-se", label: "375", width: 375 },
+        { id: "phone-sm", label: "480", width: 480 },
+        { id: "phone", label: "640", width: 640 },
+        { id: "tablet", label: "768", width: 768 },
+        { id: "laptop", label: "1024", width: 1024 },
+        { id: "desktop", label: "1440", width: 1440 },
+      ];
+
+      const ROUTES = [
+        { group: "Guest", items: [
+          { path: "/", label: "Landing", public: true },
+          { path: "/login", label: "Login", public: true },
+          { path: "/register", label: "Register", public: true },
+          { path: "/support", label: "Support", public: true },
+        ]},
+        { group: "Community", items: [
+          { path: "/community", label: "Feed", public: true },
+        ]},
+        { group: "Home (student)", items: [
+          { path: "/home", label: "Home feed" },
+          { path: "/home/search", label: "Search" },
+          { path: "/home/messages", label: "Messages" },
+          { path: "/home/documents", label: "Documents" },
+          { path: "/home/final-exam", label: "Final exam catalog" },
+          { path: "/home/practical-exam", label: "Practice catalog" },
+          { path: "/home/my-learning", label: "My learning" },
+          { path: "/home/advisor", label: "AI advisor" },
+          { path: "/home/premium", label: "Premium" },
+          { path: "/home/create-post", label: "Create post" },
+          { path: "/home/friends", label: "Friends" },
+        ]},
+        { group: "Profile", items: [
+          { path: "/profile/demo_student", label: "Profile (demo)" },
+        ]},
+        { group: "Admin", items: [
+          { path: "/admin", label: "Dashboard" },
+          { path: "/admin/users", label: "Users table" },
+          { path: "/admin/feedback", label: "Feedback" },
+        ]},
+        { group: "Moderator", items: [
+          { path: "/moderator/reports", label: "Reports" },
+          { path: "/moderator/content", label: "Content moderation" },
+          { path: "/moderator/violations", label: "Violations" },
+          { path: "/moderator/final-exams/new", label: "Exam wizard" },
+        ]},
+      ];
+
+      function previewUrl(path, deviceId) {
+        return `responsive-preview-single.html?device=${deviceId}&path=${encodeURIComponent(path)}`;
+      }
+
+      function multiUrl(path) {
+        return `responsive-preview.html?path=${encodeURIComponent(path)}`;
+      }
+
+      function render() {
+        const html = ROUTES.map((section) => `
+          <section class="group">
+            <h2>${section.group}</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Trang</th>
+                  <th>Path</th>
+                  <th>Preview</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${section.items.map((item) => `
+                  <tr>
+                    <td>
+                      ${item.label}
+                      <span class="tag ${item.public ? "tag-public" : "tag-auth"}">${item.public ? "public" : "auth"}</span>
+                    </td>
+                    <td class="path">${item.path}</td>
+                    <td>
+                      <div class="actions">
+                        <a class="btn" href="${multiUrl(item.path)}" target="_blank" rel="noopener">All devices</a>
+                        ${DEVICES.map((d) => `<a class="btn" href="${previewUrl(item.path, d.id)}" target="_blank" rel="noopener">${d.label}</a>`).join("")}
+                      </div>
+                    </td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </section>
+        `).join("");
+        document.getElementById("content").innerHTML = html + `
+          <p class="devices">
+            Checklist mỗi trang: không overflow-x · nav mở được (☰) · touch target ≥ 40px · CTA không bị cắt.
+            Chạy overflow script trong DevTools console của iframe (F12 → chọn frame trang).
+          </p>`;
+      }
+
+      document.getElementById("copyOverflow").addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(OVERFLOW_SCRIPT);
+          document.getElementById("copyOverflow").textContent = "Đã copy!";
+          setTimeout(() => { document.getElementById("copyOverflow").textContent = "Copy overflow script"; }, 2000);
+        } catch {
+          prompt("Copy script:", OVERFLOW_SCRIPT);
+        }
+      });
+
+      render();
+    </script>
+  </body>
+</html>

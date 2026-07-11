@@ -283,3 +283,27 @@
   color: #fcd34d;
   background: rgba(251, 191, 36, 0.16);
 }
+
+@media (max-width: 640px) {
+  .filterShell {
+    padding: 0.875rem 1rem;
+  }
+
+  .searchRow,
+  .filterGroup,
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .searchInput,
+  .select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .addExamBtn {
+    width: 100%;
+    align-self: stretch;
+  }
+}

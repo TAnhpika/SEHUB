@@ -194,7 +194,7 @@
   border-color: var(--color-text-subtle);
 }
 
-@media (max-width: 960px) {
+@media (max-width: 768px) {
   .page {
     padding-inline: 0.25rem;
   }

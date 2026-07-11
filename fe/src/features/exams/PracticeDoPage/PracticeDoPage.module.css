@@ -483,7 +483,7 @@
   color: var(--color-text-subtle);
 }
 
-@media (max-width: 960px) {
+@media (max-width: 768px) {
   .pageFocus .body {
     grid-template-columns: 1fr;
     padding: 1.25rem;
