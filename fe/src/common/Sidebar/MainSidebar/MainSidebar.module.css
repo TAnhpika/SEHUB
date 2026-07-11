@@ -269,7 +269,7 @@
     top: 0;
     left: 0;
     z-index: var(--z-drawer-panel);
-    width: min(280px, 85vw);
+    width: min(262px, 82vw);
     height: 100vh;
     max-height: 100dvh;
     transform: translateX(-100%);
@@ -279,5 +279,23 @@
 
   .sidebarOpen {
     transform: translateX(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: min(256px, 80vw);
+  }
+}
+
+@media (max-width: 640px) {
+  .sidebar {
+    width: min(252px, 79vw);
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    width: min(248px, 78vw);
   }
 }
