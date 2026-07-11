@@ -3,23 +3,29 @@ import GuestHeader from "@/common/Header/GuestHeader/GuestHeader";
 import FeedSidebar from "@/common/Sidebar/FeedSidebar/FeedSidebar";
 import CommunitySidebar from "@/common/Sidebar/CommunitySidebar/CommunitySidebar";
 import Footer from "@/common/Footer/Footer";
-import { MainShellProvider } from "@/common/context/MainShellContext";
+import { MainShellProvider, useMainShell } from "@/common/context/MainShellContext";
 import styles from "./CommunityLayout.module.css";
 
-function CommunityLayout() {
-  const isFeedHome = useMatch({ path: "/community", end: true });
+function CommunityLayoutFrame({ isFeedHome }) {
+  const { sidebarOpen } = useMainShell();
 
   const workspaceClass = [styles.workspace, isFeedHome && styles["workspace-feed"]]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <MainShellProvider layout="community">
-      <div className={styles.layout}>
-        <GuestHeader />
+    <div className={styles.layout}>
+      <GuestHeader />
 
       <div className={workspaceClass}>
-        <div className={styles["col-left"]}>
+        <div
+          className={[
+            styles["col-left"],
+            sidebarOpen && styles["col-left-drawer-open"],
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
           <FeedSidebar />
         </div>
 
@@ -43,10 +49,18 @@ function CommunityLayout() {
       </div>
 
       <Footer />
-      </div>
+    </div>
+  );
+}
+
+function CommunityLayout() {
+  const isFeedHome = useMatch({ path: "/community", end: true });
+
+  return (
+    <MainShellProvider layout="community">
+      <CommunityLayoutFrame isFeedHome={Boolean(isFeedHome)} />
     </MainShellProvider>
   );
 }
 
 export default CommunityLayout;
-

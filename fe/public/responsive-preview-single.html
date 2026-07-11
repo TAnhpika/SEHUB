@@ -131,14 +131,32 @@
       <div class="field">
         <label for="preset">Trang mẫu</label>
         <select id="preset">
-          <option value="/">Landing</option>
-          <option value="/community" selected>Feed</option>
-          <option value="/profile">Profile</option>
-          <option value="/home/search">Tìm kiếm</option>
-          <option value="/support">Support</option>
+          <optgroup label="Guest">
+            <option value="/">Landing</option>
+            <option value="/login">Login</option>
+            <option value="/support">Support</option>
+          </optgroup>
+          <optgroup label="Community">
+            <option value="/community" selected>Feed</option>
+          </optgroup>
+          <optgroup label="Home">
+            <option value="/home">Home</option>
+            <option value="/home/search">Search</option>
+            <option value="/home/documents">Documents</option>
+            <option value="/home/messages">Messages</option>
+            <option value="/home/final-exam">Final exam</option>
+            <option value="/home/my-learning">My learning</option>
+            <option value="/home/advisor">Advisor</option>
+          </optgroup>
+          <optgroup label="Staff">
+            <option value="/moderator/violations">Violations</option>
+            <option value="/moderator/final-exams/new">Exam wizard</option>
+            <option value="/admin/feedback">Admin feedback</option>
+          </optgroup>
         </select>
       </div>
       <button class="primary" id="reload">Tải lại</button>
+      <a href="responsive-preview-regression.html" style="padding:0.55rem 0.85rem;font:inherit;font-size:0.875rem;font-weight:600;color:var(--text);text-decoration:none;background:#0f172a;border:1px solid var(--border);border-radius:8px;">Regression</a>
       <div class="devices" id="devices"></div>
     </div>
     <div class="stage">

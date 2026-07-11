@@ -97,3 +97,32 @@
   font-size: 0.8125rem;
   color: var(--moderator-text-muted);
 }
+
+@media (max-width: 640px) {
+  .page {
+    gap: 1rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .title {
+    font-size: 1.375rem;
+  }
+
+  .card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions > * {
+    width: 100%;
+  }
+}

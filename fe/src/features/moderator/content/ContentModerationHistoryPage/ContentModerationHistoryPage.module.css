@@ -5,7 +5,7 @@
   margin-bottom: 1.25rem;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 768px) {
   .metrics {
     grid-template-columns: repeat(2, 1fr);
   }

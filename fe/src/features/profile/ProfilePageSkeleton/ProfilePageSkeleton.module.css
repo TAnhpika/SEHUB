@@ -49,6 +49,13 @@
   height: 7rem;
 }
 
+@media (max-width: 640px) {
+  .statsGrid,
+  .socialRow {
+    grid-template-columns: 1fr;
+  }
+}
+
 .panelTall {
   height: 12rem;
 }

@@ -51,12 +51,13 @@ function FeedSidebar() {
           )
         : null}
 
-      <aside
-        className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}
-        aria-label="Điều hướng cộng đồng"
-      >
-        <div className={styles.panel}>
-          <nav className={styles.nav}>
+      <div className={styles.root}>
+        <aside
+          className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}
+          aria-label="Điều hướng cộng đồng"
+        >
+          <div className={styles.panel}>
+            <nav className={styles.nav}>
             {MAIN_LINKS.map((item) => {
               if (item.requiresAuth && !isAuthenticated) {
                 return (
@@ -110,6 +111,7 @@ function FeedSidebar() {
           <SubjectNavSection pathname={pathname} styles={styles} onNavigate={handleNavClick} />
         </div>
       </aside>
+      </div>
     </>
   );
 }

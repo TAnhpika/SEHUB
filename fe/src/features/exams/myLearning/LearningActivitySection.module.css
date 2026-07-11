@@ -374,8 +374,37 @@
 }
 
 @media (max-width: 640px) {
+  .panel {
+    padding: 1rem 1.125rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .summaryItem {
+    flex: 1 1 100%;
+  }
+
+  .cardHead {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cardBadges {
+    justify-content: flex-start;
+  }
+
   .cardFoot {
     flex-direction: column;
     align-items: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .tab {
+    padding: 0.5rem 0.5rem;
+    font-size: 0.75rem;
   }
 }

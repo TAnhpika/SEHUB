@@ -708,7 +708,7 @@
   background: rgba(239, 68, 68, 0.1);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .headerActions {
     flex-direction: column;
     align-items: stretch;
@@ -785,6 +785,7 @@
 
   .sanctionActions {
     width: 100%;
+    min-width: 0;
   }
 
   .lockGroup {

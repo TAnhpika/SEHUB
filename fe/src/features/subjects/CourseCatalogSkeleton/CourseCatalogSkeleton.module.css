@@ -125,8 +125,15 @@
     padding: 1.25rem;
   }
 
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 0;
+  }
+
   .filter,
   .filterWide {
     width: 100%;
+    min-width: 0;
   }
 }

@@ -305,6 +305,10 @@
     display: none;
   }
 
+  .searchBtn {
+    display: inline-flex;
+  }
+
   .inner {
     grid-template-columns: auto auto 1fr auto;
   }

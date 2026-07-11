@@ -584,7 +584,7 @@
   border-color: rgba(147, 197, 253, 0.32);
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1024px) {
   .columns {
     grid-template-columns: 1fr;
   }
