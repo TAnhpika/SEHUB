@@ -185,6 +185,18 @@ public sealed class PostsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPut("{id:guid}/comments/{commentId:guid}")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> UpdateComment(
+        Guid id,
+        Guid commentId,
+        [FromBody] UpdateCommentRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _commentService.UpdateAsync(id, commentId, request, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpDelete("{id:guid}/comments/{commentId:guid}")]
     [Authorize(Policy = PolicyNames.RequireAuthenticated)]
     public async Task<IActionResult> DeleteComment(Guid id, Guid commentId, CancellationToken cancellationToken)

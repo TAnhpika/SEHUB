@@ -22,6 +22,14 @@ public class CommentRepository : ICommentRepository
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Comment>> GetRepliesByParentIdAsync(
+        Guid parentCommentId,
+        CancellationToken cancellationToken = default) =>
+        await _context.Comments
+            .Where(c => c.ParentCommentId == parentCommentId)
+            .OrderBy(c => c.CreatedAt)
+            .ToListAsync(cancellationToken);
+
     public Task<int> CountByPostIdAsync(Guid postId, CancellationToken cancellationToken = default) =>
         _context.Comments.CountAsync(c => c.PostId == postId, cancellationToken);
 

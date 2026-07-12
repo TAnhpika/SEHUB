@@ -436,6 +436,10 @@ export function listAuditLogs(params = {}) {
   return apiRequest(`/api/v1/admin/audit-logs${buildQuery(params)}`);
 }
 
+export function listRoleAudits(params = {}) {
+  return apiRequest(`/api/v1/admin/role-audits${buildQuery(params)}`);
+}
+
 export function getUserActivity(id, params = {}) {
   return apiRequest(`/api/v1/admin/users/${id}/activity${buildQuery(params)}`);
 }

@@ -127,6 +127,7 @@ public static class DependencyInjection
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
         services.AddScoped<IAdminDashboardChartsService, AdminDashboardChartsService>();
         services.AddScoped<IAdminUserService, AdminUserService>();
+        services.AddScoped<IRoleChangeAuditService, RoleChangeAuditService>();
         services.AddScoped<IAdminExamService, AdminExamService>();
         services.AddScoped<IAdminDocumentService, AdminDocumentService>();
         services.AddScoped<IDocumentDriveMigrationService, DocumentDriveMigrationService>();
@@ -155,6 +156,7 @@ public static class DependencyInjection
         services.AddScoped<IValidator<CreatePostRequest>, CreatePostRequestValidator>();
         services.AddScoped<IValidator<UpdatePostRequest>, UpdatePostRequestValidator>();
         services.AddScoped<IValidator<CreateCommentRequest>, CreateCommentRequestValidator>();
+        services.AddScoped<IValidator<UpdateCommentRequest>, UpdateCommentRequestValidator>();
         services.AddScoped<IValidator<ReportPostRequest>, ReportPostRequestValidator>();
         services.AddScoped<IValidator<ModeratePostRequest>, ModeratePostRequestValidator>();
         services.AddScoped<IValidator<ModeratorBanUserRequest>, ModeratorBanUserRequestValidator>();

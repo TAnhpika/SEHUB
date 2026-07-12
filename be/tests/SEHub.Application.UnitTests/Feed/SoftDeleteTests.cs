@@ -97,6 +97,9 @@ public sealed class SoftDeleteTests
         _currentUser.SetupGet(u => u.UserId).Returns(AuthorId);
         _currentUser.SetupGet(u => u.IsModeratorOrAdmin).Returns(false);
         _commentRepository.Setup(r => r.GetByIdAsync(CommentId, It.IsAny<CancellationToken>())).ReturnsAsync(comment);
+        _commentRepository
+            .Setup(r => r.GetRepliesByParentIdAsync(CommentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
 
         var sut = CreateCommentService();
         await sut.DeleteAsync(PostId, CommentId);

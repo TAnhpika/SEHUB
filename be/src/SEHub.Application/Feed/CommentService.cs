@@ -51,9 +51,10 @@ public sealed class CommentService : ICommentService
         _ = await _postRepository.GetByIdAsync(postId, cancellationToken)
             ?? throw new NotFoundException("Post", postId);
 
-        var comments = await _commentRepository.GetByPostIdAsync(postId, page, pageSize, cancellationToken);
+        var roots = await _commentRepository.GetByPostIdAsync(postId, page, pageSize, cancellationToken);
         var total = await _commentRepository.CountByPostIdAsync(postId, cancellationToken);
-        var dtos = await MapCommentsTreeAsync(comments, cancellationToken);
+        var flat = FlattenRootsWithReplies(roots);
+        var dtos = await MapCommentsTreeAsync(flat, cancellationToken);
 
         return new PagedResult<CommentDto>
         {
@@ -76,6 +77,17 @@ public sealed class CommentService : ICommentService
         {
             parentComment = await _commentRepository.GetByIdAsync(parentId, cancellationToken)
                 ?? throw new NotFoundException("Comment", parentId);
+
+            if (parentComment.PostId != postId)
+            {
+                throw new NotFoundException("Comment", parentId);
+            }
+
+            if (parentComment.ParentCommentId is not null)
+            {
+                throw new DomainException("Chỉ được trả lời bình luận gốc (một cấp).");
+            }
+
             parentCommentAuthorId = parentComment.AuthorId;
         }
 
@@ -122,7 +134,67 @@ public sealed class CommentService : ICommentService
             userId,
             cancellationToken);
 
-        return (await MapCommentsTreeAsync([comment], cancellationToken))[0];
+        return await MapSingleCommentAsync(comment, cancellationToken);
+    }
+
+    public async Task<CommentDto> UpdateAsync(
+        Guid postId,
+        Guid commentId,
+        UpdateCommentRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+        var comment = await _commentRepository.GetByIdAsync(commentId, cancellationToken)
+            ?? throw new NotFoundException("Comment", commentId);
+
+        if (comment.PostId != postId)
+        {
+            throw new NotFoundException("Comment", commentId);
+        }
+
+        if (!_currentUser.IsModeratorOrAdmin && comment.AuthorId != userId)
+        {
+            throw new ForbiddenException("You do not have permission to edit this comment.");
+        }
+
+        comment.Content = request.Content.Trim();
+        comment.UpdatedAt = DateTime.UtcNow;
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return await MapSingleCommentAsync(comment, cancellationToken);
+    }
+
+    public async Task DeleteAsync(Guid postId, Guid commentId, CancellationToken cancellationToken = default)
+    {
+        var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+        var comment = await _commentRepository.GetByIdAsync(commentId, cancellationToken)
+            ?? throw new NotFoundException("Comment", commentId);
+
+        if (comment.PostId != postId)
+        {
+            throw new NotFoundException("Comment", commentId);
+        }
+
+        if (!_currentUser.IsModeratorOrAdmin && comment.AuthorId != userId)
+        {
+            throw new ForbiddenException("You do not have permission to delete this comment.");
+        }
+
+        await _commentRepository.SoftDeleteAsync(comment, userId, cancellationToken);
+
+        if (comment.ParentCommentId is null)
+        {
+            var replies = await _commentRepository.GetRepliesByParentIdAsync(comment.Id, cancellationToken);
+            foreach (var reply in replies)
+            {
+                await _commentRepository.SoftDeleteAsync(reply, userId, cancellationToken);
+            }
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _gamificationPublisher.PublishAsync(
+            new CommentDeletedEvent(commentId, comment.AuthorId),
+            cancellationToken);
     }
 
     private async Task<IReadOnlyList<Guid>> ResolveAndValidateMentionsAsync(
@@ -168,27 +240,52 @@ public sealed class CommentService : ICommentService
         return mentionedUserIds;
     }
 
-    public async Task DeleteAsync(Guid postId, Guid commentId, CancellationToken cancellationToken = default)
+    private static IReadOnlyList<Comment> FlattenRootsWithReplies(IReadOnlyList<Comment> roots)
     {
-        var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
-        var comment = await _commentRepository.GetByIdAsync(commentId, cancellationToken)
-            ?? throw new NotFoundException("Comment", commentId);
-
-        if (comment.PostId != postId)
+        if (roots.Count == 0)
         {
-            throw new NotFoundException("Comment", commentId);
+            return [];
         }
 
-        if (!_currentUser.IsModeratorOrAdmin && comment.AuthorId != userId)
+        var flat = new List<Comment>(roots.Count * 2);
+        var seen = new HashSet<Guid>();
+
+        foreach (var root in roots)
         {
-            throw new ForbiddenException("You do not have permission to delete this comment.");
+            if (seen.Add(root.Id))
+            {
+                flat.Add(root);
+            }
+
+            if (root.Replies is null || root.Replies.Count == 0)
+            {
+                continue;
+            }
+
+            foreach (var reply in root.Replies.OrderBy(r => r.CreatedAt))
+            {
+                if (seen.Add(reply.Id))
+                {
+                    flat.Add(reply);
+                }
+            }
         }
 
-        await _commentRepository.SoftDeleteAsync(comment, userId, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-        await _gamificationPublisher.PublishAsync(
-            new CommentDeletedEvent(commentId, comment.AuthorId),
-            cancellationToken);
+        return flat;
+    }
+
+    private async Task<CommentDto> MapSingleCommentAsync(Comment comment, CancellationToken cancellationToken)
+    {
+        var author = await BuildAuthorAsync(comment.AuthorId, cancellationToken);
+        return new CommentDto
+        {
+            Id = comment.Id,
+            Content = comment.Content,
+            Author = author,
+            ParentCommentId = comment.ParentCommentId,
+            CreatedAt = comment.CreatedAt,
+            Replies = null,
+        };
     }
 
     private async Task<IReadOnlyList<CommentDto>> MapCommentsTreeAsync(

@@ -6,7 +6,6 @@ import {
   faComment,
   faEye,
   faHeart,
-  faReply,
   faShareNodes,
   faUserSlash,
 } from "@fortawesome/free-solid-svg-icons";
@@ -18,12 +17,12 @@ import {
   loadPostById,
   toggleLike,
 } from "@/features/feed/feedData";
-import { usePostDetail } from "@/features/feed/hooks/usePostDetail";
+import { countCommentsTree, usePostDetail } from "@/features/feed/hooks/usePostDetail";
+import CommentThread from "@/features/feed/CommentThread/CommentThread";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
-import CommentReportButton from "@/features/reports/CommentReportButton/CommentReportButton";
 import UserReportButton from "@/features/reports/UserReportButton/UserReportButton";
-import { copyPostLink, formatDisplayTitle, isOwnComment, isOwnPost } from "@/features/feed/postUtils";
+import { copyPostLink, formatDisplayTitle, isOwnPost } from "@/features/feed/postUtils";
 import CommentMentionPicker from "@/features/feed/CommentMentionPicker/CommentMentionPicker";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./PostDetailPage.module.css";
@@ -248,7 +247,7 @@ function PostDetailPage() {
             </span>
             <span className={styles.stat}>
               <FontAwesomeIcon icon={faComment} />
-              {comments.length}
+              {countCommentsTree(comments)}
             </span>
             <span className={styles.stat}>
               <FontAwesomeIcon icon={faEye} />
@@ -271,91 +270,27 @@ function PostDetailPage() {
       </article>
 
       <section className={styles.comments} aria-label="Bình luận">
-        <h2 className={styles["comments-title"]}>Bình luận ({comments.length})</h2>
+        <h2 className={styles["comments-title"]}>Bình luận ({countCommentsTree(comments)})</h2>
 
-        {comments.map((comment) => {
-          const commentIsOwner = isOwnComment(comment, user);
-          const isEditingComment = editingCommentId === comment.id;
-
-          return (
-            <article key={comment.id} className={styles.comment}>
-              <div className={styles["comment-head"]}>
-                <button
-                  type="button"
-                  className={`${styles["comment-author"]} ${styles["profile-trigger"]}`}
-                  onClick={() => openProfile(comment.author.username)}
-                >
-                  <span className={styles["comment-avatar"]} aria-hidden="true">
-                    {comment.author.initial}
-                  </span>
-                  <div>
-                    <p className={styles["comment-name"]}>{comment.author.name}</p>
-                    <p className={styles["comment-time"]}>{comment.time}</p>
-                  </div>
-                </button>
-
-                {commentIsOwner && !isEditingComment ? (
-                  <PostOwnerMenu
-                    horizontal
-                    showDivider
-                    editLabel="Sửa"
-                    deleteLabel="Xóa"
-                    menuAriaLabel="Tùy chọn bình luận"
-                    onEdit={() => handleStartEditComment(comment)}
-                    onDelete={() => handleDeleteComment(comment.id)}
-                  />
-                ) : !commentIsOwner ? (
-                  <CommentReportButton
-                    postId={post.id}
-                    commentId={comment.id}
-                    commentPreview={comment.content}
-                    className={`${styles.share} ${styles.report}`}
-                  />
-                ) : null}
-              </div>
-
-              {isEditingComment ? (
-                <div className={styles["comment-edit"]}>
-                  <RichTextEditor
-                    value={editCommentDraft}
-                    onChange={setEditCommentDraft}
-                    variant="comment"
-                    rows={3}
-                    bordered={false}
-                    textareaClassName={styles["comment-edit-input"]}
-                    toolbarAriaLabel="Định dạng bình luận"
-                    aria-label="Chỉnh sửa bình luận"
-                  />
-                  <div className={styles["comment-edit-actions"]}>
-                    <button
-                      type="button"
-                      className={styles["comment-edit-save"]}
-                      onClick={() => handleSaveEditComment(comment.id)}
-                    >
-                      Lưu
-                    </button>
-                    <button
-                      type="button"
-                      className={styles["comment-edit-cancel"]}
-                      onClick={handleCancelEditComment}
-                    >
-                      Hủy
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <RichTextContent value={comment.content} className={styles["comment-content"]} />
-              )}
-
-              {!isEditingComment && (
-                <button type="button" className={styles.reply} onClick={() => handleReply(comment)}>
-                  <FontAwesomeIcon icon={faReply} />
-                  Trả lời
-                </button>
-              )}
-            </article>
-          );
-        })}
+        {comments.map((comment) => (
+          <CommentThread
+            key={comment.id}
+            comment={comment}
+            postId={post.id}
+            user={user}
+            styles={styles}
+            editingCommentId={editingCommentId}
+            editCommentDraft={editCommentDraft}
+            setEditCommentDraft={setEditCommentDraft}
+            onOpenProfile={openProfile}
+            onStartEdit={handleStartEditComment}
+            onCancelEdit={handleCancelEditComment}
+            onSaveEdit={handleSaveEditComment}
+            onDelete={handleDeleteComment}
+            onReply={handleReply}
+            EditorComponent={RichTextEditor}
+          />
+        ))}
 
         <div className={styles.editor}>
           <div className={styles["editor-panel"]}>
