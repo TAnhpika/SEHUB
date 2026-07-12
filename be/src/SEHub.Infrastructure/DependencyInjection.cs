@@ -34,13 +34,15 @@ public static class DependencyInjection
         services.AddScoped<IPremiumStatusService, PremiumStatusService>();
         services.AddScoped<SoftDeleteInterceptor>();
         services.AddScoped<PaymentAuditLogAppendOnlyInterceptor>();
+        services.AddScoped<RoleChangeAuditAppendOnlyInterceptor>();
 
         services.AddDbContext<SEHubDbContext>((sp, options) =>
         {
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
             options.AddInterceptors(
                 sp.GetRequiredService<SoftDeleteInterceptor>(),
-                sp.GetRequiredService<PaymentAuditLogAppendOnlyInterceptor>());
+                sp.GetRequiredService<PaymentAuditLogAppendOnlyInterceptor>(),
+                sp.GetRequiredService<RoleChangeAuditAppendOnlyInterceptor>());
         });
 
         services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
@@ -82,6 +84,7 @@ public static class DependencyInjection
         services.AddScoped<IPaymentOrderRepository, PaymentOrderRepository>();
         services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
         services.AddScoped<IPaymentAuditLogRepository, PaymentAuditLogRepository>();
+        services.AddScoped<IRoleChangeAuditRepository, RoleChangeAuditRepository>();
         services.AddScoped<IAdminActivityReadRepository, AdminActivityReadRepository>();
         services.AddScoped<IUserProfileRepository, UserProfileRepository>();
         services.AddScoped<ILevelConfigRepository, LevelConfigRepository>();

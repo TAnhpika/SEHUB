@@ -40,6 +40,7 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<PaymentOrder> PaymentOrders => Set<PaymentOrder>();
     public DbSet<PaymentAuditLog> PaymentAuditLogs => Set<PaymentAuditLog>();
+    public DbSet<RoleChangeAudit> RoleChangeAudits => Set<RoleChangeAudit>();
     public DbSet<LevelConfig> LevelConfigs => Set<LevelConfig>();
     public DbSet<Badge> Badges => Set<Badge>();
     public DbSet<UserBadge> UserBadges => Set<UserBadge>();

@@ -41,6 +41,13 @@ export function createComment(postId, body) {
   return apiRequest(`/api/v1/posts/${postId}/comments`, { method: "POST", body });
 }
 
+export function updateComment(postId, commentId, body) {
+  return apiRequest(`/api/v1/posts/${postId}/comments/${commentId}`, {
+    method: "PUT",
+    body,
+  });
+}
+
 export function deleteComment(postId, commentId) {
   return apiRequest(`/api/v1/posts/${postId}/comments/${commentId}`, { method: "DELETE" });
 }

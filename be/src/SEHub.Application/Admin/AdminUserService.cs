@@ -28,6 +28,7 @@ public sealed class AdminUserService : IAdminUserService
     private readonly IExamAttemptRepository _examAttemptRepository;
     private readonly IPostReportRepository _reportRepository;
     private readonly IPaymentAuditLogRepository _auditLogRepository;
+    private readonly IRoleChangeAuditRepository _roleChangeAuditRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITrustScoreService _trustScoreService;
@@ -42,6 +43,7 @@ public sealed class AdminUserService : IAdminUserService
         IExamAttemptRepository examAttemptRepository,
         IPostReportRepository reportRepository,
         IPaymentAuditLogRepository auditLogRepository,
+        IRoleChangeAuditRepository roleChangeAuditRepository,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork,
         ITrustScoreService trustScoreService)
@@ -55,6 +57,7 @@ public sealed class AdminUserService : IAdminUserService
         _examAttemptRepository = examAttemptRepository;
         _reportRepository = reportRepository;
         _auditLogRepository = auditLogRepository;
+        _roleChangeAuditRepository = roleChangeAuditRepository;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _trustScoreService = trustScoreService;
@@ -116,6 +119,22 @@ public sealed class AdminUserService : IAdminUserService
         if (request.Role is not null)
         {
             await ValidateRoleChangeAsync(user, request.Role, cancellationToken);
+
+            if (!user.Role.Equals(request.Role, StringComparison.OrdinalIgnoreCase))
+            {
+                var roleAudit = TryBuildModeratorRoleAudit(
+                    targetUserId: id,
+                    targetUsername: user.Username,
+                    fromRole: user.Role,
+                    toRole: request.Role,
+                    actorId: actorId);
+
+                if (roleAudit is not null)
+                {
+                    await _roleChangeAuditRepository.AddAsync(roleAudit, cancellationToken);
+                }
+            }
+
             await _userRepository.UpdateRoleAsync(id, request.Role, cancellationToken);
         }
 
@@ -237,6 +256,38 @@ public sealed class AdminUserService : IAdminUserService
                 throw new ForbiddenException("Cannot demote the last admin account.");
             }
         }
+    }
+
+    private static RoleChangeAudit? TryBuildModeratorRoleAudit(
+        Guid targetUserId,
+        string targetUsername,
+        string fromRole,
+        string toRole,
+        Guid actorId)
+    {
+        var isGrant = fromRole.Equals(RoleNames.Student, StringComparison.OrdinalIgnoreCase)
+            && toRole.Equals(RoleNames.Moderator, StringComparison.OrdinalIgnoreCase);
+        var isRevoke = fromRole.Equals(RoleNames.Moderator, StringComparison.OrdinalIgnoreCase)
+            && toRole.Equals(RoleNames.Student, StringComparison.OrdinalIgnoreCase);
+
+        if (!isGrant && !isRevoke)
+        {
+            return null;
+        }
+
+        return new RoleChangeAudit
+        {
+            Id = Guid.NewGuid(),
+            TargetUserId = targetUserId,
+            ActorId = actorId,
+            Action = isGrant ? RoleChangeAuditActions.GrantModerator : RoleChangeAuditActions.RevokeModerator,
+            FromRole = fromRole,
+            ToRole = toRole,
+            Detail = isGrant
+                ? $"Gán quyền Moderator cho @{targetUsername}"
+                : $"Thu hồi quyền Moderator @{targetUsername}",
+            CreatedAt = DateTime.UtcNow,
+        };
     }
 
     private void ValidatePatchPermissions(AdminUserPatchRequest request)
