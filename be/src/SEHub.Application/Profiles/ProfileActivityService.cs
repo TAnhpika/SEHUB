@@ -85,6 +85,7 @@ public sealed class ProfileActivityService : IProfileActivityService
         <= 0 => 0,
         <= 2 => 1,
         <= 5 => 2,
-        _ => 3,
+        <= 9 => 3,
+        _ => 4,
     };
 }

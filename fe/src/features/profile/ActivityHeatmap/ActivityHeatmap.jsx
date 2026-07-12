@@ -7,6 +7,7 @@ const LEVEL_CLASS = {
   1: styles.l1,
   2: styles.l2,
   3: styles.l3,
+  4: styles.l4,
 };
 
 const DAY_LABEL_ROWS = [0, 2, 4];
@@ -167,6 +168,7 @@ function ActivityHeatmap({
                   <span className={`${styles.legendCell} ${styles.l1}`} aria-hidden="true" />
                   <span className={`${styles.legendCell} ${styles.l2}`} aria-hidden="true" />
                   <span className={`${styles.legendCell} ${styles.l3}`} aria-hidden="true" />
+                  <span className={`${styles.legendCell} ${styles.l4}`} aria-hidden="true" />
                   <span>Nhiều</span>
                 </div>
               </div>
