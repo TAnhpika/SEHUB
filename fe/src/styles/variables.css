@@ -71,7 +71,8 @@
   --z-drawer-panel: 99;
   --z-exam-focus: 9999;
   --z-overlay: 10000;
-  --z-toast: 10001;
+  --z-confirm: 10002;
+  --z-toast: 10003;
   /* Sidebar trái — căn theo Figma (padding đối xứng ~16px) */
   --sidebar-inline-padding: 1rem;
   --feed-sidebar-fixed: 252px;

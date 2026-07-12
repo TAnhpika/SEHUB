@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import styles from "./ConfirmDialog.module.css";
@@ -32,7 +33,7 @@ function ConfirmDialog({
     if (!loading) onCancel?.();
   }
 
-  return (
+  return createPortal(
     <div className={styles.overlay} role="presentation" onClick={handleOverlayClick}>
       <div
         className={styles.dialog}
@@ -71,7 +72,8 @@ function ConfirmDialog({
           </button>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
