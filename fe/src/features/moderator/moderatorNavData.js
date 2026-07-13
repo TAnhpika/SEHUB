@@ -98,7 +98,7 @@ export const MODERATOR_NAV_SECTIONS = [
       },
       {
         id: "featured",
-        label: "Bài viết nổi bật",
+        label: "Quản lý ghim bài",
         to: "/moderator/featured",
         icon: faStar,
         end: false,
