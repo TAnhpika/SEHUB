@@ -19,7 +19,11 @@ public class ExamRepository : IExamRepository
         var query = _context.Exams.AsQueryable();
         if (includeQuestions)
         {
-            query = query.Include(e => e.Questions).ThenInclude(q => q.Options);
+            query = query
+                .Include(e => e.Questions)
+                    .ThenInclude(q => q.Options)
+                .Include(e => e.Questions)
+                    .ThenInclude(q => q.Attachments);
         }
 
         return await query

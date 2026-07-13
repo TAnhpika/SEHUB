@@ -19,6 +19,8 @@ public sealed class CreateExamQuestionItem
     public IReadOnlyList<CreateExamOptionItem> Options { get; init; } = [];
     public Guid CorrectOptionId { get; init; }
     public IReadOnlyList<Guid> CorrectOptionIds { get; init; } = [];
+    /// <summary>Existing CDN image URLs to re-link when questions are rebuild (replace-all).</summary>
+    public IReadOnlyList<string> ImageUrls { get; init; } = [];
 }
 
 public sealed class CreateExamOptionItem

@@ -42,6 +42,7 @@ public sealed class AdminExamQuestionDto
     public Guid CorrectOptionId { get; init; }
     public IReadOnlyList<Guid> CorrectOptionIds { get; init; } = [];
     public IReadOnlyList<AdminExamOptionDto> Options { get; init; } = [];
+    public IReadOnlyList<QuestionImageDto> Images { get; init; } = [];
 }
 
 public sealed class AdminExamOptionDto

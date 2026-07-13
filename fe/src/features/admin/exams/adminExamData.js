@@ -14,6 +14,7 @@ import {
   mapPracticeExamFormToCreateRequest,
   mapRejectedExamFromApi,
   mapApprovedExamFromApi,
+  syncQuestionGalleryImages,
 } from "@/api/adminMapper";
 import { addAdminDocumentFromApprovedExam } from "@/features/admin/documents/adminDocumentData";
 import { ADMIN_API_PAGE_SIZE } from "@/features/admin/shared/adminPaginationConstants";
@@ -495,6 +496,11 @@ export async function saveAdminExamViaApi(form, options = {}) {
     await adminApi.approveExam(dto.id);
   }
 
+  if (form.typeKey === "final" && Array.isArray(ocrQuestions) && ocrQuestions.length > 0) {
+    // ocrQuestions may already be create-items; gallery files only on wizard shape
+    await syncQuestionGalleryImages(dto, ocrQuestions);
+  }
+
   const uploadWarning = await uploadExamPdfIfPresent(dto.id, form, pdfFile);
 
   const refreshed = await adminApi.getExam(dto.id);
@@ -534,11 +540,12 @@ export async function saveAdminFinalExamFromWizard(examInfo, questions, { confir
 
   const body = mapFinalExamWizardToCreateRequest(examInfo, questions);
   const dto = await createExamViaApi(body, confirmDuplicate);
+  const imageWarning = await syncQuestionGalleryImages(dto, questions);
   await adminApi.approveExam(dto.id);
   const refreshed = await adminApi.getExam(dto.id);
   const listItem = mapAdminExamListItem(refreshed);
   upsertExamInStore(listItem);
-  return mapAdminExamDetail(refreshed);
+  return { ...mapAdminExamDetail(refreshed), imageUploadWarning: imageWarning };
 }
 
 /**
@@ -573,11 +580,13 @@ export async function updateAdminFinalExamFromWizard(
   }
 
   await adminApi.updateExam(examId, body, confirmDuplicate);
+  const afterUpdate = await adminApi.getExam(examId);
+  const imageWarning = await syncQuestionGalleryImages(afterUpdate, questions);
   await adminApi.approveExam(examId);
   const refreshed = await adminApi.getExam(examId);
   const listItem = mapAdminExamListItem(refreshed);
   upsertExamInStore(listItem);
-  return mapAdminExamDetail(refreshed);
+  return { ...mapAdminExamDetail(refreshed), imageUploadWarning: imageWarning };
 }
 
 /**

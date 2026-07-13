@@ -56,6 +56,12 @@ export function mapExamDetailDtoToFeExam(dto, courseCode) {
 }
 
 export function mapQuestionPublicDto(dto) {
+  const images = (dto.images ?? []).map((image) => ({
+    id: image.id,
+    sortOrder: image.sortOrder ?? 0,
+    url: resolveAssetUrl(image.imagePath ?? image.url),
+  }));
+
   return {
     id: dto.id,
     orderIndex: dto.orderIndex,
@@ -66,6 +72,8 @@ export function mapQuestionPublicDto(dto) {
     correctAnswer: null,
     correctAnswers: [],
     options: (dto.options ?? []).map(mapQuestionOptionDto),
+    images,
+    imageUrl: images[0]?.url ?? null,
   };
 }
 

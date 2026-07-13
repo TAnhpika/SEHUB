@@ -92,10 +92,25 @@ export function importExamMarkdown(body) {
   });
 }
 
+/** @deprecated Prefer uploadExamQuestionImages(questionId, files). */
 export function uploadExamQuestionImage(file) {
   const formData = new FormData();
   formData.append("file", file);
   return apiUploadRequest("/api/v1/admin/exams/upload-question-image", formData);
+}
+
+export function uploadExamQuestionImages(questionId, files) {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+  return apiUploadRequest(`/api/v1/admin/exams/questions/${questionId}/images`, formData);
+}
+
+export function deleteExamQuestionImage(questionId, imageId) {
+  return apiRequest(`/api/v1/admin/exams/questions/${questionId}/images/${imageId}`, {
+    method: "DELETE",
+  });
 }
 
 export function uploadExamAttachment(examId, file) {

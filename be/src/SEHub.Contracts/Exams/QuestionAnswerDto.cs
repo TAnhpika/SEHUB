@@ -10,4 +10,5 @@ public sealed class QuestionAnswerDto
     public IReadOnlyList<QuestionOptionDto> Options { get; init; } = [];
     public Guid? CorrectOptionId { get; init; }
     public IReadOnlyList<Guid> CorrectOptionIds { get; init; } = [];
+    public IReadOnlyList<QuestionImageDto> Images { get; init; } = [];
 }
