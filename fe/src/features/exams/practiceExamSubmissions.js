@@ -421,29 +421,29 @@ export function isValidGithubUrl(url) {
   }
 }
 
-export async function loadStudentSubmission(courseCode, examId, username) {
+export async function loadStudentSubmission(courseCode, examId, username, options = {}) {
   if (USE_MOCK) {
     return getStudentSubmission(courseCode, examId, username);
   }
 
-  const apiExamId = await resolveExamApiId(examId);
+  const apiExamId =
+    options.apiExamId
+    ?? (await resolveExamApiId(examId, { type: "Practice" }))
+    ?? (await resolveExamApiId(examId));
+
   if (!apiExamId) {
-    return getStudentSubmission(courseCode, examId, username);
+    return null;
   }
 
-  try {
-    const dto = await practiceSubmissionsApi.getMyPracticeSubmission(apiExamId);
-    if (!dto) return null;
+  const dto = await practiceSubmissionsApi.getMyPracticeSubmission(apiExamId);
+  if (!dto) return null;
 
-    return mapPracticeSubmissionDto(dto, {
-      courseCode,
-      examId,
-      student: username,
-      username,
-    });
-  } catch {
-    return getStudentSubmission(courseCode, examId, username);
-  }
+  return mapPracticeSubmissionDto(dto, {
+    courseCode,
+    examId,
+    student: username,
+    username,
+  });
 }
 
 export async function submitPracticeExamAsync(payload) {
@@ -451,16 +451,23 @@ export async function submitPracticeExamAsync(payload) {
     return submitPracticeExam(payload);
   }
 
-  const apiExamId = await resolveExamApiId(payload.examId);
+  const apiExamId =
+    payload.apiExamId
+    ?? (await resolveExamApiId(payload.examId, { type: "Practice" }))
+    ?? (await resolveExamApiId(payload.examId));
+
   if (!apiExamId) {
-    return submitPracticeExam(payload);
+    throw new Error("Không tìm thấy đề thực hành trên hệ thống. Vui lòng tải lại trang.");
   }
 
   const dto = await practiceSubmissionsApi.submitPractice(apiExamId, {
     gitHubRepoUrl: payload.githubUrl.trim(),
   });
 
-  return mapPracticeSubmissionDto(dto, payload);
+  return mapPracticeSubmissionDto(dto, {
+    ...payload,
+    apiExamId,
+  });
 }
 
 export async function loadAllPracticeSubmissions() {

@@ -7,6 +7,8 @@
  * @property {string} role
  * @property {boolean} isPremium
  * @property {string|null} [avatarUrl]
+ * @property {boolean} [emailConfirmed]
+ * @property {boolean} [isProfileComplete]
  * @property {number} points
  * @property {string|null} [levelName]
  */
@@ -31,6 +33,8 @@
  * @property {string|null} [avatarUrl]
  * @property {number} points
  * @property {string|null} [levelName]
+ * @property {boolean} [emailConfirmed]
+ * @property {boolean} [isProfileComplete]
  */
 
 /**

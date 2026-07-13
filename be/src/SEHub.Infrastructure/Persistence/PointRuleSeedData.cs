@@ -20,6 +20,7 @@ internal static class PointRuleSeedData
         ("document-approved", GamificationConstants.EventDocumentApproved, 30, "Tài liệu được duyệt"),
         ("ai-used", GamificationConstants.EventAiUsed, 3, "Sử dụng AI học tập"),
         ("document-read", GamificationConstants.EventDocumentRead, 2, "Đọc tài liệu"),
+        ("feedback-resolved", GamificationConstants.EventFeedbackResolved, 50, "Phản hồi / báo lỗi được xử lý"),
     ];
 
     internal static async Task SyncAsync(SEHubDbContext context, ILogger logger)

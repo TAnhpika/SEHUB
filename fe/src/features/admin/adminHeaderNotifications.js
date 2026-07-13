@@ -38,7 +38,14 @@ function mapActivityItems(recent) {
   }));
 }
 
-/** Push workflow chỉ dành cho Admin — loại moderation của Moderator và legacy DB. */
+const ADMIN_MOD_DEEP_LINKS = [
+  "/moderator/reports",
+  "/moderator/content",
+  "/moderator/practice-submissions",
+  "/moderator/feedback",
+];
+
+/** Push workflow Admin: /admin/* hoặc deep-link kiểm duyệt /moderator/* (Admin vào được UI Mod). */
 export function isAdminWorkflowPush(item) {
   if (item.type === "examreview" || item.type === "refund") {
     return true;
@@ -46,7 +53,12 @@ export function isAdminWorkflowPush(item) {
 
   if (item.type === "moderation") {
     const link = item.linkUrl || "";
-    return link.startsWith("/admin/");
+    if (link.startsWith("/admin/")) {
+      return true;
+    }
+    return ADMIN_MOD_DEEP_LINKS.some(
+      (prefix) => link === prefix || link.startsWith(`${prefix}?`) || link.startsWith(`${prefix}/`),
+    );
   }
 
   return false;

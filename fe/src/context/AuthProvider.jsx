@@ -185,15 +185,17 @@ function persistUser(user) {
  * @param {import('react').Dispatch<import('react').SetStateAction<AuthUserLike | null>>} setUser - Setter user state.
  * @param {import('react').Dispatch<import('react').SetStateAction<boolean>>} setIsBootstrapping - Setter cờ bootstrap.
  * @param {{ user: Record<string, any>, accessToken: string, refreshToken?: string | null }} loginResponse - Payload trả về sau auth thành công.
+ * @param {{ onSessionApplied?: (user: AuthUserLike | null) => void }} [options] - Hook sau khi áp session (vd. nhắc profile thiếu).
  * @returns {AuthUserLike | null} User vừa áp vào session.
  */
-function applyAuthSession(setUser, setIsBootstrapping, loginResponse) {
+function applyAuthSession(setUser, setIsBootstrapping, loginResponse, options = {}) {
   const nextUser = mapAndEnrichUser(loginResponse.user);
   setAccessToken(loginResponse.accessToken);
   setRefreshToken(loginResponse.refreshToken ?? null);
   persistUser(nextUser);
   setUser(nextUser);
   setIsBootstrapping(false);
+  options.onSessionApplied?.(nextUser);
 
   if (!USE_MOCK) {
     authApi.getMe().then((me) => {
@@ -248,6 +250,10 @@ function applyMeEnrichment(user, meDto) {
 
   if (meDto.emailConfirmed !== undefined) {
     next = { ...next, emailConfirmed: Boolean(meDto.emailConfirmed) };
+  }
+
+  if (meDto.isProfileComplete !== undefined) {
+    next = { ...next, isProfileComplete: Boolean(meDto.isProfileComplete) };
   }
 
   return next;
@@ -338,6 +344,17 @@ export function AuthProvider({ children }) {
   });
   const [isBootstrapping, setIsBootstrapping] = useState(() => Boolean(getAccessToken()));
   const [aiTokenVersion, setAiTokenVersion] = useState(0);
+  const [profileIncompletePromptOpen, setProfileIncompletePromptOpen] = useState(false);
+
+  const promptIfProfileIncomplete = useCallback((nextUser) => {
+    if (nextUser?.isProfileComplete === false) {
+      setProfileIncompletePromptOpen(true);
+    }
+  }, []);
+
+  const dismissProfileIncompletePrompt = useCallback(() => {
+    setProfileIncompletePromptOpen(false);
+  }, []);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -409,8 +426,10 @@ export function AuthProvider({ children }) {
       emailOrUsername: credentials?.username?.trim() ?? "",
       password: credentials?.password ?? "",
     });
-    return applyAuthSession(setUser, setIsBootstrapping, response);
-  }, []);
+    return applyAuthSession(setUser, setIsBootstrapping, response, {
+      onSessionApplied: promptIfProfileIncomplete,
+    });
+  }, [promptIfProfileIncomplete]);
 
   const register = useCallback(async ({ fullName, email, password }) => {
     const trimmedEmail = email?.trim() ?? "";
@@ -423,13 +442,17 @@ export function AuthProvider({ children }) {
       password: password ?? "",
       displayName,
     });
-    return applyAuthSession(setUser, setIsBootstrapping, response);
-  }, []);
+    return applyAuthSession(setUser, setIsBootstrapping, response, {
+      onSessionApplied: promptIfProfileIncomplete,
+    });
+  }, [promptIfProfileIncomplete]);
 
   const googleLogin = useCallback(async (idToken) => {
     const response = await authApi.googleLogin({ idToken });
-    return applyAuthSession(setUser, setIsBootstrapping, response);
-  }, []);
+    return applyAuthSession(setUser, setIsBootstrapping, response, {
+      onSessionApplied: promptIfProfileIncomplete,
+    });
+  }, [promptIfProfileIncomplete]);
 
   const logout = useCallback(async () => {
     try {
@@ -439,6 +462,7 @@ export function AuthProvider({ children }) {
     } catch {
       /* clear local session even if API logout fails */
     } finally {
+      setProfileIncompletePromptOpen(false);
       clearAuthSession(setUser);
     }
   }, []);
@@ -523,6 +547,8 @@ export function AuthProvider({ children }) {
       logout,
       activatePremium,
       markEmailVerified,
+      profileIncompletePromptOpen,
+      dismissProfileIncompletePrompt,
     }),
     [
       user,
@@ -537,6 +563,8 @@ export function AuthProvider({ children }) {
       logout,
       activatePremium,
       markEmailVerified,
+      profileIncompletePromptOpen,
+      dismissProfileIncompletePrompt,
     ],
   );
 

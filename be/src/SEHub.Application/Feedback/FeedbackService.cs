@@ -1,13 +1,14 @@
 using System.Text.Json;
-using Microsoft.Extensions.Caching.Memory;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Gamification.Abstractions;
 using SEHub.Application.Notifications;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Feedback;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
+using SEHub.Shared.Constants;
 
 namespace SEHub.Application.Feedback;
 
@@ -46,6 +47,8 @@ public sealed class FeedbackService : IFeedbackService
 
     private readonly IUserFeedbackRepository _feedbackRepository;
     private readonly IWorkflowNotificationService _workflowNotifications;
+    private readonly IPointEngine _pointEngine;
+    private readonly ILevelEngine _levelEngine;
     private readonly ICurrentUserService _currentUser;
     private readonly IFileStorageService _fileStorage;
     private readonly IUnitOfWork _unitOfWork;
@@ -53,12 +56,16 @@ public sealed class FeedbackService : IFeedbackService
     public FeedbackService(
         IUserFeedbackRepository feedbackRepository,
         IWorkflowNotificationService workflowNotifications,
+        IPointEngine pointEngine,
+        ILevelEngine levelEngine,
         ICurrentUserService currentUser,
         IFileStorageService fileStorage,
         IUnitOfWork unitOfWork)
     {
         _feedbackRepository = feedbackRepository;
         _workflowNotifications = workflowNotifications;
+        _pointEngine = pointEngine;
+        _levelEngine = levelEngine;
         _currentUser = currentUser;
         _fileStorage = fileStorage;
         _unitOfWork = unitOfWork;
@@ -196,11 +203,49 @@ public sealed class FeedbackService : IFeedbackService
         var feedback = await _feedbackRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException("Feedback", id);
 
+        var previousStatus = feedback.Status;
+        if (previousStatus == status)
+        {
+            return MapToDto(feedback);
+        }
+
         feedback.Status = status;
         feedback.UpdatedAt = DateTime.UtcNow;
 
         await _feedbackRepository.UpdateAsync(feedback, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var actorUserId = _currentUser.UserId;
+
+        if (status == FeedbackStatus.Resolved
+            && previousStatus != FeedbackStatus.Resolved
+            && feedback.UserId is Guid submitterId)
+        {
+            await _pointEngine.AwardByEventTypeAsync(
+                submitterId,
+                GamificationConstants.EventFeedbackResolved,
+                $"feedback.resolved:{feedback.Id}",
+                "feedback",
+                feedback.Id,
+                cancellationToken);
+            await _levelEngine.RecalculateAsync(submitterId, cancellationToken);
+
+            await _workflowNotifications.NotifyUserFeedbackResolvedAsync(
+                submitterId,
+                feedback.Id,
+                actorUserId,
+                cancellationToken);
+        }
+        else if (status == FeedbackStatus.Rejected
+            && previousStatus != FeedbackStatus.Rejected
+            && feedback.UserId is Guid rejectedUserId)
+        {
+            await _workflowNotifications.NotifyUserFeedbackRejectedAsync(
+                rejectedUserId,
+                feedback.Id,
+                actorUserId,
+                cancellationToken);
+        }
 
         return MapToDto(feedback);
     }

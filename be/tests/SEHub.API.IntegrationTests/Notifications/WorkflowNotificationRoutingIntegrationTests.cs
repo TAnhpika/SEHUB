@@ -24,7 +24,7 @@ public sealed class WorkflowNotificationRoutingIntegrationTests : IClassFixture<
     }
 
     [Fact]
-    public async Task CreatePost_Pending_NotifiesModeratorsOnly()
+    public async Task CreatePost_Pending_NotifiesModeratorsAndAdmins()
     {
         var token = await _factory.LoginAndGetTokenAsync(_client);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -47,13 +47,19 @@ public sealed class WorkflowNotificationRoutingIntegrationTests : IClassFixture<
             .Where(n => n.ReferenceId == postId)
             .ToListAsync();
 
-        var recipientIds = notifications
+        var pending = notifications
             .Where(n => n.Title.Contains("đăng bài chờ duyệt", StringComparison.Ordinal))
-            .Select(n => n.UserId)
             .ToList();
 
-        recipientIds.Should().Contain(CustomWebApplicationFactory.ModeratorUserId);
-        recipientIds.Should().NotContain(CustomWebApplicationFactory.AdminUserId);
+        pending.Select(n => n.UserId).Should().Contain(CustomWebApplicationFactory.ModeratorUserId);
+        pending.Select(n => n.UserId).Should().Contain(CustomWebApplicationFactory.AdminUserId);
+
+        pending.Should().Contain(n =>
+            n.UserId == CustomWebApplicationFactory.ModeratorUserId
+            && n.LinkUrl == "/moderator/content");
+        pending.Should().Contain(n =>
+            n.UserId == CustomWebApplicationFactory.AdminUserId
+            && n.LinkUrl == "/admin/moderation/content");
     }
 
     [Fact]

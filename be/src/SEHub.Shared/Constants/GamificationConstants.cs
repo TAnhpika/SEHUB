@@ -22,4 +22,5 @@ public static class GamificationConstants
     public const string EventDocumentApproved = "document.approved";
     public const string EventAiUsed = "ai.used";
     public const string EventDocumentRead = "document.read";
+    public const string EventFeedbackResolved = "feedback.resolved";
 }

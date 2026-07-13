@@ -642,7 +642,7 @@ public sealed class AuthService : IAuthService
 
         var profile = await _profileRepository.GetByUserIdAsync(userId, cancellationToken);
 
-        var authUser = BuildAuthUserDto(user, isPremium, profile?.AvatarUrl);
+        var authUser = BuildAuthUserDto(user, isPremium, profile);
 
         var stats = await _profileStatsService.GetMyStatsAsync(cancellationToken);
         var subscription = await _premiumService.GetSubscriptionAsync(cancellationToken);
@@ -673,6 +673,8 @@ public sealed class AuthService : IAuthService
             LevelName = authUser.LevelName,
 
             EmailConfirmed = authUser.EmailConfirmed,
+
+            IsProfileComplete = authUser.IsProfileComplete,
 
             Stats = stats,
 
@@ -738,7 +740,7 @@ public sealed class AuthService : IAuthService
 
             RefreshExpiresIn = refreshExpiresIn,
 
-            User = BuildAuthUserDto(user, isPremium, profile?.AvatarUrl)
+            User = BuildAuthUserDto(user, isPremium, profile)
 
         };
 
@@ -746,7 +748,7 @@ public sealed class AuthService : IAuthService
 
 
 
-    private AuthUserDto BuildAuthUserDto(UserAccount user, bool isPremium, string? avatarUrl)
+    private AuthUserDto BuildAuthUserDto(UserAccount user, bool isPremium, UserProfile? profile)
 
     {
 
@@ -768,13 +770,15 @@ public sealed class AuthService : IAuthService
 
             IsPremium = isPremium,
 
-            AvatarUrl = avatarUrl,
+            AvatarUrl = profile?.AvatarUrl,
 
             Points = dto.Points,
 
             LevelName = dto.LevelName,
 
-            EmailConfirmed = user.EmailConfirmed
+            EmailConfirmed = user.EmailConfirmed,
+
+            IsProfileComplete = ProfileCompleteness.IsComplete(user.DisplayName, profile)
 
         };
 

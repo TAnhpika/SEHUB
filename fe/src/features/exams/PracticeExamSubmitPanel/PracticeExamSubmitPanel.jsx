@@ -11,9 +11,14 @@ import {
 import styles from "./PracticeExamSubmitPanel.module.css";
 
 /**
- * @param {{ courseCode: string; examId: string; examTitle?: string }} props
+ * @param {{
+ *   courseCode: string;
+ *   examId: string;
+ *   examTitle?: string;
+ *   apiExamId?: string | null;
+ * }} props
  */
-function PracticeExamSubmitPanel({ courseCode, examId, examTitle }) {
+function PracticeExamSubmitPanel({ courseCode, examId, examTitle, apiExamId = null }) {
   const { user, isAuthenticated, isPremium } = useAuth();
   const { showToast } = useToast();
   const [githubUrl, setGithubUrl] = useState("");
@@ -28,7 +33,7 @@ function PracticeExamSubmitPanel({ courseCode, examId, examTitle }) {
 
     let cancelled = false;
 
-    loadStudentSubmission(courseCode, examId, user.username)
+    loadStudentSubmission(courseCode, examId, user.username, { apiExamId })
       .then((result) => {
         if (cancelled) return;
         setSubmission(result);
@@ -45,7 +50,7 @@ function PracticeExamSubmitPanel({ courseCode, examId, examTitle }) {
     return () => {
       cancelled = true;
     };
-  }, [courseCode, examId, user?.username]);
+  }, [courseCode, examId, apiExamId, user?.username]);
 
   if (!isAuthenticated) {
     return (
@@ -85,6 +90,7 @@ function PracticeExamSubmitPanel({ courseCode, examId, examTitle }) {
       const saved = await submitPracticeExamAsync({
         courseCode,
         examId,
+        apiExamId,
         student: user.username,
         displayName: user.displayName ?? user.username,
         githubUrl,

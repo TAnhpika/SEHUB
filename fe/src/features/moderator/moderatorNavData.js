@@ -15,6 +15,7 @@ import {
   faClockRotateLeft,
   faFileCirclePlus,
   faFlag,
+  faInbox,
   faStar,
   faUserSlash,
 } from "@fortawesome/free-solid-svg-icons";
@@ -100,6 +101,13 @@ export const MODERATOR_NAV_SECTIONS = [
         label: "Bài viết nổi bật",
         to: "/moderator/featured",
         icon: faStar,
+        end: false,
+      },
+      {
+        id: "feedback",
+        label: "Phản hồi / Báo lỗi",
+        to: "/moderator/feedback",
+        icon: faInbox,
         end: false,
       },
     ],
