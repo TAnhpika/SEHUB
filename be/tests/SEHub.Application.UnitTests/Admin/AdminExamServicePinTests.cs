@@ -16,6 +16,7 @@ public sealed class AdminExamServicePinTests
     private readonly Mock<IExamRepository> _examRepository = new();
     private readonly Mock<ISubjectRepository> _subjectRepository = new();
     private readonly Mock<IExamAttachmentRepository> _attachmentRepository = new();
+    private readonly Mock<IQuestionAttachmentRepository> _questionAttachmentRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IWorkflowNotificationService> _workflowNotifications = new();
@@ -27,12 +28,16 @@ public sealed class AdminExamServicePinTests
     public AdminExamServicePinTests()
     {
         _mapper = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
+        _questionAttachmentRepository
+            .Setup(r => r.GetByQuestionIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
     }
 
     private AdminExamService CreateSut() => new(
         _examRepository.Object,
         _subjectRepository.Object,
         _attachmentRepository.Object,
+        _questionAttachmentRepository.Object,
         _unitOfWork.Object,
         _currentUser.Object,
         _workflowNotifications.Object,
