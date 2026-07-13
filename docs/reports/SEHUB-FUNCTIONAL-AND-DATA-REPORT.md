@@ -127,8 +127,7 @@ Policy: `RequireModerator` (Moderator hoặc Admin). FE: `fe/features/moderator/
 |-----------|-------|-----------|----------|
 | Duyệt bài viết | Approve/reject post Pending/Rejected | Posts | `PATCH /admin/moderation/posts/{id}`; Content moderation pages |
 | Featured / pin post | Đánh dấu nổi bật / ghim | Posts | `PATCH /posts/{id}/feature\|pin`; Featured pages |
-| Hàng chờ báo cáo | Post, comment, user, conversation, question reports | PostReports, CommentReports, UserReports, ConversationReports, QuestionReports | `GET/PATCH /admin/moderation/reports*` |
-| Escalate violation (**deprecated**) | Dead path: đẩy report lên ViolationEscalations; không còn nguồn trang Vi phạm | ViolationEscalations (pending drop) | `POST .../escalate-violations` — ưu tiên warn/ban từ Reports |
+| Hàng chờ báo cáo | Post, comment, user, conversation, question reports; warn/ban đủ mức từ Reports | PostReports, CommentReports, UserReports, ConversationReports, QuestionReports, UserBans | `GET/PATCH /admin/moderation/reports*`; warn/ban users |
 | Tài khoản vi phạm / ban / warn / unban | Sổ đã kỷ luật: cảnh cáo, khóa tạm (1/7/30) / vĩnh viễn | UserBans, AspNetUsers | `POST .../users/{id}/ban\|warn\|unban`; Reports + Violations pages |
 | Chấm practice | Review submission → Reviewed/Passed/Failed | PracticeSubmissions | `PATCH /exams/{examId}/practice-submissions/{id}`; Practice submissions workspace |
 | Danh sách practice chờ chấm | Queue toàn hệ thống | PracticeSubmissions | `GET /admin/moderation/practice-submissions` |
@@ -455,7 +454,7 @@ flowchart TD
 
 | | |
 |--|--|
-| **Bảng chính** | PostReports, CommentReports, UserReports, QuestionReports, ConversationReports, UserBans, Posts (status moderation), PracticeSubmissions (queue); ViolationEscalations (**deprecated**, pending drop) |
+| **Bảng chính** | PostReports, CommentReports, UserReports, QuestionReports, ConversationReports, UserBans, Posts (status moderation), PracticeSubmissions (queue) |
 | **Ai đọc/ghi** | Student tạo report; Mod/Admin resolve (warn/ban đủ mức từ Reports), duyệt post, chấm practice; trang Vi phạm = sổ UserBans |
 | **FK / quan hệ chính** | |
 | | - Mỗi *Report: targetId + ReporterId + ResolvedById + Status |

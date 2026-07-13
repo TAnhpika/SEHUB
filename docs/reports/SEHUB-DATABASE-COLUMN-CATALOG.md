@@ -1001,20 +1001,9 @@ Kế thừa `BaseEntity`. Lịch sử cấm tài khoản.
 | Until | DateTime? | Có | Hết hạn cấm |
 | Reason | string | Không | Lý do (max 1000) |
 
-### 9.7. ViolationEscalations
+### 9.7. _(removed)_ ViolationEscalations
 
-Kế thừa `BaseEntity`. **Deprecated** — không còn nguồn trang Vi phạm (list chỉ `UserBans`). API escalate còn giữ tạm; drop bảng theo PR follow-up.
-
-| Cột | Kiểu (C#) | Null? | Ghi chú (PK/FK/ý nghĩa) |
-|---|---|---|---|
-| Id | Guid | Không | PK |
-| CreatedAt | DateTime | Không | Thời điểm tạo |
-| UpdatedAt | DateTime? | Có | Thời điểm cập nhật |
-| UserId | Guid | Không | FK user bị leo thang |
-| SourceReportId | Guid | Không | ID báo cáo nguồn |
-| SourceType | string | Không | Loại nguồn (max 64) |
-| Reason | string | Không | Lý do (max 1000) |
-| EscalatedById | Guid | Không | FK người leo thang |
+Đã drop. Trang Vi phạm chỉ dựa `UserBans`.
 
 ---
 

@@ -19,7 +19,7 @@ dotnet test --filter "FullyQualifiedName~Moderation|FullyQualifiedName~SocialPha
 
 | Test file | Kết quả | Ghi chú |
 |-----------|---------|---------|
-| `ReportIntegrationTests` | PASS (3) | Đã sửa `EscalateUserReport`: `Source=chat` → `profile`, dùng target user riêng |
+| `ReportIntegrationTests` | PASS | Warn reported user → violations queue (UserBans) |
 | `ViolationsIntegrationTests` | PASS (3) | Warn → ban → login 403 → unban |
 | `ModerationIntegrationTests` | PASS (4) | Post moderation queue |
 | `SocialPhase3EndpointsTests` | PASS (5) | Conversation report + resolve |
@@ -46,7 +46,7 @@ dotnet test --filter "FullyQualifiedName~Moderation|FullyQualifiedName~SocialPha
 | Bỏ qua community | `Moderator_DismissCommunityReport_ResolvesReport` | PASS |
 | Xóa bài từ report | `Moderator_DeletePostFromReport_SoftDeletesPost` | PASS |
 | Bỏ qua user report | `Moderator_DismissUserReport_ResolvesReport` | PASS |
-| Escalate → violations | `EscalateUserReport_AddsUserToViolationsQueue` | PASS |
+| Warn → violations | `WarnReportedUser_AddsUserToViolationsQueue` | PASS |
 | Resolve conversation | `Moderator_CanListAndResolveConversationReports` | PASS |
 
 ### Bước 4 — Khóa tài khoản (L1–L12)

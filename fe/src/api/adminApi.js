@@ -212,14 +212,6 @@ export function resolveUserReport(id, body) {
   });
 }
 
-/** @deprecated Ban/warn directly from reports; escalate no longer feeds the violations queue. */
-export function escalateUserReportToViolations(id, body) {
-  return apiRequest(`/api/v1/admin/moderation/reports/${id}/escalate-violations`, {
-    method: "POST",
-    body,
-  });
-}
-
 export function confirmPayment(orderId, body = {}) {
   return apiRequest(`/api/v1/admin/payments/${orderId}/confirm`, {
     method: "POST",

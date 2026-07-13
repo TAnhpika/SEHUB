@@ -187,17 +187,6 @@ public sealed class ModerationController : ControllerBase
         return Ok(result);
     }
 
-    [Obsolete("Deprecated: ban/warn directly from reports. Prefer warn/ban endpoints; ViolationEscalations drop is a follow-up.")]
-    [HttpPost("reports/{id:guid}/escalate-violations")]
-    public async Task<IActionResult> EscalateUserReport(
-        Guid id,
-        [FromBody] EscalateUserReportRequest request,
-        CancellationToken cancellationToken)
-    {
-        var result = await _moderationService.EscalateUserReportAsync(id, request, cancellationToken);
-        return Ok(result);
-    }
-
     [HttpGet("posts")]
     public async Task<IActionResult> GetPosts([FromQuery] ModerationPostQueryParams query, CancellationToken cancellationToken)
     {

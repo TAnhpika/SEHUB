@@ -34,7 +34,6 @@ public sealed class ModerationService : IModerationService
     private readonly IUserProfileRepository _profileRepository;
     private readonly IUserBanRepository _banRepository;
     private readonly IBanStatusService _banStatusService;
-    private readonly IViolationEscalationRepository _escalationRepository;
     private readonly IViolationQueueRepository _violationQueueRepository;
     private readonly IConversationReportRepository _conversationReportRepository;
     private readonly IUserReportRepository _userReportRepository;
@@ -60,7 +59,6 @@ public sealed class ModerationService : IModerationService
         IUserProfileRepository profileRepository,
         IUserBanRepository banRepository,
         IBanStatusService banStatusService,
-        IViolationEscalationRepository escalationRepository,
         IViolationQueueRepository violationQueueRepository,
         IConversationReportRepository conversationReportRepository,
         IUserReportRepository userReportRepository,
@@ -85,7 +83,6 @@ public sealed class ModerationService : IModerationService
         _profileRepository = profileRepository;
         _banRepository = banRepository;
         _banStatusService = banStatusService;
-        _escalationRepository = escalationRepository;
         _violationQueueRepository = violationQueueRepository;
         _conversationReportRepository = conversationReportRepository;
         _userReportRepository = userReportRepository;
@@ -546,117 +543,6 @@ public sealed class ModerationService : IModerationService
         _trustScoreService.InvalidateCache(userId);
 
         return await MapViolatingUserAsync(userId, cancellationToken);
-    }
-
-    [Obsolete("Deprecated: ban/warn directly from reports UI. ViolationEscalations is a dead path; table drop is a follow-up.")]
-    public async Task<EscalateUserReportResultDto> EscalateUserReportAsync(
-        Guid reportId,
-        EscalateUserReportRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        if (_currentUser.Role != RoleNames.Moderator && _currentUser.Role != RoleNames.Admin)
-        {
-            throw new ForbiddenException("Moderator access required.");
-        }
-
-        var actorId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
-        var source = request.Source.Trim().ToLowerInvariant();
-
-        Guid reportedUserId;
-        string reason;
-        string sourceType;
-
-        if (source is "account" or "user")
-        {
-            var report = await _userReportRepository.GetByIdAsync(reportId, cancellationToken)
-                ?? throw new NotFoundException("UserReport", reportId);
-
-            if (report.Status != ReportStatus.Pending)
-            {
-                throw new ForbiddenException("Only pending reports can be escalated.");
-            }
-
-            reportedUserId = report.ReportedUserId;
-            reason = $"{report.Reason}: {report.Detail}".Trim();
-            sourceType = ViolationEscalationConstants.SourceUserReport;
-
-            report.Status = ReportStatus.Resolved;
-            report.ResolvedById = actorId;
-            report.ResolutionNote = ViolationEscalationConstants.ResolutionNote;
-            report.UpdatedAt = DateTime.UtcNow;
-            await _userReportRepository.UpdateAsync(report, cancellationToken);
-        }
-        else if (source is "conversation")
-        {
-            var report = await _conversationReportRepository.GetByIdAsync(reportId, cancellationToken)
-                ?? throw new NotFoundException("ConversationReport", reportId);
-
-            if (report.Status != ReportStatus.Pending)
-            {
-                throw new ForbiddenException("Only pending reports can be escalated.");
-            }
-
-            reportedUserId = report.Conversation?.Participants
-                .FirstOrDefault(p => p.UserId != report.ReporterId)
-                ?.UserId
-                ?? throw new ForbiddenException("Could not determine reported user.");
-
-            reason = $"{report.Reason}: {report.Detail}".Trim();
-            sourceType = ViolationEscalationConstants.SourceConversationReport;
-
-            report.Status = ReportStatus.Resolved;
-            report.ResolvedById = actorId;
-            report.ResolutionNote = ViolationEscalationConstants.ResolutionNote;
-            report.UpdatedAt = DateTime.UtcNow;
-            await _conversationReportRepository.UpdateAsync(report, cancellationToken);
-        }
-        else
-        {
-            throw new ForbiddenException("Source must be conversation or account.");
-        }
-
-        if (reason.Length > 1000)
-        {
-            reason = reason[..1000];
-        }
-
-        var existing = await _escalationRepository.GetByUserIdAsync(reportedUserId, cancellationToken);
-        if (existing is null)
-        {
-            await _escalationRepository.AddAsync(new ViolationEscalation
-            {
-                Id = Guid.NewGuid(),
-                UserId = reportedUserId,
-                SourceReportId = reportId,
-                SourceType = sourceType,
-                Reason = reason,
-                EscalatedById = actorId,
-                CreatedAt = DateTime.UtcNow
-            }, cancellationToken);
-        }
-        else
-        {
-            existing.SourceReportId = reportId;
-            existing.SourceType = sourceType;
-            existing.Reason = reason;
-            existing.EscalatedById = actorId;
-            existing.UpdatedAt = DateTime.UtcNow;
-            await _escalationRepository.UpdateAsync(existing, cancellationToken);
-        }
-
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-        InvalidateModerationStatsCache();
-
-        var user = await _userRepository.GetByIdAsync(reportedUserId, cancellationToken)
-            ?? throw new NotFoundException("User", reportedUserId);
-
-        return new EscalateUserReportResultDto
-        {
-            UserId = user.Id,
-            Username = user.Username,
-            DisplayName = user.DisplayName,
-            ReportId = reportId
-        };
     }
 
     public async Task<ViolatingUserDto> WarnUserAsync(

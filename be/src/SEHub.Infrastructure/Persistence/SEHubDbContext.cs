@@ -70,7 +70,6 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
     public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
     public DbSet<ConversationReport> ConversationReports => Set<ConversationReport>();
-    public DbSet<ViolationEscalation> ViolationEscalations => Set<ViolationEscalation>();
     public DbSet<UserFeedback> UserFeedbacks => Set<UserFeedback>();
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<PostTag> PostTags => Set<PostTag>();

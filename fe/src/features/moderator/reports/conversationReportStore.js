@@ -2,7 +2,7 @@
  * @fileoverview Store báo cáo người dùng (tin nhắn hội thoại + tài khoản) cho Moderator.
  *
  * Gộp hai nguồn API (`listConversationReports`, `listUserReports`), map sang model UI thống nhất,
- * và cung cấp hàm resolve / escalate sang trang vi phạm.
+ * và cung cấp hàm resolve báo cáo.
  *
  * @module features/moderator/reports/conversationReportStore
  */
@@ -150,7 +150,7 @@ export async function findConversationReportById(id) {
  * sau khi resolve thành công.
  *
  * @param {string} id - ID báo cáo.
- * @param {string} resolution - Ghi chú/kết quả xử lý (ví dụ `ignored`, `escalated_violations`).
+ * @param {string} resolution - Ghi chú/kết quả xử lý (ví dụ `ignored`, `warned`, `banned_7d`).
  * @param {'conversation'|'account'} [userReportType='conversation'] - Loại báo cáo.
  * @returns {Promise<Object|null>} DTO đã map, hoặc `null` khi mock.
  * @throws {Error} Khi API thất bại.
@@ -174,31 +174,6 @@ export async function resolveConversationReport(id, resolution, userReportType =
   window.dispatchEvent(new CustomEvent("sehubs-user-reports-changed"));
 
   return userReportType === "account" ? mapUserApiReport(dto) : mapConversationApiReport(dto);
-}
-
-/**
- * @deprecated Ban/warn trực tiếp từ Reports; escalate không còn đưa user vào queue Vi phạm.
- * Leo thang báo cáo người dùng sang ViolationEscalations (dead path).
- *
- * Gọi `adminApi.escalateUserReportToViolations` và dispatch sự kiện refresh queue.
- *
- * @param {string} id - ID báo cáo cần escalate.
- * @param {'conversation'|'account'} [userReportType='conversation'] - Nguồn báo cáo.
- * @returns {Promise<Object|null>} Kết quả API (có thể chứa `userId`), hoặc `null` khi mock.
- * @throws {Error} Khi API thất bại.
- */
-export async function escalateUserReportToViolations(id, userReportType = "conversation") {
-  if (USE_MOCK) {
-    return null;
-  }
-
-  const source = userReportType === "account" ? "account" : "conversation";
-  const result = await adminApi.escalateUserReportToViolations(id, { source });
-
-  window.dispatchEvent(new CustomEvent("sehubs-conversation-reports-changed"));
-  window.dispatchEvent(new CustomEvent("sehubs-user-reports-changed"));
-
-  return result;
 }
 
 /** Re-export metadata lý do báo cáo từ `reportsData`. */
