@@ -302,7 +302,11 @@ function PracticeDoPage() {
       }
     }
 
-    showToast("Đã nộp bài thành công.");
+    showToast(
+      submitMode === "github" && isPremium
+        ? "Đã nộp bài — chờ Mod/Admin chấm."
+        : "Đã nộp bài — kết quả sẽ được cập nhật sau khi được chấm.",
+    );
     navigate(resultPath);
   }
 

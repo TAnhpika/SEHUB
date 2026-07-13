@@ -19,6 +19,7 @@ import Button from "@/common/Button/Button";
 import RichTextContent from "@/common/RichTextEditor/RichTextContent";
 import ExamAiExplanation from "@/features/exams/ExamAiExplanation/ExamAiExplanation";
 import ExamQuestionReportButton from "@/features/exams/ExamQuestionReportButton/ExamQuestionReportButton";
+import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
 import {
   getMockPeerComparison,
@@ -38,7 +39,10 @@ import {
   clearPracticeSession,
   createPracticeSession,
   getPracticeSession,
+  isPracticeResultGraded,
+  mergeGradedPracticeResult,
 } from "@/features/exams/practiceSession";
+import { loadStudentSubmission } from "@/features/exams/practiceExamSubmissions";
 import {
   getExamById,
   getSubjectDetailConfig,
@@ -362,6 +366,7 @@ function ExamResultPage({ page = "review" }) {
   const { pathname, state: locationState } = useLocation();
   const [searchParams] = useSearchParams();
   const { showToast } = useToast();
+  const { user } = useAuth();
   const [showDetail, setShowDetail] = useState(false);
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
   const [isReviewSidebarOpen, setIsReviewSidebarOpen] = useState(false);
@@ -377,6 +382,7 @@ function ExamResultPage({ page = "review" }) {
   const [examReady, setExamReady] = useState(false);
   const [remoteSession, setRemoteSession] = useState(null);
   const [remoteSessionState, setRemoteSessionState] = useState("idle");
+  const [apiSubmission, setApiSubmission] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -473,6 +479,31 @@ function ExamResultPage({ page = "review" }) {
   }, [exam?.apiId, exam?.id, historyAttemptId, isPracticeExam]);
 
   useEffect(() => {
+    if (!isPracticeExam || !exam || !user?.username) {
+      setApiSubmission(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    loadStudentSubmission(exam.courseCode, exam.id, user.username)
+      .then((submission) => {
+        if (!cancelled) {
+          setApiSubmission(submission);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setApiSubmission(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [exam, isPracticeExam, user?.username]);
+
+  useEffect(() => {
     if (!isReviewFocusMode || !exam) return;
     document.title = `Kết quả — ${exam.id} | SEHUB`;
     return () => {
@@ -555,7 +586,11 @@ function ExamResultPage({ page = "review" }) {
     );
   }
 
-  const { result, startedAt, submittedAt, submission } = session;
+  const { result: sessionResult, startedAt, submittedAt, submission } = session;
+  const result = isPracticeExam
+    ? mergeGradedPracticeResult(sessionResult, apiSubmission)
+    : sessionResult;
+  const isPracticePending = isPracticeExam && !isPracticeResultGraded(result);
   const detailPath = getExamDetailPath(
     exam.courseCode,
     exam.id,
@@ -566,15 +601,39 @@ function ExamResultPage({ page = "review" }) {
     ? getPracticeDoPath(exam.courseCode, exam.id, questionNumber, scope)
     : getExamFocusDoPath(exam.courseCode, exam.id);
   const durationMs = submittedAt - startedAt;
-  const feedback = getScoreFeedback(result.scorePercent);
-  const grade = getScoreGrade(result.scorePercent);
-  const scoreOnTen = getScoreOnTen(result.correctCount, result.total);
-  const passStatus = getPassStatus(scoreOnTen);
-  const peer = getMockPeerComparison(result.scorePercent);
+  const feedback = isPracticePending
+    ? {
+        label: "Chờ chấm",
+        message: "Bài nộp đang chờ Mod/Admin chấm. Điểm và nhận xét sẽ hiển thị sau khi được xử lý.",
+      }
+    : isPracticeExam && isPracticeResultGraded(result) && result.moderatorFeedback
+      ? {
+          label: result.passStatus === "pass" ? "Đạt" : "Chưa đạt",
+          message: result.moderatorFeedback,
+        }
+      : getScoreFeedback(result.scorePercent ?? 0);
+  const grade = isPracticePending
+    ? { label: "—" }
+    : getScoreGrade(result.scorePercent ?? 0);
+  const scoreOnTen = isPracticePending
+    ? "—"
+    : result.scoreOnTen ?? getScoreOnTen(result.correctCount, result.total);
+  const passStatus = isPracticePending
+    ? "pending"
+    : result.passStatus ?? getPassStatus(typeof scoreOnTen === "string" ? 0 : scoreOnTen);
+  const peer = isPracticePending
+    ? { message: "Bạn có thể làm bài thực hành khác trong đề trong khi chờ kết quả chấm." }
+    : getMockPeerComparison(result.scorePercent ?? 0);
 
-  const correctPercent = Math.round((result.correctCount / result.total) * 100);
-  const wrongPercent = Math.round((result.wrongCount / result.total) * 100);
-  const emptyPercent = Math.round((result.unansweredCount / result.total) * 100);
+  const correctPercent = isPracticePending
+    ? 100
+    : Math.round((result.correctCount / result.total) * 100);
+  const wrongPercent = isPracticePending
+    ? 0
+    : Math.round((result.wrongCount / result.total) * 100);
+  const emptyPercent = isPracticePending
+    ? 0
+    : Math.round((result.unansweredCount / result.total) * 100);
   const wrongItems = result.items.filter((item) => item.selectedAnswer && !item.isCorrect);
   const emptyItems = result.items.filter((item) => !item.selectedAnswer);
 
@@ -626,13 +685,19 @@ function ExamResultPage({ page = "review" }) {
   }
 
   function getQuestionStatus(item) {
+    if (isPracticePending) {
+      return item.submission || item.selectedAnswer ? "pending" : "empty";
+    }
     return getQuestionReviewStatus(item);
   }
 
   const unitSingular = isPracticeExam ? "bài" : "câu";
-  const correctLabel = isPracticeExam ? "Hoàn thành" : "Câu đúng";
-  const wrongLabel = isPracticeExam ? "Chưa đạt" : "Câu sai";
+  const correctLabel = isPracticePending ? "Đã nộp" : isPracticeExam ? "Hoàn thành" : "Câu đúng";
+  const wrongLabel = isPracticePending ? "Chờ chấm" : isPracticeExam ? "Chưa đạt" : "Câu sai";
   const emptyLabel = isPracticeExam ? "Chưa làm" : "Bỏ trống";
+  const correctStatValue = isPracticePending ? result.submittedCount || 1 : result.correctCount;
+  const wrongStatValue = isPracticePending ? "—" : result.wrongCount;
+  const emptyStatValue = isPracticePending ? 0 : result.unansweredCount;
   const explorePath = isPracticeExam
     ? `${scope === "home" ? "/home" : "/community"}/pratical-exam`
     : `${scope === "home" ? "/home" : "/community"}/final-exam`;
@@ -770,25 +835,47 @@ function ExamResultPage({ page = "review" }) {
           </div>
           <span
             className={`${styles["pass-badge"]} ${
-              passStatus === "pass" ? styles["pass-badge-pass"] : styles["pass-badge-fail"]
+              passStatus === "pass"
+                ? styles["pass-badge-pass"]
+                : passStatus === "fail"
+                  ? styles["pass-badge-fail"]
+                  : styles["pass-badge-pending"]
             }`}
           >
-            <FontAwesomeIcon icon={passStatus === "pass" ? faCircleCheck : faXmark} />
-            {passStatus === "pass" ? "Đạt yêu cầu" : "Chưa đạt"}
+            <FontAwesomeIcon
+              icon={passStatus === "pass" ? faCircleCheck : passStatus === "fail" ? faXmark : faClock}
+            />
+            {passStatus === "pass"
+              ? "Đạt yêu cầu"
+              : passStatus === "fail"
+                ? "Chưa đạt"
+                : "Chờ chấm"}
           </span>
         </header>
 
         <div className={styles["summary-body"]}>
           <div className={styles["score-panel"]}>
-            <ScoreRing percent={result.scorePercent} grade={grade.label} />
-            <p className={styles["score-ten"]}>
-              <strong>{scoreOnTen}</strong>
-              <span>/10 điểm</span>
-            </p>
-            <p className={styles["score-caption"]}>
-              {result.correctCount}/{result.total}{" "}
-              {isPracticeExam ? "bài hoàn thành" : "câu đúng"}
-            </p>
+            {isPracticePending ? (
+              <div className={styles["score-pending"]}>
+                <FontAwesomeIcon icon={faClock} className={styles["score-pending-icon"]} />
+                <p className={styles["score-pending-title"]}>Chờ Mod/Admin chấm</p>
+                <p className={styles["score-pending-caption"]}>
+                  Điểm sẽ hiển thị sau khi bài được chấm
+                </p>
+              </div>
+            ) : (
+              <>
+                <ScoreRing percent={result.scorePercent ?? 0} grade={grade.label} />
+                <p className={styles["score-ten"]}>
+                  <strong>{scoreOnTen}</strong>
+                  <span>/10 điểm</span>
+                </p>
+                <p className={styles["score-caption"]}>
+                  {result.correctCount}/{result.total}{" "}
+                  {isPracticeExam ? "bài hoàn thành" : "câu đúng"}
+                </p>
+              </>
+            )}
           </div>
 
           <div className={styles["info-panel"]}>
@@ -822,8 +909,8 @@ function ExamResultPage({ page = "review" }) {
             </dl>
 
             <p className={styles.insight}>
-              {isPracticeExam
-                ? "Bài nộp của bạn đang chờ hệ thống xử lý. Bạn có thể làm bài thực hành khác trong đề."
+              {isPracticePending
+                ? "Bài nộp của bạn đang chờ Mod/Admin chấm. Bạn có thể làm bài thực hành khác trong đề."
                 : peer.message}
             </p>
           </div>
@@ -838,19 +925,19 @@ function ExamResultPage({ page = "review" }) {
             <span className={styles["stat-icon"]}>
               <FontAwesomeIcon icon={faCheck} />
             </span>
-            <p className={styles["stat-value"]}>{result.correctCount}</p>
+            <p className={styles["stat-value"]}>{correctStatValue}</p>
             <p className={styles["stat-label"]}>{correctLabel}</p>
           </article>
           <article className={`${styles["stat-card"]} ${styles["stat-wrong"]}`}>
             <span className={styles["stat-icon"]}>
-              <FontAwesomeIcon icon={faXmark} />
+              <FontAwesomeIcon icon={isPracticePending ? faClock : faXmark} />
             </span>
-            <p className={styles["stat-value"]}>{result.wrongCount}</p>
+            <p className={styles["stat-value"]}>{wrongStatValue}</p>
             <p className={styles["stat-label"]}>{wrongLabel}</p>
           </article>
           <article className={`${styles["stat-card"]} ${styles["stat-empty"]}`}>
             <span className={styles["stat-icon"]}>—</span>
-            <p className={styles["stat-value"]}>{result.unansweredCount}</p>
+            <p className={styles["stat-value"]}>{emptyStatValue}</p>
             <p className={styles["stat-label"]}>{emptyLabel}</p>
           </article>
           <article className={`${styles["stat-card"]} ${styles["stat-time"]}`}>
@@ -870,14 +957,23 @@ function ExamResultPage({ page = "review" }) {
           </div>
           <div className={styles.legend}>
             <span>
-              <i className={styles["legend-dot-correct"]} /> {correctLabel} {correctPercent}%
+              <i className={styles["legend-dot-correct"]} /> {correctLabel}{" "}
+              {isPracticePending ? "" : `${correctPercent}%`}
             </span>
-            <span>
-              <i className={styles["legend-dot-wrong"]} /> {wrongLabel} {wrongPercent}%
-            </span>
-            <span>
-              <i className={styles["legend-dot-empty"]} /> {emptyLabel} {emptyPercent}%
-            </span>
+            {!isPracticePending ? (
+              <>
+                <span>
+                  <i className={styles["legend-dot-wrong"]} /> {wrongLabel} {wrongPercent}%
+                </span>
+                <span>
+                  <i className={styles["legend-dot-empty"]} /> {emptyLabel} {emptyPercent}%
+                </span>
+              </>
+            ) : (
+              <span>
+                <i className={styles["legend-dot-wrong"]} /> {wrongLabel}
+              </span>
+            )}
           </div>
         </div>
       </section>
@@ -898,7 +994,9 @@ function ExamResultPage({ page = "review" }) {
           {result.items.map((item, index) => {
             const status = getQuestionStatus(item);
             const statusLabel =
-              status === "correct"
+              status === "pending"
+                ? "Đã nộp — chờ chấm"
+                : status === "correct"
                 ? isPracticeExam
                   ? "Hoàn thành"
                   : "Đúng"
@@ -922,7 +1020,7 @@ function ExamResultPage({ page = "review" }) {
         </div>
       </section>
 
-      {(wrongItems.length > 0 || emptyItems.length > 0) && (
+      {(wrongItems.length > 0 || emptyItems.length > 0) && !isPracticePending && (
         <section
           className={styles.review}
           aria-label={isPracticeExam ? "Phân tích bài cần ôn" : "Phân tích câu cần ôn"}

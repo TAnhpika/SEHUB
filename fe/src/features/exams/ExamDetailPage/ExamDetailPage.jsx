@@ -576,7 +576,7 @@ function ExamDetailPage({ page }) {
           <div className={styles["panel-actions"]}>
             {hasSubmittedResult && canTakeExam && (
               <button type="button" className={styles["result-btn"]} onClick={handleViewResult}>
-                Xem kết quả
+                {isPracticeExam ? "Xem trạng thái nộp" : "Xem kết quả"}
               </button>
             )}
             {isReviewExam || isPracticeExam ? (
