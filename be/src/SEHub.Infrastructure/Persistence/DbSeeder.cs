@@ -37,7 +37,6 @@ public static class DbSeeder
             await RewardRuleSeedData.SyncAsync(context, logger);
             await PartnerVoucherSeedData.SyncAsync(context, logger);
             await MissionSeedData.SyncAsync(context, logger);
-            await BattlePassSeedData.SyncAsync(context, logger);
             await SyncLevelVoucherPercentsAsync(context, logger);
             await SeedAdminUserAsync(userManager, context, logger);
             await EnsureAdminPremiumSubscriptionAsync(

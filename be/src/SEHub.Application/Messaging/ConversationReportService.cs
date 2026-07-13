@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Application.Notifications;
 using SEHub.Application.Trust;
 using SEHub.Contracts.Common;
@@ -61,8 +62,8 @@ public sealed class ConversationReportService : IConversationReportService
             throw new ForbiddenException("You are not a participant in this conversation.");
         }
 
-        var trimmedReason = reason.Trim();
-        var trimmedDetail = detail.Trim();
+        var trimmedReason = HtmlContentHelper.ToPlainText(reason);
+        var trimmedDetail = HtmlContentHelper.ToPlainText(detail);
 
         if (string.IsNullOrWhiteSpace(trimmedReason))
         {

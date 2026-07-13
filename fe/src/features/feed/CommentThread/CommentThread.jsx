@@ -2,7 +2,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faReply } from "@fortawesome/free-solid-svg-icons";
 import CommentReportButton from "@/features/reports/CommentReportButton/CommentReportButton";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
-import RichTextContent from "@/common/RichTextEditor/RichTextContent";
+import { stripRichTextMarkup } from "@/common/RichTextEditor/richTextPreviewHtml";
 import { isOwnComment } from "@/features/feed/postUtils";
 
 /**
@@ -45,6 +45,7 @@ function CommentThread({
   const isEditingComment = editingCommentId === comment.id;
   const replies = Array.isArray(comment.replies) ? comment.replies : [];
   const canReply = depth === 0;
+  const plainContent = stripRichTextMarkup(comment.content);
 
   return (
     <>
@@ -81,7 +82,7 @@ function CommentThread({
             <CommentReportButton
               postId={postId}
               commentId={comment.id}
-              commentPreview={comment.content}
+              commentPreview={plainContent}
               className={`${styles.share} ${styles.report}`}
             />
           ) : null}
@@ -92,11 +93,8 @@ function CommentThread({
             <EditorComponent
               value={editCommentDraft}
               onChange={setEditCommentDraft}
-              variant="comment"
               rows={3}
-              bordered={false}
               textareaClassName={styles["comment-edit-input"]}
-              toolbarAriaLabel="Định dạng bình luận"
               aria-label="Chỉnh sửa bình luận"
             />
             <div className={styles["comment-edit-actions"]}>
@@ -113,7 +111,7 @@ function CommentThread({
             </div>
           </div>
         ) : (
-          <RichTextContent value={comment.content} className={styles["comment-content"]} />
+          <p className={styles["comment-content"]}>{plainContent}</p>
         )}
 
         {!isEditingComment && canReply ? (

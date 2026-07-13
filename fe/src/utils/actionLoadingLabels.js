@@ -1,4 +1,5 @@
 export const ACTION_LOADING = {
+  warn: "Đang gửi cảnh báo...",
   approve: "Đang duyệt...",
   reject: "Đang từ chối...",
   delete: "Đang xóa...",

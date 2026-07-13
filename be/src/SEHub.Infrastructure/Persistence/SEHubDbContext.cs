@@ -55,7 +55,6 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<UserLevelHistory> UserLevelHistories => Set<UserLevelHistory>();
     public DbSet<DailyMission> DailyMissions => Set<DailyMission>();
     public DbSet<WeeklyMission> WeeklyMissions => Set<WeeklyMission>();
-    public DbSet<BattlePassSeason> BattlePassSeasons => Set<BattlePassSeason>();
     public DbSet<AiTokenDailyUsage> AiTokenDailyUsages => Set<AiTokenDailyUsage>();
     public DbSet<AiExamChatThread> AiExamChatThreads => Set<AiExamChatThread>();
     public DbSet<AiExamChatMessage> AiExamChatMessages => Set<AiExamChatMessage>();

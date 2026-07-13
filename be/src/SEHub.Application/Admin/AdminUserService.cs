@@ -1,5 +1,6 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Application.Trust;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
@@ -150,11 +151,15 @@ public sealed class AdminUserService : IAdminUserService
             var isBanned = request.IsBanned ?? user.IsBanned;
             var banType = ParseBanType(request.BanType);
 
+            var banReason = string.IsNullOrWhiteSpace(request.BanReason)
+                ? user.BanReason
+                : HtmlContentHelper.ToPlainText(request.BanReason);
+
             await _userRepository.UpdateBanAsync(
                 id,
                 isBanned,
                 request.BanUntil,
-                request.BanReason ?? user.BanReason,
+                banReason,
                 request.BanType,
                 cancellationToken);
 
@@ -167,7 +172,7 @@ public sealed class AdminUserService : IAdminUserService
                     ActorId = actorId,
                     BanType = banType,
                     Until = request.BanUntil,
-                    Reason = request.BanReason ?? user.BanReason ?? string.Empty,
+                    Reason = banReason ?? string.Empty,
                     CreatedAt = DateTime.UtcNow
                 }, cancellationToken);
             }

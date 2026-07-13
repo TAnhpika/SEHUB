@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Application.Feed;
 using SEHub.Application.Gamification;
 using SEHub.Application.Notifications;
@@ -360,7 +361,9 @@ public sealed class ModerationService : IModerationService
         var action = request.Action.Trim().ToLowerInvariant();
         post.ModeratedById = actorId;
         post.ModeratedAt = DateTime.UtcNow;
-        post.ModerationNote = request.Note?.Trim();
+        post.ModerationNote = string.IsNullOrWhiteSpace(request.Note)
+            ? null
+            : HtmlContentHelper.ToPlainText(request.Note);
         post.UpdatedAt = DateTime.UtcNow;
 
         switch (action)
@@ -426,8 +429,7 @@ public sealed class ModerationService : IModerationService
     {
         var user = await SyncExpiredBanIfNeededAsync(userId, cancellationToken);
         var violationCount = await _banRepository.CountByUserIdAsync(userId, cancellationToken);
-        var escalation = await _escalationRepository.GetByUserIdAsync(userId, cancellationToken);
-        if (violationCount == 0 && escalation is null)
+        if (violationCount == 0)
         {
             throw new NotFoundException("ViolatingUser", userId);
         }
@@ -450,8 +452,8 @@ public sealed class ModerationService : IModerationService
             violationCount,
             warningCount,
             latestBan,
-            latestBan?.CreatedAt ?? escalation?.CreatedAt,
-            latestBan?.Reason ?? escalation?.Reason);
+            latestBan?.CreatedAt,
+            latestBan?.Reason);
 
         return new ViolatingUserDetailDto
         {
@@ -546,6 +548,7 @@ public sealed class ModerationService : IModerationService
         return await MapViolatingUserAsync(userId, cancellationToken);
     }
 
+    [Obsolete("Deprecated: ban/warn directly from reports UI. ViolationEscalations is a dead path; table drop is a follow-up.")]
     public async Task<EscalateUserReportResultDto> EscalateUserReportAsync(
         Guid reportId,
         EscalateUserReportRequest request,
@@ -1058,8 +1061,7 @@ public sealed class ModerationService : IModerationService
     {
         var user = await SyncExpiredBanIfNeededAsync(userId, cancellationToken);
         var violationCount = await _banRepository.CountByUserIdAsync(userId, cancellationToken);
-        var escalation = await _escalationRepository.GetByUserIdAsync(userId, cancellationToken);
-        if (violationCount == 0 && escalation is null)
+        if (violationCount == 0)
         {
             throw new NotFoundException("ViolatingUser", userId);
         }
@@ -1074,8 +1076,8 @@ public sealed class ModerationService : IModerationService
             violationCount,
             warningCount,
             latestBan,
-            latestBan?.CreatedAt ?? escalation?.CreatedAt,
-            latestBan?.Reason ?? escalation?.Reason);
+            latestBan?.CreatedAt,
+            latestBan?.Reason);
     }
 
     private static ViolatingUserDto BuildViolatingUserDto(

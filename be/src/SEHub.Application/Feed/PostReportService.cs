@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Application.Notifications;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
@@ -46,13 +47,19 @@ public sealed class PostReportService : IPostReportService
             throw new ConflictException("You have already reported this post.");
         }
 
+        var plainReason = HtmlContentHelper.ToPlainText(reason);
+        if (string.IsNullOrWhiteSpace(plainReason))
+        {
+            throw new DomainException("Report reason is required.");
+        }
+
         var reportId = Guid.NewGuid();
         await _reportRepository.AddAsync(new PostReport
         {
             Id = reportId,
             PostId = postId,
             ReporterId = reporterId,
-            Reason = reason,
+            Reason = plainReason,
             Status = ReportStatus.Pending,
             CreatedAt = DateTime.UtcNow
         }, cancellationToken);
@@ -63,7 +70,7 @@ public sealed class PostReportService : IPostReportService
             reportId,
             postId,
             reporterId,
-            reason,
+            plainReason,
             cancellationToken);
     }
 }

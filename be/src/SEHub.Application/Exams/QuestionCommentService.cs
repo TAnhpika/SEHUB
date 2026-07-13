@@ -1,5 +1,6 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Contracts.Exams;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Exceptions;
@@ -64,7 +65,7 @@ public sealed class QuestionCommentService : IQuestionCommentService
             }
         }
 
-        var content = request.Content?.Trim() ?? string.Empty;
+        var content = HtmlContentHelper.ToPlainText(request.Content);
         if (string.IsNullOrWhiteSpace(content))
         {
             throw new DomainException("Nội dung bình luận không được để trống.");

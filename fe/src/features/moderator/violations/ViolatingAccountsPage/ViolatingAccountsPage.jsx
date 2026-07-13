@@ -48,7 +48,7 @@ import styles from "./ViolatingAccountsPage.module.css";
  * - Duyệt, tìm kiếm, lọc và phân trang danh sách tài khoản có lịch sử vi phạm.
  * - Gửi cảnh báo (warn) hoặc khóa tạm (ban) theo thời hạn 1 / 7 / 30 ngày.
  * - Xem chi tiết tài khoản, gỡ khóa tạm, và xuất báo cáo CSV.
- * - Xử lý deep-link từ báo cáo leo thang (escalated report) qua query string URL.
+ * - Xử lý deep-link từ báo cáo (query string URL) sang chi tiết tài khoản đã có kỷ luật.
  *
  * @module features/moderator/violations/ViolatingAccountsPage
  * @see {@link module:features/moderator/violations/violationsData} — tầng dữ liệu và API nghiệp vụ
@@ -794,7 +794,7 @@ function ViolatingAccountsPage() {
                     <td colSpan={7} className={styles.empty}>
                       {focusUserId
                         ? "Tài khoản chưa có lịch sử vi phạm — bấm Chi tiết để xem và xử lý."
-                        : "Không có tài khoản vi phạm nào. Hiển thị user đã bị cảnh báo, khóa tạm hoặc được chuyển từ báo cáo."}
+                        : "Không có tài khoản vi phạm nào. Hiển thị user đã bị cảnh báo hoặc khóa (tạm / vĩnh viễn)."}
                     </td>
                   </tr>
                 ) : (

@@ -22,6 +22,7 @@ import {
 } from "@/features/feed/feedData";
 import { countCommentsTree, usePostDetail } from "@/features/feed/hooks/usePostDetail";
 import CommentThread from "@/features/feed/CommentThread/CommentThread";
+import CommentPlainTextarea from "@/features/feed/CommentThread/CommentPlainTextarea";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
 import UserReportButton from "@/features/reports/UserReportButton/UserReportButton";
@@ -460,7 +461,7 @@ function PostDetailModal({
                 onSaveEdit={handleSaveEditComment}
                 onDelete={handleDeleteComment}
                 onReply={handleReply}
-                EditorComponent={RichTextEditorField}
+                EditorComponent={CommentPlainTextarea}
               />
             ))}
 
@@ -476,15 +477,12 @@ function PostDetailModal({
                     </button>
                   </div>
                 ) : null}
-                <RichTextEditorField
+                <CommentPlainTextarea
                   value={draft}
                   onChange={setDraft}
                   placeholder="Viết bình luận công khai"
-                  variant="comment"
                   rows={4}
-                  bordered={false}
                   textareaClassName={styles.input}
-                  toolbarAriaLabel="Định dạng bình luận"
                   aria-label="Viết bình luận công khai"
                   onKeyDown={handleDraftKeyDown}
                 />

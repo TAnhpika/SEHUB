@@ -177,7 +177,8 @@ export async function resolveConversationReport(id, resolution, userReportType =
 }
 
 /**
- * Leo thang báo cáo người dùng sang luồng xử lý tài khoản vi phạm.
+ * @deprecated Ban/warn trực tiếp từ Reports; escalate không còn đưa user vào queue Vi phạm.
+ * Leo thang báo cáo người dùng sang ViolationEscalations (dead path).
  *
  * Gọi `adminApi.escalateUserReportToViolations` và dispatch sự kiện refresh queue.
  *

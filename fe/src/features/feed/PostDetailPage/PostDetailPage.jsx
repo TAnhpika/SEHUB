@@ -11,7 +11,6 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context";
 import { useToast } from "@/common/Toast/ToastProvider";
-import RichTextEditor from "@/common/RichTextEditor/RichTextEditor";
 import RichTextContent from "@/common/RichTextEditor/RichTextContent";
 import {
   loadPostById,
@@ -19,6 +18,7 @@ import {
 } from "@/features/feed/feedData";
 import { countCommentsTree, usePostDetail } from "@/features/feed/hooks/usePostDetail";
 import CommentThread from "@/features/feed/CommentThread/CommentThread";
+import CommentPlainTextarea from "@/features/feed/CommentThread/CommentPlainTextarea";
 import PostOwnerMenu from "@/features/feed/PostOwnerMenu/PostOwnerMenu";
 import PostReportButton from "@/features/feed/PostReportButton/PostReportButton";
 import UserReportButton from "@/features/reports/UserReportButton/UserReportButton";
@@ -288,7 +288,7 @@ function PostDetailPage() {
             onSaveEdit={handleSaveEditComment}
             onDelete={handleDeleteComment}
             onReply={handleReply}
-            EditorComponent={RichTextEditor}
+            EditorComponent={CommentPlainTextarea}
           />
         ))}
 
@@ -304,15 +304,12 @@ function PostDetailPage() {
                 </button>
               </div>
             ) : null}
-            <RichTextEditor
+            <CommentPlainTextarea
               value={draft}
               onChange={setDraft}
               placeholder="Viết bình luận của bạn..."
-              variant="comment"
               rows={4}
-              bordered={false}
               textareaClassName={styles.input}
-              toolbarAriaLabel="Định dạng bình luận"
               aria-label="Viết bình luận của bạn"
             />
             <CommentMentionPicker value={draft} onInsert={handleInsertMention} />

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/common/Toast/ToastProvider";
+import { stripRichTextMarkup } from "@/common/RichTextEditor/richTextPreviewHtml";
 import { insertMention } from "@/features/feed/CommentMentionPicker/CommentMentionPicker";
 import { removeComment, saveComment, submitComment } from "@/features/feed/feedData";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
@@ -118,7 +119,7 @@ export function usePostDetail(postId, { initialComments, onCommentsChange } = {}
 
   const handleStartEditComment = useCallback((comment) => {
     setEditingCommentId(comment.id);
-    setEditCommentDraft(comment.content);
+    setEditCommentDraft(stripRichTextMarkup(comment.content ?? ""));
   }, []);
 
   const handleCancelEditComment = useCallback(() => {

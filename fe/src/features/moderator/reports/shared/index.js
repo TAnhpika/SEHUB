@@ -30,6 +30,9 @@ export function getReportResolutionMessage(report) {
     if (report.resolution === "escalated_violations") {
       return "Đã chuyển tài khoản sang trang Tài khoản vi phạm.";
     }
+    if (report.resolution === "warned") {
+      return "Đã gửi cảnh báo và đóng báo cáo.";
+    }
     if (String(report.resolution ?? "").includes("banned")) {
       return "Tài khoản đã bị khóa và báo cáo đã đóng.";
     }

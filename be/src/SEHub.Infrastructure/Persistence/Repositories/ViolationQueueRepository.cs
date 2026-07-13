@@ -21,9 +21,7 @@ public class ViolationQueueRepository : IViolationQueueRepository
     {
         var now = DateTime.UtcNow;
         var query = _context.Users
-            .Where(u =>
-                _context.UserBans.Any(b => b.UserId == u.Id)
-                || _context.ViolationEscalations.Any(e => e.UserId == u.Id))
+            .Where(u => _context.UserBans.Any(b => b.UserId == u.Id))
             .Select(u => new ViolatingUserAggregate
             {
                 UserId = u.Id,
@@ -32,9 +30,6 @@ public class ViolationQueueRepository : IViolationQueueRepository
                 LastActionAt = _context.UserBans
                     .Where(b => b.UserId == u.Id)
                     .Select(b => b.CreatedAt)
-                    .Concat(_context.ViolationEscalations
-                        .Where(e => e.UserId == u.Id)
-                        .Select(e => e.CreatedAt))
                     .Max()
             });
 

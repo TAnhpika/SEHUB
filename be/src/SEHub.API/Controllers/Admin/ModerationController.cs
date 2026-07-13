@@ -187,6 +187,7 @@ public sealed class ModerationController : ControllerBase
         return Ok(result);
     }
 
+    [Obsolete("Deprecated: ban/warn directly from reports. Prefer warn/ban endpoints; ViolationEscalations drop is a follow-up.")]
     [HttpPost("reports/{id:guid}/escalate-violations")]
     public async Task<IActionResult> EscalateUserReport(
         Guid id,

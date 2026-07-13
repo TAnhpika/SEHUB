@@ -27,6 +27,7 @@ import {
   fetchAdminReportsPage,
   resolveReportDeleteViaApi,
   resolveReportDismissViaApi,
+  resolveReportBanViaApi,
 } from "@/features/admin/moderation/adminReportData";
 import { banUserPermanentlyViaApi } from "@/features/admin/users/adminUserStore";
 import { resolveExamQuestionReport } from "@/features/exams/examQuestionReportStore";
@@ -46,7 +47,10 @@ import {
   pickNextPendingReportId,
 } from "@/features/moderator/reports/shared/reportQueueUtils";
 import { useModerationReportsQueue } from "@/features/moderator/reports/shared/useModerationReportsQueue";
-import { submitViolatingAccountBan } from "@/features/moderator/violations/violationsData";
+import {
+  submitViolatingAccountBan,
+  submitViolatingAccountWarning,
+} from "@/features/moderator/violations/violationsData";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
 import AdminTableFooter from "@/features/admin/shared/AdminTableFooter";
 import { ADMIN_PAGE_SIZES } from "@/features/admin/shared/adminPaginationConstants";
@@ -167,7 +171,7 @@ function ReportsWorkspace({ portal = "admin" }) {
 
   async function handleCommunityBan(durationDays, permanent = false) {
     if (!selected || selected.category !== "community" || pendingAction) return;
-    const actionKey = permanent ? "community-ban-perm" : "community-ban-7";
+    const actionKey = permanent ? "community-ban-perm" : `community-ban-${durationDays}`;
     setPendingAction(actionKey);
     const reportedUserId = selected.reportedUserId;
     const reason = selected.reason ?? selected.post?.excerpt ?? "Báo cáo vi phạm cộng đồng";
@@ -195,6 +199,43 @@ function ReportsWorkspace({ portal = "admin" }) {
       );
     } catch (err) {
       showToast(err.message ?? "Không khóa được tài khoản.");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function handleCommunityWarn() {
+    if (!selected || selected.category !== "community" || pendingAction) return;
+    setPendingAction("community-warn");
+    const reportedUserId = selected.reportedUserId;
+    const reason = (selected.reason ?? selected.post?.excerpt ?? "Cảnh báo từ báo cáo cộng đồng").slice(
+      0,
+      200,
+    );
+
+    try {
+      if (!reportedUserId) {
+        showToast("Không xác định được người dùng bị báo cáo.");
+        return;
+      }
+
+      await submitViolatingAccountWarning(
+        reportedUserId,
+        reason.length >= 10 ? reason : `${reason} — cảnh báo từ báo cáo bài viết.`,
+      );
+      const result = await resolveReportBanViaApi(selected.id);
+      if (!result) {
+        banReportedUser(selected.id, "cảnh báo");
+      }
+      const refreshedList = await refreshAllReports();
+      finishResolved(
+        selected.id,
+        result ?? { ...selected, status: "resolved", resolution: "warned" },
+        refreshedList,
+        "Đã gửi cảnh báo và đóng báo cáo.",
+      );
+    } catch (err) {
+      showToast(err.message ?? "Không gửi được cảnh báo.");
     } finally {
       setPendingAction(null);
     }
@@ -228,7 +269,11 @@ function ReportsWorkspace({ portal = "admin" }) {
     if (!selected || selected.category !== "user" || pendingAction) return;
     setPendingAction("user-dismiss");
     try {
-      await resolveConversationReport(selected.id, "ignored");
+      await resolveConversationReport(
+        selected.id,
+        "ignored",
+        selected.userReportType ?? "conversation",
+      );
       const refreshedList = await refreshAllReports();
       finishResolved(
         selected.id,
@@ -245,7 +290,7 @@ function ReportsWorkspace({ portal = "admin" }) {
 
   async function handleUserBan(durationDays, permanent = false) {
     if (!selected || selected.category !== "user" || pendingAction) return;
-    const actionKey = permanent ? "user-ban-perm" : "user-ban-7";
+    const actionKey = permanent ? "user-ban-perm" : `user-ban-${durationDays}`;
     setPendingAction(actionKey);
     const userId = selected.reportedUserId;
     if (!userId) {
@@ -254,12 +299,12 @@ function ReportsWorkspace({ portal = "admin" }) {
       return;
     }
 
-    const reason = (selected.reporterReason ?? "Báo cáo tin nhắn vi phạm").slice(0, 200);
+    const reason = (selected.reporterReason ?? "Báo cáo người dùng vi phạm").slice(0, 200);
 
     try {
       if (permanent) {
         const banResult = await banUserPermanentlyViaApi(userId, {
-          reason: reason.length >= 10 ? reason : `${reason} — khóa từ báo cáo chat.`,
+          reason: reason.length >= 10 ? reason : `${reason} — khóa từ báo cáo.`,
           adminUsername: "admin",
         });
         if (!banResult?.ok) {
@@ -272,6 +317,7 @@ function ReportsWorkspace({ portal = "admin" }) {
       await resolveConversationReport(
         selected.id,
         permanent ? "banned_permanent" : `banned_${durationDays}d`,
+        selected.userReportType ?? "conversation",
       );
       const refreshedList = await refreshAllReports();
       finishResolved(
@@ -286,6 +332,46 @@ function ReportsWorkspace({ portal = "admin" }) {
       );
     } catch (err) {
       showToast(err.message ?? "Không khóa được tài khoản.");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function handleUserWarn() {
+    if (!selected || selected.category !== "user" || pendingAction) return;
+    setPendingAction("user-warn");
+    const userId = selected.reportedUserId;
+    if (!userId) {
+      showToast("Không xác định được người dùng bị báo cáo.");
+      setPendingAction(null);
+      return;
+    }
+
+    const reason = (selected.reporterReason ?? "Cảnh báo từ báo cáo người dùng").slice(0, 200);
+
+    try {
+      await submitViolatingAccountWarning(
+        userId,
+        reason.length >= 10 ? reason : `${reason} — cảnh báo từ báo cáo.`,
+      );
+      await resolveConversationReport(
+        selected.id,
+        "warned",
+        selected.userReportType ?? "conversation",
+      );
+      const refreshedList = await refreshAllReports();
+      finishResolved(
+        selected.id,
+        {
+          ...selected,
+          status: "resolved",
+          resolution: "warned",
+        },
+        refreshedList,
+        "Đã gửi cảnh báo và đóng báo cáo.",
+      );
+    } catch (err) {
+      showToast(err.message ?? "Không gửi được cảnh báo.");
     } finally {
       setPendingAction(null);
     }
@@ -736,6 +822,27 @@ function ReportsWorkspace({ portal = "admin" }) {
                       </Button>
                       <Button
                         look="outline"
+                        className={modStyles.actionBtnWarn}
+                        disabled={isActing}
+                        loading={pendingAction === "user-warn"}
+                        loadingLabel={ACTION_LOADING.warn}
+                        onClick={handleUserWarn}
+                      >
+                        Cảnh báo
+                      </Button>
+                      <Button
+                        look="outline"
+                        className={modStyles.actionBtnBanTemp}
+                        disabled={isActing}
+                        loading={pendingAction === "user-ban-1"}
+                        loadingLabel={ACTION_LOADING.ban}
+                        onClick={() => handleUserBan(1)}
+                      >
+                        <FontAwesomeIcon icon={faUserSlash} />
+                        Khóa 1 ngày
+                      </Button>
+                      <Button
+                        look="outline"
                         className={modStyles.actionBtnBanTemp}
                         disabled={isActing}
                         loading={pendingAction === "user-ban-7"}
@@ -744,6 +851,17 @@ function ReportsWorkspace({ portal = "admin" }) {
                       >
                         <FontAwesomeIcon icon={faUserSlash} />
                         Khóa 7 ngày
+                      </Button>
+                      <Button
+                        look="outline"
+                        className={modStyles.actionBtnBanTemp}
+                        disabled={isActing}
+                        loading={pendingAction === "user-ban-30"}
+                        loadingLabel={ACTION_LOADING.ban}
+                        onClick={() => handleUserBan(30)}
+                      >
+                        <FontAwesomeIcon icon={faUserSlash} />
+                        Khóa 30 ngày
                       </Button>
                       <Button
                         look="outline"
@@ -873,8 +991,29 @@ function ReportsWorkspace({ portal = "admin" }) {
                       </Button>
                       <Button
                         look="outline"
+                        className={modStyles.actionBtnWarn}
+                        disabled={isActing || !selected.reportedUserId}
+                        loading={pendingAction === "community-warn"}
+                        loadingLabel={ACTION_LOADING.warn}
+                        onClick={handleCommunityWarn}
+                      >
+                        Cảnh báo
+                      </Button>
+                      <Button
+                        look="outline"
                         className={modStyles.actionBtnBanTemp}
-                        disabled={isActing}
+                        disabled={isActing || !selected.reportedUserId}
+                        loading={pendingAction === "community-ban-1"}
+                        loadingLabel={ACTION_LOADING.ban}
+                        onClick={() => handleCommunityBan(1)}
+                      >
+                        <FontAwesomeIcon icon={faUserSlash} />
+                        Khóa 1 ngày
+                      </Button>
+                      <Button
+                        look="outline"
+                        className={modStyles.actionBtnBanTemp}
+                        disabled={isActing || !selected.reportedUserId}
                         loading={pendingAction === "community-ban-7"}
                         loadingLabel={ACTION_LOADING.ban}
                         onClick={() => handleCommunityBan(7)}
@@ -884,8 +1023,19 @@ function ReportsWorkspace({ portal = "admin" }) {
                       </Button>
                       <Button
                         look="outline"
+                        className={modStyles.actionBtnBanTemp}
+                        disabled={isActing || !selected.reportedUserId}
+                        loading={pendingAction === "community-ban-30"}
+                        loadingLabel={ACTION_LOADING.ban}
+                        onClick={() => handleCommunityBan(30)}
+                      >
+                        <FontAwesomeIcon icon={faUserSlash} />
+                        Khóa 30 ngày
+                      </Button>
+                      <Button
+                        look="outline"
                         className={modStyles.actionBtnBanPerm}
-                        disabled={isActing}
+                        disabled={isActing || !selected.reportedUserId}
                         loading={pendingAction === "community-ban-perm"}
                         loadingLabel={ACTION_LOADING.ban}
                         onClick={() => handleCommunityBan(0, true)}
@@ -910,7 +1060,7 @@ function ReportsWorkspace({ portal = "admin" }) {
     return (
       <ModeratorPageShell
         title="Xử lý báo cáo"
-        subtitle="Chấp thuận xóa / từ chối giữ nguyên"
+        subtitle="Bỏ qua / xử lý nội dung / cảnh báo hoặc khóa 1·7·30 ngày / vĩnh viễn"
         crumbs={[
           { label: "Trang chủ", to: "/home" },
           { label: "Xử lý báo cáo" },

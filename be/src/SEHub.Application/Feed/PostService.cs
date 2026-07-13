@@ -1,6 +1,7 @@
 using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Application.Models;
 using SEHub.Application.Storage;
 using SEHub.Application.Notifications;
@@ -198,8 +199,8 @@ public sealed class PostService : IPostService
         {
             Id = Guid.NewGuid(),
             AuthorId = userId,
-            Title = request.Title,
-            Content = request.Content,
+            Title = HtmlContentHelper.ToPlainText(request.Title),
+            Content = HtmlContentHelper.SanitizeRichHtml(request.Content),
             Status = PostStatus.Pending,
             CreatedAt = DateTime.UtcNow
         };
@@ -223,8 +224,8 @@ public sealed class PostService : IPostService
 
         EnsureAuthorOrModerator(post.AuthorId);
 
-        post.Title = request.Title;
-        post.Content = request.Content;
+        post.Title = HtmlContentHelper.ToPlainText(request.Title);
+        post.Content = HtmlContentHelper.SanitizeRichHtml(request.Content);
         var resubmittedForReview = post.Status == PostStatus.Rejected;
         if (resubmittedForReview)
         {

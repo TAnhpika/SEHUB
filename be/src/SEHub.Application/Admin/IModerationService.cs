@@ -19,6 +19,7 @@ public interface IModerationService
     Task<ViolatingUserDto> BanUserAsync(Guid userId, ModeratorBanUserRequest request, CancellationToken cancellationToken = default);
     Task<ViolatingUserDto> WarnUserAsync(Guid userId, ModeratorWarnUserRequest request, CancellationToken cancellationToken = default);
     Task<ViolatingUserDto> UnbanUserAsync(Guid userId, UnbanUserRequest request, CancellationToken cancellationToken = default);
+    [Obsolete("Deprecated: ban/warn directly from reports UI. ViolationEscalations is a dead path; table drop is a follow-up.")]
     Task<EscalateUserReportResultDto> EscalateUserReportAsync(
         Guid reportId, EscalateUserReportRequest request, CancellationToken cancellationToken = default);
     Task<PagedResult<PracticeSubmissionListItemDto>> GetPracticeSubmissionsAsync(
