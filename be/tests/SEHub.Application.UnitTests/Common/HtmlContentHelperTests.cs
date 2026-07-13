@@ -59,4 +59,23 @@ public sealed class HtmlContentHelperTests
 
         Assert.DoesNotContain("javascript:", result, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void SanitizePostHtml_StripsImagesAndKeepsFormatting()
+    {
+        var input =
+            "<p>Hello <strong>bold</strong></p>" +
+            "<img src=\"https://res.cloudinary.com/demo/image/upload/sample.jpg\" alt=\"demo\">" +
+            "![md](https://example.com/a.png)" +
+            "<a href=\"https://example.com\">link</a>";
+
+        var result = HtmlContentHelper.SanitizePostHtml(input);
+
+        Assert.Contains("<strong>", result);
+        Assert.Contains("Hello", result);
+        Assert.Contains("<a href=\"https://example.com\"", result);
+        Assert.DoesNotContain("<img", result, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("cloudinary.com", result, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("![md]", result, StringComparison.Ordinal);
+    }
 }

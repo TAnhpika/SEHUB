@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -13,10 +13,13 @@ import RichTextPreview from "@/common/RichTextEditor/RichTextPreview";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
-import * as postsApi from "@/api/postsApi";
 import { submitPost } from "@/features/feed/feedData";
 import { MAJORS, MAX_CONTENT_LENGTH, SEMESTERS } from "@/features/posts/createPostData";
 import { getPlainTextLength } from "@/common/RichTextEditor/richTextEditorWysiwyg";
+import PostImagesPicker, {
+  getNewImageFiles,
+  revokePickerPreview,
+} from "@/features/posts/PostImagesPicker/PostImagesPicker";
 import styles from "./CreatePostPage.module.css";
 
 function CreatePostPage() {
@@ -31,13 +34,16 @@ function CreatePostPage() {
   const [contentMode, setContentMode] = useState("edit");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState([]);
+  const [imageItems, setImageItems] = useState([]);
   const [anonymous, setAnonymous] = useState(false);
   const [allowComments, setAllowComments] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleImageUpload = useCallback(async (file) => {
-    const result = await postsApi.uploadPostContentImage(file);
-    return result?.url ?? result?.Url ?? null;
+  useEffect(() => {
+    return () => {
+      imageItems.forEach(revokePickerPreview);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- revoke only on unmount
   }, []);
 
   function addTag(rawValue) {
@@ -64,12 +70,21 @@ function CreatePostPage() {
 
     setIsSubmitting(true);
     try {
-      await submitPost({
+      const result = await submitPost({
         title: title.trim(),
         content: content.trim(),
         tags,
+        imageFiles: getNewImageFiles(imageItems),
       });
-      showToast("Đã gửi bài viết — chờ moderator duyệt trước khi hiển thị.", 5500);
+
+      if (result.imageUploadError) {
+        showToast(
+          `Đã gửi bài viết nhưng tải ảnh thất bại: ${result.imageUploadError}. Bạn có thể chỉnh sửa bài để thêm ảnh lại.`,
+          7000,
+        );
+      } else {
+        showToast("Đã gửi bài viết — chờ moderator duyệt trước khi hiển thị.", 5500);
+      }
       window.setTimeout(() => navigate("/home"), 1200);
     } catch (err) {
       showToast(err.message ?? "Không đăng được bài viết.");
@@ -178,17 +193,33 @@ function CreatePostPage() {
               rows={12}
               required
               toolbarAriaLabel="Định dạng nội dung"
-              onImageUpload={handleImageUpload}
-              onImageUploadError={(message) => showToast(message)}
+              allowImages={false}
             />
           ) : (
             <div className={styles.preview}>
               <RichTextPreview value={content} />
+              {imageItems.length > 0 ? (
+                <div className={styles.previewImages}>
+                  {imageItems.map((item) => (
+                    <img
+                      key={item.key}
+                      src={item.previewUrl}
+                      alt=""
+                      className={styles.previewImage}
+                    />
+                  ))}
+                </div>
+              ) : null}
             </div>
           )}
-          <p className={styles.hint}>
-            Dùng nút hình ảnh trên thanh công cụ để chèn ảnh vào nội dung (lưu trên Cloudinary).
-          </p>
+        </section>
+
+        <section className={styles.card}>
+          <PostImagesPicker
+            items={imageItems}
+            onChange={setImageItems}
+            disabled={isSubmitting}
+          />
         </section>
 
         <section className={styles.card}>

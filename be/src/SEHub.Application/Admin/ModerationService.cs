@@ -29,6 +29,7 @@ public sealed class ModerationService : IModerationService
     private readonly ICommentReportRepository _commentReportRepository;
     private readonly ICommentRepository _commentRepository;
     private readonly IPostRepository _postRepository;
+    private readonly IPostImageService _postImageService;
     private readonly IPostTagRepository _postTagRepository;
     private readonly IUserRepository _userRepository;
     private readonly IUserProfileRepository _profileRepository;
@@ -54,6 +55,7 @@ public sealed class ModerationService : IModerationService
         ICommentReportRepository commentReportRepository,
         ICommentRepository commentRepository,
         IPostRepository postRepository,
+        IPostImageService postImageService,
         IPostTagRepository postTagRepository,
         IUserRepository userRepository,
         IUserProfileRepository profileRepository,
@@ -78,6 +80,7 @@ public sealed class ModerationService : IModerationService
         _commentReportRepository = commentReportRepository;
         _commentRepository = commentRepository;
         _postRepository = postRepository;
+        _postImageService = postImageService;
         _postTagRepository = postTagRepository;
         _userRepository = userRepository;
         _profileRepository = profileRepository;
@@ -193,6 +196,7 @@ public sealed class ModerationService : IModerationService
             reportedPost = await _postRepository.GetByIdIncludingDeletedAsync(report.PostId, cancellationToken);
             if (reportedPost is not null && !reportedPost.IsDeleted)
             {
+                await _postImageService.DeleteImagesForPostAsync(reportedPost.Id, cancellationToken);
                 await _postRepository.SoftDeleteAsync(reportedPost, actorId, cancellationToken);
                 deletedPost = reportedPost;
             }

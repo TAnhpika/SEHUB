@@ -27,6 +27,8 @@ public interface IPostImageService
     Task<PostImageContentResult> OpenImageAsync(Guid imageId, CancellationToken cancellationToken = default);
 
     Task DeleteImagesForPostAsync(Guid postId, CancellationToken cancellationToken = default);
+
+    Task DeleteImageAsync(Guid postId, Guid imageId, CancellationToken cancellationToken = default);
 }
 
 public sealed class PostImageUpload
@@ -220,6 +222,37 @@ public sealed class PostImageService : IPostImageService
         }
 
         await _imageRepository.DeleteRangeAsync(images, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteImageAsync(Guid postId, Guid imageId, CancellationToken cancellationToken = default)
+    {
+        var post = await _postRepository.GetByIdAsync(postId, cancellationToken)
+            ?? throw new NotFoundException("Post", postId);
+
+        EnsureAuthorOrModerator(post.AuthorId);
+
+        var image = await _imageRepository.GetByIdAsync(imageId, cancellationToken)
+            ?? throw new NotFoundException("PostImage", imageId);
+
+        if (image.PostId != postId)
+        {
+            throw new NotFoundException("PostImage", imageId);
+        }
+
+        await CdnAssetCleanup.TryDeleteAsync(
+            _cdnStorage,
+            image.PublicId,
+            image.Url,
+            isRaw: false,
+            cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(image.DriveFileId))
+        {
+            await CloudFileCleanup.TryDeleteAsync(_driveStorage, image.DriveFileId, cancellationToken);
+        }
+
+        await _imageRepository.DeleteRangeAsync([image], cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 

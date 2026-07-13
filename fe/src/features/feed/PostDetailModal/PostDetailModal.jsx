@@ -13,7 +13,6 @@ import { useAuth } from "@/context";
 import { Modal } from "@/common/Modal/Modal";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-import * as postsApi from "@/api/postsApi";
 import RichTextContent from "@/common/RichTextEditor/RichTextContent";
 import {
   loadPostById,
@@ -31,6 +30,13 @@ import CommentMentionPicker from "@/features/feed/CommentMentionPicker/CommentMe
 import PinnedBadge from "@/features/feed/shared/PinnedBadge/PinnedBadge";
 import { filterDisplayTags } from "@/features/feed/shared/postDisplayUtils";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
+import PostImagesGallery from "@/features/posts/PostImagesGallery/PostImagesGallery";
+import PostImagesPicker, {
+  createPickerItemFromExisting,
+  getExistingImageIds,
+  getNewImageFiles,
+  revokePickerPreview,
+} from "@/features/posts/PostImagesPicker/PostImagesPicker";
 import styles from "./PostDetailModal.module.css";
 
 const LazyRichTextEditor = lazy(() => import("@/common/RichTextEditor/RichTextEditor"));
@@ -65,6 +71,9 @@ function PostDetailModal({
   const [editBody, setEditBody] = useState("");
   const [displayTitle, setDisplayTitle] = useState("");
   const [displayBody, setDisplayBody] = useState("");
+  const [displayImages, setDisplayImages] = useState([]);
+  const [editImages, setEditImages] = useState([]);
+  const [baselineImageIds, setBaselineImageIds] = useState([]);
   const [likeCount, setLikeCount] = useState(0);
   const [liked, setLiked] = useState(false);
   const [liking, setLiking] = useState(false);
@@ -117,10 +126,13 @@ function PostDetailModal({
     onPostChangeRef.current?.(patch);
   }
 
-  const handleImageUpload = useCallback(async (file) => {
-    const result = await postsApi.uploadPostContentImage(file);
-    return result?.url ?? result?.Url ?? null;
-  }, []);
+  function syncImages(images) {
+    const list = images ?? [];
+    setDisplayImages(list);
+    const pickerItems = list.map(createPickerItemFromExisting);
+    setEditImages(pickerItems);
+    setBaselineImageIds(getExistingImageIds(pickerItems));
+  }
 
   useEffect(() => {
     if (!post || !open) return undefined;
@@ -134,6 +146,7 @@ function PostDetailModal({
       setDisplayBody(post.body ?? post.excerpt);
       setEditTitle(post.title);
       setEditBody(post.body ?? post.excerpt);
+      syncImages(post.images ?? []);
       setLikeCount(post.likes ?? 0);
       setLiked(Boolean(post.isLiked));
       setViewCount(post.views ?? 0);
@@ -150,6 +163,7 @@ function PostDetailModal({
         setDisplayBody(detail.body ?? detail.excerpt);
         setEditTitle(detail.title);
         setEditBody(detail.body ?? detail.excerpt);
+        syncImages(detail.images ?? []);
         setLikeCount(detail.likes ?? 0);
         setLiked(Boolean(detail.isLiked));
         setViewCount(detail.views ?? 0);
@@ -160,6 +174,9 @@ function PostDetailModal({
           likes: detail.likes ?? 0,
           views: detail.views ?? 0,
           isLiked: detail.isLiked,
+          images: detail.images ?? [],
+          coverImageUrl: detail.coverImageUrl,
+          previewImageUrl: detail.previewImageUrl,
         });
         onViewed?.(detail);
       } catch {
@@ -209,12 +226,18 @@ function PostDetailModal({
   function handleStartEdit() {
     setEditTitle(displayTitle);
     setEditBody(displayBody);
+    setEditImages(displayImages.map(createPickerItemFromExisting));
+    setBaselineImageIds(displayImages.map((image) => image.id).filter(Boolean));
     setIsEditing(true);
   }
 
   function handleCancelEdit() {
+    editImages.forEach((item) => {
+      if (item.file) revokePickerPreview(item);
+    });
     setEditTitle(displayTitle);
     setEditBody(displayBody);
+    setEditImages(displayImages.map(createPickerItemFromExisting));
     setIsEditing(false);
   }
 
@@ -225,15 +248,28 @@ function PostDetailModal({
 
     setSavingPost(true);
     try {
+      const keptIds = new Set(getExistingImageIds(editImages));
+      const deletedImageIds = baselineImageIds.filter((id) => !keptIds.has(id));
+
       const updatedPost = await savePost(post.id, {
         title,
         content: body,
         tags: post.tags,
+        deletedImageIds,
+        newImageFiles: getNewImageFiles(editImages),
       });
 
-      const mergedPost = { ...post, ...updatedPost, title, body, excerpt: body };
+      const mergedPost = {
+        ...post,
+        ...updatedPost,
+        title,
+        body,
+        excerpt: body,
+        images: updatedPost.images ?? [],
+      };
       setDisplayTitle(title);
       setDisplayBody(body);
+      syncImages(updatedPost.images ?? []);
       setIsEditing(false);
       onUpdate?.(mergedPost);
       showToast("Đã cập nhật bài viết.");
@@ -359,15 +395,19 @@ function PostDetailModal({
                     rows={5}
                     toolbarAriaLabel="Định dạng nội dung"
                     aria-label="Chỉnh sửa nội dung bài viết"
-                    onImageUpload={handleImageUpload}
-                    onImageUploadError={(message) => showToast(message)}
+                    allowImages={false}
                   />
                 </label>
+                <PostImagesPicker
+                  items={editImages}
+                  onChange={setEditImages}
+                  disabled={savingPost}
+                />
                 <div className={styles["edit-actions"]}>
-                  <button type="button" className={styles["edit-save"]} onClick={handleSaveEdit}>
+                  <button type="button" className={styles["edit-save"]} onClick={handleSaveEdit} disabled={savingPost}>
                     Lưu thay đổi
                   </button>
-                  <button type="button" className={styles["edit-cancel"]} onClick={handleCancelEdit}>
+                  <button type="button" className={styles["edit-cancel"]} onClick={handleCancelEdit} disabled={savingPost}>
                     Hủy
                   </button>
                 </div>
@@ -378,6 +418,7 @@ function PostDetailModal({
                   {post.isPinned ? <PinnedBadge /> : null}
                   <h3 className={styles.title}>{displayTitle}</h3>
                 </div>
+                <PostImagesGallery images={displayImages} />
                 <RichTextContent value={displayBody} className={styles.content} />
                 {displayTags.length > 0 ? (
                   <ul className={styles.tags} aria-label="Thẻ bài viết">

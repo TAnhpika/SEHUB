@@ -12,6 +12,15 @@ public interface IPointEngine
         Guid? sourceId,
         CancellationToken cancellationToken = default);
 
+    Task<PointAwardResult> AwardFixedPointsAsync(
+        Guid userId,
+        int amount,
+        string ruleCode,
+        string idempotencyKey,
+        string sourceType,
+        Guid? sourceId,
+        CancellationToken cancellationToken = default);
+
     Task<PointAwardResult> VoidByIdempotencyKeyAsync(
         Guid userId,
         string originalIdempotencyKey,

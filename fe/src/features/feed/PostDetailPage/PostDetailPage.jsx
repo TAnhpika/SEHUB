@@ -24,6 +24,7 @@ import PostReportButton from "@/features/feed/PostReportButton/PostReportButton"
 import UserReportButton from "@/features/reports/UserReportButton/UserReportButton";
 import { copyPostLink, formatDisplayTitle, isOwnPost } from "@/features/feed/postUtils";
 import CommentMentionPicker from "@/features/feed/CommentMentionPicker/CommentMentionPicker";
+import PostImagesGallery from "@/features/posts/PostImagesGallery/PostImagesGallery";
 import { withPremiumUsernameClass } from "@/utils/premiumNameClass";
 import styles from "./PostDetailPage.module.css";
 
@@ -227,6 +228,7 @@ function PostDetailPage() {
         <h1 className={styles.title}>
           <span className={styles.hash}>#</span> {displayTitle}
         </h1>
+        <PostImagesGallery images={post.images} />
         <RichTextContent value={post.body ?? post.excerpt} className={styles.body} />
 
         {post.tags?.length > 0 && (

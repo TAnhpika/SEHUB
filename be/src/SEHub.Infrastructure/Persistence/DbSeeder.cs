@@ -44,6 +44,7 @@ public static class DbSeeder
                 context,
                 subscriptionService,
                 logger);
+            await PostImageContentMigration.MigrateAsync(context, logger);
         }
         catch (Exception ex)
         {

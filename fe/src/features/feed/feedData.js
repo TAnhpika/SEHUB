@@ -1,5 +1,6 @@
 import { MAJORS, SEMESTERS } from "@/features/posts/createPostData";
 import * as postsApi from "@/api/postsApi";
+import { resolveAssetUrl } from "@/api/assetUrl";
 import { mapComment, mapPostDetail, mapPostListItem } from "@/api/feedMapper";
 import { isValidGuid } from "@/features/feed/postUtils";
 
@@ -181,7 +182,7 @@ export async function loadPostById(postId) {
   return mapPostDetail(detail, commentsList);
 }
 
-export async function submitPost({ title, content, tags }) {
+export async function submitPost({ title, content, tags, imageFiles = [] }) {
   if (USE_MOCK) {
     return {
       id: Date.now(),
@@ -195,20 +196,52 @@ export async function submitPost({ title, content, tags }) {
       views: 0,
       commentsList: [],
       images: [],
+      imageUploadError: null,
     };
   }
 
   const data = await postsApi.createPost({ title, content, tags });
-  return mapPostDetail(data, []);
+  const post = mapPostDetail(data, []);
+  let imageUploadError = null;
+
+  if (imageFiles.length > 0) {
+    try {
+      const uploaded = await postsApi.uploadPostImages(post.id, imageFiles);
+      post.images = (uploaded ?? []).map((dto) => ({
+        id: dto.id,
+        sortOrder: dto.sortOrder ?? 0,
+        url: resolveAssetUrl(dto.imagePath ?? dto.url),
+      }));
+      post.coverImageUrl = post.images[0]?.url ?? post.coverImageUrl;
+      post.previewImageUrl = post.images[0]?.url ?? post.previewImageUrl;
+    } catch (err) {
+      imageUploadError = err.message ?? "Không tải được ảnh bài viết.";
+    }
+  }
+
+  return { ...post, imageUploadError };
 }
 
-export async function savePost(postId, { title, content, tags }) {
+export async function savePost(
+  postId,
+  { title, content, tags, deletedImageIds = [], newImageFiles = [] },
+) {
   if (USE_MOCK) {
     return { id: postId, title, body: content, excerpt: content, tags: tags ?? [] };
   }
 
-  const data = await postsApi.updatePost(postId, { title, content, tags });
-  return mapPostDetail(data);
+  await postsApi.updatePost(postId, { title, content, tags });
+
+  for (const imageId of deletedImageIds) {
+    await postsApi.deletePostImage(postId, imageId);
+  }
+
+  if (newImageFiles.length > 0) {
+    await postsApi.uploadPostImages(postId, newImageFiles);
+  }
+
+  const detail = await postsApi.getPost(postId);
+  return mapPostDetail(detail);
 }
 
 export async function removePost(postId) {

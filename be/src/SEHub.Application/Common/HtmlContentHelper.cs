@@ -9,7 +9,8 @@ namespace SEHub.Application.Common;
 /// </summary>
 public static partial class HtmlContentHelper
 {
-    private static readonly HtmlSanitizer RichSanitizer = CreateRichSanitizer();
+    private static readonly HtmlSanitizer RichSanitizer = CreateRichSanitizer(allowImages: true);
+    private static readonly HtmlSanitizer PostSanitizer = CreateRichSanitizer(allowImages: false);
 
     /// <summary>Strip all HTML tags and decode entities to plain text (whitespace collapsed).</summary>
     public static string ToPlainText(string? value)
@@ -41,7 +42,7 @@ public static partial class HtmlContentHelper
         return normalized.Trim();
     }
 
-    /// <summary>Sanitize rich HTML for posts/questions (safe tags only; no script/style/handlers).</summary>
+    /// <summary>Sanitize rich HTML for questions/exams (safe tags including img).</summary>
     public static string SanitizeRichHtml(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -52,18 +53,37 @@ public static partial class HtmlContentHelper
         return RichSanitizer.Sanitize(value).Trim();
     }
 
-    private static HtmlSanitizer CreateRichSanitizer()
+    /// <summary>Sanitize post body HTML — images belong in PostImages, not Content.</summary>
+    public static string SanitizePostHtml(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var withoutImages = ImgTagRegex().Replace(value, string.Empty);
+        withoutImages = MarkdownImgRegex().Replace(withoutImages, string.Empty);
+        return PostSanitizer.Sanitize(withoutImages).Trim();
+    }
+
+    private static HtmlSanitizer CreateRichSanitizer(bool allowImages)
     {
         var sanitizer = new HtmlSanitizer();
         sanitizer.AllowedTags.Clear();
-        foreach (var tag in new[]
-                 {
-                     "p", "br", "strong", "b", "em", "i", "u", "s", "del", "mark",
-                     "ul", "ol", "li", "blockquote",
-                     "h1", "h2", "h3", "h4", "h5", "h6",
-                     "a", "img", "code", "pre", "span", "div",
-                     "table", "thead", "tbody", "tr", "th", "td", "hr",
-                 })
+        var tags = new List<string>
+        {
+            "p", "br", "strong", "b", "em", "i", "u", "s", "del", "mark",
+            "ul", "ol", "li", "blockquote",
+            "h1", "h2", "h3", "h4", "h5", "h6",
+            "a", "code", "pre", "span", "div",
+            "table", "thead", "tbody", "tr", "th", "td", "hr",
+        };
+        if (allowImages)
+        {
+            tags.Add("img");
+        }
+
+        foreach (var tag in tags)
         {
             sanitizer.AllowedTags.Add(tag);
         }
@@ -88,4 +108,10 @@ public static partial class HtmlContentHelper
 
     [GeneratedRegex(@"\s+", RegexOptions.CultureInvariant)]
     private static partial Regex WhitespaceRegex();
+
+    [GeneratedRegex(@"<img\b[^>]*/?>", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex ImgTagRegex();
+
+    [GeneratedRegex(@"!\[[^\]]*\]\([^)]*\)", RegexOptions.CultureInvariant)]
+    private static partial Regex MarkdownImgRegex();
 }
