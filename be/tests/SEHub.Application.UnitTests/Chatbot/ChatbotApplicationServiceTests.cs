@@ -108,4 +108,102 @@ public class ChatbotApplicationServiceTests
         await act.Should().ThrowAsync<ForbiddenException>()
             .WithMessage("*disabled*");
     }
+
+    [Fact]
+    public async Task RenameConversationAsync_UpdatesTitle_WhenOwnedByUser()
+    {
+        var conversationId = Guid.NewGuid();
+        var conversation = new ChatbotConversation
+        {
+            Id = conversationId,
+            UserId = _userId,
+            Title = "Old title",
+            CreatedAt = DateTime.UtcNow.AddHours(-1),
+        };
+
+        _chatbotRepository
+            .Setup(x => x.GetConversationAsync(conversationId, _userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(conversation);
+        _unitOfWork
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        var result = await _sut.RenameConversationAsync(
+            conversationId,
+            new RenameChatbotConversationRequest { Title = "  New title  " });
+
+        result.Id.Should().Be(conversationId);
+        result.Title.Should().Be("New title");
+        conversation.Title.Should().Be("New title");
+        _chatbotRepository.Verify(
+            x => x.UpdateConversationAsync(conversation, It.IsAny<CancellationToken>()),
+            Times.Once);
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RenameConversationAsync_ThrowsNotFound_WhenConversationMissing()
+    {
+        var conversationId = Guid.NewGuid();
+        _chatbotRepository
+            .Setup(x => x.GetConversationAsync(conversationId, _userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ChatbotConversation?)null);
+
+        var act = () => _sut.RenameConversationAsync(
+            conversationId,
+            new RenameChatbotConversationRequest { Title = "New title" });
+
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task DeleteConversationAsync_RemovesConversation_WhenOwnedByUser()
+    {
+        var conversationId = Guid.NewGuid();
+        var conversation = new ChatbotConversation
+        {
+            Id = conversationId,
+            UserId = _userId,
+            Title = "To delete",
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        _chatbotRepository
+            .Setup(x => x.GetConversationAsync(conversationId, _userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(conversation);
+        _unitOfWork
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        await _sut.DeleteConversationAsync(conversationId);
+
+        _chatbotRepository.Verify(
+            x => x.DeleteConversationAsync(conversation, It.IsAny<CancellationToken>()),
+            Times.Once);
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteConversationAsync_ThrowsNotFound_WhenConversationMissing()
+    {
+        var conversationId = Guid.NewGuid();
+        _chatbotRepository
+            .Setup(x => x.GetConversationAsync(conversationId, _userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ChatbotConversation?)null);
+
+        var act = () => _sut.DeleteConversationAsync(conversationId);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task DeleteConversationAsync_ThrowsForbidden_WhenUserIsNotPremium()
+    {
+        _currentUser.Setup(x => x.IsPremium).Returns(false);
+
+        var act = () => _sut.DeleteConversationAsync(Guid.NewGuid());
+
+        await act.Should().ThrowAsync<ForbiddenException>()
+            .WithMessage("*PREMIUM_REQUIRED*");
+    }
 }

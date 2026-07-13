@@ -41,6 +41,8 @@ public interface IChatbotRepository
 
     Task UpdateConversationAsync(Domain.Entities.ChatbotConversation conversation, CancellationToken cancellationToken = default);
 
+    Task DeleteConversationAsync(Domain.Entities.ChatbotConversation conversation, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Domain.Entities.ChatbotMessage>> GetMessagesAsync(
         Guid conversationId,
         CancellationToken cancellationToken = default);

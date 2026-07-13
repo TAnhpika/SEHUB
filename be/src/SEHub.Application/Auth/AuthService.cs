@@ -576,6 +576,10 @@ public sealed class AuthService : IAuthService
 
 
 
+        // Intentionally do not reject unconfirmed email here: keep verify-email session alive.
+
+        // Business APIs are blocked by EmailConfirmedMiddleware; response still includes EmailConfirmed.
+
         await EnsureNotBannedAsync(user.Id, cancellationToken);
 
 

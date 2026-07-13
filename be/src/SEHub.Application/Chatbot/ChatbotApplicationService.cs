@@ -25,6 +25,15 @@ public interface IChatbotApplicationService
     Task<ChatbotReplyResponse> SendMessageAsync(
         ChatbotMessageRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<ChatbotConversationDto> RenameConversationAsync(
+        Guid conversationId,
+        RenameChatbotConversationRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task DeleteConversationAsync(
+        Guid conversationId,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class ChatbotApplicationService : IChatbotApplicationService
@@ -207,6 +216,56 @@ public sealed class ChatbotApplicationService : IChatbotApplicationService
             RemainingTokens = remaining,
             Messages = MapMessages(history.Concat([userMessage, assistantMessage]).ToList()),
         };
+    }
+
+    public async Task<ChatbotConversationDto> RenameConversationAsync(
+        Guid conversationId,
+        RenameChatbotConversationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        EnsurePremiumAccess();
+        var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+
+        var title = request.Title?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            throw new ValidationException("Title is required.");
+        }
+
+        if (title.Length > 200)
+        {
+            throw new ValidationException("Title must be at most 200 characters.");
+        }
+
+        var conversation = await _chatbotRepository.GetConversationAsync(conversationId, userId, cancellationToken)
+            ?? throw new NotFoundException("ChatbotConversation", conversationId);
+
+        conversation.Title = title;
+        conversation.UpdatedAt = DateTime.UtcNow;
+        await _chatbotRepository.UpdateConversationAsync(conversation, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new ChatbotConversationDto
+        {
+            Id = conversation.Id,
+            Title = conversation.Title,
+            CreatedAt = conversation.CreatedAt,
+            UpdatedAt = conversation.UpdatedAt,
+        };
+    }
+
+    public async Task DeleteConversationAsync(
+        Guid conversationId,
+        CancellationToken cancellationToken = default)
+    {
+        EnsurePremiumAccess();
+        var userId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
+
+        var conversation = await _chatbotRepository.GetConversationAsync(conversationId, userId, cancellationToken)
+            ?? throw new NotFoundException("ChatbotConversation", conversationId);
+
+        await _chatbotRepository.DeleteConversationAsync(conversation, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
     private void EnsurePremiumAccess()
