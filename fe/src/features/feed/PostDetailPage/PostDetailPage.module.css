@@ -320,6 +320,11 @@
   margin-bottom: 1rem;
 }
 
+.commentReply {
+  margin-bottom: 0.75rem;
+  border-left: 2px solid var(--color-border);
+}
+
 .comment-head {
   display: flex;
   align-items: flex-start;

@@ -339,20 +339,24 @@ function AdminPermissionsPage() {
           </div>
         </div>
         <ul className={permStyles.auditList}>
-          {auditPage.pageItems.map((row) => (
-            <li
-              key={row.id}
-              className={[
-                permStyles.auditItem,
-                row.action === "grant" ? permStyles.auditGrant : permStyles.auditRevoke,
-              ].join(" ")}
-            >
-              <span className={permStyles.auditDetail}>{row.detail}</span>
-              <span className={permStyles.auditMeta}>
-                {row.admin} · {formatAuditTime(row.at)}
-              </span>
-            </li>
-          ))}
+          {auditPage.pageItems.length === 0 ? (
+            <li className={permStyles.emptyState}>Chưa có nhật ký gán / thu hồi Mod.</li>
+          ) : (
+            auditPage.pageItems.map((row) => (
+              <li
+                key={row.id}
+                className={[
+                  permStyles.auditItem,
+                  row.action === "grant" ? permStyles.auditGrant : permStyles.auditRevoke,
+                ].join(" ")}
+              >
+                <span className={permStyles.auditDetail}>{row.detail}</span>
+                <span className={permStyles.auditMeta}>
+                  {row.admin} · {formatAuditTime(row.at)}
+                </span>
+              </li>
+            ))
+          )}
         </ul>
         <AdminTableFooter
           rangeStart={auditPage.rangeStart}

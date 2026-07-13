@@ -1,8 +1,56 @@
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/common/Toast/ToastProvider";
 import { insertMention } from "@/features/feed/CommentMentionPicker/CommentMentionPicker";
-import { removeComment, submitComment } from "@/features/feed/feedData";
+import { removeComment, saveComment, submitComment } from "@/features/feed/feedData";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+
+export function countCommentsTree(comments) {
+  if (!Array.isArray(comments) || comments.length === 0) return 0;
+  return comments.reduce((sum, comment) => sum + 1 + countCommentsTree(comment.replies), 0);
+}
+
+function insertReplyIntoTree(comments, parentId, newComment) {
+  return comments.map((comment) => {
+    if (comment.id === parentId) {
+      return {
+        ...comment,
+        replies: [...(comment.replies ?? []), newComment],
+      };
+    }
+    if (comment.replies?.length) {
+      return {
+        ...comment,
+        replies: insertReplyIntoTree(comment.replies, parentId, newComment),
+      };
+    }
+    return comment;
+  });
+}
+
+function updateCommentInTree(comments, commentId, patch) {
+  return comments.map((comment) => {
+    if (comment.id === commentId) {
+      return { ...comment, ...patch };
+    }
+    if (comment.replies?.length) {
+      return {
+        ...comment,
+        replies: updateCommentInTree(comment.replies, commentId, patch),
+      };
+    }
+    return comment;
+  });
+}
+
+function removeCommentFromTree(comments, commentId) {
+  return comments
+    .filter((comment) => comment.id !== commentId)
+    .map((comment) =>
+      comment.replies?.length
+        ? { ...comment, replies: removeCommentFromTree(comment.replies, commentId) }
+        : comment,
+    );
+}
 
 export function usePostDetail(postId, { initialComments, onCommentsChange } = {}) {
   const { confirm } = useConfirmDialog();
@@ -38,8 +86,12 @@ export function usePostDetail(postId, { initialComments, onCommentsChange } = {}
 
     setSubmittingComment(true);
     try {
-      const newComment = await submitComment(postId, content, replyTarget?.id ?? null);
-      applyComments([...comments, newComment]);
+      const parentId = replyTarget?.id ?? null;
+      const newComment = await submitComment(postId, content, parentId);
+      const next = parentId
+        ? insertReplyIntoTree(comments, parentId, { ...newComment, replies: newComment.replies ?? [] })
+        : [...comments, { ...newComment, replies: newComment.replies ?? [] }];
+      applyComments(next);
       setDraft("");
       setReplyTarget(null);
     } catch (err) {
@@ -75,15 +127,24 @@ export function usePostDetail(postId, { initialComments, onCommentsChange } = {}
   }, []);
 
   const handleSaveEditComment = useCallback(
-    (commentId) => {
+    async (commentId) => {
       const content = editCommentDraft.trim();
-      if (!content) return;
+      if (!content || !postId) return;
 
-      applyComments(comments.map((item) => (item.id === commentId ? { ...item, content } : item)));
-      setEditingCommentId(null);
-      setEditCommentDraft("");
+      try {
+        const updated = await saveComment(postId, commentId, content);
+        applyComments(
+          updateCommentInTree(comments, commentId, {
+            content: updated?.content ?? content,
+          }),
+        );
+        setEditingCommentId(null);
+        setEditCommentDraft("");
+      } catch (err) {
+        showToast(err.message ?? "Không cập nhật được bình luận.");
+      }
     },
-    [editCommentDraft, comments, applyComments],
+    [editCommentDraft, postId, comments, applyComments, showToast],
   );
 
   const handleDeleteComment = useCallback(
@@ -98,7 +159,7 @@ export function usePostDetail(postId, { initialComments, onCommentsChange } = {}
 
       try {
         await removeComment(postId, commentId);
-        applyComments(comments.filter((item) => item.id !== commentId));
+        applyComments(removeCommentFromTree(comments, commentId));
         if (editingCommentId === commentId) {
           setEditingCommentId(null);
           setEditCommentDraft("");

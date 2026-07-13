@@ -97,9 +97,12 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 services.Remove(descriptor);
             }
 
-            services.AddDbContext<SEHubDbContext>(options =>
+            services.AddScoped<SEHub.Infrastructure.Persistence.Interceptors.RoleChangeAuditAppendOnlyInterceptor>();
+            services.AddDbContext<SEHubDbContext>((sp, options) =>
             {
                 options.UseInMemoryDatabase(_databaseName);
+                options.AddInterceptors(
+                    sp.GetRequiredService<SEHub.Infrastructure.Persistence.Interceptors.RoleChangeAuditAppendOnlyInterceptor>());
             });
 
             services.PostConfigure<SEHub.Application.Auth.JwtSettings>(options =>

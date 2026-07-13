@@ -6,6 +6,7 @@ using SEHub.Application.Gamification.Abstractions;
 using SEHub.Application.Models;
 using SEHub.Application.Notifications;
 using SEHub.Application.Profiles;
+using SEHub.Contracts.Feed;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 
@@ -41,7 +42,7 @@ public sealed class CommentServiceTests
         _unitOfWork.Object);
 
     [Fact]
-    public async Task GetCommentsAsync_BatchesAuthorLookupsAndBuildsNestedTree()
+    public async Task GetCommentsAsync_FlattensIncludedRepliesAndBuildsNestedTree()
     {
         var post = new Post
         {
@@ -52,14 +53,6 @@ public sealed class CommentServiceTests
             Status = PostStatus.Published,
         };
 
-        var root = new Comment
-        {
-            Id = RootId,
-            PostId = PostId,
-            AuthorId = Author1,
-            Content = "Root",
-            CreatedAt = DateTime.UtcNow,
-        };
         var reply = new Comment
         {
             Id = ReplyId,
@@ -69,11 +62,20 @@ public sealed class CommentServiceTests
             Content = "Reply",
             CreatedAt = DateTime.UtcNow,
         };
+        var root = new Comment
+        {
+            Id = RootId,
+            PostId = PostId,
+            AuthorId = Author1,
+            Content = "Root",
+            CreatedAt = DateTime.UtcNow,
+            Replies = [reply],
+        };
 
         _postRepository.Setup(r => r.GetByIdAsync(PostId, It.IsAny<CancellationToken>())).ReturnsAsync(post);
         _commentRepository
             .Setup(r => r.GetByPostIdAsync(PostId, 1, 20, It.IsAny<CancellationToken>()))
-            .ReturnsAsync([root, reply]);
+            .ReturnsAsync([root]);
         _commentRepository
             .Setup(r => r.CountByPostIdAsync(PostId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(2);
@@ -95,18 +97,123 @@ public sealed class CommentServiceTests
         result.Items[0].Author.Username.Should().Be("author1");
         result.Items[0].Replies.Should().ContainSingle();
         result.Items[0].Replies![0].Author.Username.Should().Be("author2");
+        result.Items[0].Replies![0].ParentCommentId.Should().Be(RootId);
+    }
 
-        _userRepository.Verify(
-            r => r.GetByIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()),
-            Times.Once);
-        _userRepository.Verify(
-            r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-        _profileRepository.Verify(
-            r => r.GetByUserIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()),
-            Times.Once);
-        _profileRepository.Verify(
-            r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+    [Fact]
+    public async Task CreateAsync_Reply_ReturnsDtoWithoutThrowing()
+    {
+        var post = new Post
+        {
+            Id = PostId,
+            AuthorId = Author1,
+            Title = "Post",
+            Content = "Body",
+            Status = PostStatus.Published,
+        };
+        var parent = new Comment
+        {
+            Id = RootId,
+            PostId = PostId,
+            AuthorId = Author1,
+            Content = "Root",
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        _currentUser.SetupGet(u => u.UserId).Returns(Author2);
+        _postRepository.Setup(r => r.GetByIdAsync(PostId, It.IsAny<CancellationToken>())).ReturnsAsync(post);
+        _commentRepository.Setup(r => r.GetByIdAsync(RootId, It.IsAny<CancellationToken>())).ReturnsAsync(parent);
+        _userRepository
+            .Setup(r => r.GetByIdAsync(Author1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserAccount { Id = Author1, Username = "author1", DisplayName = "Author 1" });
+        _userRepository
+            .Setup(r => r.GetByIdAsync(Author2, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserAccount { Id = Author2, Username = "author2", DisplayName = "Author 2" });
+        _userRepository
+            .Setup(r => r.GetByUsernameAsync("author1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserAccount { Id = Author1, Username = "author1", DisplayName = "Author 1" });
+        _profileRepository
+            .Setup(r => r.GetByUserIdAsync(Author2, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserProfile?)null);
+
+        var sut = CreateSut();
+        var dto = await sut.CreateAsync(PostId, new CreateCommentRequest
+        {
+            Content = "hello",
+            ParentCommentId = RootId,
+        });
+
+        dto.ParentCommentId.Should().Be(RootId);
+        dto.Content.Should().Contain("@author1");
+        dto.Author.Username.Should().Be("author2");
+        _commentRepository.Verify(r => r.AddAsync(It.IsAny<Comment>(), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_AuthorCanEditContent()
+    {
+        var comment = new Comment
+        {
+            Id = RootId,
+            PostId = PostId,
+            AuthorId = Author1,
+            Content = "Old",
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        _currentUser.SetupGet(u => u.UserId).Returns(Author1);
+        _currentUser.SetupGet(u => u.IsModeratorOrAdmin).Returns(false);
+        _commentRepository.Setup(r => r.GetByIdAsync(RootId, It.IsAny<CancellationToken>())).ReturnsAsync(comment);
+        _userRepository
+            .Setup(r => r.GetByIdAsync(Author1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserAccount { Id = Author1, Username = "author1", DisplayName = "Author 1" });
+        _profileRepository
+            .Setup(r => r.GetByUserIdAsync(Author1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserProfile?)null);
+
+        var sut = CreateSut();
+        var dto = await sut.UpdateAsync(PostId, RootId, new UpdateCommentRequest { Content = "Updated text" });
+
+        dto.Content.Should().Be("Updated text");
+        comment.Content.Should().Be("Updated text");
+        comment.UpdatedAt.Should().NotBeNull();
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_Root_SoftDeletesReplies()
+    {
+        var root = new Comment
+        {
+            Id = RootId,
+            PostId = PostId,
+            AuthorId = Author1,
+            Content = "Root",
+            CreatedAt = DateTime.UtcNow,
+        };
+        var reply = new Comment
+        {
+            Id = ReplyId,
+            PostId = PostId,
+            AuthorId = Author2,
+            ParentCommentId = RootId,
+            Content = "Reply",
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        _currentUser.SetupGet(u => u.UserId).Returns(Author1);
+        _currentUser.SetupGet(u => u.IsModeratorOrAdmin).Returns(false);
+        _commentRepository.Setup(r => r.GetByIdAsync(RootId, It.IsAny<CancellationToken>())).ReturnsAsync(root);
+        _commentRepository
+            .Setup(r => r.GetRepliesByParentIdAsync(RootId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([reply]);
+
+        var sut = CreateSut();
+        await sut.DeleteAsync(PostId, RootId);
+
+        _commentRepository.Verify(r => r.SoftDeleteAsync(root, Author1, It.IsAny<CancellationToken>()), Times.Once);
+        _commentRepository.Verify(r => r.SoftDeleteAsync(reply, Author1, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

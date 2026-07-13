@@ -1,3 +1,4 @@
+import * as adminApi from "@/api/adminApi";
 import {
   findAdminUserByUsername,
   loadAdminUsers,
@@ -6,34 +7,6 @@ import {
 } from "@/features/admin/users/adminUserStore";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
-
-const MOD_GRANT_DATES_KEY = "sehub:moderator-grant-dates";
-
-function readModGrantDates() {
-  try {
-    const raw = localStorage.getItem(MOD_GRANT_DATES_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeModGrantDate(username, date = new Date().toISOString().slice(0, 10)) {
-  const dates = readModGrantDates();
-  dates[username] = date;
-  localStorage.setItem(MOD_GRANT_DATES_KEY, JSON.stringify(dates));
-}
-
-function removeModGrantDate(username) {
-  const dates = readModGrantDates();
-  delete dates[username];
-  localStorage.setItem(MOD_GRANT_DATES_KEY, JSON.stringify(dates));
-}
-
-function resolveGrantedAt(username, fallback = null) {
-  if (USE_MOCK) return fallback;
-  return readModGrantDates()[username] ?? null;
-}
 
 /** Mock store phân quyền Moderator — Admin gán/thu hồi */
 
@@ -123,6 +96,33 @@ export function getPermissionsAudit() {
   return [...auditStore].sort((a, b) => (a.at < b.at ? 1 : -1));
 }
 
+/**
+ * @param {Array<{ id: string, action: string, detail: string, targetUsername: string, actorUsername?: string | null, createdAt: string }>} items
+ */
+function mapRoleAuditsFromApi(items) {
+  return (items ?? []).map((item) => ({
+    id: String(item.id),
+    at: item.createdAt,
+    action: item.action === "revoke_moderator" ? "revoke" : "grant",
+    username: item.targetUsername ?? "",
+    admin: item.actorUsername ?? "admin",
+    detail: item.detail ?? "",
+  }));
+}
+
+/** @param {Array<{ action: string, username: string, at: string }>} audits */
+function buildGrantedAtMap(audits) {
+  /** @type {Record<string, string>} */
+  const map = {};
+  for (const row of audits) {
+    if (row.action !== "grant" || !row.username) continue;
+    const key = row.username.toLowerCase();
+    if (map[key]) continue;
+    map[key] = String(row.at).slice(0, 10);
+  }
+  return map;
+}
+
 export function addModeratorDirect(
   { username, email, displayName },
   adminUsername = "admin_sehub",
@@ -143,20 +143,21 @@ export function addModeratorDirect(
     grantedBy: adminUsername,
   };
   moderatorsStore = [...moderatorsStore, entry];
-  if (!USE_MOCK) writeModGrantDate(username, grantedAt);
   candidatesStore = candidatesStore.filter((c) => c.username !== username);
 
-  auditStore = [
-    {
-      id: `perm-aud-${Date.now()}`,
-      at: new Date().toISOString(),
-      action: "grant",
-      username,
-      admin: adminUsername,
-      detail,
-    },
-    ...auditStore,
-  ];
+  if (USE_MOCK) {
+    auditStore = [
+      {
+        id: `perm-aud-${Date.now()}`,
+        at: new Date().toISOString(),
+        action: "grant",
+        username,
+        admin: adminUsername,
+        detail,
+      },
+      ...auditStore,
+    ];
+  }
 
   patchUserRole(username, "moderator");
 
@@ -182,7 +183,6 @@ export function grantModerator(username, adminUsername = "admin_sehub") {
     grantedBy: adminUsername,
   };
   moderatorsStore = [...moderatorsStore, entry];
-  if (!USE_MOCK) writeModGrantDate(username, grantedAt);
   candidatesStore = candidatesStore.filter((c) => c.username !== username);
 
   const audit = {
@@ -205,7 +205,6 @@ export function revokeModerator(username, adminUsername = "admin_sehub") {
   if (!mod) return { ok: false, message: "Không tìm thấy Moderator." };
 
   moderatorsStore = moderatorsStore.filter((m) => m.username !== username);
-  if (!USE_MOCK) removeModGrantDate(username);
   candidatesStore = [
     {
       username: mod.username,
@@ -235,13 +234,14 @@ export function revokeModerator(username, adminUsername = "admin_sehub") {
   return { ok: true, message: `Đã thu hồi quyền Mod của @${username}.` };
 }
 
-function mapUserToModerator(user) {
+function mapUserToModerator(user, grantedAtMap = {}) {
+  const grantedAt = grantedAtMap[user.username?.toLowerCase()] ?? null;
   return {
     username: user.username,
     email: user.email,
     displayName: user.displayName,
     initial: user.displayName?.charAt(0)?.toUpperCase() ?? user.username.charAt(0).toUpperCase(),
-    grantedAt: resolveGrantedAt(user.username),
+    grantedAt,
     grantedBy: "Admin",
   };
 }
@@ -260,10 +260,6 @@ function mapUserToCandidate(user) {
   };
 }
 
-function pushPermissionAudit(entry) {
-  auditStore = [{ ...entry, id: `perm-aud-${Date.now()}` }, ...auditStore];
-}
-
 export async function loadPermissionsData() {
   if (USE_MOCK) {
     return {
@@ -274,8 +270,17 @@ export async function loadPermissionsData() {
     };
   }
 
-  const users = await loadAdminUsers();
-  const moderators = users.filter((user) => user.role === "moderator").map(mapUserToModerator);
+  const [users, auditPage] = await Promise.all([
+    loadAdminUsers(),
+    adminApi.listRoleAudits({ page: 1, pageSize: 200 }),
+  ]);
+
+  const audit = mapRoleAuditsFromApi(auditPage?.items ?? []);
+  const grantedAtMap = buildGrantedAtMap(audit);
+
+  const moderators = users
+    .filter((user) => user.role === "moderator")
+    .map((user) => mapUserToModerator(user, grantedAtMap));
   const modUsernames = new Set(moderators.map((mod) => mod.username));
   const candidates = users
     .filter((user) => user.role === "student" && user.status === "active")
@@ -292,7 +297,7 @@ export async function loadPermissionsData() {
       candidates: candidates.length,
       permissionCount: MOD_PERMISSIONS.length,
     },
-    audit: getPermissionsAudit(),
+    audit,
   };
 }
 
@@ -309,14 +314,6 @@ export async function grantModeratorViaApi(username, adminUsername = "admin_sehu
 
   await patchAdminUserViaApi(user.id, { role: "Moderator" });
   patchUserRole(username, "moderator");
-  writeModGrantDate(username);
-  pushPermissionAudit({
-    at: new Date().toISOString(),
-    action: "grant",
-    username,
-    admin: adminUsername,
-    detail: `Gán quyền Moderator cho @${username}`,
-  });
 
   return { ok: true, message: `Đã gán Mod cho @${username}.` };
 }
@@ -334,14 +331,6 @@ export async function revokeModeratorViaApi(username, adminUsername = "admin_seh
 
   await patchAdminUserViaApi(user.id, { role: "Student" });
   patchUserRole(username, "student");
-  removeModGrantDate(username);
-  pushPermissionAudit({
-    at: new Date().toISOString(),
-    action: "revoke",
-    username,
-    admin: adminUsername,
-    detail: `Thu hồi quyền Moderator @${username}`,
-  });
 
   return { ok: true, message: `Đã thu hồi quyền Mod của @${username}.` };
 }

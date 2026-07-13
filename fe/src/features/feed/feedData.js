@@ -232,6 +232,8 @@ export async function submitComment(postId, content, parentCommentId = null) {
       content,
       author: { name: "Mock", initial: "M" },
       time: new Date().toISOString(),
+      parentCommentId,
+      replies: [],
     };
   }
 
@@ -241,6 +243,15 @@ export async function submitComment(postId, content, parentCommentId = null) {
   }
 
   const data = await postsApi.createComment(postId, body);
+  return mapComment(data);
+}
+
+export async function saveComment(postId, commentId, content) {
+  if (USE_MOCK) {
+    return { id: commentId, content, replies: [] };
+  }
+
+  const data = await postsApi.updateComment(postId, commentId, { content });
   return mapComment(data);
 }
 

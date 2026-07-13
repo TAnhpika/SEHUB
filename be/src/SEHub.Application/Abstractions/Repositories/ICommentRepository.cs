@@ -6,6 +6,7 @@ public interface ICommentRepository
 {
     Task<Comment?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Comment>> GetByPostIdAsync(Guid postId, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Comment>> GetRepliesByParentIdAsync(Guid parentCommentId, CancellationToken cancellationToken = default);
     Task<int> CountByPostIdAsync(Guid postId, CancellationToken cancellationToken = default);
     Task<IReadOnlyDictionary<Guid, int>> CountByPostIdsAsync(
         IReadOnlyList<Guid> postIds,
