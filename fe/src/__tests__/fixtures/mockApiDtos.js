@@ -156,6 +156,7 @@ export const mockPracticeSubmissionDto = {
   id: "sub-001",
   examId: "exam-api-uuid-002",
   examCode: "PE-SWE201c-SU2026-1",
+  examTitle: "SWE201c",
   gitHubRepoUrl: "https://github.com/demo/student-repo",
   submittedAt: "2026-07-09T14:00:00Z",
   status: "Submitted",

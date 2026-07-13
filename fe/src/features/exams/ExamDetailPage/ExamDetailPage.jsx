@@ -558,6 +558,7 @@ function ExamDetailPage({ page }) {
           courseCode={exam.courseCode}
           examId={exam.id}
           examTitle={exam.id}
+          apiExamId={resolvedApiExamId}
         />
       ) : null}
 

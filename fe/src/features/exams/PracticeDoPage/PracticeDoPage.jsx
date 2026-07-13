@@ -293,6 +293,7 @@ function PracticeDoPage() {
         await submitPracticeExamAsync({
           courseCode,
           examId: exam.id,
+          apiExamId,
           student: user.username,
           displayName: user.displayName ?? user.username,
           githubUrl: githubUrl.trim(),

@@ -116,6 +116,15 @@ public sealed partial class PartnerVoucherService : IPartnerVoucherService
             $"Mã FTES: {code.Code} (hết hạn {code.ExpiresAt:dd/MM/yyyy}). Đổi trên cổng FTES.",
             "/home/premium",
             cancellationToken: cancellationToken);
+
+        var recipient = await _userRepository.GetByIdAsync(order.UserId, cancellationToken);
+        await _workflowNotifications.NotifyAdminsPartnerVoucherAssignedAsync(
+            type.Label,
+            code.Code,
+            recipient?.Username ?? order.UserId.ToString("N"),
+            paymentOrderId,
+            code.Id,
+            cancellationToken);
     }
 
     public async Task<IReadOnlyList<PartnerVoucherDto>> ListMyAsync(CancellationToken cancellationToken = default)
@@ -278,6 +287,14 @@ public sealed partial class PartnerVoucherService : IPartnerVoucherService
             $"Mã FTES: {code.Code} (hết hạn {code.ExpiresAt:dd/MM/yyyy}).",
             "/home/premium",
             cancellationToken: cancellationToken);
+
+        await _workflowNotifications.NotifyAdminsPartnerVoucherAssignedAsync(
+            type.Label,
+            code.Code,
+            user.Username,
+            paymentOrderId: null,
+            code.Id,
+            cancellationToken);
 
         return MapAdminDto(code, user);
     }

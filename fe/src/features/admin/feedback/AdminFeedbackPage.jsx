@@ -10,6 +10,7 @@ import StatusBadge from "@/features/admin/shared/StatusBadge";
 import AdminTableFooter from "@/features/admin/shared/AdminTableFooter";
 import { ADMIN_PAGE_SIZES } from "@/features/admin/shared/adminPaginationConstants";
 import {
+  FEEDBACK_STATUS_ACTIONS,
   FEEDBACK_STATUS_FILTER_OPTIONS,
   FEEDBACK_STATUS_META,
   formatFeedbackDate,
@@ -19,7 +20,6 @@ import {
 import pageStyles from "@/features/admin/feedback/AdminFeedbackPage.module.css";
 
 const PAGE_SIZE = ADMIN_PAGE_SIZES[0] ?? 20;
-const STATUS_ACTIONS = ["Pending", "Reviewed", "Resolved"];
 
 function AdminFeedbackPage() {
   const { showToast } = useToast();
@@ -260,14 +260,14 @@ function AdminFeedbackPage() {
           ) : null}
 
           <div className={pageStyles.statusActions}>
-            {STATUS_ACTIONS.map((status) => {
+            {FEEDBACK_STATUS_ACTIONS.map((status) => {
               const meta = FEEDBACK_STATUS_META[status];
               const isActive = selectedItem.status === status;
               return (
                 <Button
                   key={status}
                   type="button"
-                  variant={isActive ? "primary" : "secondary"}
+                  look={isActive ? "solid" : "outline"}
                   className={pageStyles.statusBtn}
                   disabled={isActive || statusUpdating !== null}
                   onClick={() => handleStatusChange(status)}

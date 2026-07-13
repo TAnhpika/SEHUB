@@ -75,13 +75,18 @@ export function mapPracticeSubmissionDto(dto, context = {}) {
 
 export function mapPracticeSubmissionListItem(dto, exam) {
   const feedback = dto.reviewerComment ?? "";
-  const examCode = dto.examCode ?? exam?.code ?? "";
+  const paperCode = dto.examCode ?? exam?.paperCode ?? exam?.code ?? "";
+  const subjectCode =
+    dto.examTitle
+    ?? exam?.subjectCode
+    ?? exam?.major
+    ?? resolveCourseCode(exam ?? { code: paperCode });
 
   return {
     id: dto.id,
     apiExamId: dto.examId,
-    courseCode: resolveCourseCode(exam ?? { code: examCode }),
-    examId: examCode,
+    courseCode: String(subjectCode || "").toUpperCase(),
+    examId: paperCode || String(dto.examId ?? ""),
     student: dto.user?.username ?? "unknown",
     displayName: dto.user?.displayName ?? dto.user?.username ?? "Unknown",
     githubUrl: dto.gitHubRepoUrl,
@@ -95,5 +100,10 @@ export function mapPracticeSubmissionListItem(dto, exam) {
 }
 
 export function mapModerationPracticeSubmission(dto) {
-  return mapPracticeSubmissionListItem(dto, { code: dto.examCode, major: dto.examCode });
+  return mapPracticeSubmissionListItem(dto, {
+    paperCode: dto.examCode,
+    subjectCode: dto.examTitle,
+    code: dto.examCode,
+    major: dto.examTitle,
+  });
 }

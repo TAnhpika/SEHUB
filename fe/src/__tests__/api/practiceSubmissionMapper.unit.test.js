@@ -82,6 +82,7 @@ describe("practiceSubmissionMapper", () => {
     it("delegates to list item mapper with exam code context", () => {
       const item = mapModerationPracticeSubmission(mockPracticeSubmissionDto);
       expect(item.examId).toBe("PE-SWE201c-SU2026-1");
+      expect(item.courseCode).toBe("SWE201C");
       expect(item.status).toBe("pending");
     });
   });

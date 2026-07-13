@@ -102,7 +102,7 @@ public sealed class AdminExamService : IAdminExamService
         await ApplyPracticeExamPinAsync(exam, cancellationToken);
         await _examRepository.AddAsync(exam, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        await NotifyAdminsIfModeratorSubmittedAsync(exam, cancellationToken);
+        await NotifyAdminsIfModeratorSubmittedAsync(exam, isResubmit: false, cancellationToken);
 
         return await MapAdminExamAsync(exam, cancellationToken);
     }
@@ -285,7 +285,7 @@ public sealed class AdminExamService : IAdminExamService
         var refreshed = await _examRepository.GetByIdAsync(id, includeQuestions: true, cancellationToken: cancellationToken)
             ?? throw new NotFoundException("Exam", id);
 
-        await NotifyAdminsIfModeratorSubmittedAsync(refreshed, cancellationToken);
+        await NotifyAdminsIfModeratorSubmittedAsync(refreshed, isResubmit: true, cancellationToken);
         return await MapAdminExamAsync(refreshed, cancellationToken);
     }
 
@@ -343,7 +343,10 @@ public sealed class AdminExamService : IAdminExamService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task NotifyAdminsIfModeratorSubmittedAsync(Exam exam, CancellationToken cancellationToken)
+    private async Task NotifyAdminsIfModeratorSubmittedAsync(
+        Exam exam,
+        bool isResubmit,
+        CancellationToken cancellationToken)
     {
         if (exam.Status != ExamStatus.PendingApproval)
         {
@@ -358,6 +361,7 @@ public sealed class AdminExamService : IAdminExamService
         await _workflowNotifications.NotifyAdminsExamPendingReviewAsync(
             exam,
             _currentUser.UserId,
+            isResubmit,
             cancellationToken);
     }
 

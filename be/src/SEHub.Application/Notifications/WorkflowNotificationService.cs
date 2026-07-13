@@ -23,6 +23,7 @@ public interface IWorkflowNotificationService
     Task NotifyAdminsExamPendingReviewAsync(
         Exam exam,
         Guid? actorUserId,
+        bool isResubmit,
         CancellationToken cancellationToken = default);
 
     Task NotifyModeratorExamReviewResultAsync(
@@ -160,10 +161,30 @@ public interface IWorkflowNotificationService
         string description,
         CancellationToken cancellationToken = default);
 
+    Task NotifyUserFeedbackResolvedAsync(
+        Guid userId,
+        Guid feedbackId,
+        Guid? actorUserId,
+        CancellationToken cancellationToken = default);
+
+    Task NotifyUserFeedbackRejectedAsync(
+        Guid userId,
+        Guid feedbackId,
+        Guid? actorUserId,
+        CancellationToken cancellationToken = default);
+
     Task NotifyAdminsPartnerVoucherPoolEmptyAsync(
         string typeCode,
         string planCode,
         Guid paymentOrderId,
+        CancellationToken cancellationToken = default);
+
+    Task NotifyAdminsPartnerVoucherAssignedAsync(
+        string typeLabel,
+        string voucherCode,
+        string recipientUsername,
+        Guid? paymentOrderId,
+        Guid voucherCodeId,
         CancellationToken cancellationToken = default);
 }
 
@@ -267,16 +288,21 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
     public async Task NotifyAdminsExamPendingReviewAsync(
         Exam exam,
         Guid? actorUserId,
+        bool isResubmit,
         CancellationToken cancellationToken = default)
     {
         var actorName = actorUserId.HasValue
             ? await ResolveActorNameAsync(actorUserId.Value, cancellationToken)
             : "Moderator";
 
+        var title = isResubmit
+            ? $"{actorName} gửi lại đề đã sửa — cần duyệt"
+            : $"{actorName} gửi đề chờ duyệt";
+
         await NotifyRoleMembersAsync(
             [RoleNames.Admin],
             NotificationType.ExamReview,
-            $"{actorName} gửi đề chờ duyệt",
+            title,
             $"{exam.PaperCode} ({exam.SubjectCode})",
             $"/admin/exams/{exam.Id}",
             actorUserId,
@@ -333,6 +359,16 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             reporterUserId,
             reportId,
             cancellationToken);
+
+        await NotifyRoleMembersAsync(
+            [RoleNames.Admin],
+            NotificationType.Moderation,
+            $"{actorName} báo cáo một bài viết",
+            $"Lý do: {reasonLabel}",
+            "/admin/moderation",
+            reporterUserId,
+            reportId,
+            cancellationToken);
     }
 
     public async Task NotifyModeratorsCommentReportedAsync(
@@ -352,6 +388,16 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             $"{actorName} báo cáo một bình luận",
             $"Lý do: {reasonLabel}",
             $"/moderator/reports?id={reportId}",
+            reporterUserId,
+            reportId,
+            cancellationToken);
+
+        await NotifyRoleMembersAsync(
+            [RoleNames.Admin],
+            NotificationType.Moderation,
+            $"{actorName} báo cáo một bình luận",
+            $"Lý do: {reasonLabel}",
+            "/admin/moderation",
             reporterUserId,
             reportId,
             cancellationToken);
@@ -380,6 +426,16 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             reporterUserId,
             reportId,
             cancellationToken);
+
+        await NotifyRoleMembersAsync(
+            [RoleNames.Admin],
+            NotificationType.Moderation,
+            $"{actorName} báo cáo người dùng @{reportedLabel}",
+            $"Lý do: {reasonLabel} — {preview}",
+            "/admin/moderation",
+            reporterUserId,
+            reportId,
+            cancellationToken);
     }
 
     public async Task NotifyModeratorsConversationReportedAsync(
@@ -400,6 +456,16 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             $"{actorName} báo cáo cuộc trò chuyện",
             $"Lý do: {reasonLabel} — {preview}",
             $"/moderator/reports?id={reportId}",
+            reporterUserId,
+            reportId,
+            cancellationToken);
+
+        await NotifyRoleMembersAsync(
+            [RoleNames.Admin],
+            NotificationType.Moderation,
+            $"{actorName} báo cáo cuộc trò chuyện",
+            $"Lý do: {reasonLabel} — {preview}",
+            "/admin/moderation",
             reporterUserId,
             reportId,
             cancellationToken);
@@ -424,6 +490,16 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             $"{actorName} báo cáo câu hỏi đề {exam.PaperCode}",
             $"Lý do: {reasonLabel} — {preview}",
             "/moderator/reports",
+            reporterUserId,
+            reportId,
+            cancellationToken);
+
+        await NotifyRoleMembersAsync(
+            [RoleNames.Admin],
+            NotificationType.Moderation,
+            $"{actorName} báo cáo câu hỏi đề {exam.PaperCode}",
+            $"Lý do: {reasonLabel} — {preview}",
+            "/admin/moderation",
             reporterUserId,
             reportId,
             cancellationToken);
@@ -556,6 +632,16 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             authorUserId,
             post.Id,
             cancellationToken);
+
+        await NotifyRoleMembersAsync(
+            [RoleNames.Admin],
+            NotificationType.Moderation,
+            $"{actorName} đăng bài chờ duyệt",
+            postLabel,
+            "/admin/moderation/content",
+            authorUserId,
+            post.Id,
+            cancellationToken);
     }
 
     public async Task NotifyModeratorsPracticeSubmittedAsync(
@@ -572,6 +658,16 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             $"{actorName} nộp bài thực hành",
             $"{exam.PaperCode} ({exam.SubjectCode})",
             "/moderator/practice-submissions",
+            studentUserId,
+            submission.Id,
+            cancellationToken);
+
+        await NotifyRoleMembersAsync(
+            [RoleNames.Admin],
+            NotificationType.Moderation,
+            $"{actorName} nộp bài thực hành",
+            $"{exam.PaperCode} ({exam.SubjectCode})",
+            $"/admin/moderation/practice-submissions?highlight={submission.Id}",
             studentUserId,
             submission.Id,
             cancellationToken);
@@ -706,6 +802,50 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             submitterUserId,
             feedbackId,
             cancellationToken);
+
+        await NotifyRoleMembersAsync(
+            [RoleNames.Moderator],
+            NotificationType.Moderation,
+            $"{actorName} gửi phản hồi / báo lỗi",
+            $"@{username}: {preview}",
+            "/moderator/feedback",
+            submitterUserId,
+            feedbackId,
+            cancellationToken);
+    }
+
+    public async Task NotifyUserFeedbackResolvedAsync(
+        Guid userId,
+        Guid feedbackId,
+        Guid? actorUserId,
+        CancellationToken cancellationToken = default)
+    {
+        await _notificationService.CreateAsync(
+            userId,
+            NotificationType.Moderation,
+            "Phản hồi của bạn đã được xử lý",
+            "Cảm ơn bạn đã góp ý. Bạn nhận +50 điểm vì phản hồi hữu ích.",
+            "/home/feedback",
+            actorUserId,
+            feedbackId,
+            cancellationToken);
+    }
+
+    public async Task NotifyUserFeedbackRejectedAsync(
+        Guid userId,
+        Guid feedbackId,
+        Guid? actorUserId,
+        CancellationToken cancellationToken = default)
+    {
+        await _notificationService.CreateAsync(
+            userId,
+            NotificationType.Moderation,
+            "Phản hồi của bạn bị từ chối",
+            "Báo cáo / phản hồi được đánh giá là không đúng hoặc không đủ cơ sở để xử lý.",
+            "/home/feedback",
+            actorUserId,
+            feedbackId,
+            cancellationToken);
     }
 
     public async Task NotifyAdminsPartnerVoucherPoolEmptyAsync(
@@ -722,6 +862,29 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             "/admin/vouchers",
             null,
             paymentOrderId,
+            cancellationToken);
+    }
+
+    public async Task NotifyAdminsPartnerVoucherAssignedAsync(
+        string typeLabel,
+        string voucherCode,
+        string recipientUsername,
+        Guid? paymentOrderId,
+        Guid voucherCodeId,
+        CancellationToken cancellationToken = default)
+    {
+        var orderHint = paymentOrderId.HasValue
+            ? $" (đơn {paymentOrderId.Value:N})"
+            : string.Empty;
+
+        await NotifyRoleMembersAsync(
+            [RoleNames.Admin],
+            NotificationType.Moderation,
+            "Voucher FTES đã được cấp",
+            $"{typeLabel} → @{recipientUsername}: {voucherCode}{orderHint}",
+            "/admin/vouchers",
+            null,
+            voucherCodeId,
             cancellationToken);
     }
 

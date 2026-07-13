@@ -42,6 +42,16 @@ describe("authMapper", () => {
       expect(mapApiUser(null)).toBe(null);
       expect(mapApiUser(undefined)).toBe(null);
     });
+
+    it("maps isProfileComplete from DTO and defaults missing to true", () => {
+      expect(mapApiUser({ ...mockApiUserDto, isProfileComplete: false }).isProfileComplete).toBe(
+        false,
+      );
+      expect(mapApiUser({ ...mockApiUserDto, isProfileComplete: true }).isProfileComplete).toBe(
+        true,
+      );
+      expect(mapApiUser(mockApiUserDto).isProfileComplete).toBe(true);
+    });
   });
 
   describe("deriveUsernameFromEmail", () => {
