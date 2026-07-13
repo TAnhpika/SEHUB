@@ -12,6 +12,7 @@ public sealed class MeResponse
     public int Points { get; init; }
     public string? LevelName { get; init; }
     public bool EmailConfirmed { get; init; }
+    public bool IsProfileComplete { get; init; }
     public Profiles.ProfileStatsDto? Stats { get; init; }
     public Premium.SubscriptionStatusDto? Subscription { get; init; }
     public Profiles.AiTokenStatusDto? AiTokens { get; init; }

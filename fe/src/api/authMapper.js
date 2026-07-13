@@ -28,6 +28,7 @@ export function mapApiUser(dto) {
     level: dto.levelName ?? "Bronze",
     avatarUrl: dto.avatarUrl ?? null,
     emailConfirmed: dto.emailConfirmed ?? false,
+    isProfileComplete: dto.isProfileComplete !== false,
     streak: 0,
     unreadNotifications: 0,
     levelProgress: 0,

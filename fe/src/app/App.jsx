@@ -22,6 +22,7 @@ import GuestLayout from "@/common/Layout/GuestLayout/GuestLayout";
 import MainLayout from "@/common/Layout/MainLayout/MainLayout";
 import ExamFocusLayout from "@/common/Layout/ExamFocusLayout/ExamFocusLayout";
 import { AuthProvider } from "@/context";
+import ProfileIncompleteGate from "@/features/profile/ProfileIncompleteModal/ProfileIncompleteGate";
 import { ThemeProvider } from "@/context/ThemeProvider";
 import LoginPage from "@/features/auth/LoginPage/LoginPage";
 import RegisterPage from "@/features/auth/RegisterPage/RegisterPage";
@@ -141,6 +142,7 @@ function App() {
         <ConfirmDialogProvider>
         <BrowserRouter>
           <ScrollToTop />
+          <ProfileIncompleteGate />
           <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/community/pratical-exam/*" element={<PracticalExamRedirect />} />
@@ -336,6 +338,7 @@ function App() {
                 <Route path="content" element={<ContentModerationPage />} />
                 <Route path="content/history" element={<ContentModerationHistoryPage />} />
                 <Route path="featured" element={<FeaturedPostsPage />} />
+                <Route path="feedback" element={<AdminFeedbackPage />} />
                 <Route path="violations" element={<ViolatingAccountsPage />} />
                 <Route path="practice-submissions" element={<ModeratorPracticeSubmissionsPage />} />
                 <Route path="exams/history" element={<ModeratorExamContributionHistoryPage />} />

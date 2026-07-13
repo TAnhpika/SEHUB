@@ -4,6 +4,7 @@ export const FEEDBACK_STATUS_META = {
   Pending: { label: "Chờ xử lý", badgeStatus: "pending" },
   Reviewed: { label: "Đã xem", badgeStatus: "draft" },
   Resolved: { label: "Đã xử lý", badgeStatus: "resolved" },
+  Rejected: { label: "Từ chối", badgeStatus: "banned" },
 };
 
 export const FEEDBACK_STATUS_FILTER_OPTIONS = [
@@ -11,7 +12,10 @@ export const FEEDBACK_STATUS_FILTER_OPTIONS = [
   { value: "Pending", label: "Chờ xử lý" },
   { value: "Reviewed", label: "Đã xem" },
   { value: "Resolved", label: "Đã xử lý" },
+  { value: "Rejected", label: "Từ chối" },
 ];
+
+export const FEEDBACK_STATUS_ACTIONS = ["Pending", "Reviewed", "Resolved", "Rejected"];
 
 export function mapFeedbackItem(dto) {
   const status = dto?.status ?? "Pending";

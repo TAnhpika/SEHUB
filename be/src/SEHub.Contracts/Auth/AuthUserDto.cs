@@ -12,4 +12,5 @@ public sealed class AuthUserDto
     public int Points { get; init; }
     public string? LevelName { get; init; }
     public bool EmailConfirmed { get; init; }
+    public bool IsProfileComplete { get; init; }
 }

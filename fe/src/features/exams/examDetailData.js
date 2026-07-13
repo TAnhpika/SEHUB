@@ -177,17 +177,43 @@ export const EXAM_PREVIEW_LABELS = {
   documents: "Tài liệu",
 };
 
-export async function resolveExamApiId(examIdOrCode) {
+function examListItemMatchesCode(item, normalizedValue) {
+  const candidates = [
+    item?.id,
+    item?.paperCode,
+    item?.subjectCode,
+    item?.code,
+    item?.title,
+  ]
+    .filter(Boolean)
+    .map((value) => String(value).trim().toLowerCase());
+
+  return candidates.includes(normalizedValue);
+}
+
+export async function resolveExamApiId(examIdOrCode, options = {}) {
   if (USE_MOCK) return null;
 
   const value = String(examIdOrCode ?? "").trim();
   if (!value) return null;
   if (isValidGuid(value)) return value;
 
-  const list = await examsApi.listExams({ pageSize: 100 });
-  const match = (list.items ?? []).find(
-    (item) => item.code?.toLowerCase() === value.toLowerCase(),
+  const normalized = value.toLowerCase();
+  const query = { pageSize: 100 };
+  if (options.type) {
+    query.type = options.type;
+  }
+
+  const list = await examsApi.listExams(query);
+  const items = list.items ?? [];
+
+  // Ưu tiên khớp đúng paperCode (mã đề trên route), rồi mới tới subjectCode / legacy code.
+  const byPaper = items.find(
+    (item) => String(item.paperCode ?? "").trim().toLowerCase() === normalized,
   );
+  if (byPaper?.id) return byPaper.id;
+
+  const match = items.find((item) => examListItemMatchesCode(item, normalized));
   return match?.id ?? null;
 }
 

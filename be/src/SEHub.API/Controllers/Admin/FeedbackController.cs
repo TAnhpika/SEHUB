@@ -9,7 +9,7 @@ namespace SEHub.API.Controllers.Admin;
 
 [ApiController]
 [Route("api/v1/admin/feedback")]
-[Authorize(Policy = PolicyNames.RequireAdmin)]
+[Authorize(Policy = PolicyNames.RequireModerator)]
 public sealed class FeedbackController : ControllerBase
 {
     private readonly IFeedbackService _feedbackService;
