@@ -171,7 +171,7 @@ public sealed class OpenRouterAiProvider : IAiProvider
         {
             Model = model,
             Messages = messages,
-            MaxTokens = Math.Clamp(_settings.MaxTokens, 256, 4096),
+            MaxTokens = Math.Clamp(_settings.MaxTokens, 256, 8192),
         };
 
         if (RequiresRelaxedSampling(model))

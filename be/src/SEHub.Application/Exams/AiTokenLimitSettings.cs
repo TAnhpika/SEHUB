@@ -28,6 +28,6 @@ public sealed class AiTokenLimitSettings
 
     public int RequestTimeoutSeconds { get; set; } = 120;
 
-    public int MaxTokens { get; set; } = 1024;
+    public int MaxTokens { get; set; } = 2048;
 }
 

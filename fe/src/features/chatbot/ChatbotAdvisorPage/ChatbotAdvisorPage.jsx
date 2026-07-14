@@ -204,8 +204,17 @@ function ChatbotAdvisorPage() {
       return;
     }
 
+    const optimisticId = `optimistic-${Date.now()}`;
+    const optimisticMessage = {
+      id: optimisticId,
+      role: "user",
+      text,
+      createdAt: new Date().toISOString(),
+    };
+
     setIsSending(true);
     setDraft("");
+    setMessages((prev) => [...prev, optimisticMessage]);
 
     try {
       const result = await sendAdvisorMessage(text, conversationId);
@@ -222,6 +231,8 @@ function ChatbotAdvisorPage() {
       }
       await refreshConversations().catch(() => {});
     } catch (error) {
+      setMessages((prev) => prev.filter((message) => message.id !== optimisticId));
+      setDraft(text);
       showToast(error?.message ?? "Không gửi được tin nhắn.");
     } finally {
       setIsSending(false);
