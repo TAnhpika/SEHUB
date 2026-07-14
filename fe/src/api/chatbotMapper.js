@@ -52,9 +52,14 @@ export function mapChatbotKnowledgeEntryDto(dto) {
 
 export function mapAdminChatbotConversationDto(dto) {
   if (!dto) return null;
+  const username = dto.username ?? "";
+  const displayName = dto.displayName ?? "";
   return {
     id: dto.id,
     userId: dto.userId,
+    username,
+    displayName,
+    userLabel: displayName || username || "Người dùng không rõ",
     title: dto.title ?? "",
     createdAt: dto.createdAt,
     messageCount: dto.messageCount ?? 0,

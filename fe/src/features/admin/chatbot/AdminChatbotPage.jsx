@@ -231,6 +231,9 @@ function AdminChatbotPage() {
     }
   }
 
+  const selectedConversation = conversations.find((item) => item.id === selectedConversationId);
+  const selectedUserLabel = selectedConversation?.userLabel || "Người dùng";
+
   return (
     <AdminPageLayout
       title="Chatbot tư vấn"
@@ -456,7 +459,7 @@ function AdminChatbotPage() {
             <thead>
               <tr>
                 <th>Tiêu đề</th>
-                <th>User ID</th>
+                <th>Người dùng</th>
                 <th>Tin nhắn</th>
                 <th />
               </tr>
@@ -465,7 +468,7 @@ function AdminChatbotPage() {
               {conversations.map((conversation) => (
                 <tr key={conversation.id}>
                   <td>{conversation.title}</td>
-                  <td>{conversation.userId}</td>
+                  <td title={conversation.username || undefined}>{conversation.userLabel}</td>
                   <td>{conversation.messageCount}</td>
                   <td>
                     <Button
@@ -496,7 +499,9 @@ function AdminChatbotPage() {
               ) : conversationMessages.length > 0 ? (
                 conversationMessages.map((message) => (
                   <div key={message.id} className={styles.messageItem}>
-                    <p className={styles.messageRole}>{message.role}</p>
+                    <p className={styles.messageRole}>
+                      {message.role === "assistant" ? "SEHub AI" : selectedUserLabel}
+                    </p>
                     <p className={styles.messageText}>{message.text}</p>
                   </div>
                 ))
