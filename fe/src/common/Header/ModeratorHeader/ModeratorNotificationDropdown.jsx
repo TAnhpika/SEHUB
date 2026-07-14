@@ -58,7 +58,7 @@ const STATS_EVENT = "sehub-moderator-stats-updated";
  */
 function mapIncomingModeratorNotification(payload) {
   const mapped = mapNotificationItem(payload);
-  if (mapped.type !== "moderation" && mapped.type !== "examreview") {
+  if (mapped.type !== "moderation" && mapped.type !== "examreview" && mapped.type !== "moderatorwelcome") {
     return null;
   }
 

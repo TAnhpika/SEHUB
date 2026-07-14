@@ -59,6 +59,8 @@ const AdminDocumentCatalogPage = lazy(() => import("@/features/admin/documents/A
 const AdminDocumentSubjectPage = lazy(() => import("@/features/admin/documents/AdminDocumentSubjectPage"));
 const AdminModerationPage = lazy(() => import("@/features/admin/moderation/AdminModerationPage"));
 const AdminContentModerationPage = lazy(() => import("@/features/admin/moderation/AdminContentModerationPage"));
+const AdminContentModerationHistoryPage = lazy(() => import("@/features/admin/moderation/AdminContentModerationHistoryPage"));
+const AdminFeaturedPostsPage = lazy(() => import("@/features/admin/moderation/AdminFeaturedPostsPage"));
 const AdminReportDetailPage = lazy(() => import("@/features/admin/moderation/AdminReportDetailPage"));
 const AdminBannedPage = lazy(() => import("@/features/admin/moderation/AdminBannedPage"));
 const AdminPaymentListPage = lazy(() => import("@/features/admin/payments/AdminPaymentListPage"));
@@ -314,6 +316,8 @@ function App() {
                 <Route path="documents" element={<AdminDocumentCatalogPage />} />
                 <Route path="documents/:courseCode" element={<AdminDocumentSubjectPage />} />
                 <Route path="moderation/content" element={<AdminContentModerationPage />} />
+                <Route path="moderation/content/history" element={<AdminContentModerationHistoryPage />} />
+                <Route path="moderation/featured" element={<AdminFeaturedPostsPage />} />
                 <Route
                   path="moderation/practice-submissions"
                   element={<AdminPracticeSubmissionsPage />}

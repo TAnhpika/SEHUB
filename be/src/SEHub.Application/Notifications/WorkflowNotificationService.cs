@@ -186,6 +186,10 @@ public interface IWorkflowNotificationService
         Guid? paymentOrderId,
         Guid voucherCodeId,
         CancellationToken cancellationToken = default);
+
+    Task EnsureModeratorWelcomeNotificationAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class WorkflowNotificationService : IWorkflowNotificationService
@@ -329,15 +333,59 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             ? exam.PaperCode
             : exam.RejectionReasonDetail ?? "Vui lòng xem chi tiết và chỉnh sửa.";
 
+        var linkUrl = BuildModeratorExamReviewResultLink(exam, approved);
+
         await _notificationService.CreateAsync(
             moderatorId,
             NotificationType.ExamReview,
             title,
             body,
-            "/moderator/exams/history",
+            linkUrl,
             actorUserId,
             exam.Id,
             cancellationToken);
+    }
+
+    public async Task EnsureModeratorWelcomeNotificationAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var pendingAt = await _userRepository.GetModeratorWelcomePendingAtAsync(userId, cancellationToken);
+        if (pendingAt is null)
+        {
+            return;
+        }
+
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+        if (user is null || !user.Role.Equals(RoleNames.Moderator, StringComparison.OrdinalIgnoreCase))
+        {
+            await _userRepository.ClearModeratorWelcomePendingAsync(userId, cancellationToken);
+            return;
+        }
+
+        await _notificationService.CreateAsync(
+            userId,
+            NotificationType.ModeratorWelcome,
+            "Bạn đã được cấp quyền Moderator",
+            "Chào mừng bạn đến workspace Kiểm duyệt SEHub. Bắt đầu với hàng đợi báo cáo và duyệt bài viết.",
+            "/moderator/reports",
+            null,
+            userId,
+            cancellationToken);
+
+        await _userRepository.ClearModeratorWelcomePendingAsync(userId, cancellationToken);
+    }
+
+    private static string BuildModeratorExamReviewResultLink(Exam exam, bool approved)
+    {
+        if (approved)
+        {
+            return "/moderator/exams/history";
+        }
+
+        return exam.ExamType == ExamType.Practice
+            ? $"/moderator/practice-exams/edit/{exam.Id}"
+            : $"/moderator/final-exams/edit/{exam.Id}";
     }
 
     public async Task NotifyModeratorsPostReportedAsync(

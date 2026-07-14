@@ -14,5 +14,6 @@ public enum NotificationType
     Moderation,
     ExamReview,
     Mention,
-    PracticeResult
+    PracticeResult,
+    ModeratorWelcome
 }

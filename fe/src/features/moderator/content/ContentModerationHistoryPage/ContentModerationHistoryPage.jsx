@@ -25,6 +25,7 @@ import FilterDropdown from "@/common/FilterDropdown/FilterDropdown";
 import Pagination from "@/common/Pagination/Pagination";
 import ModeratorBadge from "@/features/moderator/components/ModeratorBadge/ModeratorBadge";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
+import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import ModeratorToolbar from "@/features/moderator/components/ModeratorToolbar/ModeratorToolbar";
 import ContentPostDetailPanel from "@/features/moderator/content/components/ContentPostDetailPanel/ContentPostDetailPanel";
 import {
@@ -55,9 +56,15 @@ import styles from "./ContentModerationHistoryPage.module.css";
  * @constant {ReadonlyArray<{ label: string, to?: string }>}
  * @readonly
  */
-const HISTORY_CRUMBS = [
+const HISTORY_CRUMBS_MOD = [
   { label: "Trang chủ", to: "/home" },
   { label: "Kiểm duyệt", to: "/moderator/content" },
+  { label: "Lịch sử duyệt bài" },
+];
+
+const HISTORY_CRUMBS_ADMIN = [
+  { label: "Dashboard", to: "/admin" },
+  { label: "Kiểm duyệt", to: "/admin/moderation" },
   { label: "Lịch sử duyệt bài" },
 ];
 
@@ -105,7 +112,7 @@ function StatusBadge({ status }) {
  * // Deep-link mở bài đã từ chối:
  * // /moderator/content/history?tab=rejected&id=ch-3
  */
-function ContentModerationHistoryPage() {
+function ContentModerationHistoryPage({ portal = "moderator" }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState("all");
   const [sort, setSort] = useState("newest");
@@ -252,12 +259,8 @@ function ContentModerationHistoryPage() {
     );
   }
 
-  return (
-    <ModeratorPageShell
-      title="Lịch sử duyệt bài viết"
-      description="Theo dõi bài đang chờ, đã duyệt và đã từ chối. Bài Rejected có thể được sinh viên chỉnh sửa và gửi lại (Pending)."
-      crumbs={HISTORY_CRUMBS}
-    >
+  const pageBody = (
+    <>
       <div className={styles.metrics}>
         <div className={styles.metric}>
           <span className={`${styles.metricIcon} ${styles.metricPending}`}>
@@ -443,6 +446,28 @@ function ContentModerationHistoryPage() {
           </aside>
         </div>
       </section>
+    </>
+  );
+
+  if (portal === "admin") {
+    return (
+      <AdminPageLayout
+        title="Lịch sử duyệt bài viết"
+        subtitle="Theo dõi bài đang chờ, đã duyệt và đã từ chối. Bài Rejected có thể được sinh viên chỉnh sửa và gửi lại (Pending)."
+        breadcrumbs={HISTORY_CRUMBS_ADMIN}
+      >
+        {pageBody}
+      </AdminPageLayout>
+    );
+  }
+
+  return (
+    <ModeratorPageShell
+      title="Lịch sử duyệt bài viết"
+      description="Theo dõi bài đang chờ, đã duyệt và đã từ chối. Bài Rejected có thể được sinh viên chỉnh sửa và gửi lại (Pending)."
+      crumbs={HISTORY_CRUMBS_MOD}
+    >
+      {pageBody}
     </ModeratorPageShell>
   );
 }

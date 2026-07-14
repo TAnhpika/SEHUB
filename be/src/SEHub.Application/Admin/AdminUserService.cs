@@ -134,6 +134,11 @@ public sealed class AdminUserService : IAdminUserService
                 {
                     await _roleChangeAuditRepository.AddAsync(roleAudit, cancellationToken);
                 }
+
+                if (request.Role.Equals(RoleNames.Moderator, StringComparison.OrdinalIgnoreCase))
+                {
+                    await _userRepository.SetModeratorWelcomePendingAsync(id, cancellationToken);
+                }
             }
 
             await _userRepository.UpdateRoleAsync(id, request.Role, cancellationToken);
