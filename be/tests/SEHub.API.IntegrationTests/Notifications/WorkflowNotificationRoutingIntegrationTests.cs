@@ -51,6 +51,33 @@ public sealed class WorkflowNotificationRoutingIntegrationTests : IClassFixture<
             .Where(n => n.Title.Contains("đăng bài chờ duyệt", StringComparison.Ordinal))
             .ToList();
 
+        // #region agent log
+        try
+        {
+            var line = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                sessionId = "50d8cc",
+                hypothesisId = "A",
+                location = "WorkflowNotificationRoutingIntegrationTests.CreatePost_Pending_NotifiesModeratorsAndAdmins",
+                message = "assert-vs-actual pending notification links",
+                data = new
+                {
+                    postId,
+                    count = pending.Count,
+                    links = pending.Select(n => new { userId = n.UserId, linkUrl = n.LinkUrl }).ToList(),
+                    expectedModerator = "/moderator/content",
+                    expectedAdmin = "/admin/moderation/content"
+                },
+                timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                runId = "pre-fix"
+            });
+            await System.IO.File.AppendAllTextAsync(
+                @"c:\Users\VICTUS\source\repos\SEHUB\debug-50d8cc.log",
+                line + Environment.NewLine);
+        }
+        catch { /* debug log only */ }
+        // #endregion
+
         pending.Select(n => n.UserId).Should().Contain(CustomWebApplicationFactory.ModeratorUserId);
         pending.Select(n => n.UserId).Should().Contain(CustomWebApplicationFactory.AdminUserId);
 
