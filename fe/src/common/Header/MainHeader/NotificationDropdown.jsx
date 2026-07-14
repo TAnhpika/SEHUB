@@ -10,6 +10,7 @@ import {
   markNotificationRead,
 } from "@/api/notificationsApi";
 import { mapNotificationItem, mapNotificationPage } from "@/api/notificationsMapper";
+import { useAuth } from "@/context";
 import { useChatHub } from "@/hooks/useChatHub";
 import { useHoverDropdown } from "@/hooks/useHoverDropdown";
 import AccountPenaltyModal from "@/features/account/AccountPenaltyModal/AccountPenaltyModal";
@@ -21,12 +22,14 @@ import NotificationListItem from "@/features/notifications/NotificationListItem"
 import NotificationsModal from "@/features/notifications/NotificationsModal";
 import {
   DROPDOWN_PREVIEW_SIZE,
+  isGamificationNotification,
   isVisibleNotification,
 } from "@/features/notifications/notificationTypes";
 import styles from "./NotificationDropdown.module.css";
 
 function NotificationDropdown() {
   const navigate = useNavigate();
+  const { refreshGamification } = useAuth();
   const { open, setOpen, rootProps, handleTriggerClick, hide } = useHoverDropdown();
   const [items, setItems] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -59,10 +62,12 @@ function NotificationDropdown() {
           ? unread.totalUnread
           : visible.filter((item) => !item.read).length,
       );
+      return visible;
     } catch {
       setItems([]);
       setTotalCount(0);
       setUnreadCount(0);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -86,6 +91,9 @@ function NotificationDropdown() {
       if (!mapped.read) {
         setUnreadCount((count) => count + 1);
       }
+      if (isGamificationNotification(mapped)) {
+        refreshGamification?.();
+      }
     },
     onNotificationUnreadUpdated: () => {
       refreshNotifications();
@@ -97,10 +105,18 @@ function NotificationDropdown() {
   }, []);
 
   useEffect(() => {
-    if (open) {
-      refreshNotifications();
-    }
-  }, [open]);
+    if (!open) return undefined;
+
+    let cancelled = false;
+    refreshNotifications().then((visible) => {
+      if (!cancelled && visible.some(isGamificationNotification)) {
+        refreshGamification?.();
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, refreshGamification]);
 
   useEffect(() => {
     if (!open) return undefined;

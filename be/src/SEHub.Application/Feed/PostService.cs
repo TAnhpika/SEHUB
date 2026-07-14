@@ -1,9 +1,7 @@
-using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Common;
 using SEHub.Application.Models;
-using SEHub.Application.Storage;
 using SEHub.Application.Notifications;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
@@ -17,12 +15,6 @@ namespace SEHub.Application.Feed;
 
 public sealed class PostService : IPostService
 {
-    private const long MaxCoverSizeBytes = 5_242_880;
-    private static readonly HashSet<string> AllowedCoverContentTypes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "image/jpeg", "image/png", "image/gif", "image/webp",
-    };
-
     private readonly IPostRepository _postRepository;
     private readonly IPostImageRepository _imageRepository;
     private readonly IPostImageService _postImageService;
@@ -32,13 +24,9 @@ public sealed class PostService : IPostService
     private readonly IUserProfileRepository _profileRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IGamificationService _gamificationService;
-    private readonly IImageCdnStorageService _cdnStorage;
-    private readonly ICdnFolderSettings _cdnFolders;
     private readonly IWorkflowNotificationService _workflowNotifications;
-    private readonly IFileStorageService _fileStorage;
     private readonly IPostTagRepository _postTagRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
 
     public PostService(
         IPostRepository postRepository,
@@ -50,13 +38,9 @@ public sealed class PostService : IPostService
         IUserProfileRepository profileRepository,
         ICurrentUserService currentUser,
         IGamificationService gamificationService,
-        IImageCdnStorageService cdnStorage,
-        ICdnFolderSettings cdnFolders,
         IWorkflowNotificationService workflowNotifications,
-        IFileStorageService fileStorage,
         IPostTagRepository postTagRepository,
-        IUnitOfWork unitOfWork,
-        IMapper mapper)
+        IUnitOfWork unitOfWork)
     {
         _postRepository = postRepository;
         _imageRepository = imageRepository;
@@ -67,13 +51,9 @@ public sealed class PostService : IPostService
         _profileRepository = profileRepository;
         _currentUser = currentUser;
         _gamificationService = gamificationService;
-        _cdnStorage = cdnStorage;
-        _cdnFolders = cdnFolders;
         _workflowNotifications = workflowNotifications;
-        _fileStorage = fileStorage;
         _postTagRepository = postTagRepository;
         _unitOfWork = unitOfWork;
-        _mapper = mapper;
     }
 
     public async Task<PagedResult<PostListItemDto>> GetPostsAsync(PostQueryParams query, CancellationToken cancellationToken = default)
@@ -209,10 +189,7 @@ public sealed class PostService : IPostService
         await _postTagRepository.SyncPostTagsAsync(post.Id, request.Tags ?? [], cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        if (!_currentUser.IsModeratorOrAdmin)
-        {
-            await _workflowNotifications.NotifyModeratorsPostPendingAsync(post, userId, cancellationToken);
-        }
+        await _workflowNotifications.NotifyModeratorsPostPendingAsync(post, userId, cancellationToken);
 
         return await MapDetailAsync(post, cancellationToken);
     }
@@ -238,7 +215,7 @@ public sealed class PostService : IPostService
         await _postTagRepository.SyncPostTagsAsync(post.Id, request.Tags ?? [], cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        if (resubmittedForReview && !_currentUser.IsModeratorOrAdmin)
+        if (resubmittedForReview)
         {
             await _workflowNotifications.NotifyModeratorsPostPendingAsync(
                 post,
@@ -327,47 +304,6 @@ public sealed class PostService : IPostService
         return await MapDetailAsync(post, cancellationToken);
     }
 
-    public async Task<PostCoverUploadDto> UploadCoverAsync(
-        Stream fileContent,
-        string fileName,
-        string contentType,
-        long fileSizeBytes,
-        CancellationToken cancellationToken = default)
-    {
-        _ = RequireUserId();
-
-        if (fileSizeBytes <= 0)
-        {
-            throw new DomainException("File is required.");
-        }
-
-        if (fileSizeBytes > MaxCoverSizeBytes)
-        {
-            throw new DomainException("Cover image cannot exceed 5 MB.");
-        }
-
-        var normalizedContentType = contentType?.Trim() ?? string.Empty;
-        if (!AllowedCoverContentTypes.Contains(normalizedContentType))
-        {
-            throw new DomainException("Cover image must be JPEG, PNG, GIF, or WEBP.");
-        }
-
-        var safeFileName = Path.GetFileName(fileName);
-        if (string.IsNullOrWhiteSpace(safeFileName))
-        {
-            throw new DomainException("File name is required.");
-        }
-
-        var upload = await _cdnStorage.UploadImageAsync(
-            fileContent,
-            safeFileName,
-            normalizedContentType,
-            _cdnFolders.Posts,
-            cancellationToken);
-
-        return new PostCoverUploadDto { CoverImageUrl = upload.Url };
-    }
-
     private async Task<IReadOnlyList<FeaturedPostModeratorItemDto>> MapFeaturedModeratorItemsAsync(
         IReadOnlyList<Post> posts,
         CancellationToken cancellationToken)
@@ -438,7 +374,6 @@ public sealed class PostService : IPostService
             authorsById.TryGetValue(post.AuthorId, out var authorUser);
             profilesByUserId.TryGetValue(post.AuthorId, out var profile);
             imagesByPostId.TryGetValue(post.Id, out var images);
-            var coverUrl = ResolveListCoverImageUrl(images?.OrderBy(i => i.SortOrder).FirstOrDefault()?.Url);
 
             dtos.Add(new PostListItemDto
             {
@@ -446,7 +381,6 @@ public sealed class PostService : IPostService
                 Title = post.Title,
                 Excerpt = BuildExcerpt(post.Content),
                 ContentPreview = PostContentPreview.BuildContentPreview(post.Content),
-                PreviewImageUrl = coverUrl,
                 Author = BuildAuthorSummary(post.AuthorId, authorUser, profile),
                 Tags = tagsByPostId.GetValueOrDefault(post.Id) ?? [],
                 LikeCount = likeCounts.GetValueOrDefault(post.Id),
@@ -455,19 +389,15 @@ public sealed class PostService : IPostService
                 CreatedAt = post.CreatedAt,
                 IsPinned = post.IsPinned,
                 IsFeatured = post.IsFeatured,
-                CoverImageUrl = coverUrl,
                 IsLiked = _currentUser.UserId is null ? null : likedPostIds.Contains(post.Id),
-                Images = (images ?? []).Select(PostImageService.MapDto).ToList()
+                Images = (images ?? [])
+                    .OrderBy(i => i.SortOrder)
+                    .Select(PostImageService.MapDto)
+                    .ToList()
             });
         }
 
         return dtos;
-    }
-
-    private async Task<PostListItemDto> MapListItemAsync(Post post, CancellationToken cancellationToken)
-    {
-        var items = await MapListItemsAsync([post], cancellationToken);
-        return items[0];
     }
 
     private static AuthorSummaryDto BuildAuthorSummary(
@@ -507,9 +437,6 @@ public sealed class PostService : IPostService
             ViewCount = post.ViewCount,
             IsPinned = post.IsPinned,
             IsFeatured = post.IsFeatured,
-            CoverImageUrl = await ResolveCoverImageUrlAsync(
-                images.FirstOrDefault()?.ImagePath,
-                cancellationToken),
             IsLiked = isLiked,
             CreatedAt = post.CreatedAt,
             UpdatedAt = post.UpdatedAt,
@@ -533,59 +460,6 @@ public sealed class PostService : IPostService
 
     private static string BuildExcerpt(string content) =>
         PostContentPreview.BuildTextExcerpt(content);
-
-    private static string? NormalizeCoverImageUrl(string? coverImageUrl)
-    {
-        if (string.IsNullOrWhiteSpace(coverImageUrl))
-        {
-            return null;
-        }
-
-        var trimmed = coverImageUrl.Trim();
-        if (trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-            || trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
-            || trimmed.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase)
-            || trimmed.StartsWith("posts/covers/", StringComparison.OrdinalIgnoreCase))
-        {
-            return trimmed;
-        }
-
-        return null;
-    }
-
-    private static string? ResolveListCoverImageUrl(string? storedPath)
-    {
-        if (string.IsNullOrWhiteSpace(storedPath))
-        {
-            return null;
-        }
-
-        var trimmed = storedPath.Trim();
-        if (trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-            || trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
-            || trimmed.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase)
-            || trimmed.StartsWith('/'))
-        {
-            return trimmed;
-        }
-
-        return $"/uploads/{trimmed.Replace('\\', '/')}";
-    }
-
-    private async Task<string?> ResolveCoverImageUrlAsync(string? storedPath, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(storedPath))
-        {
-            return null;
-        }
-
-        if (storedPath.StartsWith('/') || storedPath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-        {
-            return storedPath;
-        }
-
-        return await _fileStorage.GetSignedUrlAsync(storedPath, TimeSpan.FromDays(365), cancellationToken);
-    }
 
     private Guid RequireUserId() =>
         _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");

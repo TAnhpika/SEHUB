@@ -2,6 +2,8 @@ using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Documents;
+using SEHub.Application.Gamification.Abstractions;
+using SEHub.Application.Gamification.Events;
 using SEHub.Application.Subjects;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
@@ -22,6 +24,7 @@ public sealed class AdminDocumentService : IAdminDocumentService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
     private readonly IPdfPageExtractor _pdfPageExtractor;
+    private readonly IGamificationEventPublisher _gamificationPublisher;
 
     public AdminDocumentService(
         IDocumentRepository documentRepository,
@@ -31,7 +34,8 @@ public sealed class AdminDocumentService : IAdminDocumentService
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork,
         IMapper mapper,
-        IPdfPageExtractor pdfPageExtractor)
+        IPdfPageExtractor pdfPageExtractor,
+        IGamificationEventPublisher gamificationPublisher)
     {
         _documentRepository = documentRepository;
         _categoryRepository = categoryRepository;
@@ -41,6 +45,7 @@ public sealed class AdminDocumentService : IAdminDocumentService
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _pdfPageExtractor = pdfPageExtractor;
+        _gamificationPublisher = gamificationPublisher;
     }
 
     public async Task<PagedResult<AdminDocumentDto>> GetDocumentsAsync(int page, int pageSize, CancellationToken cancellationToken = default)
@@ -117,6 +122,15 @@ public sealed class AdminDocumentService : IAdminDocumentService
 
         await _documentRepository.AddAsync(document, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Catalog documents go live on upload (no separate approval workflow).
+        // Award the uploader via document.approved so the seeded +30 rule is reachable.
+        if (_currentUser.UserId is Guid uploaderId)
+        {
+            await _gamificationPublisher.PublishAsync(
+                new DocumentApprovedEvent(document.Id, uploaderId),
+                cancellationToken);
+        }
 
         document.Category = category;
         return _mapper.Map<AdminDocumentDto>(document);

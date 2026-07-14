@@ -4,7 +4,7 @@
  * Module này cung cấp giao diện đầy đủ để:
  * - Xem, tìm kiếm, sắp xếp và phân trang bài viết sinh viên gửi chờ duyệt.
  * - Chọn nhiều bài (checkbox) để duyệt hoặc từ chối hàng loạt.
- * - Xem chi tiết bài (ảnh bìa, nội dung, file đính kèm) trong panel bên phải.
+ * - Xem chi tiết bài (ảnh, nội dung, file đính kèm) trong panel bên phải.
  * - Hỗ trợ layout mobile: chuyển giữa danh sách và chi tiết.
  *
  * @module features/moderator/content/ContentModerationPage
@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faCheck, faFilePdf, faImage, faRotateRight, faXmark } from "@fortawesome/free-solid-svg-icons";
 import FilterDropdown from "@/common/FilterDropdown/FilterDropdown";
@@ -66,6 +67,7 @@ const SEARCH_DEBOUNCE_MS = 350;
  */
 function ContentModerationPage({ portal = "moderator" }) {
     const { showToast } = useToast();
+    const [searchParams] = useSearchParams();
     const { items, loading, error, sort, setSort, search, setSearch, refresh, approveItems, rejectItems } = useContentModerationQueue();
     const [page, setPage] = useState(1);
     const [searchInput, setSearchInput] = useState("");
@@ -97,6 +99,19 @@ function ContentModerationPage({ portal = "moderator" }) {
 
     const filtered = useMemo(() => filterContentQueue(items, { sort, query: search }), [items, sort, search]);
 
+    // Deep-link từ thông báo: /moderator/content?id={postId}
+    useEffect(() => {
+        const idFromUrl = searchParams.get("id");
+        if (!idFromUrl || loading) return;
+        const match = filtered.find((item) => String(item.id) === String(idFromUrl));
+        if (!match) return;
+        setFocusedId(String(match.id));
+        const index = filtered.findIndex((item) => String(item.id) === String(match.id));
+        if (index >= 0) {
+            setPage(Math.floor(index / CONTENT_QUEUE_PAGE_SIZE) + 1);
+        }
+    }, [searchParams, filtered, loading]);
+
     const totalPages = Math.max(1, Math.ceil(filtered.length / CONTENT_QUEUE_PAGE_SIZE));
     const safePage = Math.min(page, totalPages);
 
@@ -105,7 +120,7 @@ function ContentModerationPage({ portal = "moderator" }) {
         return filtered.slice(start, start + CONTENT_QUEUE_PAGE_SIZE);
     }, [filtered, safePage]);
 
-    const pageIds = pageItems.map((item) => item.id);
+    const pageIds = pageItems.map((item) => String(item.id));
     const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
     const somePageSelected = pageIds.some((id) => selectedIds.has(id));
     const selectedCount = selectedIds.size;
@@ -118,10 +133,14 @@ function ContentModerationPage({ portal = "moderator" }) {
             setFocusedId(null);
             return;
         }
-        if (focusedId && !filtered.some((item) => item.id === focusedId)) {
+        const idFromUrl = searchParams.get("id");
+        if (idFromUrl && filtered.some((item) => String(item.id) === String(idFromUrl))) {
+            return;
+        }
+        if (focusedId && !filtered.some((item) => String(item.id) === String(focusedId))) {
             setFocusedId(filtered[0]?.id ?? null);
         }
-    }, [filtered, focusedId]);
+    }, [filtered, focusedId, searchParams]);
 
     /**
      * Tạo handler onChange cho `FilterDropdown`: cập nhật state và reset trang về 1.
@@ -145,10 +164,11 @@ function ContentModerationPage({ portal = "moderator" }) {
      */
     function toggleRow(id, event) {
         event.stopPropagation();
+        const key = String(id);
         setSelectedIds((prev) => {
             const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
             return next;
         });
     }
@@ -163,10 +183,11 @@ function ContentModerationPage({ portal = "moderator" }) {
         event.stopPropagation();
         setSelectedIds((prev) => {
             const next = new Set(prev);
+            const keys = pageIds.map(String);
             if (allPageSelected) {
-                pageIds.forEach((id) => next.delete(id));
+                keys.forEach((id) => next.delete(id));
             } else {
-                pageIds.forEach((id) => next.add(id));
+                keys.forEach((id) => next.add(id));
             }
             return next;
         });
@@ -179,12 +200,13 @@ function ContentModerationPage({ portal = "moderator" }) {
      * @returns {void}
      */
     function clearSelection(ids) {
+        const keys = (ids ?? []).map(String);
         setSelectedIds((prev) => {
             const next = new Set(prev);
-            ids.forEach((id) => next.delete(id));
+            keys.forEach((id) => next.delete(id));
             return next;
         });
-        if (focusedId && ids.includes(focusedId)) {
+        if (focusedId && keys.includes(String(focusedId))) {
             setFocusedId(null);
         }
     }
@@ -199,13 +221,16 @@ function ContentModerationPage({ portal = "moderator" }) {
      * @throws {Error} Lỗi từ store/API — hiển thị toast.
      */
     async function handleApprove(ids) {
-        if (acting || ids.length === 0) return;
-        setPendingAction({ type: "approve", ids });
+        const targetIds = [...new Set((ids ?? []).map((id) => String(id)).filter(Boolean))];
+        if (acting || targetIds.length === 0) return;
+        setPendingAction({ type: "approve", ids: targetIds });
         try {
-            await approveItems(ids);
-            clearSelection(ids);
-            showToast(`Đã duyệt ${ids.length} bài viết. Bài sẽ hiển thị trên feed.`);
+            const result = await approveItems(targetIds);
+            const succeeded = result?.succeeded ?? targetIds;
+            clearSelection(succeeded);
+            showToast(`Đã duyệt ${succeeded.length} bài viết. Bài sẽ hiển thị trên feed.`);
         } catch (err) {
+            clearSelection(targetIds);
             showToast(err.message ?? "Không duyệt được bài viết.");
         } finally {
             setPendingAction(null);
@@ -222,13 +247,16 @@ function ContentModerationPage({ portal = "moderator" }) {
      * @throws {Error} Lỗi từ store/API — hiển thị toast.
      */
     async function handleReject(ids) {
-        if (acting || ids.length === 0) return;
-        setPendingAction({ type: "reject", ids });
+        const targetIds = [...new Set((ids ?? []).map((id) => String(id)).filter(Boolean))];
+        if (acting || targetIds.length === 0) return;
+        setPendingAction({ type: "reject", ids: targetIds });
         try {
-            await rejectItems(ids);
-            clearSelection(ids);
-            showToast(`Đã từ chối ${ids.length} bài viết. Sinh viên có thể chỉnh sửa và gửi lại.`);
+            const result = await rejectItems(targetIds);
+            const succeeded = result?.succeeded ?? targetIds;
+            clearSelection(succeeded);
+            showToast(`Đã từ chối ${succeeded.length} bài viết. Sinh viên có thể chỉnh sửa và gửi lại.`);
         } catch (err) {
+            clearSelection(targetIds);
             showToast(err.message ?? "Không từ chối được bài viết.");
         } finally {
             setPendingAction(null);
@@ -290,11 +318,21 @@ function ContentModerationPage({ portal = "moderator" }) {
                             <button type="button" className={styles.bulkClear} onClick={() => setSelectedIds(new Set())}>
                                 Bỏ chọn
                             </button>
-                            <button type="button" className={styles.bulkReject} disabled={acting} onClick={() => handleReject([...selectedIds])}>
+                            <button
+                                type="button"
+                                className={styles.bulkReject}
+                                disabled={acting}
+                                onClick={() => handleReject(Array.from(selectedIds, String))}
+                            >
                                 <FontAwesomeIcon icon={faXmark} />
                                 {pendingAction?.type === "reject" ? "Đang từ chối..." : "Từ chối tất cả"}
                             </button>
-                            <button type="button" className={styles.bulkApprove} disabled={acting} onClick={() => handleApprove([...selectedIds])}>
+                            <button
+                                type="button"
+                                className={styles.bulkApprove}
+                                disabled={acting}
+                                onClick={() => handleApprove(Array.from(selectedIds, String))}
+                            >
                                 <FontAwesomeIcon icon={faCheck} />
                                 {pendingAction?.type === "approve" ? "Đang duyệt..." : "Duyệt tất cả"}
                             </button>
@@ -347,8 +385,8 @@ function ContentModerationPage({ portal = "moderator" }) {
                                         </tr>
                                     ) : (
                                         pageItems.map((item) => {
-                                            const isSelected = selectedIds.has(item.id);
-                                            const isFocused = focusedId === item.id;
+                                            const isSelected = selectedIds.has(String(item.id));
+                                            const isFocused = focusedId === item.id || String(focusedId) === String(item.id);
 
                                             return (
                                                 <tr
@@ -372,16 +410,10 @@ function ContentModerationPage({ portal = "moderator" }) {
                                                             <p className={styles.contentExcerpt}>{item.excerpt}</p>
                                                             <div className={styles.contentHints}>
                                                                 {item.resubmission ? <span className={styles.contentHintResubmit}>Gửi lại</span> : null}
-                                                                {item.coverImage?.url ? (
+                                                                {item.images?.length ? (
                                                                     <span className={styles.contentHint}>
                                                                         <FontAwesomeIcon icon={faImage} />
-                                                                        Ảnh bìa
-                                                                    </span>
-                                                                ) : null}
-                                                                {item.inlineImages?.length ? (
-                                                                    <span className={styles.contentHint}>
-                                                                        <FontAwesomeIcon icon={faImage} />
-                                                                        {item.inlineImages.length} ảnh
+                                                                        {item.images.length} ảnh
                                                                     </span>
                                                                 ) : null}
                                                                 {item.attachments?.length ? (

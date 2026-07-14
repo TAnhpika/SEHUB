@@ -22,10 +22,4 @@ public interface IPostService
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     Task<PostDetailDto> SetFeaturedAsync(Guid id, FeaturePostRequest request, CancellationToken cancellationToken = default);
     Task<PostDetailDto> SetPinnedAsync(Guid id, PinPostRequest request, CancellationToken cancellationToken = default);
-    Task<PostCoverUploadDto> UploadCoverAsync(
-        Stream fileContent,
-        string fileName,
-        string contentType,
-        long fileSizeBytes,
-        CancellationToken cancellationToken = default);
 }

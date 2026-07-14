@@ -10,15 +10,15 @@ public class PointRuleRepository : IPointRuleRepository
 
     public PointRuleRepository(SEHubDbContext context) => _context = context;
 
-    public Task<IReadOnlyList<PointRule>> GetAllAsync(CancellationToken cancellationToken = default) =>
-        _context.PointRules.OrderBy(r => r.Code).ToListAsync(cancellationToken)
-            .ContinueWith(t => (IReadOnlyList<PointRule>)t.Result, cancellationToken);
+    public async Task<IReadOnlyList<PointRule>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        await _context.PointRules.OrderBy(r => r.Code).ToListAsync(cancellationToken);
 
-    public Task<IReadOnlyList<PointRule>> GetActiveByEventTypeAsync(string eventType, CancellationToken cancellationToken = default) =>
-        _context.PointRules
+    public async Task<IReadOnlyList<PointRule>> GetActiveByEventTypeAsync(
+        string eventType,
+        CancellationToken cancellationToken = default) =>
+        await _context.PointRules
             .Where(r => r.IsActive && r.EventType == eventType)
-            .ToListAsync(cancellationToken)
-            .ContinueWith(t => (IReadOnlyList<PointRule>)t.Result, cancellationToken);
+            .ToListAsync(cancellationToken);
 
     public Task<PointRule?> GetByCodeAsync(string code, CancellationToken cancellationToken = default) =>
         _context.PointRules.FirstOrDefaultAsync(r => r.Code == code, cancellationToken);

@@ -125,27 +125,6 @@ public sealed class PostsController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("upload-cover")]
-    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
-    [RequestSizeLimit(5_242_880)]
-    public async Task<IActionResult> UploadCover(IFormFile file, CancellationToken cancellationToken)
-    {
-        if (file is null || file.Length == 0)
-        {
-            return BadRequest(new { message = "File is required" });
-        }
-
-        await using var stream = file.OpenReadStream();
-        var result = await _postService.UploadCoverAsync(
-            stream,
-            file.FileName,
-            file.ContentType,
-            file.Length,
-            cancellationToken);
-
-        return Ok(result);
-    }
-
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = PolicyNames.RequireAuthenticated)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)

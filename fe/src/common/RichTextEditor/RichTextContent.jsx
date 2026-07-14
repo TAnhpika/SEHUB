@@ -1,4 +1,5 @@
 import DOMPurify from "dompurify";
+import { resolveAssetUrl } from "@/api/assetUrl";
 import { richTextToDisplayHtml } from "./richTextPreviewHtml";
 import styles from "./RichTextEditor.module.css";
 
@@ -38,9 +39,38 @@ const PURIFY_CONFIG = {
     "td",
     "hr",
   ],
-  ALLOWED_ATTR: ["href", "src", "alt", "title", "target", "rel"],
+  ALLOWED_ATTR: [
+    "href",
+    "src",
+    "alt",
+    "title",
+    "target",
+    "rel",
+    "style",
+    "width",
+    "height",
+    "loading",
+    "decoding",
+  ],
   ALLOW_DATA_ATTR: false,
 };
+
+/**
+ * Prefix relative image/asset paths with the API base URL so `<img>` loads
+ * correctly from the Vite origin (e.g. localhost:5173).
+ *
+ * @param {string} html
+ * @returns {string}
+ */
+function rewriteAssetUrlsInHtml(html) {
+  return html.replace(
+    /(<img\b[^>]*?\bsrc\s*=\s*["'])([^"']+)(["'])/gi,
+    (match, prefix, src, suffix) => {
+      const resolved = resolveAssetUrl(src);
+      return resolved ? `${prefix}${resolved}${suffix}` : match;
+    },
+  );
+}
 
 function RichTextContent({ value, className = "", emptyFallback = null }) {
   if (!value?.trim()) {
@@ -52,7 +82,7 @@ function RichTextContent({ value, className = "", emptyFallback = null }) {
     return emptyFallback;
   }
 
-  const html = DOMPurify.sanitize(rawHtml, PURIFY_CONFIG);
+  const html = DOMPurify.sanitize(rewriteAssetUrlsInHtml(rawHtml), PURIFY_CONFIG);
   if (!html) {
     return emptyFallback;
   }

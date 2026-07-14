@@ -175,8 +175,6 @@ function PostDetailModal({
           views: detail.views ?? 0,
           isLiked: detail.isLiked,
           images: detail.images ?? [],
-          coverImageUrl: detail.coverImageUrl,
-          previewImageUrl: detail.previewImageUrl,
         });
         onViewed?.(detail);
       } catch {

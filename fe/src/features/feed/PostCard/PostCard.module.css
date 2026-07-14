@@ -119,15 +119,6 @@
   margin: 0;
 }
 
-.cover {
-  display: block;
-  width: 100%;
-  max-height: 220px;
-  object-fit: cover;
-  border-radius: var(--radius-lg);
-  margin-bottom: 0.75rem;
-}
-
 .excerpt {
   font-size: 0.875rem;
   color: var(--color-text-muted);
@@ -235,7 +226,7 @@
   flex-shrink: 0;
 }
 
-.coverWrap {
+.mediaWrap {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -247,7 +238,7 @@
   overflow: hidden;
 }
 
-.cover {
+.media {
   display: block;
   max-width: 100%;
   max-height: min(320px, 45vh);
@@ -294,8 +285,8 @@
     height: 2.75rem;
   }
 
-  .coverWrap,
-  .cover {
+  .mediaWrap,
+  .media {
     max-width: 100%;
     max-height: min(280px, 50vh);
   }
