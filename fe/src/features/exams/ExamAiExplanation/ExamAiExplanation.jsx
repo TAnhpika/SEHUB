@@ -203,42 +203,51 @@ function ExamAiExplanation({ examId, question }) {
   const explanation = USE_MOCK ? getAiExplanation(question) : apiExplanation;
 
   return (
-    <section className={styles.panel} aria-label="AI giải thích chi tiết" key={refreshKey}>
-      <header className={styles.header}>
-        <div className={styles.brand}>
-          <span className={styles.icon} aria-hidden="true">
-            <FontAwesomeIcon icon={faRobot} />
-          </span>
-          <div>
-            <h3 className={styles.title}>AI giải thích chi tiết</h3>
-            {isAuthenticated && Number.isFinite(aiTokens.remaining) ? (
-              <p className={styles["token-meta"]}>
-                Token còn lại: {aiTokens.remaining}/{aiTokens.limit}
-              </p>
-            ) : null}
+    <div className={styles.stack} key={refreshKey}>
+      <section className={styles.panel} aria-label="AI giải thích chi tiết">
+        <header className={styles.header}>
+          <div className={styles.brand}>
+            <span className={styles.icon} aria-hidden="true">
+              <FontAwesomeIcon icon={faRobot} />
+            </span>
+            <div>
+              <h3 className={styles.title}>AI giải thích chi tiết</h3>
+              {isAuthenticated && Number.isFinite(aiTokens.remaining) ? (
+                <p className={styles["token-meta"]}>
+                  Token còn lại: {aiTokens.remaining}/{aiTokens.limit}
+                </p>
+              ) : null}
+            </div>
           </div>
+          <button type="button" className={styles.refresh} onClick={handleRefresh}>
+            Yêu cầu giải thích lại
+          </button>
+        </header>
+
+        <div className={styles.content}>
+          <p className={styles.intro}>{explanation.intro}</p>
+
+          {explanation.bullets?.length ? (
+            <ul className={styles.bullets}>
+              {explanation.bullets.map((item) => (
+                <li key={item.label}>
+                  <strong>{item.label}</strong>: {item.text}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {explanation.possiblyTruncated ? (
+            <p className={styles.truncateHint} role="status">
+              Phản hồi có vẻ bị cắt giữa chừng. Bấm &quot;Yêu cầu giải thích lại&quot; để nhận bản đủ.
+            </p>
+          ) : null}
+
+          {explanation.note ? <p className={styles.note}>{explanation.note}</p> : null}
         </div>
-        <button type="button" className={styles.refresh} onClick={handleRefresh}>
-          Yêu cầu giải thích lại
-        </button>
-      </header>
-
-      <p className={styles.intro}>{explanation.intro}</p>
-
-      {explanation.bullets?.length ? (
-        <ul className={styles.bullets}>
-          {explanation.bullets.map((item) => (
-            <li key={item.label}>
-              <strong>{item.label}</strong>: {item.text}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {explanation.note ? <p className={styles.note}>{explanation.note}</p> : null}
-
+      </section>
       {renderPremiumChat()}
-    </section>
+    </div>
   );
 }
 

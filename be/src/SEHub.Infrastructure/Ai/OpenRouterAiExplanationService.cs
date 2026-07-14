@@ -25,6 +25,8 @@ public sealed class OpenRouterAiExplanationService : IAiExplanationService
         var systemInstruction =
             "Bạn là trợ giảng SEHub cho sinh viên FPT. Giải thích câu hỏi trắc nghiệm bằng tiếng Việt, " +
             "rõ ràng, có cấu trúc (tóm tắt, phân tích từng đáp án nếu có, kết luận). " +
+            "Viết ngắn gọn (khoảng 180–280 từ), đủ ý nhưng không dài dòng. " +
+            "Luôn kết thúc bằng một câu kết luận hoàn chỉnh; không dừng giữa từ hoặc giữa câu. " +
             "Không bịa đáp án nếu thiếu thông tin. " +
             AiPromptRules.PlainTextOnly;
 

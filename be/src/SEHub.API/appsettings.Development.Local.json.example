@@ -64,7 +64,7 @@
     "HttpReferer": "http://localhost:5173",
     "SiteTitle": "SEHub",
     "RequestTimeoutSeconds": 120,
-    "MaxTokens": 1024,
+    "MaxTokens": 2048,
     "DailyTokenLimitFree": 10,
     "DailyTokenLimitPremium": 1000,
     "TokenCostExplain": 10,

@@ -207,6 +207,14 @@ export function mapExamResultToLocalResult(apiResult, questions) {
   };
 }
 
+function looksTruncatedExplanation(text) {
+  const trimmed = text.trim();
+  if (trimmed.length < 48) return false;
+  // Câu kết thường kết thúc bằng dấu câu; cắt giữa từ là dấu hiệu MaxTokens.
+  if (/[.!?…。]\s*$/u.test(trimmed)) return false;
+  return /[\p{L}\p{N}]$/u.test(trimmed);
+}
+
 export function mapAiExplainResponse(response) {
   const explanation = response?.explanation?.trim() ?? "";
 
@@ -214,15 +222,13 @@ export function mapAiExplainResponse(response) {
     return null;
   }
 
-  const paragraphs = explanation.split(/\n{2,}/).filter(Boolean);
-
+  // Giữ nguyên toàn bộ phản hồi AI (xuống dòng) thay vì cắt thành "Ghi chú N"
+  // — tránh mất đoạn cuối và tránh khung trống bên dưới.
   return {
-    intro: paragraphs[0] ?? explanation,
-    bullets: paragraphs.slice(1).map((text, index) => ({
-      label: `Ghi chú ${index + 1}`,
-      text,
-    })),
+    intro: explanation,
+    bullets: [],
     note: "Giải thích từ SEHub AI.",
+    possiblyTruncated: looksTruncatedExplanation(explanation),
     tokensUsed: response.tokensUsed,
     remainingTokens: response.remainingTokens,
   };
