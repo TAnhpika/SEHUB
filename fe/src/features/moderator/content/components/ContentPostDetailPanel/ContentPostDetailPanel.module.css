@@ -368,6 +368,25 @@
   border-top: 1px solid var(--moderator-border-light);
 }
 
+.detailActionsStack {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.detailActionsStack .detailReject,
+.detailActionsStack .detailApprove {
+  justify-content: center;
+  width: 100%;
+}
+
+.quotaHint {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--moderator-text-muted);
+  text-align: center;
+}
+
 .detailReject,
 .detailApprove,
 .detailQueueLink {

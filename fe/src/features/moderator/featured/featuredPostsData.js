@@ -16,13 +16,30 @@ import { FEATURED_POSTS_UPDATED_EVENT } from "@/features/feed/feedData";
 import { formatRelativeTimeFromApi } from "@/utils/dateTime";
 
 /**
- * Số bài viết tối đa được ghim lên sidebar cộng đồng cùng lúc.
+ * Số bài tối đa ghim lên sidebar “Bài viết nổi bật”.
  *
  * @constant {number}
  * @readonly
  * @default 5
  */
-export const MAX_PINNED_POSTS = 5;
+export const MAX_FEATURED_POSTS = 5;
+
+/**
+ * Số bài tối đa ghim đầu timeline feed.
+ *
+ * @constant {number}
+ * @readonly
+ * @default 5
+ */
+export const MAX_FEED_PINNED_POSTS = 5;
+
+/**
+ * Alias tương thích — cùng `MAX_FEATURED_POSTS` (sidebar).
+ *
+ * @constant {number}
+ * @readonly
+ */
+export const MAX_PINNED_POSTS = MAX_FEATURED_POSTS;
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
@@ -227,6 +244,8 @@ export const PINNED_POSTS_INITIAL = [
     likes: 124,
     comments: 32,
     status: "approved",
+    isFeatured: true,
+    isPinned: true,
   },
   {
     id: "fp-2",
@@ -241,6 +260,8 @@ export const PINNED_POSTS_INITIAL = [
     likes: 45,
     comments: 18,
     status: "approved",
+    isFeatured: true,
+    isPinned: false,
   },
   {
     id: "fp-3",
@@ -255,8 +276,18 @@ export const PINNED_POSTS_INITIAL = [
     likes: 78,
     comments: 14,
     status: "approved",
+    isFeatured: true,
+    isPinned: false,
   },
 ];
+
+/**
+ * Mock bài đang ghim đầu feed (`IsPinned`).
+ *
+ * @constant {ReadonlyArray<Object>}
+ * @readonly
+ */
+export const FEED_PINNED_POSTS_INITIAL = PINNED_POSTS_INITIAL.filter((post) => post.isPinned);
 
 /**
  * Pool bài viết đã đăng có thể tìm kiếm để ghim — dữ liệu mock ban đầu.
@@ -366,40 +397,39 @@ export function enrichFeaturedPost(post) {
 }
 
 /**
- * Tìm và enrich một bài theo ID từ danh sách ghim hoặc pool tìm kiếm.
+ * Tìm và enrich một bài theo ID từ các danh sách workspace ghim.
  *
  * @param {string} id - ID bài viết.
- * @param {Object[]} pinned - Mảng bài đang ghim.
- * @param {Object[]} searchPool - Mảng bài ứng viên tìm kiếm.
- * @returns {Object|null} Bài đã enrich hoặc `null` nếu không tìm thấy.
- *
- * @example
- * const post = findFeaturedPost('fp-1', pinned, searchPool);
+ * @param {...Object[]} lists - Các mảng (feedPinned, featured, searchPool, ...).
+ * @returns {Object|null}
  */
-export function findFeaturedPost(id, pinned, searchPool) {
-  const raw = pinned.find((item) => item.id === id) ?? searchPool.find((item) => item.id === id);
-  return raw ? enrichFeaturedPost(raw) : null;
+export function findFeaturedPost(id, ...lists) {
+  for (const list of lists) {
+    if (!Array.isArray(list)) continue;
+    const raw = list.find((item) => item.id === id);
+    if (raw) return enrichFeaturedPost(raw);
+  }
+  return null;
 }
 
 /**
- * Lọc và sắp xếp pool tìm kiếm — loại bài đã ghim, tìm theo query, sort theo tương tác/thời gian.
+ * Lọc và sắp xếp pool tìm kiếm — tìm theo query, sort theo tương tác/thời gian.
+ * Không loại bài đã ghim feed/sidebar (hiển thị chip trạng thái trên UI).
  *
  * @param {Object[]} posts - Pool bài ứng viên.
  * @param {Object} options - Tùy chọn lọc.
  * @param {string} options.query - Từ khóa tìm (tiêu đề, tác giả, excerpt).
  * @param {string} [options.sort="newest"] - `newest` | `oldest` | `mostInteractions`.
- * @param {Set<string>} options.pinnedIds - Set ID đã ghim (loại khỏi kết quả).
+ * @param {Set<string>} [options.pinnedIds] - Deprecated; bỏ qua nếu truyền.
  * @returns {Object[]} Mảng bài sau lọc và sắp xếp.
  *
  * @example
- * filterSearchPosts(pool, { query: 'PRF192', sort: 'mostInteractions', pinnedIds });
+ * filterSearchPosts(pool, { query: 'PRF192', sort: 'mostInteractions' });
  */
-export function filterSearchPosts(posts, { query, sort = "newest", pinnedIds }) {
+export function filterSearchPosts(posts, { query, sort = "newest" }) {
   const normalizedQuery = query.trim().toLowerCase();
 
   let result = posts.filter((post) => {
-    if (pinnedIds.has(post.id)) return false;
-
     if (!normalizedQuery) return true;
 
     const haystack = [post.title, post.authorName, post.excerpt].filter(Boolean).join(" ").toLowerCase();
@@ -442,41 +472,117 @@ function mapModeratorFeaturedItem(dto) {
     status: "approved",
     sortOrder: Number.isNaN(createdMs) ? 0 : createdMs,
     isFeatured: dto.isFeatured ?? false,
+    isPinned: dto.isPinned ?? false,
   };
 }
 
 /**
- * Tải trạng thái bài nổi bật: danh sách đang ghim và pool ứng viên tìm kiếm.
+ * Gộp nhiều list DTO theo id, giữ cờ `isFeatured` / `isPinned`.
  *
- * Mock mode trả về `PINNED_POSTS_INITIAL` và `SEARCH_POSTS_INITIAL`.
- * API mode gọi `adminApi.getFeaturedPosts`.
+ * @param {...Object[]} lists - Các mảng DTO/card.
+ * @returns {Object[]}
+ */
+function mergeModeratorItemsById(...lists) {
+  const byId = new Map();
+
+  for (const list of lists) {
+    for (const raw of list ?? []) {
+      const item =
+        raw.authorName != null
+          ? { ...raw }
+          : mapModeratorFeaturedItem(raw);
+      const existing = byId.get(item.id);
+      if (!existing) {
+        byId.set(item.id, item);
+        continue;
+      }
+      byId.set(item.id, {
+        ...existing,
+        ...item,
+        isFeatured: Boolean(existing.isFeatured || item.isFeatured),
+        isPinned: Boolean(existing.isPinned || item.isPinned),
+      });
+    }
+  }
+
+  return [...byId.values()];
+}
+
+/**
+ * Tải workspace ghim kép: đầu feed + nổi bật sidebar + pool tìm kiếm chung.
  *
  * @async
- * @param {Object} [options] - Tùy chọn truy vấn.
- * @param {string} [options.search=""] - Từ khóa tìm kiếm ứng viên (API mode).
- * @returns {Promise<{ pinned: Object[], searchPool: Object[] }>}
- *
- * @throws {Error} Khi API thất bại (chế độ API thật).
- *
- * @example
- * const { pinned, searchPool } = await loadFeaturedPostsState({ search: 'PRF192' });
+ * @param {Object} [options]
+ * @param {string} [options.search=""]
+ * @returns {Promise<{ feedPinned: Object[], featured: Object[], searchPool: Object[], maxFeedPinned: number, maxFeatured: number }>}
  */
-export async function loadFeaturedPostsState({ search = "" } = {}) {
+export async function loadPinWorkspaceState({ search = "" } = {}) {
   if (USE_MOCK) {
     return {
-      pinned: PINNED_POSTS_INITIAL,
-      searchPool: SEARCH_POSTS_INITIAL,
+      feedPinned: FEED_PINNED_POSTS_INITIAL.map((post) => enrichFeaturedPost(post)),
+      featured: PINNED_POSTS_INITIAL.map((post) => enrichFeaturedPost(post)),
+      searchPool: mergeModeratorItemsById(
+        SEARCH_POSTS_INITIAL,
+        PINNED_POSTS_INITIAL,
+        FEED_PINNED_POSTS_INITIAL,
+      ),
+      maxFeedPinned: MAX_FEED_PINNED_POSTS,
+      maxFeatured: MAX_FEATURED_POSTS,
     };
   }
 
-  const state = await adminApi.getFeaturedPosts({
-    search: search.trim() || undefined,
-    pageSize: 20,
-  });
-  const pinned = (state.pinned ?? []).map(mapModeratorFeaturedItem);
-  const searchPool = (state.candidates ?? []).map(mapModeratorFeaturedItem);
+  const searchTerm = search.trim() || undefined;
+  const pageSize = 50;
+  const [featuredState, pinnedState] = await Promise.all([
+    adminApi.getFeaturedPosts({ search: searchTerm, pageSize }),
+    adminApi.getPinnedPosts({ search: searchTerm, pageSize }),
+  ]);
 
-  return { pinned, searchPool };
+  const featured = (featuredState.pinned ?? []).map((dto) =>
+    mapModeratorFeaturedItem({ ...dto, isFeatured: true }),
+  );
+  const feedPinned = (pinnedState.pinned ?? []).map((dto) =>
+    mapModeratorFeaturedItem({ ...dto, isPinned: true }),
+  );
+
+  const searchPool = mergeModeratorItemsById(
+    featuredState.candidates ?? [],
+    pinnedState.candidates ?? [],
+    featuredState.pinned ?? [],
+    pinnedState.pinned ?? [],
+  ).map((item) => {
+    const inFeatured = featured.some((post) => post.id === item.id);
+    const inFeed = feedPinned.some((post) => post.id === item.id);
+    return {
+      ...item,
+      isFeatured: inFeatured || item.isFeatured,
+      isPinned: inFeed || item.isPinned,
+    };
+  });
+
+  return {
+    feedPinned,
+    featured,
+    searchPool,
+    maxFeedPinned: pinnedState.maxPinned ?? MAX_FEED_PINNED_POSTS,
+    maxFeatured: featuredState.maxPinned ?? MAX_FEATURED_POSTS,
+  };
+}
+
+/**
+ * Tải trạng thái bài nổi bật (sidebar) — giữ tương thích gọi cũ.
+ *
+ * @async
+ * @param {Object} [options]
+ * @param {string} [options.search=""]
+ * @returns {Promise<{ pinned: Object[], searchPool: Object[] }>}
+ */
+export async function loadFeaturedPostsState({ search = "" } = {}) {
+  const state = await loadPinWorkspaceState({ search });
+  return {
+    pinned: state.featured,
+    searchPool: state.searchPool,
+  };
 }
 
 /**
@@ -507,6 +613,7 @@ export async function loadFeaturedPostDetail(id) {
     commentCount: dto.commentCount,
     createdAt: dto.createdAt,
     isFeatured: dto.isFeatured,
+    isPinned: dto.isPinned,
   });
 
   return enrichFeaturedPost({

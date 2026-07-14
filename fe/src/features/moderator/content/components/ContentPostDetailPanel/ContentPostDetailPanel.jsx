@@ -165,19 +165,27 @@ function ContentPostDetailPanel({
   mode = "queue",
   isPinned = false,
   canPin = true,
+  isFeatured = false,
+  isFeedPinned = false,
+  canFeature = true,
+  canFeedPin = true,
   onApprove,
   onReject,
   isApproving = false,
   isRejecting = false,
   onPin,
   onUnpin,
+  onFeature,
+  onUnfeature,
+  onFeedPin,
+  onFeedUnpin,
 }) {
   if (!item) {
     const emptyTitle =
       mode === "featured" ? "Chọn một bài viết để xem chi tiết" : "Chọn một bài viết để xem trước";
     const emptyDesc =
       mode === "featured"
-        ? "Nhấp bài đang ghim hoặc kết quả tìm kiếm để xem nội dung trước khi ghim lên sidebar."
+        ? "Nhấp bài đang ghim hoặc kết quả tìm kiếm để xem nội dung trước khi ghim đầu feed / nổi bật sidebar."
         : "Xem đầy đủ tiêu đề, nội dung, ảnh bìa, ảnh trong bài và file đính kèm.";
 
     return (
@@ -194,6 +202,11 @@ function ContentPostDetailPanel({
   const hasInlineImages = item.inlineImages?.length > 0;
   const showModerationActions = mode === "queue" && item.status === "pending";
   const isFeaturedMode = mode === "featured";
+  const featuredActive = Boolean(isFeatured || (isPinned && !onFeature && !onUnfeature));
+  const feedPinnedActive = Boolean(isFeedPinned);
+  const handleFeature = onFeature ?? onPin;
+  const handleUnfeature = onUnfeature ?? onUnpin;
+  const featureAllowed = onFeature || onUnfeature ? canFeature : canPin;
 
   return (
     <>
@@ -203,7 +216,8 @@ function ContentPostDetailPanel({
           {isFeaturedMode ? (
             <>
               <ModeratorBadge label="Đã đăng" tone="success" dot />
-              {isPinned ? <ModeratorBadge label="Đang ghim" tone="primary" /> : null}
+              {feedPinnedActive ? <ModeratorBadge label="Đầu feed" tone="primary" /> : null}
+              {featuredActive ? <ModeratorBadge label="Nổi bật sidebar" tone="primary" /> : null}
               {item.categoryLabel ? (
                 <ModeratorBadge label={item.categoryLabel} tone="muted" />
               ) : null}
@@ -386,22 +400,50 @@ function ContentPostDetailPanel({
           </button>
         </footer>
       ) : isFeaturedMode ? (
-        <footer className={styles.detailActions}>
-          {isPinned ? (
-            <button type="button" className={styles.detailReject} onClick={() => onUnpin?.(item.id)}>
-              Bỏ ghim
+        <footer className={`${styles.detailActions} ${styles.detailActionsStack}`}>
+          {feedPinnedActive ? (
+            <button
+              type="button"
+              className={styles.detailReject}
+              onClick={() => onFeedUnpin?.(item.id)}
+            >
+              Bỏ ghim đầu feed
             </button>
           ) : (
             <button
               type="button"
               className={styles.detailApprove}
-              disabled={!canPin}
-              onClick={() => onPin?.(item.id)}
+              disabled={!canFeedPin}
+              onClick={() => onFeedPin?.(item.id)}
             >
               <FontAwesomeIcon icon={faThumbtack} />
-              Ghim bài
+              Ghim đầu feed
             </button>
           )}
+          {featuredActive ? (
+            <button
+              type="button"
+              className={styles.detailReject}
+              onClick={() => handleUnfeature?.(item.id)}
+            >
+              Bỏ nổi bật sidebar
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={styles.detailApprove}
+              disabled={!featureAllowed}
+              onClick={() => handleFeature?.(item.id)}
+            >
+              <FontAwesomeIcon icon={faThumbtack} />
+              Ghim nổi bật sidebar
+            </button>
+          )}
+          {(!feedPinnedActive && !canFeedPin) || (!featuredActive && !featureAllowed) ? (
+            <p className={styles.quotaHint}>
+              Đã đủ 5/5 slot. Bỏ ghim một bài ở cột trái rồi thử lại.
+            </p>
+          ) : null}
         </footer>
       ) : mode === "history" && item.status === "pending" ? (
         <footer className={styles.detailActions}>
