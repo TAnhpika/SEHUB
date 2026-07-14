@@ -671,13 +671,36 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
     {
         var actorName = await ResolveActorNameAsync(authorUserId, cancellationToken);
         var postLabel = BuildPostLabel(post);
+        var moderatorLink = $"/moderator/content?id={post.Id}";
+        var adminLink = $"/admin/moderation/content?id={post.Id}";
+
+        // #region agent log
+        try
+        {
+            var line = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                sessionId = "50d8cc",
+                hypothesisId = "A",
+                location = "WorkflowNotificationService.NotifyModeratorsPostPendingAsync",
+                message = "pending-post notification links",
+                data = new { postId = post.Id, moderatorLink, adminLink },
+                timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                runId = "post-fix"
+            });
+            await System.IO.File.AppendAllTextAsync(
+                @"c:\Users\VICTUS\source\repos\SEHUB\debug-50d8cc.log",
+                line + Environment.NewLine,
+                cancellationToken);
+        }
+        catch { /* debug ingest must not affect notify flow */ }
+        // #endregion
 
         await NotifyRoleMembersAsync(
             [RoleNames.Moderator],
             NotificationType.Moderation,
             $"{actorName} đăng bài chờ duyệt",
             postLabel,
-            $"/moderator/content?id={post.Id}",
+            moderatorLink,
             authorUserId,
             post.Id,
             cancellationToken);
@@ -687,7 +710,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             NotificationType.Moderation,
             $"{actorName} đăng bài chờ duyệt",
             postLabel,
-            $"/admin/moderation/content?id={post.Id}",
+            adminLink,
             authorUserId,
             post.Id,
             cancellationToken);

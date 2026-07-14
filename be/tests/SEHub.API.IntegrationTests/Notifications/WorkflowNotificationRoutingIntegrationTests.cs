@@ -51,15 +51,42 @@ public sealed class WorkflowNotificationRoutingIntegrationTests : IClassFixture<
             .Where(n => n.Title.Contains("đăng bài chờ duyệt", StringComparison.Ordinal))
             .ToList();
 
+        // #region agent log
+        try
+        {
+            var line = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                sessionId = "50d8cc",
+                hypothesisId = "A",
+                location = "WorkflowNotificationRoutingIntegrationTests.CreatePost_Pending_NotifiesModeratorsAndAdmins",
+                message = "assert-vs-actual pending notification links",
+                data = new
+                {
+                    postId,
+                    count = pending.Count,
+                    links = pending.Select(n => new { userId = n.UserId, linkUrl = n.LinkUrl }).ToList(),
+                    expectedModerator = $"/moderator/content?id={postId}",
+                    expectedAdmin = $"/admin/moderation/content?id={postId}"
+                },
+                timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                runId = "post-fix"
+            });
+            await System.IO.File.AppendAllTextAsync(
+                @"c:\Users\VICTUS\source\repos\SEHUB\debug-50d8cc.log",
+                line + Environment.NewLine);
+        }
+        catch { /* debug log only */ }
+        // #endregion
+
         pending.Select(n => n.UserId).Should().Contain(CustomWebApplicationFactory.ModeratorUserId);
         pending.Select(n => n.UserId).Should().Contain(CustomWebApplicationFactory.AdminUserId);
 
         pending.Should().Contain(n =>
             n.UserId == CustomWebApplicationFactory.ModeratorUserId
-            && n.LinkUrl == "/moderator/content");
+            && n.LinkUrl == $"/moderator/content?id={postId}");
         pending.Should().Contain(n =>
             n.UserId == CustomWebApplicationFactory.AdminUserId
-            && n.LinkUrl == "/admin/moderation/content");
+            && n.LinkUrl == $"/admin/moderation/content?id={postId}");
     }
 
     [Fact]
