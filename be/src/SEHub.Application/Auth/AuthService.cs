@@ -13,6 +13,7 @@ using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Gamification.Abstractions;
 using SEHub.Application.Gamification.Events;
 using SEHub.Application.Premium;
+using SEHub.Application.Notifications;
 using SEHub.Application.Profiles;
 
 using SEHub.Application.Models;
@@ -71,6 +72,7 @@ public sealed class AuthService : IAuthService
     private readonly ILogger<AuthService> _logger;
     private readonly IBanStatusService _banStatusService;
     private readonly IAccountPenaltyService _accountPenaltyService;
+    private readonly IWorkflowNotificationService _workflowNotifications;
 
 
 
@@ -114,7 +116,9 @@ public sealed class AuthService : IAuthService
 
         IBanStatusService banStatusService,
 
-        IAccountPenaltyService accountPenaltyService)
+        IAccountPenaltyService accountPenaltyService,
+
+        IWorkflowNotificationService workflowNotifications)
 
     {
 
@@ -157,6 +161,8 @@ public sealed class AuthService : IAuthService
         _banStatusService = banStatusService;
 
         _accountPenaltyService = accountPenaltyService;
+
+        _workflowNotifications = workflowNotifications;
 
     }
 
@@ -652,6 +658,9 @@ public sealed class AuthService : IAuthService
         var subscription = await _premiumService.GetSubscriptionAsync(cancellationToken);
         var aiTokens = await _aiTokenService.GetStatusAsync(userId, cancellationToken);
 
+        await _workflowNotifications.EnsureModeratorWelcomeNotificationAsync(userId, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
 
 
         return new MeResponse
@@ -728,6 +737,9 @@ public sealed class AuthService : IAuthService
 
 
 
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _workflowNotifications.EnsureModeratorWelcomeNotificationAsync(user.Id, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
 

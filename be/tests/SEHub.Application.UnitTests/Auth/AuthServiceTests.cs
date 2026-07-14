@@ -8,6 +8,7 @@ using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Auth;
 using SEHub.Application.Gamification.Abstractions;
 using SEHub.Application.Gamification.Events;
+using SEHub.Application.Notifications;
 using SEHub.Application.Premium;
 using SEHub.Application.Profiles;
 using SEHub.Application.Models;
@@ -40,6 +41,7 @@ public sealed class AuthServiceTests
     private readonly Mock<ILogger<AuthService>> _logger = new();
     private readonly Mock<IBanStatusService> _banStatusService = new();
     private readonly Mock<IAccountPenaltyService> _accountPenaltyService = new();
+    private readonly Mock<IWorkflowNotificationService> _workflowNotifications = new();
     private readonly IMapper _mapper;
 
     private static readonly Guid UserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -69,7 +71,8 @@ public sealed class AuthServiceTests
         _scopeFactory.Object,
         _logger.Object,
         _banStatusService.Object,
-        _accountPenaltyService.Object);
+        _accountPenaltyService.Object,
+        _workflowNotifications.Object);
 
     private void SetupSuccessfulLoginMocks(UserAccount user)
     {

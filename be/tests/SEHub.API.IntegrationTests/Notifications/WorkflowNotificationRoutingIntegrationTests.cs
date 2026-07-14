@@ -95,4 +95,42 @@ public sealed class WorkflowNotificationRoutingIntegrationTests : IClassFixture<
         recipientIds.Should().Contain(CustomWebApplicationFactory.AdminUserId);
         recipientIds.Should().NotContain(CustomWebApplicationFactory.ModeratorUserId);
     }
+
+    [Fact]
+    public async Task Admin_RejectModeratorExam_NotifiesModeratorWithEditLink()
+    {
+        var modToken = await _factory.LoginModeratorAndGetTokenAsync(_client);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", modToken);
+
+        var paperCode = $"INT-REJECT-{Guid.NewGuid():N}"[..24];
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/admin/exams", new CreateExamRequest
+        {
+            SubjectCode = "PRF192",
+            PaperCode = paperCode,
+            ExamType = nameof(ExamType.Practice),
+            Description = "Reject notification routing integration test.",
+        });
+        createResponse.EnsureSuccessStatusCode();
+        var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<AdminExamDto>>();
+        var examId = created!.Data!.Id;
+
+        var adminToken = await _factory.LoginAdminAndGetTokenAsync(_client);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+
+        var rejectResponse = await _client.PostAsJsonAsync(
+            $"/api/v1/admin/exams/{examId}/reject",
+            new RejectExamRequest { ReasonCode = "content", Detail = "Needs revision." });
+        rejectResponse.EnsureSuccessStatusCode();
+
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<SEHubDbContext>();
+        var notification = await context.UserNotifications
+            .AsNoTracking()
+            .Where(n => n.ReferenceId == examId && n.UserId == CustomWebApplicationFactory.ModeratorUserId)
+            .OrderByDescending(n => n.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        notification.Should().NotBeNull();
+        notification!.LinkUrl.Should().Be($"/moderator/practice-exams/edit/{examId}");
+    }
 }

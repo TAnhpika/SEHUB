@@ -1,14 +1,34 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell } from "@fortawesome/free-solid-svg-icons";
+import { mapNotificationItem } from "@/api/notificationsMapper";
+import { useChatHub } from "@/hooks/useChatHub";
 import {
   getAdminHeaderNotifications,
   getAdminNotificationCount,
+  isAdminWorkflowPush,
   loadAdminHeaderNotifications,
   loadAdminNotificationCount,
 } from "@/features/admin/adminHeaderNotifications";
 import styles from "./AdminHeader.module.css";
+
+function mapIncomingAdminNotification(payload) {
+  const mapped = mapNotificationItem(payload);
+  if (!isAdminWorkflowPush(mapped)) {
+    return null;
+  }
+
+  return {
+    id: `notif-${mapped.id}`,
+    kind: "action",
+    title: mapped.title,
+    desc: mapped.body || null,
+    time: mapped.time,
+    to: mapped.linkUrl || "/admin",
+    urgent: !mapped.read,
+  };
+}
 
 function NotificationSection({ label, items, urgentLabel, onNavigate }) {
   if (items.length === 0) {
@@ -50,20 +70,49 @@ function AdminNotificationDropdown() {
   const rootRef = useRef(null);
   const panelId = useId();
 
-  useEffect(() => {
-    let cancelled = false;
+  const refreshNotifications = useCallback(() => {
     Promise.all([loadAdminHeaderNotifications(), loadAdminNotificationCount()]).then(
       ([nextPayload, count]) => {
-        if (!cancelled) {
-          setPayload(nextPayload);
-          setUnreadCount(count);
-        }
+        setPayload(nextPayload);
+        setUnreadCount(count);
       },
     );
-    return () => {
-      cancelled = true;
-    };
-  }, [location.pathname, location.key]);
+  }, []);
+
+  useChatHub({
+    onNotificationReceived: (incoming) => {
+      const item = mapIncomingAdminNotification(incoming);
+      if (!item) {
+        return;
+      }
+
+      setPayload((current) => {
+        const adminTasks = current.adminTasks.some((entry) => entry.id === item.id)
+          ? current.adminTasks
+          : [item, ...current.adminTasks];
+        const adminPending = adminTasks.filter((entry) => entry.kind === "action").length;
+        const moderationPending = current.moderatorQueue.filter((entry) => entry.kind === "action").length;
+
+        return {
+          ...current,
+          adminTasks,
+          counts: {
+            adminPending,
+            moderatorPending: moderationPending,
+            total: adminPending + moderationPending,
+          },
+        };
+      });
+      setUnreadCount((current) => current + 1);
+    },
+    onNotificationUnreadUpdated: () => {
+      refreshNotifications();
+    },
+  });
+
+  useEffect(() => {
+    refreshNotifications();
+  }, [location.pathname, location.key, refreshNotifications]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -92,6 +141,12 @@ function AdminNotificationDropdown() {
   useEffect(() => {
     setOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (open) {
+      refreshNotifications();
+    }
+  }, [open, refreshNotifications]);
 
   const { adminTasks, moderatorQueue, activity, counts } = payload;
   const hasContent =
@@ -155,8 +210,8 @@ function AdminNotificationDropdown() {
               <NotificationSection
                 label={
                   counts.moderatorPending > 0
-                    ? `Hàng chờ Moderator (${counts.moderatorPending})`
-                    : "Hàng chờ Moderator"
+                    ? `Kiểm duyệt (${counts.moderatorPending})`
+                    : "Kiểm duyệt"
                 }
                 items={moderatorQueue}
                 urgentLabel={false}

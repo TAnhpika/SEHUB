@@ -152,7 +152,7 @@ export function buildModeratorNotifications() {
  */
 function mapModeratorWorkflowNotifications(items) {
   return items
-    .filter((item) => item.type === "moderation" || item.type === "examreview")
+    .filter((item) => item.type === "moderation" || item.type === "examreview" || item.type === "moderatorwelcome")
     .map((item) => ({
       id: `notif-${item.id}`,
       title: item.title,
