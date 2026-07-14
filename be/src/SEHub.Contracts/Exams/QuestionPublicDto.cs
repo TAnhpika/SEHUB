@@ -8,4 +8,5 @@ public sealed class QuestionPublicDto
     public string QuestionType { get; init; } = "SingleChoice";
     public int? RequiredSelectCount { get; init; }
     public IReadOnlyList<QuestionOptionDto> Options { get; init; } = [];
+    public IReadOnlyList<QuestionImageDto> Images { get; init; } = [];
 }

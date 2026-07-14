@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Application.Notifications;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
@@ -66,8 +67,8 @@ public sealed class CommentReportService : ICommentReportService
             throw new ForbiddenException("You cannot report your own comment.");
         }
 
-        var trimmedReason = reason.Trim();
-        var trimmedDetail = detail.Trim();
+        var trimmedReason = HtmlContentHelper.ToPlainText(reason);
+        var trimmedDetail = HtmlContentHelper.ToPlainText(detail);
 
         if (string.IsNullOrWhiteSpace(trimmedReason))
         {

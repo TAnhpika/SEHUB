@@ -1,6 +1,7 @@
 using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Application.Models;
 using SEHub.Application.Storage;
 using SEHub.Application.Notifications;
@@ -198,8 +199,8 @@ public sealed class PostService : IPostService
         {
             Id = Guid.NewGuid(),
             AuthorId = userId,
-            Title = request.Title,
-            Content = request.Content,
+            Title = HtmlContentHelper.ToPlainText(request.Title),
+            Content = HtmlContentHelper.SanitizePostHtml(request.Content),
             Status = PostStatus.Pending,
             CreatedAt = DateTime.UtcNow
         };
@@ -223,8 +224,8 @@ public sealed class PostService : IPostService
 
         EnsureAuthorOrModerator(post.AuthorId);
 
-        post.Title = request.Title;
-        post.Content = request.Content;
+        post.Title = HtmlContentHelper.ToPlainText(request.Title);
+        post.Content = HtmlContentHelper.SanitizePostHtml(request.Content);
         var resubmittedForReview = post.Status == PostStatus.Rejected;
         if (resubmittedForReview)
         {
@@ -437,6 +438,7 @@ public sealed class PostService : IPostService
             authorsById.TryGetValue(post.AuthorId, out var authorUser);
             profilesByUserId.TryGetValue(post.AuthorId, out var profile);
             imagesByPostId.TryGetValue(post.Id, out var images);
+            var coverUrl = ResolveListCoverImageUrl(images?.OrderBy(i => i.SortOrder).FirstOrDefault()?.Url);
 
             dtos.Add(new PostListItemDto
             {
@@ -444,7 +446,7 @@ public sealed class PostService : IPostService
                 Title = post.Title,
                 Excerpt = BuildExcerpt(post.Content),
                 ContentPreview = PostContentPreview.BuildContentPreview(post.Content),
-                PreviewImageUrl = PostContentPreview.ExtractFirstImageUrl(post.Content),
+                PreviewImageUrl = coverUrl,
                 Author = BuildAuthorSummary(post.AuthorId, authorUser, profile),
                 Tags = tagsByPostId.GetValueOrDefault(post.Id) ?? [],
                 LikeCount = likeCounts.GetValueOrDefault(post.Id),
@@ -453,7 +455,7 @@ public sealed class PostService : IPostService
                 CreatedAt = post.CreatedAt,
                 IsPinned = post.IsPinned,
                 IsFeatured = post.IsFeatured,
-                CoverImageUrl = ResolveListCoverImageUrl(images?.OrderBy(i => i.SortOrder).FirstOrDefault()?.Url),
+                CoverImageUrl = coverUrl,
                 IsLiked = _currentUser.UserId is null ? null : likedPostIds.Contains(post.Id),
                 Images = (images ?? []).Select(PostImageService.MapDto).ToList()
             });

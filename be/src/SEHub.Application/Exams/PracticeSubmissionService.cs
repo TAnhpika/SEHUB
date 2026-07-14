@@ -1,6 +1,7 @@
 using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Application.Gamification.Abstractions;
 using SEHub.Application.Gamification.Events;
 using SEHub.Application.Notifications;
@@ -161,7 +162,9 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
         }
 
         submission.Status = status;
-        submission.ReviewerComment = request.ReviewerComment;
+        submission.ReviewerComment = string.IsNullOrWhiteSpace(request.ReviewerComment)
+            ? null
+            : HtmlContentHelper.ToPlainText(request.ReviewerComment);
         submission.ReviewedById = _currentUser.UserId;
         submission.ReviewedAt = DateTime.UtcNow;
         submission.UpdatedAt = DateTime.UtcNow;
@@ -175,7 +178,7 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
             submission,
             exam,
             status,
-            request.ReviewerComment,
+            submission.ReviewerComment,
             _currentUser.UserId,
             cancellationToken);
 
@@ -185,7 +188,7 @@ public sealed class PracticeSubmissionService : IPracticeSubmissionService
                 submission,
                 exam,
                 status,
-                request.ReviewerComment,
+                submission.ReviewerComment,
                 reviewerId,
                 cancellationToken);
         }

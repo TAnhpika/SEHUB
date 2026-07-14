@@ -106,6 +106,7 @@ export function createEmptyQuestion(id) {
     requiredSelectCount: null,
     explanation: "",
     showExplanation: false,
+    images: [],
   };
 }
 
@@ -315,11 +316,34 @@ export function mapImportedExamQuestions(apiQuestions = [], importWarnings = [])
     const orderIndex = question.orderIndex ?? question.OrderIndex ?? index + 1;
     const rawContent = question.content ?? question.Content ?? "";
     const content = sanitizeWizardQuestionContent(rawContent);
+    const images = (question.images ?? question.Images ?? []).map((image) => ({
+      key: image.id ?? image.Id ?? `img-${orderIndex}-${image.sortOrder ?? 0}`,
+      file: null,
+      previewUrl: image.imagePath ?? image.ImagePath ?? image.url ?? image.Url ?? "",
+      existingId: image.id ?? image.Id ?? null,
+      url: image.imagePath ?? image.ImagePath ?? image.url ?? image.Url ?? "",
+      sortOrder: image.sortOrder ?? image.SortOrder ?? 0,
+    }));
+
+    // Legacy: scrape single image from content if gallery empty
+    if (images.length === 0) {
+      const legacyMatch = String(rawContent).match(/<img[^>]+src=["']([^"']+)["']/i);
+      if (legacyMatch?.[1]) {
+        images.push({
+          key: `legacy-${orderIndex}`,
+          file: null,
+          previewUrl: legacyMatch[1],
+          existingId: null,
+          url: legacyMatch[1],
+          sortOrder: 0,
+        });
+      }
+    }
 
     return {
       id: `q-${orderIndex}`,
       orderIndex,
-      content,
+      content: content.replace(/<img\b[^>]*>/gi, "").trim(),
       questionType,
       optionLabels,
       answers,
@@ -329,6 +353,7 @@ export function mapImportedExamQuestions(apiQuestions = [], importWarnings = [])
       explanation: "",
       showExplanation: false,
       importWarnings: warningsByQuestion.get(orderIndex) ?? [],
+      images,
     };
   });
 }

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Application.Gamification.Abstractions;
 using SEHub.Application.Notifications;
 using SEHub.Contracts.Common;
@@ -77,8 +78,8 @@ public sealed class FeedbackService : IFeedbackService
     {
         _ = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
 
-        var username = request.Username?.Trim() ?? string.Empty;
-        var description = request.Description?.Trim() ?? string.Empty;
+        var username = HtmlContentHelper.ToPlainText(request.Username);
+        var description = HtmlContentHelper.ToPlainText(request.Description);
 
         if (string.IsNullOrWhiteSpace(username))
         {

@@ -21,10 +21,78 @@ import {
   parseTermFromExamCode,
 } from "@/features/exams/finalExam/examTermOptions";
 import {
-  appendQuestionImageToContent,
   extractQuestionImageUrl,
   stripQuestionImageMarkup,
 } from "@/utils/examQuestionContent";
+import { createPickerItemFromExisting, getNewImageFiles } from "@/features/posts/PostImagesPicker/PostImagesPicker";
+import * as adminApi from "@/api/adminApi";
+
+function mapQuestionImagesFromDto(question) {
+  const fromDto = question.images ?? question.Images ?? [];
+  if (fromDto.length > 0) {
+    return fromDto.map((image) =>
+      createPickerItemFromExisting({
+        id: image.id ?? image.Id,
+        url: resolveAssetUrl(image.imagePath ?? image.ImagePath ?? image.url),
+        sortOrder: image.sortOrder ?? image.SortOrder ?? 0,
+      }),
+    );
+  }
+
+  const legacyUrl =
+    question.imageUrl ??
+    question.ImageUrl ??
+    extractQuestionImageUrl(question.content ?? question.Content ?? "") ??
+    null;
+  if (!legacyUrl) return [];
+  return [
+    createPickerItemFromExisting({
+      id: null,
+      url: resolveAssetUrl(legacyUrl),
+      sortOrder: 0,
+    }),
+  ];
+}
+
+function getKeptImageUrls(question) {
+  return (question.images ?? [])
+    .filter((item) => !item.file && (item.url || item.previewUrl))
+    .map((item) => item.url ?? item.previewUrl)
+    .filter(Boolean);
+}
+
+function isWizardQuestionFilled(question) {
+  return Boolean(
+    question.content?.trim() &&
+      (question.optionLabels ?? ["A", "B", "C", "D"]).some((key) =>
+        question.answers?.[key]?.trim(),
+      ),
+  );
+}
+
+/**
+ * Upload file ảnh mới cho từng câu sau create/update exam (match theo OrderIndex).
+ * @returns {Promise<string|null>} Warning message nếu có lỗi upload.
+ */
+export async function syncQuestionGalleryImages(examDto, wizardQuestions) {
+  const filtered = (wizardQuestions ?? []).filter(isWizardQuestionFilled);
+  const saved = [...(examDto?.questions ?? [])].sort(
+    (a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0),
+  );
+
+  let warning = null;
+  for (let index = 0; index < filtered.length; index += 1) {
+    const files = getNewImageFiles(filtered[index].images ?? []);
+    const questionId = saved[index]?.id;
+    if (!files.length || !questionId) continue;
+    try {
+      await adminApi.uploadExamQuestionImages(questionId, files);
+    } catch (error) {
+      warning = error.message ?? "Không tải được một số ảnh câu hỏi.";
+    }
+  }
+  return warning;
+}
 
 /**
  * @fileoverview Mapper chuyển đổi DTO admin/moderation từ API sang shape UI nội bộ của SEHUB.
@@ -389,13 +457,14 @@ export function mapAdminReviewQuestion(question, index = 0) {
     typeof question.correct === "number" && question.correct >= 0 ? question.correct : 0;
 
   const rawText = question.content ?? question.Content ?? question.text ?? "";
-  const imageUrl =
-    question.imageUrl ?? question.ImageUrl ?? extractQuestionImageUrl(rawText) ?? null;
+  const images = mapQuestionImagesFromDto(question);
+  const imageUrl = images[0]?.previewUrl ?? images[0]?.url ?? null;
 
   return {
     id: question.orderIndex ?? question.OrderIndex ?? question.id ?? index + 1,
     text: stripQuestionImageMarkup(rawText),
     imageUrl,
+    images,
     options: optionTexts,
     correct: correctIndices[0] ?? legacyCorrect,
     correctIndices: correctIndices.length > 0 ? correctIndices : [legacyCorrect],
@@ -450,11 +519,7 @@ function getWizardOptionLabels(question) {
  */
 export function mapWizardQuestionsToCreateItems(questions) {
   return questions
-    .filter(
-      (question) =>
-        question.content?.trim() &&
-        getWizardOptionLabels(question).some((key) => question.answers?.[key]?.trim()),
-    )
+    .filter(isWizardQuestionFilled)
     .map((question, index) => {
       const optionLabels = getWizardOptionLabels(question);
       const options = optionLabels.map((key) => ({
@@ -481,6 +546,7 @@ export function mapWizardQuestionsToCreateItems(questions) {
         options,
         correctOptionId: fallbackCorrect?.id,
         correctOptionIds: correctOptions.map((option) => option.id),
+        imageUrls: getKeptImageUrls(question),
       };
     });
 }
@@ -661,13 +727,16 @@ export function mapMockOcrQuestionsToCreateItems(questions) {
     const fallbackCorrect = options.find((option) => correctOptionIds.includes(String(option.id))) ?? options[0];
     const questionType = String(question.questionType ?? question.QuestionType ?? "").toLowerCase();
     const isMulti = questionType === "multiselect";
-    const baseContent = String(question.content ?? question.Content ?? question.text ?? "").trim();
-    const imageUrl = question.imageUrl ?? question.ImageUrl ?? extractQuestionImageUrl(baseContent);
-    const content = appendQuestionImageToContent(baseContent, imageUrl);
+    const baseContent = stripQuestionImageMarkup(
+      String(question.content ?? question.Content ?? question.text ?? "").trim(),
+    );
+    const imageUrls = getKeptImageUrls({
+      images: mapQuestionImagesFromDto(question),
+    });
 
     return {
       orderIndex: question.orderIndex ?? question.OrderIndex ?? index + 1,
-      content,
+      content: baseContent,
       questionType: isMulti ? "MultiSelect" : "SingleChoice",
       requiredSelectCount: isMulti
         ? question.requiredSelectCount ?? question.RequiredSelectCount ?? correctOptionIds.length
@@ -675,6 +744,7 @@ export function mapMockOcrQuestionsToCreateItems(questions) {
       options,
       correctOptionId: fallbackCorrect?.id ?? crypto.randomUUID(),
       correctOptionIds,
+      imageUrls,
     };
   });
 }

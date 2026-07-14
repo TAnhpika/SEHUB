@@ -187,16 +187,6 @@ public sealed class ModerationController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("reports/{id:guid}/escalate-violations")]
-    public async Task<IActionResult> EscalateUserReport(
-        Guid id,
-        [FromBody] EscalateUserReportRequest request,
-        CancellationToken cancellationToken)
-    {
-        var result = await _moderationService.EscalateUserReportAsync(id, request, cancellationToken);
-        return Ok(result);
-    }
-
     [HttpGet("posts")]
     public async Task<IActionResult> GetPosts([FromQuery] ModerationPostQueryParams query, CancellationToken cancellationToken)
     {

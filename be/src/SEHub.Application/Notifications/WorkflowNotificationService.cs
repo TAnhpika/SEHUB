@@ -949,15 +949,8 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         return trimmed.Length <= maxLength ? trimmed : $"{trimmed[..maxLength]}…";
     }
 
-    private static string StripHtml(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return string.Empty;
-        }
-
-        return System.Text.RegularExpressions.Regex.Replace(value, "<[^>]+>", " ").Trim();
-    }
+    private static string StripHtml(string? value) =>
+        SEHub.Application.Common.HtmlContentHelper.ToPlainText(value);
 
     private static string FormatReportReason(string reason) =>
         reason.Replace("_", " ", StringComparison.Ordinal);

@@ -2,7 +2,6 @@ using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Gamification.Abstractions;
 using SEHub.Application.Gamification.Models;
 using SEHub.Contracts.Gamification;
-using SEHub.Shared.Constants;
 
 namespace SEHub.Application.Gamification.Engines;
 
@@ -11,18 +10,18 @@ public sealed class GamificationReadService : IGamificationReadService
     private readonly ILevelEngine _levelEngine;
     private readonly IUserRepository _userRepository;
     private readonly IMissionRepository _missionRepository;
-    private readonly IPointTransactionRepository _transactionRepository;
+    private readonly IUserMissionProgressRepository _missionProgressRepository;
 
     public GamificationReadService(
         ILevelEngine levelEngine,
         IUserRepository userRepository,
         IMissionRepository missionRepository,
-        IPointTransactionRepository transactionRepository)
+        IUserMissionProgressRepository missionProgressRepository)
     {
         _levelEngine = levelEngine;
         _userRepository = userRepository;
         _missionRepository = missionRepository;
-        _transactionRepository = transactionRepository;
+        _missionProgressRepository = missionProgressRepository;
     }
 
     public async Task<Models.GamificationProfileDto> GetProfileGamificationAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -48,7 +47,7 @@ public sealed class GamificationReadService : IGamificationReadService
         CancellationToken cancellationToken = default)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var dayStart = today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var periodKey = today.ToString("yyyy-MM-dd");
         var missions = await _missionRepository.GetActiveDailyMissionsAsync(cancellationToken);
         var pickedMissions = DailyMissionPicker.PickForUser(
             userId,
@@ -59,34 +58,26 @@ public sealed class GamificationReadService : IGamificationReadService
         var results = new List<DailyMissionProgressDto>(pickedMissions.Count);
         foreach (var mission in pickedMissions)
         {
-            var sourceTypes = ResolveSourceTypes(mission.EventType);
-            var current = await _transactionRepository.CountPostedQualifyingEventsSinceAsync(
+            var progress = await _missionProgressRepository.GetAsync(
                 userId,
-                sourceTypes,
-                dayStart,
+                mission.Code,
+                periodKey,
                 cancellationToken);
-            var capped = Math.Min(current, mission.TargetCount);
+            var current = Math.Min(progress?.ProgressCount ?? 0, mission.TargetCount);
+            var isCompleted = progress?.CompletedAt is not null || current >= mission.TargetCount;
 
             results.Add(new DailyMissionProgressDto
             {
                 Id = mission.Id,
                 Code = mission.Code,
                 Title = mission.Name,
-                Current = capped,
+                Current = current,
                 Target = mission.TargetCount,
                 RewardPoints = mission.RewardPoints,
-                IsCompleted = capped >= mission.TargetCount
+                IsCompleted = isCompleted
             });
         }
 
         return results;
     }
-
-    private static IReadOnlyList<string> ResolveSourceTypes(string eventType) =>
-        eventType switch
-        {
-            GamificationConstants.EventDailyLogin => ["login", GamificationConstants.EventDailyLogin],
-            GamificationConstants.EventLikeReceived => ["like", GamificationConstants.EventLikeReceived],
-            _ => [eventType]
-        };
 }

@@ -133,6 +133,7 @@ public sealed class ExamsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Deprecated — use POST questions/{questionId}/images for gallery.</summary>
     [HttpPost("upload-question-image")]
     [Authorize(Policy = PolicyNames.RequireModerator)]
     [RequestSizeLimit(5_242_880)]
@@ -156,6 +157,61 @@ public sealed class ExamsController : ControllerBase
             cancellationToken);
 
         return Ok(result);
+    }
+
+    [HttpPost("questions/{questionId:guid}/images")]
+    [Authorize(Policy = PolicyNames.RequireModerator)]
+    [RequestSizeLimit(26_214_400)]
+    public async Task<IActionResult> UploadQuestionImages(
+        Guid questionId,
+        IFormFileCollection files,
+        CancellationToken cancellationToken)
+    {
+        if (files.Count == 0)
+        {
+            return BadRequest(new { message = "At least one image is required." });
+        }
+
+        var uploads = new List<QuestionImageUpload>();
+        foreach (var file in files)
+        {
+            if (file.Length == 0)
+            {
+                continue;
+            }
+
+            await using var stream = file.OpenReadStream();
+            var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer, cancellationToken);
+            buffer.Position = 0;
+
+            uploads.Add(new QuestionImageUpload
+            {
+                Content = buffer,
+                FileName = file.FileName,
+                ContentType = file.ContentType,
+                FileSizeBytes = file.Length
+            });
+        }
+
+        if (uploads.Count == 0)
+        {
+            return BadRequest(new { message = "At least one image is required." });
+        }
+
+        var result = await _examImageService.UploadImagesAsync(questionId, uploads, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpDelete("questions/{questionId:guid}/images/{imageId:guid}")]
+    [Authorize(Policy = PolicyNames.RequireModerator)]
+    public async Task<IActionResult> DeleteQuestionImage(
+        Guid questionId,
+        Guid imageId,
+        CancellationToken cancellationToken)
+    {
+        await _examImageService.DeleteImageAsync(questionId, imageId, cancellationToken);
+        return Ok(new { message = "Image deleted" });
     }
 
     [HttpPost("{id:guid}/attachments")]

@@ -32,6 +32,7 @@ function RichTextEditor({
   id,
   name,
   onKeyDown,
+  allowImages = true,
   onImageUpload,
   onImageUploadError,
   "aria-label": ariaLabel,
@@ -41,7 +42,10 @@ function RichTextEditor({
   const fileInputRef = useRef(null);
   const skipExternalSyncRef = useRef(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const tools = TOOLBAR_VARIANTS[variant] ?? TOOLBAR_VARIANTS.full;
+  const imagesEnabled = allowImages && typeof onImageUpload === "function";
+  const tools = (TOOLBAR_VARIANTS[variant] ?? TOOLBAR_VARIANTS.full).filter(
+    (action) => action !== "image" || imagesEnabled,
+  );
   const plainTextLength = getPlainTextLength(value);
 
   useEffect(() => {
@@ -84,7 +88,7 @@ function RichTextEditor({
       return;
     }
 
-    if (action === "image" && onImageUpload) {
+    if (action === "image" && imagesEnabled) {
       fileInputRef.current?.click();
       return;
     }
@@ -96,7 +100,7 @@ function RichTextEditor({
     const file = event.target.files?.[0];
     event.target.value = "";
 
-    if (!file || !onImageUpload) {
+    if (!file || !imagesEnabled) {
       return;
     }
 
@@ -197,7 +201,7 @@ function RichTextEditor({
         onKeyDown={onKeyDown}
       />
 
-      {onImageUpload ? (
+      {imagesEnabled ? (
         <input
           ref={fileInputRef}
           type="file"

@@ -1,5 +1,6 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Application.Storage;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Messaging;
@@ -178,7 +179,7 @@ public sealed class MessagingService : IMessagingService
         await EnsureNotBlockedInConversationAsync(conversationId, userId, cancellationToken);
         await EnsureWithinRateLimitAsync(userId, cancellationToken);
 
-        var trimmed = content.Trim();
+        var trimmed = HtmlContentHelper.ToPlainTextPreserveNewlines(content);
         if (string.IsNullOrWhiteSpace(trimmed))
         {
             throw new DomainException("Message content is required.");
@@ -247,7 +248,7 @@ public sealed class MessagingService : IMessagingService
                     : "File size cannot exceed 10 MB.");
         }
 
-        var trimmedCaption = caption?.Trim() ?? string.Empty;
+        var trimmedCaption = HtmlContentHelper.ToPlainTextPreserveNewlines(caption);
         if (trimmedCaption.Length > MaxContentLength)
         {
             throw new DomainException($"Caption cannot exceed {MaxContentLength} characters.");

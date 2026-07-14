@@ -1,5 +1,6 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Application.Gamification.Abstractions;
 using SEHub.Application.Gamification.Events;
 using SEHub.Application.Models;
@@ -91,7 +92,12 @@ public sealed class CommentService : ICommentService
             parentCommentAuthorId = parentComment.AuthorId;
         }
 
-        var content = request.Content;
+        var content = HtmlContentHelper.ToPlainText(request.Content);
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            throw new DomainException("Nội dung bình luận không được để trống.");
+        }
+
         if (parentComment is not null)
         {
             var parentUser = await _userRepository.GetByIdAsync(parentComment.AuthorId, cancellationToken);
@@ -157,7 +163,13 @@ public sealed class CommentService : ICommentService
             throw new ForbiddenException("You do not have permission to edit this comment.");
         }
 
-        comment.Content = request.Content.Trim();
+        var content = HtmlContentHelper.ToPlainText(request.Content);
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            throw new DomainException("Nội dung bình luận không được để trống.");
+        }
+
+        comment.Content = content;
         comment.UpdatedAt = DateTime.UtcNow;
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

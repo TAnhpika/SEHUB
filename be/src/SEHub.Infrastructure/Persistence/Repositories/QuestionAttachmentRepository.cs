@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Domain.Entities;
 using SEHub.Infrastructure.Persistence;
@@ -12,6 +13,36 @@ public sealed class QuestionAttachmentRepository : IQuestionAttachmentRepository
     {
         _context = context;
     }
+
+    public Task<QuestionAttachment?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        _context.QuestionAttachments.FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+
+    public async Task<IReadOnlyList<QuestionAttachment>> GetByQuestionIdAsync(
+        Guid questionId,
+        CancellationToken cancellationToken = default) =>
+        await _context.QuestionAttachments
+            .Where(a => a.QuestionId == questionId)
+            .OrderBy(a => a.SortOrder)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<QuestionAttachment>> GetByQuestionIdsAsync(
+        IReadOnlyList<Guid> questionIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (questionIds.Count == 0)
+        {
+            return [];
+        }
+
+        return await _context.QuestionAttachments
+            .Where(a => questionIds.Contains(a.QuestionId))
+            .OrderBy(a => a.QuestionId)
+            .ThenBy(a => a.SortOrder)
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<bool> QuestionExistsAsync(Guid questionId, CancellationToken cancellationToken = default) =>
+        _context.Questions.AnyAsync(q => q.Id == questionId, cancellationToken);
 
     public async Task<QuestionAttachment> AddAsync(
         Guid questionId,
@@ -30,7 +61,16 @@ public sealed class QuestionAttachmentRepository : IQuestionAttachmentRepository
             CreatedAt = DateTime.UtcNow
         };
 
-        _context.QuestionAttachments.Add(attachment);
+        await _context.QuestionAttachments.AddAsync(attachment, cancellationToken);
         return attachment;
+    }
+
+    public async Task AddRangeAsync(IEnumerable<QuestionAttachment> attachments, CancellationToken cancellationToken = default) =>
+        await _context.QuestionAttachments.AddRangeAsync(attachments, cancellationToken);
+
+    public Task DeleteRangeAsync(IEnumerable<QuestionAttachment> attachments, CancellationToken cancellationToken = default)
+    {
+        _context.QuestionAttachments.RemoveRange(attachments);
+        return Task.CompletedTask;
     }
 }

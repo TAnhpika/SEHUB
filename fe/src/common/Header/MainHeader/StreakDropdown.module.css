@@ -152,6 +152,14 @@
 
 .content {
   min-width: 0;
+  flex: 1;
+}
+
+.taskHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .task-title {
@@ -160,6 +168,14 @@
   font-weight: 600;
   color: var(--color-text);
   line-height: 1.4;
+}
+
+.reward {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  white-space: nowrap;
 }
 
 .progress {

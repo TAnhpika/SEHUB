@@ -6,6 +6,7 @@ import {
   mapPracticeExamDetailToForm,
   mapPracticeExamFormToResubmitRequest,
   mapWizardQuestionsToCreateItems,
+  syncQuestionGalleryImages,
 } from "@/api/adminMapper";
 import {
   buildExamDisplayFields,
@@ -262,8 +263,12 @@ export async function resubmitPracticeExamViaApi(examId, payload, { isRevision =
 export async function createFinalExamViaApi(examInfo, questions, confirmDuplicate = false) {
   const body = buildFinalExamCreateBody(examInfo, questions);
   const dto = await adminApi.createExam(body, confirmDuplicate);
+  const imageWarning = await syncQuestionGalleryImages(dto, questions);
   await uploadExamPdfIfPresent(dto.id, examInfo);
   invalidateExamPaperCodeCache();
+  if (imageWarning) {
+    dto.imageUploadWarning = imageWarning;
+  }
   return dto;
 }
 
@@ -310,7 +315,12 @@ export async function loadExamForWizardEdit(examId) {
  */
 export async function resubmitFinalExamViaApi(examId, examInfo, questions, { isRevision = false } = {}) {
   const body = mapFinalExamWizardToResubmitRequest(examInfo, questions, { isRevision });
-  return adminApi.resubmitExam(examId, body);
+  const dto = await adminApi.resubmitExam(examId, body);
+  const imageWarning = await syncQuestionGalleryImages(dto, questions);
+  if (imageWarning) {
+    dto.imageUploadWarning = imageWarning;
+  }
+  return dto;
 }
 
 /**

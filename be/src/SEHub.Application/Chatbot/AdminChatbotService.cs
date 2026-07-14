@@ -1,6 +1,7 @@
 using FluentValidation;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Contracts.Chatbot;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Exceptions;
@@ -85,9 +86,9 @@ public sealed class AdminChatbotService : IAdminChatbotService
         var entry = new ChatbotKnowledgeEntry
         {
             Id = Guid.NewGuid(),
-            Title = request.Title.Trim(),
-            Content = request.Content.Trim(),
-            Tags = request.Tags?.Trim(),
+            Title = HtmlContentHelper.ToPlainText(request.Title),
+            Content = HtmlContentHelper.ToPlainTextPreserveNewlines(request.Content),
+            Tags = string.IsNullOrWhiteSpace(request.Tags) ? null : HtmlContentHelper.ToPlainText(request.Tags),
             IsActive = request.IsActive,
             SortOrder = request.SortOrder,
             CreatedAt = DateTime.UtcNow,
@@ -108,9 +109,9 @@ public sealed class AdminChatbotService : IAdminChatbotService
         var entry = await _chatbotRepository.GetKnowledgeByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException("ChatbotKnowledgeEntry", id);
 
-        entry.Title = request.Title.Trim();
-        entry.Content = request.Content.Trim();
-        entry.Tags = request.Tags?.Trim();
+        entry.Title = HtmlContentHelper.ToPlainText(request.Title);
+        entry.Content = HtmlContentHelper.ToPlainTextPreserveNewlines(request.Content);
+        entry.Tags = string.IsNullOrWhiteSpace(request.Tags) ? null : HtmlContentHelper.ToPlainText(request.Tags);
         entry.IsActive = request.IsActive;
         entry.SortOrder = request.SortOrder;
         entry.UpdatedAt = DateTime.UtcNow;

@@ -281,39 +281,6 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                     b.ToTable("Badges");
                 });
 
-            modelBuilder.Entity("SEHub.Domain.Entities.BattlePassSeason", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("EndsAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
-                    b.Property<DateTime>("StartsAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IsActive");
-
-                    b.ToTable("BattlePassSeasons");
-                });
-
             modelBuilder.Entity("SEHub.Domain.Entities.ChatbotConversation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2666,46 +2633,6 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("SEHub.Domain.Entities.ViolationEscalation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("EscalatedById")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<Guid>("SourceReportId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("SourceType")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EscalatedById");
-
-                    b.HasIndex("UserId", "CreatedAt");
-
-                    b.ToTable("ViolationEscalations");
-                });
-
             modelBuilder.Entity("SEHub.Domain.Entities.WeeklyMission", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3665,21 +3592,6 @@ namespace SEHub.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("ResolvedById")
                         .OnDelete(DeleteBehavior.SetNull);
-                });
-
-            modelBuilder.Entity("SEHub.Domain.Entities.ViolationEscalation", b =>
-                {
-                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
-                        .WithMany()
-                        .HasForeignKey("EscalatedById")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SEHub.Infrastructure.Identity.ApplicationUser", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("SEHub.Infrastructure.Identity.ApplicationUser", b =>

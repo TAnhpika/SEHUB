@@ -14,17 +14,20 @@ public sealed class ExamQueryService : IExamQueryService
 {
     private readonly IExamRepository _examRepository;
     private readonly IExamAttachmentRepository _attachmentRepository;
+    private readonly IQuestionAttachmentRepository _questionAttachmentRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IMapper _mapper;
 
     public ExamQueryService(
         IExamRepository examRepository,
         IExamAttachmentRepository attachmentRepository,
+        IQuestionAttachmentRepository questionAttachmentRepository,
         ICurrentUserService currentUser,
         IMapper mapper)
     {
         _examRepository = examRepository;
         _attachmentRepository = attachmentRepository;
+        _questionAttachmentRepository = questionAttachmentRepository;
         _currentUser = currentUser;
         _mapper = mapper;
     }
@@ -86,6 +89,8 @@ public sealed class ExamQueryService : IExamQueryService
 
         ExamContentAccess.EnsureCanViewExamContent(_currentUser, exam);
 
+        var imagesByQuestion = await LoadImagesByQuestionAsync(exam.Questions.Select(q => q.Id).ToList(), cancellationToken);
+
         return exam.Questions
             .OrderBy(q => q.OrderIndex)
             .Select(q => new QuestionPublicDto
@@ -102,7 +107,8 @@ public sealed class ExamQueryService : IExamQueryService
                     Id = o.Id,
                     Label = o.Label,
                     Text = o.Text
-                }).ToList()
+                }).ToList(),
+                Images = imagesByQuestion.GetValueOrDefault(q.Id) ?? [],
             })
             .ToList();
     }
@@ -120,6 +126,8 @@ public sealed class ExamQueryService : IExamQueryService
         var question = exam.Questions.FirstOrDefault(q => q.Id == questionId)
             ?? throw new NotFoundException("Question", questionId);
 
+        var images = await _questionAttachmentRepository.GetByQuestionIdAsync(questionId, cancellationToken);
+
         return new QuestionAnswerDto
         {
             Id = question.Id,
@@ -136,8 +144,19 @@ public sealed class ExamQueryService : IExamQueryService
                 Id = o.Id,
                 Label = o.Label,
                 Text = o.Text
-            }).ToList()
+            }).ToList(),
+            Images = images.Select(ExamImageService.MapDto).ToList(),
         };
+    }
+
+    private async Task<Dictionary<Guid, List<QuestionImageDto>>> LoadImagesByQuestionAsync(
+        IReadOnlyList<Guid> questionIds,
+        CancellationToken cancellationToken)
+    {
+        var images = await _questionAttachmentRepository.GetByQuestionIdsAsync(questionIds, cancellationToken);
+        return images
+            .GroupBy(a => a.QuestionId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(a => a.SortOrder).Select(ExamImageService.MapDto).ToList());
     }
 
     private static ExamListItemDto MapListItem(Exam exam, int questionCount) => new()

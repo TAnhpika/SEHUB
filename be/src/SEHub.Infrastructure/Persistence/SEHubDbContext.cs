@@ -55,7 +55,6 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<UserLevelHistory> UserLevelHistories => Set<UserLevelHistory>();
     public DbSet<DailyMission> DailyMissions => Set<DailyMission>();
     public DbSet<WeeklyMission> WeeklyMissions => Set<WeeklyMission>();
-    public DbSet<BattlePassSeason> BattlePassSeasons => Set<BattlePassSeason>();
     public DbSet<AiTokenDailyUsage> AiTokenDailyUsages => Set<AiTokenDailyUsage>();
     public DbSet<AiExamChatThread> AiExamChatThreads => Set<AiExamChatThread>();
     public DbSet<AiExamChatMessage> AiExamChatMessages => Set<AiExamChatMessage>();
@@ -71,7 +70,6 @@ public class SEHubDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Gu
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
     public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
     public DbSet<ConversationReport> ConversationReports => Set<ConversationReport>();
-    public DbSet<ViolationEscalation> ViolationEscalations => Set<ViolationEscalation>();
     public DbSet<UserFeedback> UserFeedbacks => Set<UserFeedback>();
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<PostTag> PostTags => Set<PostTag>();

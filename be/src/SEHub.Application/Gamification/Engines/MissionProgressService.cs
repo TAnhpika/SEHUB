@@ -48,9 +48,10 @@ public sealed class MissionProgressService : IMissionProgressService
             if (progress.ProgressCount >= mission.TargetCount && mission.RewardPoints > 0)
             {
                 var key = $"daily-mission:{mission.Code}:{userId}:{periodKey}";
-                await _pointEngine.AwardByEventTypeAsync(
+                await _pointEngine.AwardFixedPointsAsync(
                     userId,
-                    $"mission.daily.{mission.Code}",
+                    mission.RewardPoints,
+                    $"mission-daily-{mission.Code}",
                     key,
                     "daily_mission",
                     mission.Id,
@@ -72,9 +73,10 @@ public sealed class MissionProgressService : IMissionProgressService
             if (progress.ProgressCount >= mission.TargetCount && mission.RewardPoints > 0)
             {
                 var key = $"weekly-mission:{mission.Code}:{userId}:{periodKey}";
-                await _pointEngine.AwardByEventTypeAsync(
+                await _pointEngine.AwardFixedPointsAsync(
                     userId,
-                    $"mission.weekly.{mission.Code}",
+                    mission.RewardPoints,
+                    $"mission-weekly-{mission.Code}",
                     key,
                     "weekly_mission",
                     mission.Id,

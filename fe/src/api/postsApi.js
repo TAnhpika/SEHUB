@@ -71,6 +71,10 @@ export function uploadPostImages(postId, files) {
   return apiUploadRequest(`/api/v1/posts/${postId}/images`, formData);
 }
 
+export function deletePostImage(postId, imageId) {
+  return apiRequest(`/api/v1/posts/${postId}/images/${imageId}`, { method: "DELETE" });
+}
+
 export function featurePost(id, body) {
   return apiRequest(`/api/v1/posts/${id}/feature`, { method: "PATCH", body });
 }
@@ -79,6 +83,7 @@ export function pinPost(id, body) {
   return apiRequest(`/api/v1/posts/${id}/pin`, { method: "PATCH", body });
 }
 
+/** @deprecated Prefer PostImages gallery (`uploadPostImages`) for posts. Still used by exam/question editors. */
 export function uploadPostContentImage(file) {
   const formData = new FormData();
   formData.append("file", file);

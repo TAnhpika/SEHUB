@@ -44,7 +44,8 @@ public static class CloudFileValidation
         "image/jpeg",
         "image/jpg",
         "image/png",
-        "image/webp"
+        "image/webp",
+        "image/gif"
     };
 
     public static void EnsureValidPdf(string contentType, long fileSizeBytes, string fileName)

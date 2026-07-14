@@ -14,6 +14,7 @@ public sealed class ExamQueryServiceTests
 {
     private readonly Mock<IExamRepository> _examRepository = new();
     private readonly Mock<IExamAttachmentRepository> _attachmentRepository = new();
+    private readonly Mock<IQuestionAttachmentRepository> _questionAttachmentRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly IMapper _mapper;
 
@@ -24,11 +25,18 @@ public sealed class ExamQueryServiceTests
     public ExamQueryServiceTests()
     {
         _mapper = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
+        _questionAttachmentRepository
+            .Setup(r => r.GetByQuestionIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _questionAttachmentRepository
+            .Setup(r => r.GetByQuestionIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
     }
 
     private ExamQueryService CreateSut() => new(
         _examRepository.Object,
         _attachmentRepository.Object,
+        _questionAttachmentRepository.Object,
         _currentUser.Object,
         _mapper);
 

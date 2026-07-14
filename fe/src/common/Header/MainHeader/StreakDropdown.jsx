@@ -121,7 +121,7 @@ function StreakDropdown() {
           ) : (
             <ul className={styles.list}>
               {dailyTasks.map((task) => {
-                const isDone = task.current >= task.target;
+                const isDone = task.isCompleted || task.current >= task.target;
 
                 return (
                   <li key={task.id} className={styles.item}>
@@ -130,7 +130,12 @@ function StreakDropdown() {
                       aria-hidden="true"
                     />
                     <div className={styles.content}>
-                      <p className={styles["task-title"]}>{task.title}</p>
+                      <div className={styles.taskHeader}>
+                        <p className={styles["task-title"]}>{task.title}</p>
+                        {task.rewardPoints > 0 && (
+                          <span className={styles.reward}>+{task.rewardPoints} điểm</span>
+                        )}
+                      </div>
                       <p className={styles.progress}>
                         Tiến độ: {task.current}/{task.target}
                       </p>

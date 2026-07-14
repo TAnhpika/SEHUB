@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Users;
 using SEHub.Application.Notifications;
@@ -65,8 +66,8 @@ public sealed class UserReportService : IUserReportService
         _ = await _userRepository.GetByIdAsync(reportedUserId, cancellationToken)
             ?? throw new NotFoundException("User", reportedUserId);
 
-        var trimmedReason = request.Reason.Trim();
-        var trimmedDetail = request.Detail.Trim();
+        var trimmedReason = HtmlContentHelper.ToPlainText(request.Reason);
+        var trimmedDetail = HtmlContentHelper.ToPlainText(request.Detail);
 
         if (string.IsNullOrWhiteSpace(trimmedReason))
         {

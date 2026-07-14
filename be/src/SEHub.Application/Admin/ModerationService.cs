@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Application.Feed;
 using SEHub.Application.Gamification;
 using SEHub.Application.Notifications;
@@ -28,12 +29,12 @@ public sealed class ModerationService : IModerationService
     private readonly ICommentReportRepository _commentReportRepository;
     private readonly ICommentRepository _commentRepository;
     private readonly IPostRepository _postRepository;
+    private readonly IPostImageService _postImageService;
     private readonly IPostTagRepository _postTagRepository;
     private readonly IUserRepository _userRepository;
     private readonly IUserProfileRepository _profileRepository;
     private readonly IUserBanRepository _banRepository;
     private readonly IBanStatusService _banStatusService;
-    private readonly IViolationEscalationRepository _escalationRepository;
     private readonly IViolationQueueRepository _violationQueueRepository;
     private readonly IConversationReportRepository _conversationReportRepository;
     private readonly IUserReportRepository _userReportRepository;
@@ -54,12 +55,12 @@ public sealed class ModerationService : IModerationService
         ICommentReportRepository commentReportRepository,
         ICommentRepository commentRepository,
         IPostRepository postRepository,
+        IPostImageService postImageService,
         IPostTagRepository postTagRepository,
         IUserRepository userRepository,
         IUserProfileRepository profileRepository,
         IUserBanRepository banRepository,
         IBanStatusService banStatusService,
-        IViolationEscalationRepository escalationRepository,
         IViolationQueueRepository violationQueueRepository,
         IConversationReportRepository conversationReportRepository,
         IUserReportRepository userReportRepository,
@@ -79,12 +80,12 @@ public sealed class ModerationService : IModerationService
         _commentReportRepository = commentReportRepository;
         _commentRepository = commentRepository;
         _postRepository = postRepository;
+        _postImageService = postImageService;
         _postTagRepository = postTagRepository;
         _userRepository = userRepository;
         _profileRepository = profileRepository;
         _banRepository = banRepository;
         _banStatusService = banStatusService;
-        _escalationRepository = escalationRepository;
         _violationQueueRepository = violationQueueRepository;
         _conversationReportRepository = conversationReportRepository;
         _userReportRepository = userReportRepository;
@@ -195,6 +196,7 @@ public sealed class ModerationService : IModerationService
             reportedPost = await _postRepository.GetByIdIncludingDeletedAsync(report.PostId, cancellationToken);
             if (reportedPost is not null && !reportedPost.IsDeleted)
             {
+                await _postImageService.DeleteImagesForPostAsync(reportedPost.Id, cancellationToken);
                 await _postRepository.SoftDeleteAsync(reportedPost, actorId, cancellationToken);
                 deletedPost = reportedPost;
             }
@@ -360,7 +362,9 @@ public sealed class ModerationService : IModerationService
         var action = request.Action.Trim().ToLowerInvariant();
         post.ModeratedById = actorId;
         post.ModeratedAt = DateTime.UtcNow;
-        post.ModerationNote = request.Note?.Trim();
+        post.ModerationNote = string.IsNullOrWhiteSpace(request.Note)
+            ? null
+            : HtmlContentHelper.ToPlainText(request.Note);
         post.UpdatedAt = DateTime.UtcNow;
 
         switch (action)
@@ -426,8 +430,7 @@ public sealed class ModerationService : IModerationService
     {
         var user = await SyncExpiredBanIfNeededAsync(userId, cancellationToken);
         var violationCount = await _banRepository.CountByUserIdAsync(userId, cancellationToken);
-        var escalation = await _escalationRepository.GetByUserIdAsync(userId, cancellationToken);
-        if (violationCount == 0 && escalation is null)
+        if (violationCount == 0)
         {
             throw new NotFoundException("ViolatingUser", userId);
         }
@@ -450,8 +453,8 @@ public sealed class ModerationService : IModerationService
             violationCount,
             warningCount,
             latestBan,
-            latestBan?.CreatedAt ?? escalation?.CreatedAt,
-            latestBan?.Reason ?? escalation?.Reason);
+            latestBan?.CreatedAt,
+            latestBan?.Reason);
 
         return new ViolatingUserDetailDto
         {
@@ -544,116 +547,6 @@ public sealed class ModerationService : IModerationService
         _trustScoreService.InvalidateCache(userId);
 
         return await MapViolatingUserAsync(userId, cancellationToken);
-    }
-
-    public async Task<EscalateUserReportResultDto> EscalateUserReportAsync(
-        Guid reportId,
-        EscalateUserReportRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        if (_currentUser.Role != RoleNames.Moderator && _currentUser.Role != RoleNames.Admin)
-        {
-            throw new ForbiddenException("Moderator access required.");
-        }
-
-        var actorId = _currentUser.UserId ?? throw new ForbiddenException("Authentication required.");
-        var source = request.Source.Trim().ToLowerInvariant();
-
-        Guid reportedUserId;
-        string reason;
-        string sourceType;
-
-        if (source is "account" or "user")
-        {
-            var report = await _userReportRepository.GetByIdAsync(reportId, cancellationToken)
-                ?? throw new NotFoundException("UserReport", reportId);
-
-            if (report.Status != ReportStatus.Pending)
-            {
-                throw new ForbiddenException("Only pending reports can be escalated.");
-            }
-
-            reportedUserId = report.ReportedUserId;
-            reason = $"{report.Reason}: {report.Detail}".Trim();
-            sourceType = ViolationEscalationConstants.SourceUserReport;
-
-            report.Status = ReportStatus.Resolved;
-            report.ResolvedById = actorId;
-            report.ResolutionNote = ViolationEscalationConstants.ResolutionNote;
-            report.UpdatedAt = DateTime.UtcNow;
-            await _userReportRepository.UpdateAsync(report, cancellationToken);
-        }
-        else if (source is "conversation")
-        {
-            var report = await _conversationReportRepository.GetByIdAsync(reportId, cancellationToken)
-                ?? throw new NotFoundException("ConversationReport", reportId);
-
-            if (report.Status != ReportStatus.Pending)
-            {
-                throw new ForbiddenException("Only pending reports can be escalated.");
-            }
-
-            reportedUserId = report.Conversation?.Participants
-                .FirstOrDefault(p => p.UserId != report.ReporterId)
-                ?.UserId
-                ?? throw new ForbiddenException("Could not determine reported user.");
-
-            reason = $"{report.Reason}: {report.Detail}".Trim();
-            sourceType = ViolationEscalationConstants.SourceConversationReport;
-
-            report.Status = ReportStatus.Resolved;
-            report.ResolvedById = actorId;
-            report.ResolutionNote = ViolationEscalationConstants.ResolutionNote;
-            report.UpdatedAt = DateTime.UtcNow;
-            await _conversationReportRepository.UpdateAsync(report, cancellationToken);
-        }
-        else
-        {
-            throw new ForbiddenException("Source must be conversation or account.");
-        }
-
-        if (reason.Length > 1000)
-        {
-            reason = reason[..1000];
-        }
-
-        var existing = await _escalationRepository.GetByUserIdAsync(reportedUserId, cancellationToken);
-        if (existing is null)
-        {
-            await _escalationRepository.AddAsync(new ViolationEscalation
-            {
-                Id = Guid.NewGuid(),
-                UserId = reportedUserId,
-                SourceReportId = reportId,
-                SourceType = sourceType,
-                Reason = reason,
-                EscalatedById = actorId,
-                CreatedAt = DateTime.UtcNow
-            }, cancellationToken);
-        }
-        else
-        {
-            existing.SourceReportId = reportId;
-            existing.SourceType = sourceType;
-            existing.Reason = reason;
-            existing.EscalatedById = actorId;
-            existing.UpdatedAt = DateTime.UtcNow;
-            await _escalationRepository.UpdateAsync(existing, cancellationToken);
-        }
-
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-        InvalidateModerationStatsCache();
-
-        var user = await _userRepository.GetByIdAsync(reportedUserId, cancellationToken)
-            ?? throw new NotFoundException("User", reportedUserId);
-
-        return new EscalateUserReportResultDto
-        {
-            UserId = user.Id,
-            Username = user.Username,
-            DisplayName = user.DisplayName,
-            ReportId = reportId
-        };
     }
 
     public async Task<ViolatingUserDto> WarnUserAsync(
@@ -1058,8 +951,7 @@ public sealed class ModerationService : IModerationService
     {
         var user = await SyncExpiredBanIfNeededAsync(userId, cancellationToken);
         var violationCount = await _banRepository.CountByUserIdAsync(userId, cancellationToken);
-        var escalation = await _escalationRepository.GetByUserIdAsync(userId, cancellationToken);
-        if (violationCount == 0 && escalation is null)
+        if (violationCount == 0)
         {
             throw new NotFoundException("ViolatingUser", userId);
         }
@@ -1074,8 +966,8 @@ public sealed class ModerationService : IModerationService
             violationCount,
             warningCount,
             latestBan,
-            latestBan?.CreatedAt ?? escalation?.CreatedAt,
-            latestBan?.Reason ?? escalation?.Reason);
+            latestBan?.CreatedAt,
+            latestBan?.Reason);
     }
 
     private static ViolatingUserDto BuildViolatingUserDto(

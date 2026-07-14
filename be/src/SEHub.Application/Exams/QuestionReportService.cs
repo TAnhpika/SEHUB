@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Application.Notifications;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Exams;
@@ -61,8 +62,8 @@ public sealed class QuestionReportService : IQuestionReportService
             throw new ConflictException("You have already reported this question.");
         }
 
-        var reason = request.Reason.Trim();
-        var detail = request.Detail.Trim();
+        var reason = HtmlContentHelper.ToPlainText(request.Reason);
+        var detail = HtmlContentHelper.ToPlainText(request.Detail);
         if (string.IsNullOrWhiteSpace(reason))
         {
             throw new DomainException("Vui lòng chọn lý do báo cáo.");

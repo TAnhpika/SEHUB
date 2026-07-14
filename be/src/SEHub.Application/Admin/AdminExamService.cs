@@ -1,8 +1,10 @@
 using AutoMapper;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Application.Exams;
 using SEHub.Application.Notifications;
+using SEHub.Application.Storage;
 using SEHub.Domain.Enums;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
@@ -18,6 +20,7 @@ public sealed class AdminExamService : IAdminExamService
     private readonly IExamRepository _examRepository;
     private readonly ISubjectRepository _subjectRepository;
     private readonly IExamAttachmentRepository _attachmentRepository;
+    private readonly IQuestionAttachmentRepository _questionAttachmentRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IWorkflowNotificationService _workflowNotifications;
@@ -28,6 +31,7 @@ public sealed class AdminExamService : IAdminExamService
         IExamRepository examRepository,
         ISubjectRepository subjectRepository,
         IExamAttachmentRepository attachmentRepository,
+        IQuestionAttachmentRepository questionAttachmentRepository,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         IWorkflowNotificationService workflowNotifications,
@@ -37,6 +41,7 @@ public sealed class AdminExamService : IAdminExamService
         _examRepository = examRepository;
         _subjectRepository = subjectRepository;
         _attachmentRepository = attachmentRepository;
+        _questionAttachmentRepository = questionAttachmentRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _workflowNotifications = workflowNotifications;
@@ -142,7 +147,10 @@ public sealed class AdminExamService : IAdminExamService
             exam.PaperCode = paperCode;
         }
 
-        if (request.Description is not null) exam.Description = request.Description;
+        if (request.Description is not null)
+        {
+            exam.Description = HtmlContentHelper.ToPlainText(request.Description);
+        }
         if (request.ExamType is not null && Enum.TryParse<ExamType>(request.ExamType, true, out var examType)) exam.ExamType = examType;
         if (request.Status is not null && Enum.TryParse<ExamStatus>(request.Status, true, out var status)) exam.Status = status;
 
@@ -220,10 +228,10 @@ public sealed class AdminExamService : IAdminExamService
         }
 
         exam.Status = ExamStatus.Rejected;
-        exam.RejectionReasonCode = request.ReasonCode.Trim();
+        exam.RejectionReasonCode = HtmlContentHelper.ToPlainText(request.ReasonCode);
         exam.RejectionReasonDetail = string.IsNullOrWhiteSpace(request.Detail)
-            ? request.ReasonLabel.Trim()
-            : $"{request.ReasonLabel.Trim()}: {request.Detail.Trim()}";
+            ? HtmlContentHelper.ToPlainText(request.ReasonLabel)
+            : $"{HtmlContentHelper.ToPlainText(request.ReasonLabel)}: {HtmlContentHelper.ToPlainText(request.Detail)}";
         exam.RejectedAt = DateTime.UtcNow;
         exam.RejectedById = _currentUser.UserId;
         exam.UpdatedAt = DateTime.UtcNow;
@@ -437,7 +445,7 @@ public sealed class AdminExamService : IAdminExamService
             Id = examId,
             PaperCode = request.PaperCode.Trim(),
             ExamType = examType,
-            Description = request.Description ?? string.Empty,
+            Description = HtmlContentHelper.ToPlainText(request.Description),
             SubmittedById = submittedById,
             Status = ExamStatus.PendingApproval,
             ContentHash = contentHash,
@@ -460,7 +468,7 @@ public sealed class AdminExamService : IAdminExamService
             Id = o.Id == Guid.Empty ? Guid.NewGuid() : o.Id,
             QuestionId = questionId,
             Label = o.Label,
-            Text = o.Text,
+            Text = HtmlContentHelper.SanitizeRichHtml(o.Text),
             CreatedAt = DateTime.UtcNow,
         }).ToList();
 
@@ -487,14 +495,49 @@ public sealed class AdminExamService : IAdminExamService
             Id = questionId,
             ExamId = examId,
             OrderIndex = item.OrderIndex,
-            Content = item.Content,
+            Content = HtmlContentHelper.SanitizePostHtml(item.Content),
             QuestionType = questionType,
             RequiredSelectCount = requiredSelectCount,
             CorrectOptionId = questionType == QuestionType.SingleChoice ? correctOptionIds[0] : null,
             CorrectOptionIdsJson = QuestionCorrectAnswers.SerializeCorrectOptionIds(correctOptionIds),
             CreatedAt = DateTime.UtcNow,
             Options = options,
+            Attachments = BuildAttachmentsFromUrls(questionId, item.ImageUrls),
         };
+    }
+
+    private static List<QuestionAttachment> BuildAttachmentsFromUrls(Guid questionId, IReadOnlyList<string>? imageUrls)
+    {
+        if (imageUrls is null || imageUrls.Count == 0)
+        {
+            return [];
+        }
+
+        var attachments = new List<QuestionAttachment>();
+        var sortOrder = 0;
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var raw in imageUrls)
+        {
+            var url = raw?.Trim();
+            if (string.IsNullOrWhiteSpace(url) || !seen.Add(url))
+            {
+                continue;
+            }
+
+            CdnUrlHelper.TryGetPublicId(url, out var publicId, out _);
+            attachments.Add(new QuestionAttachment
+            {
+                Id = Guid.NewGuid(),
+                QuestionId = questionId,
+                Url = url,
+                PublicId = publicId ?? string.Empty,
+                SortOrder = sortOrder++,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+
+        return attachments;
     }
 
     private static List<Guid> ResolveCorrectOptionIds(CreateExamQuestionItem item, IReadOnlyList<QuestionOption> options)
@@ -542,7 +585,7 @@ public sealed class AdminExamService : IAdminExamService
                     Id = Guid.NewGuid(),
                     QuestionId = questionId,
                     Label = o.Label,
-                    Text = o.Text,
+                    Text = HtmlContentHelper.SanitizeRichHtml(o.Text),
                     CreatedAt = DateTime.UtcNow,
                 }).ToList();
 
@@ -566,7 +609,7 @@ public sealed class AdminExamService : IAdminExamService
                     Id = questionId,
                     ExamId = revisionId,
                     OrderIndex = q.OrderIndex,
-                    Content = q.Content,
+                    Content = HtmlContentHelper.SanitizePostHtml(q.Content),
                     QuestionType = q.QuestionType,
                     RequiredSelectCount = q.RequiredSelectCount,
                     CorrectOptionId = q.QuestionType == QuestionType.SingleChoice
@@ -575,6 +618,18 @@ public sealed class AdminExamService : IAdminExamService
                     CorrectOptionIdsJson = QuestionCorrectAnswers.SerializeCorrectOptionIds(remappedCorrectIds),
                     CreatedAt = DateTime.UtcNow,
                     Options = options,
+                    Attachments = q.Attachments
+                        .OrderBy(a => a.SortOrder)
+                        .Select((a, index) => new QuestionAttachment
+                        {
+                            Id = Guid.NewGuid(),
+                            QuestionId = questionId,
+                            Url = a.Url,
+                            PublicId = a.PublicId,
+                            SortOrder = index,
+                            CreatedAt = DateTime.UtcNow,
+                        })
+                        .ToList(),
                 };
             })
             .ToList();
@@ -636,7 +691,7 @@ public sealed class AdminExamService : IAdminExamService
 
         if (request.Description is not null)
         {
-            exam.Description = request.Description;
+            exam.Description = HtmlContentHelper.ToPlainText(request.Description);
         }
 
         if (exam.ExamType == ExamType.Practice && request.Questions.Count == 0)
@@ -681,6 +736,12 @@ public sealed class AdminExamService : IAdminExamService
     private async Task<AdminExamDto> MapAdminExamAsync(Exam exam, CancellationToken cancellationToken)
     {
         var attachments = await _attachmentRepository.GetByExamIdAsync(exam.Id, cancellationToken);
+        var questionIds = exam.Questions.Select(q => q.Id).ToList();
+        var questionImages = await _questionAttachmentRepository.GetByQuestionIdsAsync(questionIds, cancellationToken);
+        var imagesByQuestion = questionImages
+            .GroupBy(a => a.QuestionId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(a => a.SortOrder).Select(ExamImageService.MapDto).ToList());
+
         var submitter = exam.SubmittedById is Guid submittedById
             ? await _userRepository.GetByIdAsync(submittedById, cancellationToken)
             : null;
@@ -726,7 +787,8 @@ public sealed class AdminExamService : IAdminExamService
                     Id = o.Id,
                     Label = o.Label,
                     Text = o.Text
-                }).ToList()
+                }).ToList(),
+                Images = imagesByQuestion.GetValueOrDefault(q.Id) ?? [],
             }).ToList()
         };
     }

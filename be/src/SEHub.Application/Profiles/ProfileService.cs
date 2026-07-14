@@ -1,5 +1,6 @@
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
+using SEHub.Application.Common;
 using SEHub.Application.Feed;
 using SEHub.Application.Storage;
 using SEHub.Application.Trust;
@@ -101,7 +102,7 @@ public sealed class ProfileService : IProfileService
             await _userRepository.UpdateDisplayNameAsync(userId, request.DisplayName, cancellationToken);
         }
 
-        if (request.Bio is not null) profile.Bio = request.Bio;
+        if (request.Bio is not null) profile.Bio = HtmlContentHelper.ToPlainText(request.Bio);
         if (request.Major is not null) profile.Major = request.Major;
         if (request.Semester is not null && int.TryParse(request.Semester, out var semester))
         {

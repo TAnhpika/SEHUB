@@ -93,7 +93,7 @@ public sealed class ReportIntegrationTests : IClassFixture<CustomWebApplicationF
     }
 
     [Fact]
-    public async Task EscalateUserReport_AddsUserToViolationsQueue()
+    public async Task WarnReportedUser_AddsUserToViolationsQueue()
     {
         await SeedEscalationTargetUserAsync();
 
@@ -118,10 +118,15 @@ public sealed class ReportIntegrationTests : IClassFixture<CustomWebApplicationF
         var queue = await queueResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResult<UserReportDto>>>();
         var report = queue!.Data!.Items.First(r => r.ReportedUserId == SocialPhase3EndpointsTests.TargetUserId);
 
-        var escalateResponse = await _client.PostAsJsonAsync(
-            $"/api/v1/admin/moderation/reports/{report.Id}/escalate-violations",
-            new EscalateUserReportRequest { Source = "account" });
-        escalateResponse.EnsureSuccessStatusCode();
+        var warnResponse = await _client.PostAsJsonAsync(
+            $"/api/v1/admin/moderation/users/{report.ReportedUserId}/warn",
+            new ModeratorWarnUserRequest { Reason = "Spam từ báo cáo — integration test." });
+        warnResponse.EnsureSuccessStatusCode();
+
+        var resolveResponse = await _client.PatchAsJsonAsync(
+            $"/api/v1/admin/moderation/user-reports/{report.Id}",
+            new ResolveUserReportRequest { Status = "Resolved", ResolutionNote = "warned" });
+        resolveResponse.EnsureSuccessStatusCode();
 
         var violationsResponse = await _client.GetAsync(
             "/api/v1/admin/moderation/violations?status=all&page=1&pageSize=20");

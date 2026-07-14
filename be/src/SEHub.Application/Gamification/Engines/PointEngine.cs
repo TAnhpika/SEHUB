@@ -89,6 +89,62 @@ public sealed class PointEngine : IPointEngine
         };
     }
 
+    public async Task<PointAwardResult> AwardFixedPointsAsync(
+        Guid userId,
+        int amount,
+        string ruleCode,
+        string idempotencyKey,
+        string sourceType,
+        Guid? sourceId,
+        CancellationToken cancellationToken = default)
+    {
+        if (amount <= 0)
+        {
+            return new PointAwardResult { Applied = false, Amount = 0, TotalPoints = 0 };
+        }
+
+        if (await _userRepository.IsCurrentlyBannedAsync(userId, cancellationToken))
+        {
+            return new PointAwardResult { Applied = false, Amount = 0, TotalPoints = 0 };
+        }
+
+        if (await _transactionRepository.ExistsByIdempotencyKeyAsync(idempotencyKey, cancellationToken))
+        {
+            var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+            return new PointAwardResult
+            {
+                Applied = false,
+                Amount = 0,
+                TotalPoints = user?.Points ?? 0
+            };
+        }
+
+        await _transactionRepository.AddAsync(new PointTransaction
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            RuleCode = ruleCode,
+            Amount = amount,
+            IdempotencyKey = idempotencyKey,
+            SourceType = sourceType,
+            SourceId = sourceId,
+            Status = PointTransactionStatus.Posted,
+            CreatedAt = DateTime.UtcNow
+        }, cancellationToken);
+
+        await _userRepository.ApplyPointDeltaAsync(userId, amount, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var updated = await _userRepository.GetByIdAsync(userId, cancellationToken);
+        return new PointAwardResult
+        {
+            Applied = true,
+            Amount = amount,
+            TotalPoints = updated?.Points ?? 0,
+            RuleCode = ruleCode
+        };
+    }
+
     public async Task<PointAwardResult> VoidByIdempotencyKeyAsync(
         Guid userId,
         string originalIdempotencyKey,

@@ -103,6 +103,7 @@ public sealed class PostsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Deprecated for posts — use POST /posts/{id}/images (PostImages gallery). Kept for question/exam editors.</summary>
     [HttpPost("upload-image")]
     [Authorize(Policy = PolicyNames.RequireAuthenticated)]
     [RequestSizeLimit(5_242_880)]
@@ -263,5 +264,13 @@ public sealed class PostsController : ControllerBase
 
         var result = await _postImageService.UploadImagesAsync(id, uploads, cancellationToken);
         return Ok(result);
+    }
+
+    [HttpDelete("{id:guid}/images/{imageId:guid}")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
+    public async Task<IActionResult> DeleteImage(Guid id, Guid imageId, CancellationToken cancellationToken)
+    {
+        await _postImageService.DeleteImageAsync(id, imageId, cancellationToken);
+        return Ok(new { message = "Image deleted" });
     }
 }

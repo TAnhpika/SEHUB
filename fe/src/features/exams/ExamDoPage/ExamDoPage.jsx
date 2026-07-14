@@ -11,6 +11,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/common/Toast/ToastProvider";
 import RichTextContent from "@/common/RichTextEditor/RichTextContent";
+import PostImagesGallery from "@/features/posts/PostImagesGallery/PostImagesGallery";
 import { useAuth } from "@/context";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { buildExamQuestions, EXAM_TYPE_LABELS, EXAM_USE_MOCK, loadExamMeta, loadReviewQuestions, resolveExamApiId } from "@/features/exams/examDetailData";
@@ -604,6 +605,7 @@ function ExamDoPage({ page = "review" }) {
                 value={currentQuestion.text}
                 className={styles["question-text"]}
               />
+              <PostImagesGallery images={currentQuestion.images} />
 
               {isMultiQuestion ? (
                 <p className={styles["multi-hint"]}>

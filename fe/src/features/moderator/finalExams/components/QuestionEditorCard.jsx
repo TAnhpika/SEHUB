@@ -6,6 +6,7 @@ import {
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import RichTextEditor from "@/common/RichTextEditor/RichTextEditor";
+import PostImagesPicker from "@/features/posts/PostImagesPicker/PostImagesPicker";
 import {
   OPTION_LABELS,
   QUESTION_TYPES,
@@ -173,6 +174,14 @@ function QuestionEditorCard({
           textareaClassName={styles.questionEditor}
           toolbarAriaLabel="Công cụ soạn câu hỏi"
           aria-labelledby={`question-${questionNumber}-content-label`}
+          allowImages={false}
+        />
+      </div>
+
+      <div className={styles.field}>
+        <PostImagesPicker
+          items={question.images ?? []}
+          onChange={(images) => onChange({ images })}
         />
       </div>
 
@@ -259,6 +268,7 @@ function QuestionEditorCard({
             textareaClassName={styles.textareaPlain}
             toolbarAriaLabel="Định dạng giải thích"
             aria-labelledby={`question-${questionNumber}-explanation-label`}
+            allowImages={false}
           />
         </div>
       )}

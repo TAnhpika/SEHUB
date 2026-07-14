@@ -1,9 +1,17 @@
 import { useState } from "react";
 import examStyles from "@/features/admin/exams/AdminExam.module.css";
 import pickerStyles from "@/features/moderator/finalExams/steps/FinalExamQuestionsStep.module.css";
+import PostImagesGallery from "@/features/posts/PostImagesGallery/PostImagesGallery";
 import styles from "./AdminExamQuestionViewer.module.css";
 
 function QuestionBody({ question, index }) {
+  const galleryImages =
+    question.images?.length > 0
+      ? question.images
+      : question.imageUrl
+        ? [{ id: "legacy", url: question.imageUrl }]
+        : [];
+
   return (
     <article className={examStyles.questionItem}>
       <p className={examStyles.questionText}>
@@ -14,9 +22,7 @@ function QuestionBody({ question, index }) {
           </span>
         ) : null}
       </p>
-      {question.imageUrl ? (
-        <img src={question.imageUrl} alt="" className={styles.questionImage} />
-      ) : null}
+      <PostImagesGallery images={galleryImages} />
       <ol className={examStyles.optionList}>
         {question.options.map((opt, optionIndex) => {
           const isCorrect =
