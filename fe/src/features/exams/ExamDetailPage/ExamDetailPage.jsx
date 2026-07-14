@@ -21,6 +21,7 @@ import { useRequirePremium } from "@/hooks/useRequirePremium";
 import ExamAiExplanation from "@/features/exams/ExamAiExplanation/ExamAiExplanation";
 import ExamAttachmentViewer from "@/features/exams/ExamAttachmentViewer/ExamAttachmentViewer";
 import ExamCommentsPanel from "@/features/exams/ExamCommentsPanel/ExamCommentsPanel";
+import PostImagesGallery from "@/features/posts/PostImagesGallery/PostImagesGallery";
 import { getExamSession } from "@/features/exams/examSession";
 import { getPracticeSession } from "@/features/exams/practiceSession";
 import {
@@ -618,6 +619,15 @@ function ExamDetailPage({ page }) {
                   {correctAnswerRevealed ? " · Đáp án đã hiện" : ""}
                 </p>
               )}
+              {isReviewExam && currentQuestion ? (
+                <>
+                  <RichTextContent
+                    value={currentQuestion.text}
+                    className={styles["question-text"]}
+                  />
+                  <PostImagesGallery images={currentQuestion.images} />
+                </>
+              ) : null}
               {showPracticeMockContent ? (
                 <RichTextContent
                   value={currentQuestion?.text}
