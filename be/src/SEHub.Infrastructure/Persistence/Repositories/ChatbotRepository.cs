@@ -168,6 +168,12 @@ public class ChatbotRepository : IChatbotRepository
         return Task.CompletedTask;
     }
 
+    public Task DeleteConversationAsync(ChatbotConversation conversation, CancellationToken cancellationToken = default)
+    {
+        _context.ChatbotConversations.Remove(conversation);
+        return Task.CompletedTask;
+    }
+
     public Task<IReadOnlyList<ChatbotMessage>> GetMessagesAsync(
         Guid conversationId,
         CancellationToken cancellationToken = default) =>

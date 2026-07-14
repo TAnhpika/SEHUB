@@ -20,6 +20,19 @@ export function sendChatbotMessage(body, options = {}) {
   });
 }
 
+export function renameChatbotConversation(conversationId, body) {
+  return apiRequest(`/api/v1/chatbot/conversations/${conversationId}`, {
+    method: "PATCH",
+    body,
+  });
+}
+
+export function deleteChatbotConversation(conversationId) {
+  return apiRequest(`/api/v1/chatbot/conversations/${conversationId}`, {
+    method: "DELETE",
+  });
+}
+
 export function getAdminChatbotSettings() {
   return apiRequest("/api/v1/admin/chatbot/settings");
 }

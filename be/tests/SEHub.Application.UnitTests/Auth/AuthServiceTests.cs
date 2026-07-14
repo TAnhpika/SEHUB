@@ -198,7 +198,7 @@ public sealed class AuthServiceTests
     [Fact]
     public async Task RefreshAsync_WithValidToken_RotatesAndReturnsNewPair()
     {
-        var user = CreateUser();
+        var user = CreateUser(emailConfirmed: true);
         var stored = new RefreshToken
         {
             Id = Guid.NewGuid(),
@@ -249,6 +249,103 @@ public sealed class AuthServiceTests
         stored.IsRevoked.Should().BeTrue();
         _refreshTokenRepository.Verify(r => r.RevokeAsync(stored, It.IsAny<CancellationToken>()), Times.Once);
         _refreshTokenRepository.Verify(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task LoginAsync_WhenRequireConfirmedEmailAndNotConfirmed_ThrowsEmailNotConfirmed()
+    {
+        var user = CreateUser(emailConfirmed: false);
+        _userRepository
+            .Setup(r => r.GetByEmailOrUsernameAsync("student@test.local", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _userRepository
+            .Setup(r => r.ValidatePasswordAsync(user.Id, "ValidPass1!", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var sut = CreateSut(new AuthSettings { RequireConfirmedEmail = true });
+        var act = () => sut.LoginAsync(new LoginRequest
+        {
+            EmailOrUsername = "student@test.local",
+            Password = "ValidPass1!"
+        });
+
+        var exception = await act.Should().ThrowAsync<ForbiddenException>();
+        exception.Which.Message.Should().Be(ErrorCodes.EmailNotConfirmed);
+    }
+
+    [Fact]
+    public async Task LoginAsync_WhenRequireConfirmedEmailFalseAndNotConfirmed_Succeeds()
+    {
+        var user = CreateUser(emailConfirmed: false);
+        _userRepository
+            .Setup(r => r.GetByEmailOrUsernameAsync("student@test.local", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _userRepository
+            .Setup(r => r.ValidatePasswordAsync(user.Id, "ValidPass1!", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        SetupSuccessfulLoginMocks(user);
+
+        var sut = CreateSut(new AuthSettings { RequireConfirmedEmail = false });
+        var result = await sut.LoginAsync(new LoginRequest
+        {
+            EmailOrUsername = "student@test.local",
+            Password = "ValidPass1!"
+        });
+
+        result.AccessToken.Should().Be("access-token");
+        result.User.EmailConfirmed.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task RefreshAsync_WhenRequireConfirmedEmailAndNotConfirmed_SucceedsAndReturnsEmailConfirmedFalse()
+    {
+        var user = CreateUser(emailConfirmed: false);
+        var stored = new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            Token = "old-refresh",
+            ExpiresAt = DateTime.UtcNow.AddDays(1),
+            IsRevoked = false,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _refreshTokenRepository
+            .Setup(r => r.FindByTokenValueAsync("old-refresh", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(stored);
+        _userRepository
+            .Setup(r => r.GetByIdAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _userRepository
+            .Setup(r => r.IsCurrentlyBannedAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _subscriptionRepository
+            .Setup(r => r.GetActiveByUserIdAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Domain.Entities.Subscription?)null);
+        _profileRepository
+            .Setup(r => r.GetByUserIdAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Domain.Entities.UserProfile?)null);
+        _jwtTokenService
+            .Setup(s => s.GenerateAccessToken(user, false))
+            .Returns(("new-access", 3600));
+        _jwtTokenService
+            .Setup(s => s.GenerateRefreshTokenValue())
+            .Returns("new-refresh");
+        _refreshTokenRepository
+            .Setup(r => r.RevokeAsync(stored, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        _refreshTokenRepository
+            .Setup(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        _unitOfWork
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        var sut = CreateSut(new AuthSettings { RequireConfirmedEmail = true });
+        var result = await sut.RefreshAsync(new RefreshTokenRequest { RefreshToken = "old-refresh" });
+
+        result.AccessToken.Should().Be("new-access");
+        result.User.EmailConfirmed.Should().BeFalse();
     }
 
     [Fact]
@@ -484,13 +581,14 @@ public sealed class AuthServiceTests
         exception.Which.Penalty.Reason.Should().Be("Spam");
     }
 
-    private static UserAccount CreateUser() => new()
+    private static UserAccount CreateUser(bool emailConfirmed = true) => new()
     {
         Id = UserId,
         Username = "student",
         Email = "student@test.local",
         DisplayName = "Student",
         Role = RoleNames.Student,
+        EmailConfirmed = emailConfirmed,
         Points = 0,
         CreatedAt = DateTime.UtcNow
     };

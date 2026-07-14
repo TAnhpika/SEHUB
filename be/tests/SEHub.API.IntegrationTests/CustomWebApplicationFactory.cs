@@ -80,6 +80,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 ["RateLimit:GoogleLoginPermitLimit"] = "100",
                 ["RateLimit:RegisterPermitLimit"] = "100",
                 ["RateLimit:RefreshPermitLimit"] = "100",
+                ["Auth:RequireConfirmedEmail"] = "true",
                 ["N8n:InboundSecretKey"] = N8nInboundSecretKey
             });
         });

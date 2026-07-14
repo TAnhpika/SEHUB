@@ -42,6 +42,7 @@ app.UseResponseCaching();
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseMiddleware<BannedUserMiddleware>();
+app.UseMiddleware<EmailConfirmedMiddleware>();
 app.UseAuthorization();
 app.UseRateLimiter();
 

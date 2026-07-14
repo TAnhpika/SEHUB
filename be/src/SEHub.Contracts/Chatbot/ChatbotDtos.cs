@@ -22,6 +22,11 @@ public sealed class ChatbotConversationDto
     public DateTime? UpdatedAt { get; init; }
 }
 
+public sealed class RenameChatbotConversationRequest
+{
+    public string Title { get; init; } = string.Empty;
+}
+
 public sealed class ChatbotReplyResponse
 {
     public Guid ConversationId { get; init; }

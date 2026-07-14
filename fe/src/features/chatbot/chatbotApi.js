@@ -1,7 +1,9 @@
 import {
+  deleteChatbotConversation,
   getChatbotConversation,
   getChatbotSettings,
   listChatbotConversations,
+  renameChatbotConversation,
   sendChatbotMessage,
 } from "@/api/chatbotApi";
 import {
@@ -23,6 +25,15 @@ export async function loadChatbotConversations() {
 export async function loadChatbotConversation(conversationId) {
   const dto = await getChatbotConversation(conversationId);
   return mapChatbotReplyResponse(dto);
+}
+
+export async function renameAdvisorConversation(conversationId, title) {
+  const dto = await renameChatbotConversation(conversationId, { title });
+  return mapChatbotConversationDto(dto);
+}
+
+export async function deleteAdvisorConversation(conversationId) {
+  await deleteChatbotConversation(conversationId);
 }
 
 export async function sendAdvisorMessage(message, conversationId) {

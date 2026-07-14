@@ -45,4 +45,23 @@ public sealed class ChatbotController : ControllerBase
         var result = await _chatbotService.SendMessageAsync(request, cancellationToken);
         return Ok(result);
     }
+
+    [HttpPatch("conversations/{conversationId:guid}")]
+    public async Task<IActionResult> RenameConversation(
+        Guid conversationId,
+        [FromBody] RenameChatbotConversationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _chatbotService.RenameConversationAsync(conversationId, request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpDelete("conversations/{conversationId:guid}")]
+    public async Task<IActionResult> DeleteConversation(
+        Guid conversationId,
+        CancellationToken cancellationToken)
+    {
+        await _chatbotService.DeleteConversationAsync(conversationId, cancellationToken);
+        return NoContent();
+    }
 }
