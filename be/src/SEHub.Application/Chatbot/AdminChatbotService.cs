@@ -40,11 +40,16 @@ public interface IAdminChatbotService
 public sealed class AdminChatbotService : IAdminChatbotService
 {
     private readonly IChatbotRepository _chatbotRepository;
+    private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public AdminChatbotService(IChatbotRepository chatbotRepository, IUnitOfWork unitOfWork)
+    public AdminChatbotService(
+        IChatbotRepository chatbotRepository,
+        IUserRepository userRepository,
+        IUnitOfWork unitOfWork)
     {
         _chatbotRepository = chatbotRepository;
+        _userRepository = userRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -134,15 +139,22 @@ public sealed class AdminChatbotService : IAdminChatbotService
         CancellationToken cancellationToken = default)
     {
         var conversations = await _chatbotRepository.GetRecentConversationsAsync(50, cancellationToken);
+        var userIds = conversations.Select(conversation => conversation.UserId).Distinct().ToList();
+        var users = await _userRepository.GetByIdsAsync(userIds, cancellationToken);
+        var usersById = users.ToDictionary(user => user.Id);
+
         var result = new List<AdminChatbotConversationDto>();
 
         foreach (var conversation in conversations)
         {
             var messages = await _chatbotRepository.GetMessagesAsync(conversation.Id, cancellationToken);
+            usersById.TryGetValue(conversation.UserId, out var user);
             result.Add(new AdminChatbotConversationDto
             {
                 Id = conversation.Id,
                 UserId = conversation.UserId,
+                Username = user?.Username ?? string.Empty,
+                DisplayName = user?.DisplayName ?? string.Empty,
                 Title = conversation.Title,
                 CreatedAt = conversation.CreatedAt,
                 MessageCount = messages.Count,

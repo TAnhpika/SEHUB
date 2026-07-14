@@ -73,6 +73,8 @@ public sealed class AdminChatbotConversationDto
 {
     public Guid Id { get; init; }
     public Guid UserId { get; init; }
+    public string Username { get; init; } = string.Empty;
+    public string DisplayName { get; init; } = string.Empty;
     public string Title { get; init; } = string.Empty;
     public DateTime CreatedAt { get; init; }
     public int MessageCount { get; init; }
