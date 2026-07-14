@@ -272,6 +272,18 @@
   background: #fffbeb;
 }
 
+.kpiWarn .kpiLabel {
+  color: #92400e;
+}
+
+.kpiWarn .kpiValue {
+  color: #78350f;
+}
+
+.kpiWarn .kpiHint {
+  color: #b45309;
+}
+
 .importTextarea {
   width: 100%;
   padding: 0.65rem 0.75rem;
