@@ -18,6 +18,7 @@ function buildQueueItem(id, label, count, to, urgent = count > 0) {
   return {
     id: `pending-${id}`,
     kind: "action",
+    type: inferAdminNotifType(to),
     title: `${label} (${count})`,
     desc: urgent ? "Cần xử lý sớm" : "Việc chờ trong hàng đợi",
     time: "Hôm nay",
@@ -26,10 +27,26 @@ function buildQueueItem(id, label, count, to, urgent = count > 0) {
   };
 }
 
+/** Gợi ý type icon theo đường dẫn admin. */
+function inferAdminNotifType(to = "") {
+  const path = String(to).toLowerCase();
+  if (path.includes("refund") || path.includes("payment") || path.includes("premium")) {
+    return "refund";
+  }
+  if (path.includes("feedback")) return "moderation";
+  if (path.includes("report")) return "moderation";
+  if (path.includes("exam")) return "examreview";
+  if (path.includes("moderation") || path.includes("content") || path.includes("featured")) {
+    return "moderation";
+  }
+  return "moderation";
+}
+
 function mapActivityItems(recent) {
   return recent.map((row) => ({
     id: `activity-${row.id}`,
     kind: "activity",
+    type: "activity",
     title: row.text,
     desc: null,
     time: row.time,
@@ -56,6 +73,7 @@ function mapAdminWorkflowNotifications(items) {
   return items.filter(isAdminWorkflowPush).map((item) => ({
     id: `notif-${item.id}`,
     kind: "action",
+    type: item.type || inferAdminNotifType(item.linkUrl),
     title: item.title,
     desc: item.body || null,
     time: item.time,

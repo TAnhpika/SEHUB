@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell } from "@fortawesome/free-solid-svg-icons";
+import {
+  faBell,
+  faClipboardCheck,
+  faClipboardList,
+  faClockRotateLeft,
+  faCommentDots,
+  faFileLines,
+  faRotateLeft,
+} from "@fortawesome/free-solid-svg-icons";
 import { mapNotificationItem } from "@/api/notificationsMapper";
 import { useChatHub } from "@/hooks/useChatHub";
 import {
@@ -11,7 +19,32 @@ import {
   loadAdminHeaderNotifications,
   loadAdminNotificationCount,
 } from "@/features/admin/adminHeaderNotifications";
+import { getNotificationIcon } from "@/features/notifications/notificationTypes";
 import styles from "./AdminHeader.module.css";
+
+const FALLBACK_ICONS = {
+  moderation: faClipboardCheck,
+  examreview: faFileLines,
+  refund: faRotateLeft,
+  feedback: faCommentDots,
+  activity: faClockRotateLeft,
+  practiceresult: faClipboardList,
+};
+
+function resolveItemIcon(item) {
+  if (item.type && item.type !== "activity") {
+    return getNotificationIcon(item.type);
+  }
+  return FALLBACK_ICONS[item.type] ?? faBell;
+}
+
+function resolveIconTone(item) {
+  if (item.kind === "activity") return "neutral";
+  if (item.type === "refund") return "amber";
+  if (item.type === "examreview") return "purple";
+  if (item.urgent) return "blue";
+  return "neutral";
+}
 
 function mapIncomingAdminNotification(payload) {
   const mapped = mapNotificationItem(payload);
@@ -22,6 +55,7 @@ function mapIncomingAdminNotification(payload) {
   return {
     id: `notif-${mapped.id}`,
     kind: "action",
+    type: mapped.type,
     title: mapped.title,
     desc: mapped.body || null,
     time: mapped.time,
@@ -30,7 +64,35 @@ function mapIncomingAdminNotification(payload) {
   };
 }
 
-function NotificationSection({ label, items, urgentLabel, onNavigate }) {
+function NotificationRow({ item, onNavigate }) {
+  const unread = Boolean(item.urgent);
+  const iconTone = resolveIconTone(item);
+
+  return (
+    <Link
+      to={item.to}
+      className={`${styles.notifRow} ${unread ? styles.notifRowUnread : styles.notifRowRead}`}
+      onClick={onNavigate}
+    >
+      <span
+        className={`${styles.notifAvatar} ${styles[`notifAvatar-${iconTone}`]}`}
+        aria-hidden="true"
+      >
+        <FontAwesomeIcon icon={resolveItemIcon(item)} />
+      </span>
+
+      <span className={styles.notifContent}>
+        <span className={styles.notifItemTitle}>{item.title}</span>
+        {item.desc ? <span className={styles.notifItemDesc}>{item.desc}</span> : null}
+        {item.time ? <span className={styles.notifItemTime}>{item.time}</span> : null}
+      </span>
+
+      {unread ? <span className={styles.notifUnreadDot} aria-label="Chưa xử lý" /> : null}
+    </Link>
+  );
+}
+
+function NotificationSection({ label, items, emphasize, onNavigate }) {
   if (items.length === 0) {
     return null;
   }
@@ -39,7 +101,7 @@ function NotificationSection({ label, items, urgentLabel, onNavigate }) {
     <section className={styles.notifPanelSection}>
       <p
         className={`${styles.notifPanelSectionLabel} ${
-          urgentLabel ? styles.notifPanelSectionUrgent : ""
+          emphasize ? styles.notifPanelSectionUrgent : ""
         }`}
       >
         {label}
@@ -47,14 +109,7 @@ function NotificationSection({ label, items, urgentLabel, onNavigate }) {
       <ul className={styles.notifList}>
         {items.map((item) => (
           <li key={item.id}>
-            <Link
-              to={item.to}
-              className={`${styles.notifItem} ${item.urgent ? styles.notifItemUrgent : ""}`}
-              onClick={onNavigate}
-            >
-              <span className={styles.notifItemTitle}>{item.title}</span>
-              {item.desc ? <span className={styles.notifItemDesc}>{item.desc}</span> : null}
-            </Link>
+            <NotificationRow item={item} onNavigate={onNavigate} />
           </li>
         ))}
       </ul>
@@ -65,6 +120,7 @@ function NotificationSection({ label, items, urgentLabel, onNavigate }) {
 function AdminNotificationDropdown() {
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState("all");
   const [payload, setPayload] = useState(() => getAdminHeaderNotifications());
   const [unreadCount, setUnreadCount] = useState(() => getAdminNotificationCount());
   const rootRef = useRef(null);
@@ -149,8 +205,18 @@ function AdminNotificationDropdown() {
   }, [open, refreshNotifications]);
 
   const { adminTasks, moderatorQueue, activity, counts } = payload;
+  const pendingOnly = filter === "pending";
+
+  const visibleAdminTasks = pendingOnly
+    ? adminTasks.filter((item) => item.urgent || item.kind === "action")
+    : adminTasks;
+  const visibleModQueue = pendingOnly
+    ? moderatorQueue.filter((item) => item.urgent || item.kind === "action")
+    : moderatorQueue;
+  const visibleActivity = pendingOnly ? [] : activity;
+
   const hasContent =
-    adminTasks.length > 0 || moderatorQueue.length > 0 || activity.length > 0;
+    visibleAdminTasks.length > 0 || visibleModQueue.length > 0 || visibleActivity.length > 0;
   const closePanel = () => setOpen(false);
 
   return (
@@ -186,25 +252,50 @@ function AdminNotificationDropdown() {
                 <span className={styles.notifPanelMeta}>{unreadCount} việc chờ</span>
               ) : null}
             </div>
+
+            <div className={styles.notifFilterTabs} role="tablist" aria-label="Lọc thông báo">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={filter === "all"}
+                className={`${styles.notifFilterTab} ${filter === "all" ? styles.notifFilterTabActive : ""}`}
+                onClick={() => setFilter("all")}
+              >
+                Tất cả
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={filter === "pending"}
+                className={`${styles.notifFilterTab} ${filter === "pending" ? styles.notifFilterTabActive : ""}`}
+                onClick={() => setFilter("pending")}
+              >
+                Việc chờ
+              </button>
+            </div>
           </header>
 
           {!hasContent ? (
-            <p className={styles.notifPanelEmpty}>Không có việc cần xử lý — hệ thống ổn định.</p>
+            <p className={styles.notifPanelEmpty}>
+              {pendingOnly
+                ? "Không còn việc chờ xử lý."
+                : "Không có việc cần xử lý — hệ thống ổn định."}
+            </p>
           ) : (
             <div className={styles.notifPanelBody}>
-              {adminTasks.length > 0 ? (
+              {visibleAdminTasks.length > 0 ? (
                 <NotificationSection
                   label={
                     counts.adminPending > 0
                       ? `Việc Admin (${counts.adminPending})`
                       : "Việc Admin"
                   }
-                  items={adminTasks}
-                  urgentLabel
+                  items={visibleAdminTasks}
+                  emphasize
                   onNavigate={closePanel}
                 />
-              ) : moderatorQueue.length > 0 ? (
-                <p className={styles.notifPanelEmpty}>Không có việc Admin cần xử lý.</p>
+              ) : visibleModQueue.length > 0 && !pendingOnly ? (
+                <p className={styles.notifPanelEmptyInline}>Không có việc Admin cần xử lý.</p>
               ) : null}
 
               <NotificationSection
@@ -213,31 +304,18 @@ function AdminNotificationDropdown() {
                     ? `Kiểm duyệt (${counts.moderatorPending})`
                     : "Kiểm duyệt"
                 }
-                items={moderatorQueue}
-                urgentLabel={false}
+                items={visibleModQueue}
+                emphasize={false}
                 onNavigate={closePanel}
               />
 
-              {activity.length > 0 ? (
-                <section className={styles.notifPanelSection}>
-                  <p className={styles.notifPanelSectionLabel}>Hoạt động gần đây</p>
-                  <ul className={styles.notifList}>
-                    {activity.map((item) => (
-                      <li key={item.id}>
-                        <Link
-                          to={item.to}
-                          className={styles.notifItem}
-                          onClick={closePanel}
-                        >
-                          <span className={styles.notifItemTitle}>{item.title}</span>
-                          {item.time ? (
-                            <span className={styles.notifItemTime}>{item.time}</span>
-                          ) : null}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+              {visibleActivity.length > 0 ? (
+                <NotificationSection
+                  label="Hoạt động gần đây"
+                  items={visibleActivity}
+                  emphasize={false}
+                  onNavigate={closePanel}
+                />
               ) : null}
             </div>
           )}
