@@ -12,7 +12,7 @@ function PostFeedSkeletonCard() {
         </div>
       </div>
       <Shimmer className={styles.title} />
-      <Shimmer className={styles.cover} />
+      <Shimmer className={styles.media} />
       <Shimmer className={styles.excerpt} />
       <Shimmer className={`${styles.excerpt} ${styles.excerptLast}`} />
       <div className={styles.tags}>

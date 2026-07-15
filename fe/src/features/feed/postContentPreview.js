@@ -22,8 +22,6 @@ export function extractFirstImageUrl(content) {
 export function resolvePostPreviewImage(post) {
   return (
     post?.images?.[0]?.url ??
-    post?.previewImageUrl ??
-    post?.coverImageUrl ??
     extractFirstImageUrl(post?.body) ??
     extractFirstImageUrl(post?.excerpt) ??
     null

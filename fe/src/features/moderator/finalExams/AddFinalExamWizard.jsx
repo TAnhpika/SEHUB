@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Outlet, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import * as adminApi from "@/api/adminApi";
 import { useExamFormFlow } from "@/features/exams/examFormFlow";
@@ -95,8 +95,9 @@ function WizardMetaSync({ isEditMode, isRevisionEdit }) {
 /**
  * Render route nội bộ 3 bước wizard hoặc `Outlet` khi dùng route cha bên ngoài.
  *
- * Khi `useExamFormFlow().useInternalRoutes` bật, mount trực tiếp các step component;
- * ngược lại delegate cho React Router `Outlet`.
+ * Khi `useExamFormFlow().useInternalRoutes` bật (mặc định cho Admin và Moderator),
+ * mount trực tiếp các step component qua Routes nội bộ — tránh Suspense/lazy ở App
+ * remount provider và mất state giữa các bước. Ngược lại dùng `Outlet`.
  *
  * @returns {import('react').ReactElement} Route nội bộ hoặc outlet.
  */
@@ -186,7 +187,8 @@ function WizardShell({ children }) {
 /**
  * Nội dung chính wizard: tải đề khi edit, hiển thị skeleton/lỗi, mount shell và routes.
  *
- * Tự động gọi `loadExamForEdit` khi URL có `examId`, hoặc `resetWizard` khi tạo mới.
+ * Tự động gọi `loadExamForEdit` khi URL có `examId`, hoặc `resetWizard`
+ * khi chuyển từ chế độ sửa sang tạo mới.
  *
  * @returns {import('react').ReactElement} Skeleton, thông báo lỗi, hoặc wizard đầy đủ.
  */
@@ -203,9 +205,18 @@ function WizardContent() {
     resetWizard,
   } = useFinalExamWizard();
 
+  const previousExamIdRef = useRef(examId);
+
   useEffect(() => {
+    const previousExamId = previousExamIdRef.current;
+    previousExamIdRef.current = examId;
+
+    // Create mode: only clear when leaving edit → add so step navigation
+    // never wipes in-progress examInfo / questions.
     if (!examId) {
-      resetWizard();
+      if (previousExamId) {
+        resetWizard();
+      }
       return undefined;
     }
 

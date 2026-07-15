@@ -29,6 +29,7 @@ public sealed class ModerationService : IModerationService
     private readonly ICommentReportRepository _commentReportRepository;
     private readonly ICommentRepository _commentRepository;
     private readonly IPostRepository _postRepository;
+    private readonly IPostImageRepository _postImageRepository;
     private readonly IPostImageService _postImageService;
     private readonly IPostTagRepository _postTagRepository;
     private readonly IUserRepository _userRepository;
@@ -55,6 +56,7 @@ public sealed class ModerationService : IModerationService
         ICommentReportRepository commentReportRepository,
         ICommentRepository commentRepository,
         IPostRepository postRepository,
+        IPostImageRepository postImageRepository,
         IPostImageService postImageService,
         IPostTagRepository postTagRepository,
         IUserRepository userRepository,
@@ -80,6 +82,7 @@ public sealed class ModerationService : IModerationService
         _commentReportRepository = commentReportRepository;
         _commentRepository = commentRepository;
         _postRepository = postRepository;
+        _postImageRepository = postImageRepository;
         _postImageService = postImageService;
         _postTagRepository = postTagRepository;
         _userRepository = userRepository;
@@ -367,12 +370,13 @@ public sealed class ModerationService : IModerationService
             : HtmlContentHelper.ToPlainText(request.Note);
         post.UpdatedAt = DateTime.UtcNow;
 
+        var approved = false;
         switch (action)
         {
             case "approve":
             case "published":
                 post.Status = PostStatus.Published;
-                await _gamificationService.AwardPostPublishedAsync(post.AuthorId, post.Id, cancellationToken);
+                approved = true;
                 break;
             case "reject":
             case "rejected":
@@ -386,14 +390,34 @@ public sealed class ModerationService : IModerationService
                 throw new ForbiddenException("Action must be approve or reject.");
         }
 
+        // Persist moderation decision first so side-effects cannot roll back / obscure success.
         await _postRepository.UpdateAsync(post, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await _workflowNotifications.NotifyPostAuthorModerationResultAsync(
-            post,
-            approved: action is "approve" or "published",
-            actorId,
-            cancellationToken);
+        if (approved)
+        {
+            try
+            {
+                await _gamificationService.AwardPostPublishedAsync(post.AuthorId, post.Id, cancellationToken);
+            }
+            catch (Exception)
+            {
+                // Decision already persisted; do not fail the moderation API for award pipeline errors.
+            }
+        }
+
+        try
+        {
+            await _workflowNotifications.NotifyPostAuthorModerationResultAsync(
+                post,
+                approved,
+                actorId,
+                cancellationToken);
+        }
+        catch (Exception)
+        {
+            // Decision already persisted; notification failure should not fail the moderation API.
+        }
 
         return await MapModerationDetailAsync(post, cancellationToken);
     }
@@ -891,6 +915,10 @@ public sealed class ModerationService : IModerationService
         var profilesByUserId = (profiles ?? []).ToDictionary(p => p.UserId);
         var postIds = posts.Select(p => p.Id).ToList();
         var tagsByPostId = await _postTagRepository.GetTagNamesForPostsAsync(postIds, cancellationToken);
+        var images = await _postImageRepository.GetByPostIdsAsync(postIds, cancellationToken);
+        var imagesByPostId = images
+            .GroupBy(i => i.PostId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(i => i.SortOrder).ToList());
 
         var dtos = new List<ModerationPostListItemDto>(posts.Count);
         foreach (var post in posts)
@@ -903,6 +931,7 @@ public sealed class ModerationService : IModerationService
             }
 
             profilesByUserId.TryGetValue(post.AuthorId, out var profile);
+            imagesByPostId.TryGetValue(post.Id, out var postImages);
 
             dtos.Add(new ModerationPostListItemDto
             {
@@ -912,6 +941,9 @@ public sealed class ModerationService : IModerationService
                 Status = post.Status.ToString(),
                 Author = BuildModerationAuthor(post.AuthorId, authorUser),
                 Tags = tagsByPostId.GetValueOrDefault(post.Id) ?? [],
+                Images = (postImages ?? [])
+                    .Select(PostImageService.MapDto)
+                    .ToList(),
                 Major = profile?.Major,
                 Semester = profile?.Semester,
                 CreatedAt = post.CreatedAt,
@@ -937,6 +969,7 @@ public sealed class ModerationService : IModerationService
             Status = listItem.Status,
             Author = listItem.Author,
             Tags = listItem.Tags,
+            Images = listItem.Images,
             Major = listItem.Major,
             Semester = listItem.Semester,
             CreatedAt = post.CreatedAt,

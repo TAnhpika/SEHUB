@@ -21,6 +21,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import * as adminApi from "@/api/adminApi";
 import { getPendingContentCount } from "@/features/moderator/content/contentModerationStore";
+import { syncCachedPendingContentCount } from "@/features/moderator/content/contentModerationService";
 import {
   getCommunityReportsPendingCount,
   syncCachedPendingReportsCount,
@@ -299,6 +300,7 @@ export async function loadModeratorNavBadgeCounts() {
   try {
     const stats = await adminApi.getModerationStats();
     syncCachedPendingReportsCount(stats.pendingReports ?? 0);
+    syncCachedPendingContentCount(stats.pendingPosts ?? 0);
     return {
       reports: stats.pendingReports ?? 0,
       content: stats.pendingPosts ?? 0,

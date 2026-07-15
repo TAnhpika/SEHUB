@@ -2,29 +2,35 @@ import { describe, expect, it } from "vitest";
 import { resolvePostPreviewImage } from "@/features/feed/postContentPreview";
 
 describe("resolvePostPreviewImage", () => {
-  it("prefers gallery images[0] over content scrape", () => {
+  it("prefers gallery images[0]", () => {
     const url = resolvePostPreviewImage({
-      images: [{ id: "1", url: "https://cdn.example/gallery.jpg" }],
-      previewImageUrl: "https://cdn.example/preview.jpg",
-      coverImageUrl: "https://cdn.example/cover.jpg",
-      body: '<p>x</p><img src="https://cdn.example/legacy.jpg" />',
+      images: [{ url: "https://cdn.example/gallery0.jpg" }],
+      body: '<img src="https://cdn.example/legacy.jpg" />',
+      excerpt: "no images here",
     });
-
-    expect(url).toBe("https://cdn.example/gallery.jpg");
+    expect(url).toBe("https://cdn.example/gallery0.jpg");
   });
 
-  it("falls back to preview/cover then legacy content", () => {
+  it("falls back to body scrape when gallery empty", () => {
     expect(
       resolvePostPreviewImage({
-        previewImageUrl: "https://cdn.example/preview.jpg",
-        body: '<img src="https://cdn.example/legacy.jpg" />',
+        images: [],
+        body: '<p>hi</p><img src="https://cdn.example/from-body.jpg" alt="x">',
       }),
-    ).toBe("https://cdn.example/preview.jpg");
+    ).toBe("https://cdn.example/from-body.jpg");
+  });
 
+  it("falls back to excerpt scrape when body has no image", () => {
     expect(
       resolvePostPreviewImage({
-        body: '<img src="https://cdn.example/legacy.jpg" />',
+        images: [],
+        body: "plain text",
+        excerpt: "![alt](https://cdn.example/from-excerpt.jpg)",
       }),
-    ).toBe("https://cdn.example/legacy.jpg");
+    ).toBe("https://cdn.example/from-excerpt.jpg");
+  });
+
+  it("returns null when no gallery or scraped image", () => {
+    expect(resolvePostPreviewImage({ images: [], body: "plain", excerpt: "plain" })).toBeNull();
   });
 });

@@ -62,8 +62,6 @@ export function mapPostListItem(dto) {
     views: dto.viewCount ?? 0,
     isPinned: dto.isPinned ?? false,
     isFeatured: dto.isFeatured ?? false,
-    coverImageUrl: resolveAssetUrl(dto.coverImageUrl),
-    previewImageUrl: resolveAssetUrl(dto.previewImageUrl),
     isLiked: dto.isLiked ?? false,
     images: (dto.images ?? []).map(mapPostImage),
     commentsList: [],

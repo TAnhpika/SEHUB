@@ -89,9 +89,3 @@ export function uploadPostContentImage(file) {
   formData.append("file", file);
   return apiUploadRequest("/api/v1/posts/upload-image", formData);
 }
-
-export function uploadPostCover(file) {
-  const formData = new FormData();
-  formData.append("file", file);
-  return apiUploadRequest("/api/v1/posts/upload-cover", formData);
-}

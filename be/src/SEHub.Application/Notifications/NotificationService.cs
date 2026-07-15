@@ -122,7 +122,13 @@ public sealed class NotificationService : INotificationService
         Guid? referenceId = null,
         CancellationToken cancellationToken = default)
     {
-        if (actorUserId.HasValue && actorUserId.Value == userId)
+        // Skip self for social alerts. Queue alerts (moderation / exam review) must still
+        // reach staff even when the actor is also a moderator/admin (solo-mod demo, self-report).
+        if (actorUserId.HasValue
+            && actorUserId.Value == userId
+            && type is not NotificationType.Moderation
+            and not NotificationType.ExamReview
+            and not NotificationType.ModeratorWelcome)
         {
             return;
         }

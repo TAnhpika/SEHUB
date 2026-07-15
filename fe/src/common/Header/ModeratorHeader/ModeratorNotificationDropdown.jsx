@@ -24,6 +24,7 @@ import headerStyles from "./ModeratorHeader.module.css";
 import styles from "./ModeratorHeaderDropdown.module.css";
 
 const STATS_EVENT = "sehub-moderator-stats-updated";
+const CONTENT_EVENT = "sehub-content-moderation-updated";
 
 /**
  * @typedef {Object} ModeratorNotificationItem
@@ -133,6 +134,19 @@ function ModeratorNotificationDropdown({ open, onToggle, onClose }) {
   }, [open, refreshNotifications]);
 
   useEffect(() => {
+    function handleStatsRefresh() {
+      refreshNotifications();
+    }
+
+    window.addEventListener(STATS_EVENT, handleStatsRefresh);
+    window.addEventListener(CONTENT_EVENT, handleStatsRefresh);
+    return () => {
+      window.removeEventListener(STATS_EVENT, handleStatsRefresh);
+      window.removeEventListener(CONTENT_EVENT, handleStatsRefresh);
+    };
+  }, [refreshNotifications]);
+
+  useEffect(() => {
     if (!open) return undefined;
 
     function handlePointerDown(event) {
@@ -195,8 +209,8 @@ function ModeratorNotificationDropdown({ open, onToggle, onClose }) {
             </ul>
           ) : (
             <p className={styles.empty}>
-              Không có việc chờ trong hàng đợi kiểm duyệt. Bạn sẽ nhận thông báo khi có báo cáo
-              mới, bài chờ duyệt hoặc bài nộp thực hành.
+              Chưa có thông báo kiểm duyệt mới. Khi có bài chờ duyệt, báo cáo hoặc bài nộp thực hành,
+              từng việc sẽ hiện cụ thể tại đây.
             </p>
           )}
 

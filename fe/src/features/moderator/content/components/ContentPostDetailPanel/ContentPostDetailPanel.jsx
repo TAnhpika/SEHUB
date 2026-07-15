@@ -1,7 +1,7 @@
 /**
  * @fileoverview Panel chi tiết bài viết dùng chung cho kiểm duyệt, lịch sử và bài nổi bật.
  *
- * Hiển thị đầy đủ: tiêu đề, nội dung rich text, ảnh bìa/inline, file đính kèm, metadata tác giả,
+ * Hiển thị đầy đủ: tiêu đề, nội dung rich text, ảnh bài viết, file đính kèm, metadata tác giả,
  * bản ghi quyết định kiểm duyệt, và footer hành động (duyệt/từ chối/ghim) tùy `mode`.
  *
  * @module features/moderator/content/components/ContentPostDetailPanel
@@ -18,7 +18,6 @@ import {
   faFileArchive,
   faFilePdf,
   faHeart,
-  faImage,
   faMousePointer,
   faRotateRight,
   faThumbtack,
@@ -186,7 +185,7 @@ function ContentPostDetailPanel({
     const emptyDesc =
       mode === "featured"
         ? "Nhấp bài đang ghim hoặc kết quả tìm kiếm để xem nội dung trước khi ghim đầu feed / nổi bật sidebar."
-        : "Xem đầy đủ tiêu đề, nội dung, ảnh bìa, ảnh trong bài và file đính kèm.";
+        : "Xem đầy đủ tiêu đề, nội dung, ảnh bài viết và file đính kèm.";
 
     return (
       <div className={styles.detailEmpty}>
@@ -199,7 +198,8 @@ function ContentPostDetailPanel({
 
   const bodyText = item.content ?? item.excerpt;
   const hasAttachments = item.attachments?.length > 0;
-  const hasInlineImages = item.inlineImages?.length > 0;
+  const postImages = item.images ?? [];
+  const hasImages = postImages.length > 0;
   const showModerationActions = mode === "queue" && item.status === "pending";
   const isFeaturedMode = mode === "featured";
   const featuredActive = Boolean(isFeatured || (isPinned && !onFeature && !onUnfeature));
@@ -249,37 +249,15 @@ function ContentPostDetailPanel({
       <div className={styles.detailBody}>
         {!isFeaturedMode ? <ModerationRecord item={item} /> : null}
 
-        {item.coverImage?.url ? (
-          <figure className={styles.coverFigure}>
-            <img
-              src={item.coverImage.url}
-              alt={item.coverImage.alt ?? item.title}
-              className={styles.coverImage}
-              loading="lazy"
-              decoding="async"
-            />
-            <figcaption className={styles.mediaCaption}>
-              <FontAwesomeIcon icon={faImage} />
-              Ảnh bìa
-              {item.coverImage.alt ? ` — ${item.coverImage.alt}` : ""}
-            </figcaption>
-          </figure>
-        ) : null}
-
-        <div className={styles.detailPreview}>
-          <p className={styles.detailPreviewLabel}>Nội dung bài viết</p>
-          <RichTextContent value={bodyText} className={styles.detailText} />
-        </div>
-
-        {hasInlineImages ? (
+        {hasImages ? (
           <section className={styles.mediaSection}>
-            <p className={styles.detailPreviewLabel}>Ảnh trong bài ({item.inlineImages.length})</p>
+            <p className={styles.detailPreviewLabel}>Ảnh bài viết ({postImages.length})</p>
             <div className={styles.inlineGrid}>
-              {item.inlineImages.map((image) => (
-                <figure key={image.url} className={styles.inlineFigure}>
+              {postImages.map((image) => (
+                <figure key={image.id ?? image.url} className={styles.inlineFigure}>
                   <img
                     src={image.url}
-                    alt={image.caption ?? "Ảnh trong bài"}
+                    alt={image.alt ?? image.caption ?? "Ảnh bài viết"}
                     className={styles.inlineImage}
                     loading="lazy"
                     decoding="async"
@@ -292,6 +270,11 @@ function ContentPostDetailPanel({
             </div>
           </section>
         ) : null}
+
+        <div className={styles.detailPreview}>
+          <p className={styles.detailPreviewLabel}>Nội dung bài viết</p>
+          <RichTextContent value={bodyText} className={styles.detailText} />
+        </div>
 
         {hasAttachments ? (
           <section className={styles.mediaSection}>

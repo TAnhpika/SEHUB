@@ -76,9 +76,6 @@ const AddPracticeExamPage = lazy(() => import("@/features/moderator/practiceExam
 const ModeratorExamContributionHistoryPage = lazy(() => import("@/features/moderator/exams/ModeratorExamContributionHistoryPage/ModeratorExamContributionHistoryPage"));
 const ModeratorPracticeSubmissionsPage = lazy(() => import("@/features/moderator/practiceExams/ModeratorPracticeSubmissionsPage"));
 const AddFinalExamWizard = lazy(() => import("@/features/moderator/finalExams/AddFinalExamWizard"));
-const FinalExamInfoStep = lazy(() => import("@/features/moderator/finalExams/steps/FinalExamInfoStep"));
-const FinalExamQuestionsStep = lazy(() => import("@/features/moderator/finalExams/steps/FinalExamQuestionsStep"));
-const FinalExamReviewStep = lazy(() => import("@/features/moderator/finalExams/steps/FinalExamReviewStep"));
 const ViolatingAccountsPage = lazy(() => import("@/features/moderator/violations/ViolatingAccountsPage/ViolatingAccountsPage"));
 const ContentModerationPage = lazy(() => import("@/features/moderator/content/ContentModerationPage/ContentModerationPage"));
 const ContentModerationHistoryPage = lazy(() => import("@/features/moderator/content/ContentModerationHistoryPage/ContentModerationHistoryPage"));
@@ -348,16 +345,8 @@ function App() {
                 <Route path="exams/history" element={<ModeratorExamContributionHistoryPage />} />
                 <Route path="practice-exams/add" element={<AddPracticeExamPage />} />
                 <Route path="practice-exams/edit/:examId" element={<AddPracticeExamPage />} />
-                <Route path="final-exams/add" element={<AddFinalExamWizard />}>
-                  <Route index element={<FinalExamInfoStep />} />
-                  <Route path="questions" element={<FinalExamQuestionsStep />} />
-                  <Route path="review" element={<FinalExamReviewStep />} />
-                </Route>
-                <Route path="final-exams/edit/:examId" element={<AddFinalExamWizard />}>
-                  <Route index element={<FinalExamInfoStep />} />
-                  <Route path="questions" element={<FinalExamQuestionsStep />} />
-                  <Route path="review" element={<FinalExamReviewStep />} />
-                </Route>
+                <Route path="final-exams/add/*" element={<AddFinalExamWizard />} />
+                <Route path="final-exams/edit/:examId/*" element={<AddFinalExamWizard />} />
               </Route>
             </Route>
             <Route path="/landing" element={<Navigate to="/" replace />} />
