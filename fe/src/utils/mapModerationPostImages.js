@@ -1,6 +1,8 @@
 import { resolveAssetUrl } from "@/api/assetUrl";
 
 /**
+ * Map ảnh moderation: tất cả ảnh vào gallery (inlineImages), ảnh đầu cũng làm cover cho thumbnail.
+ *
  * @param {Array<{ id?: string, sortOrder?: number, imagePath?: string, url?: string }>} images
  */
 export function mapModerationPostImages(images = []) {
@@ -12,8 +14,8 @@ export function mapModerationPostImages(images = []) {
       return {
         id: image.id ?? `img-${index}`,
         url,
-        alt: index === 0 ? "Ảnh bìa" : `Ảnh trong bài ${index}`,
-        caption: index > 0 ? `Ảnh ${index}` : undefined,
+        alt: `Ảnh ${index + 1}`,
+        caption: `Ảnh ${index + 1}`,
       };
     })
     .filter(Boolean);
@@ -24,7 +26,7 @@ export function mapModerationPostImages(images = []) {
 
   return {
     coverImage: { url: mapped[0].url, alt: mapped[0].alt },
-    inlineImages: mapped.slice(1).map((image) => ({
+    inlineImages: mapped.map((image) => ({
       url: image.url,
       caption: image.caption,
     })),

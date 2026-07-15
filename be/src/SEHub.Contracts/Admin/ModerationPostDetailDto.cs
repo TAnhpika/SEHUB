@@ -1,3 +1,5 @@
+using SEHub.Contracts.Feed;
+
 namespace SEHub.Contracts.Admin;
 
 public sealed class ModerationPostDetailDto
@@ -9,6 +11,7 @@ public sealed class ModerationPostDetailDto
     public string Status { get; init; } = string.Empty;
     public ModerationAuthorDto Author { get; init; } = null!;
     public IReadOnlyList<string> Tags { get; init; } = [];
+    public IReadOnlyList<PostImageDto> Images { get; init; } = [];
     public string? Major { get; init; }
     public int? Semester { get; init; }
     public DateTime CreatedAt { get; init; }

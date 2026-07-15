@@ -1,7 +1,7 @@
 /**
  * @fileoverview Panel chi tiết bài viết dùng chung cho kiểm duyệt, lịch sử và bài nổi bật.
  *
- * Hiển thị đầy đủ: tiêu đề, nội dung rich text, ảnh bìa/inline, file đính kèm, metadata tác giả,
+ * Hiển thị xem trước kiểu feed (tác giả → tiêu đề → nội dung → ảnh), file đính kèm,
  * bản ghi quyết định kiểm duyệt, và footer hành động (duyệt/từ chối/ghim) tùy `mode`.
  *
  * @module features/moderator/content/components/ContentPostDetailPanel
@@ -18,7 +18,6 @@ import {
   faFileArchive,
   faFilePdf,
   faHeart,
-  faImage,
   faMousePointer,
   faRotateRight,
   faThumbtack,
@@ -199,7 +198,13 @@ function ContentPostDetailPanel({
 
   const bodyText = item.content ?? item.excerpt;
   const hasAttachments = item.attachments?.length > 0;
-  const hasInlineImages = item.inlineImages?.length > 0;
+  const postImages =
+    item.inlineImages?.length > 0
+      ? item.inlineImages
+      : item.coverImage?.url
+        ? [{ url: item.coverImage.url, caption: item.coverImage.alt ?? "Ảnh 1" }]
+        : [];
+  const hasPostImages = postImages.length > 0;
   const showModerationActions = mode === "queue" && item.status === "pending";
   const isFeaturedMode = mode === "featured";
   const featuredActive = Boolean(isFeatured || (isPinned && !onFeature && !onUnfeature));
@@ -238,144 +243,118 @@ function ContentPostDetailPanel({
             </span>
           ) : null}
         </div>
-        <h2 className={styles.detailTitle}>{item.title}</h2>
-        <p className={styles.detailMeta}>
-          {isFeaturedMode ? "Đăng" : "Gửi"} {item.submittedAtLabel ?? item.timeLabel}
-          {item.semester ? ` · ${item.semester}` : ""}
-          {item.major && item.major !== "—" ? ` · ${item.major}` : ""}
-        </p>
+        <p className={styles.detailHeadHint}>Xem trước như trên cộng đồng</p>
       </header>
 
       <div className={styles.detailBody}>
         {!isFeaturedMode ? <ModerationRecord item={item} /> : null}
 
-        {item.coverImage?.url ? (
-          <figure className={styles.coverFigure}>
-            <img
-              src={item.coverImage.url}
-              alt={item.coverImage.alt ?? item.title}
-              className={styles.coverImage}
-              loading="lazy"
-              decoding="async"
-            />
-            <figcaption className={styles.mediaCaption}>
-              <FontAwesomeIcon icon={faImage} />
-              Ảnh bìa
-              {item.coverImage.alt ? ` — ${item.coverImage.alt}` : ""}
-            </figcaption>
-          </figure>
-        ) : null}
+        <article className={styles.postPreview}>
+          <header className={styles.postAuthorRow}>
+            <span className={styles.postAvatar} aria-hidden>
+              {item.authorInitial ?? item.authorName?.charAt(0)?.toUpperCase() ?? "?"}
+            </span>
+            <div className={styles.postAuthorMeta}>
+              <p className={styles.postAuthorName}>{item.authorName}</p>
+              <p className={styles.postAuthorSub}>
+                {item.studentId}
+                {item.submittedAtLabel || item.timeLabel
+                  ? ` · ${item.submittedAtLabel ?? item.timeLabel}`
+                  : ""}
+                {item.semester ? ` · ${item.semester}` : ""}
+                {item.major && item.major !== "—" ? ` · ${item.major}` : ""}
+              </p>
+            </div>
+          </header>
 
-        <div className={styles.detailPreview}>
-          <p className={styles.detailPreviewLabel}>Nội dung bài viết</p>
-          <RichTextContent value={bodyText} className={styles.detailText} />
-        </div>
+          <h3 className={styles.postTitle}>{item.title}</h3>
 
-        {hasInlineImages ? (
-          <section className={styles.mediaSection}>
-            <p className={styles.detailPreviewLabel}>Ảnh trong bài ({item.inlineImages.length})</p>
-            <div className={styles.inlineGrid}>
-              {item.inlineImages.map((image) => (
-                <figure key={image.url} className={styles.inlineFigure}>
+          {bodyText ? (
+            <div className={styles.postContent}>
+              <RichTextContent value={bodyText} className={styles.detailText} />
+            </div>
+          ) : null}
+
+          {hasPostImages ? (
+            <section
+              className={`${styles.postMedia} ${postImages.length === 1 ? styles.postMediaSingle : styles.postMediaGrid}`}
+              aria-label={`Ảnh bài viết (${postImages.length})`}
+            >
+              {postImages.map((image, index) => (
+                <figure key={image.url} className={styles.postFigure}>
                   <img
                     src={image.url}
-                    alt={image.caption ?? "Ảnh trong bài"}
-                    className={styles.inlineImage}
+                    alt={image.caption ?? `Ảnh ${index + 1}`}
+                    className={styles.postImage}
                     loading="lazy"
                     decoding="async"
                   />
-                  {image.caption ? (
-                    <figcaption className={styles.mediaCaption}>{image.caption}</figcaption>
-                  ) : null}
                 </figure>
               ))}
-            </div>
-          </section>
-        ) : null}
+            </section>
+          ) : null}
 
-        {hasAttachments ? (
-          <section className={styles.mediaSection}>
-            <p className={styles.detailPreviewLabel}>File đính kèm ({item.attachments.length})</p>
-            <ul className={styles.attachmentList}>
-              {item.attachments.map((file) => (
-                <li key={file.id} className={styles.attachmentItem}>
-                  <span className={styles.attachmentIcon} aria-hidden>
-                    <FontAwesomeIcon icon={AttachmentIcon({ type: file.type })} />
-                  </span>
-                  <div className={styles.attachmentMeta}>
-                    <p className={styles.attachmentName}>{file.name}</p>
-                    <p className={styles.attachmentSize}>{file.sizeLabel}</p>
-                  </div>
-                  {file.url ? (
-                    <a
-                      href={file.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={styles.attachmentBtn}
-                      download={file.name}
-                      aria-label={`Tải ${file.name}`}
-                    >
-                      <FontAwesomeIcon icon={faDownload} />
-                      Xem / tải
-                    </a>
-                  ) : null}
-                </li>
+          {hasAttachments ? (
+            <section className={styles.mediaSection} aria-label="File đính kèm">
+              <ul className={styles.attachmentList}>
+                {item.attachments.map((file) => (
+                  <li key={file.id} className={styles.attachmentItem}>
+                    <span className={styles.attachmentIcon} aria-hidden>
+                      <FontAwesomeIcon icon={AttachmentIcon({ type: file.type })} />
+                    </span>
+                    <div className={styles.attachmentMeta}>
+                      <p className={styles.attachmentName}>{file.name}</p>
+                      <p className={styles.attachmentSize}>{file.sizeLabel}</p>
+                    </div>
+                    {file.url ? (
+                      <a
+                        href={file.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.attachmentBtn}
+                        download={file.name}
+                        aria-label={`Tải ${file.name}`}
+                      >
+                        <FontAwesomeIcon icon={faDownload} />
+                        Xem / tải
+                      </a>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {item.tags?.length ? (
+            <div className={styles.detailTags}>
+              {item.tags.map((tag) => (
+                <span key={tag} className={styles.tag}>
+                  #{tag}
+                </span>
               ))}
-            </ul>
-          </section>
-        ) : null}
-
-        {item.tags?.length ? (
-          <div className={styles.detailTags}>
-            {item.tags.map((tag) => (
-              <span key={tag} className={styles.tag}>
-                #{tag}
-              </span>
-            ))}
-          </div>
-        ) : null}
-
-        <dl className={styles.detailGrid}>
-          <div className={styles.detailGridItem}>
-            <dt>Tác giả</dt>
-            <dd>{item.authorName}</dd>
-          </div>
-          <div className={styles.detailGridItem}>
-            <dt>Mã sinh viên</dt>
-            <dd>{item.studentId}</dd>
-          </div>
-          <div className={styles.detailGridItem}>
-            <dt>Học kỳ</dt>
-            <dd>{item.semester ?? "—"}</dd>
-          </div>
-          <div className={styles.detailGridItem}>
-            <dt>Chuyên ngành</dt>
-            <dd>{item.major ?? "—"}</dd>
-          </div>
-          {isFeaturedMode ? (
-            <>
-              <div className={styles.detailGridItem}>
-                <dt>Lượt thích</dt>
-                <dd className={styles.detailSetting}>
-                  <FontAwesomeIcon icon={faHeart} />
-                  {item.likes ?? 0}
-                </dd>
-              </div>
-              <div className={styles.detailGridItem}>
-                <dt>Số bình luận</dt>
-                <dd>{item.comments ?? 0}</dd>
-              </div>
-            </>
-          ) : (
-            <div className={styles.detailGridItem}>
-              <dt>Bình luận</dt>
-              <dd className={styles.detailSetting}>
-                <FontAwesomeIcon icon={item.allowComments ? faComment : faCommentSlash} />
-                {item.allowComments ? "Cho phép" : "Tắt"}
-              </dd>
             </div>
-          )}
-        </dl>
+          ) : null}
+
+          <footer className={styles.postMetaBar}>
+            {isFeaturedMode ? (
+              <>
+                <span className={styles.postMetaChip}>
+                  <FontAwesomeIcon icon={faHeart} />
+                  {item.likes ?? 0} thích
+                </span>
+                <span className={styles.postMetaChip}>
+                  <FontAwesomeIcon icon={faComment} />
+                  {item.comments ?? 0} bình luận
+                </span>
+              </>
+            ) : (
+              <span className={styles.postMetaChip}>
+                <FontAwesomeIcon icon={item.allowComments ? faComment : faCommentSlash} />
+                Bình luận: {item.allowComments ? "Cho phép" : "Tắt"}
+              </span>
+            )}
+          </footer>
+        </article>
       </div>
 
       {showModerationActions ? (

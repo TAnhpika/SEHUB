@@ -372,16 +372,12 @@ function ContentModerationPage({ portal = "moderator" }) {
                                                             <p className={styles.contentExcerpt}>{item.excerpt}</p>
                                                             <div className={styles.contentHints}>
                                                                 {item.resubmission ? <span className={styles.contentHintResubmit}>Gửi lại</span> : null}
-                                                                {item.coverImage?.url ? (
+                                                                {(item.inlineImages?.length || item.coverImage?.url) ? (
                                                                     <span className={styles.contentHint}>
                                                                         <FontAwesomeIcon icon={faImage} />
-                                                                        Ảnh bìa
-                                                                    </span>
-                                                                ) : null}
-                                                                {item.inlineImages?.length ? (
-                                                                    <span className={styles.contentHint}>
-                                                                        <FontAwesomeIcon icon={faImage} />
-                                                                        {item.inlineImages.length} ảnh
+                                                                        {item.inlineImages?.length
+                                                                            ? `${item.inlineImages.length} ảnh`
+                                                                            : "1 ảnh"}
                                                                     </span>
                                                                 ) : null}
                                                                 {item.attachments?.length ? (

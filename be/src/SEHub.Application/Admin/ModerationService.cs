@@ -11,6 +11,7 @@ using SEHub.Application.Users;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Exams;
+using SEHub.Contracts.Feed;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;
@@ -29,6 +30,7 @@ public sealed class ModerationService : IModerationService
     private readonly ICommentReportRepository _commentReportRepository;
     private readonly ICommentRepository _commentRepository;
     private readonly IPostRepository _postRepository;
+    private readonly IPostImageRepository _postImageRepository;
     private readonly IPostImageService _postImageService;
     private readonly IPostTagRepository _postTagRepository;
     private readonly IUserRepository _userRepository;
@@ -55,6 +57,7 @@ public sealed class ModerationService : IModerationService
         ICommentReportRepository commentReportRepository,
         ICommentRepository commentRepository,
         IPostRepository postRepository,
+        IPostImageRepository postImageRepository,
         IPostImageService postImageService,
         IPostTagRepository postTagRepository,
         IUserRepository userRepository,
@@ -80,6 +83,7 @@ public sealed class ModerationService : IModerationService
         _commentReportRepository = commentReportRepository;
         _commentRepository = commentRepository;
         _postRepository = postRepository;
+        _postImageRepository = postImageRepository;
         _postImageService = postImageService;
         _postTagRepository = postTagRepository;
         _userRepository = userRepository;
@@ -891,6 +895,10 @@ public sealed class ModerationService : IModerationService
         var profilesByUserId = (profiles ?? []).ToDictionary(p => p.UserId);
         var postIds = posts.Select(p => p.Id).ToList();
         var tagsByPostId = await _postTagRepository.GetTagNamesForPostsAsync(postIds, cancellationToken);
+        var postImages = await _postImageRepository.GetByPostIdsAsync(postIds, cancellationToken);
+        var imagesByPostId = (postImages ?? [])
+            .GroupBy(i => i.PostId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(i => i.SortOrder).Select(PostImageService.MapDto).ToList());
 
         var dtos = new List<ModerationPostListItemDto>(posts.Count);
         foreach (var post in posts)
@@ -912,6 +920,7 @@ public sealed class ModerationService : IModerationService
                 Status = post.Status.ToString(),
                 Author = BuildModerationAuthor(post.AuthorId, authorUser),
                 Tags = tagsByPostId.GetValueOrDefault(post.Id) ?? [],
+                Images = imagesByPostId.GetValueOrDefault(post.Id) ?? [],
                 Major = profile?.Major,
                 Semester = profile?.Semester,
                 CreatedAt = post.CreatedAt,
@@ -937,6 +946,7 @@ public sealed class ModerationService : IModerationService
             Status = listItem.Status,
             Author = listItem.Author,
             Tags = listItem.Tags,
+            Images = listItem.Images,
             Major = listItem.Major,
             Semester = listItem.Semester,
             CreatedAt = post.CreatedAt,
