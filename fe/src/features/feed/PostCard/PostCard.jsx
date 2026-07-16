@@ -141,8 +141,8 @@ function PostCard({ post, interactive = false, onOpen, onEdit, onDelete, onLikeC
           <h2 className={styles.title}>{post.title}</h2>
         </div>
         {previewImageUrl ? (
-          <div className={styles.coverWrap}>
-            <img src={previewImageUrl} alt="" className={styles.cover} loading="lazy" />
+          <div className={styles.mediaWrap}>
+            <img src={previewImageUrl} alt="" className={styles.media} loading="lazy" />
           </div>
         ) : null}
         {excerptText ? <p className={styles.excerpt}>{excerptText}</p> : null}

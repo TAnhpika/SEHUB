@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Gamification.Abstractions;
@@ -41,12 +40,20 @@ public sealed class PointEngine : IPointEngine
     {
         if (await _userRepository.IsCurrentlyBannedAsync(userId, cancellationToken))
         {
+            _logger.LogWarning(
+                "Skip points for banned user {UserId} on event {EventType}",
+                userId,
+                eventType);
             return new PointAwardResult { Applied = false, Amount = 0, TotalPoints = 0 };
         }
 
         if (await _transactionRepository.ExistsByIdempotencyKeyAsync(idempotencyKey, cancellationToken))
         {
             var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+            _logger.LogInformation(
+                "Skip duplicate points award for {EventType} key {IdempotencyKey}",
+                eventType,
+                idempotencyKey);
             return new PointAwardResult
             {
                 Applied = false,
@@ -59,6 +66,10 @@ public sealed class PointEngine : IPointEngine
         var rule = rules.FirstOrDefault();
         if (rule is null || rule.Points == 0)
         {
+            _logger.LogWarning(
+                "No active point rule for event {EventType}; points not applied for user {UserId}",
+                eventType,
+                userId);
             return new PointAwardResult { Applied = false, Amount = 0, TotalPoints = 0 };
         }
 

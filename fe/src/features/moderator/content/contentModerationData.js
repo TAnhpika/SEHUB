@@ -109,15 +109,9 @@ Mình attach slide ôn và vài bài tập mẫu bên dưới. Cảm ơn mọi n
     semester: "Fall 2025",
     major: "SE",
     tags: ["CSD", "FE"],
-    coverImage: {
-      url: "https://picsum.photos/seed/sehub-csd/960/480",
-      alt: "Ảnh bìa — ôn tập Cấu trúc dữ liệu",
-    },
-    inlineImages: [
-      {
-        url: "https://picsum.photos/seed/sehub-bst/720/405",
-        caption: "Minh họa cây nhị phân tìm kiếm (BST)",
-      },
+    images: [
+      { url: "https://picsum.photos/seed/sehub-csd/960/480", alt: "ôn tập Cấu trúc dữ liệu", caption: "Ảnh 1" },
+      { url: "https://picsum.photos/seed/sehub-bst/720/405", alt: "Ảnh 2", caption: "Ảnh 2" }
     ],
     attachments: [
       {
@@ -159,11 +153,9 @@ Inbox GitHub hoặc comment bên dưới nếu bạn quan tâm nhé!`,
     semester: "Fall 2025",
     major: "SE",
     tags: ["Hackathon", "Team"],
-    coverImage: {
-      url: "https://picsum.photos/seed/sehub-hack/960/480",
-      alt: "Poster Hackathon FPT 2024",
-    },
-    inlineImages: [],
+    images: [
+      { url: "https://picsum.photos/seed/sehub-hack/960/480", alt: "Poster Hackathon FPT 2024", caption: "Ảnh 1" }
+    ],
     attachments: [{ id: "att-3", name: "hackathon_pitch_deck.pdf", sizeLabel: "3.1 MB", type: "pdf" }],
     allowComments: true,
     anonymous: false,
@@ -190,12 +182,8 @@ File lộ trình chi tiết và checklist ôn tập mình để trong file đín
     semester: "Summer 2025",
     major: "SE",
     tags: ["PRF192"],
-    coverImage: null,
-    inlineImages: [
-      {
-        url: "https://picsum.photos/seed/sehub-prf/720/405",
-        caption: "Screenshot lịch ôn PRF192 trên Notion",
-      },
+    images: [
+      { url: "https://picsum.photos/seed/sehub-prf/720/405", alt: "Ảnh 1", caption: "Ảnh 1" }
     ],
     attachments: [
       { id: "att-4", name: "PRF192_4week_plan.pdf", sizeLabel: "1.2 MB", type: "pdf" },
@@ -227,11 +215,9 @@ Mình đính kèm template SRS team mình dùng (đạt 8.5).`,
     semester: "Fall 2025",
     major: "SE",
     tags: ["SWR302"],
-    coverImage: {
-      url: "https://picsum.photos/seed/sehub-swr/960/480",
-      alt: "Use case diagram mẫu",
-    },
-    inlineImages: [],
+    images: [
+      { url: "https://picsum.photos/seed/sehub-swr/960/480", alt: "Use case diagram mẫu", caption: "Ảnh 1" }
+    ],
     attachments: [{ id: "att-6", name: "SWR302_SRS_template.docx", sizeLabel: "680 KB", type: "file" }],
     allowComments: true,
     anonymous: true,
@@ -257,8 +243,7 @@ Cảm ơn mọi người!`,
     semester: "Summer 2025",
     major: "SE",
     tags: ["MAD", "FE"],
-    coverImage: null,
-    inlineImages: [],
+    images: [],
     attachments: [],
     allowComments: true,
     anonymous: false,
@@ -288,13 +273,10 @@ Mọi người dùng cẩn thận, đối chiếu thêm slide nhé!`,
     semester: "Summer 2025",
     major: "SE",
     tags: ["MAD", "FE"],
-    coverImage: {
-      url: "https://picsum.photos/seed/sehub-mad/960/480",
-      alt: "Trang bìa đề MAD",
-    },
-    inlineImages: [
-      { url: "https://picsum.photos/seed/sehub-mad2/720/405", caption: "Trang 1 — đề trắc nghiệm mẫu" },
-      { url: "https://picsum.photos/seed/sehub-mad3/720/405", caption: "Trang 2 — câu hỏi design pattern" },
+    images: [
+      { url: "https://picsum.photos/seed/sehub-mad/960/480", alt: "Trang bìa đề MAD", caption: "Ảnh 1" },
+      { url: "https://picsum.photos/seed/sehub-mad2/720/405", alt: "Ảnh 2", caption: "Ảnh 2" },
+      { url: "https://picsum.photos/seed/sehub-mad3/720/405", alt: "Ảnh 3", caption: "Ảnh 3" }
     ],
     attachments: [
       { id: "att-7", name: "MAD_FE_Summer2025_bundle.zip", sizeLabel: "8.6 MB", type: "zip" },
@@ -332,11 +314,9 @@ Mình đã kiểm tra link và file PDF, không chứa nội dung vi phạm. Ch�
     semester: "Fall 2025",
     major: "SE",
     tags: ["WED201c"],
-    coverImage: {
-      url: "https://picsum.photos/seed/sehub-wed/960/480",
-      alt: "Slide WED201c",
-    },
-    inlineImages: [],
+    images: [
+      { url: "https://picsum.photos/seed/sehub-wed/960/480", alt: "Slide WED201c", caption: "Ảnh 1" }
+    ],
     attachments: [{ id: "att-h1", name: "WED201c_week1-5.pdf", sizeLabel: "4.2 MB", type: "pdf" }],
     allowComments: true,
     anonymous: false,
@@ -365,9 +345,8 @@ Team mình dùng branch develop + PR review, tránh merge thẳng main.`,
     semester: "Summer 2025",
     major: "SE",
     tags: ["SWP391", "Team"],
-    coverImage: null,
-    inlineImages: [
-      { url: "https://picsum.photos/seed/sehub-swp/720/405", caption: "Board phân task trên Trello" },
+    images: [
+      { url: "https://picsum.photos/seed/sehub-swp/720/405", alt: "Ảnh 1", caption: "Ảnh 1" }
     ],
     attachments: [],
     allowComments: true,
@@ -397,8 +376,7 @@ Giá 50k, chuyển khoản trước. Không refund.`,
     semester: "Fall 2025",
     major: "SE",
     tags: ["PRF192"],
-    coverImage: null,
-    inlineImages: [],
+    images: [],
     attachments: [{ id: "att-h3", name: "preview_de.pdf", sizeLabel: "120 KB", type: "pdf" }],
     allowComments: false,
     anonymous: false,
@@ -428,8 +406,7 @@ Link: [đã gỡ] — dùng cho mục đích học tập.`,
     semester: "Fall 2025",
     major: "SE",
     tags: ["Tools"],
-    coverImage: null,
-    inlineImages: [],
+    images: [],
     attachments: [],
     allowComments: true,
     anonymous: true,
@@ -459,8 +436,7 @@ Xin hỏi lịch thi chính thức MAE101 kỳ Summer 2025 và phòng thi FE ạ
     semester: "Summer 2025",
     major: "SE",
     tags: ["MAE101"],
-    coverImage: null,
-    inlineImages: [],
+    images: [],
     attachments: [],
     allowComments: true,
     anonymous: false,

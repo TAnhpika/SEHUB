@@ -10,7 +10,9 @@ export const MODERATOR_EXAM_FLOW = {
   examsListPath: "/moderator/exams/history",
   examsNewPath: null,
   breadcrumbRoot: "Moderator",
-  useInternalRoutes: false,
+  // Keep steps inside the wizard tree (eager imports) so Suspense on App.jsx
+  // lazy routes cannot remount FinalExamWizardProvider and wipe in-progress state.
+  useInternalRoutes: true,
 };
 
 export const ADMIN_EXAM_FLOW = {

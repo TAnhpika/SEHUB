@@ -10,7 +10,6 @@ import {
   resolvePublicExamName,
   stripRevisionLabel,
 } from "@/utils/examDisplay";
-import { mapModerationPostImages } from "@/utils/mapModerationPostImages";
 import { getExamAssetFileName } from "@/utils/examAssetUrl";
 import {
   mapImportedExamQuestions,

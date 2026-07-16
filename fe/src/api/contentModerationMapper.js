@@ -45,8 +45,7 @@ import {
  * @property {number} sortOrder - Mốc thời gian dạng số để sắp xếp.
  * @property {boolean} allowComments - Cho phép hiển thị/duy trì comment.
  * @property {ModerationRecordUi|null} moderation - Thông tin moderator xử lý nếu có.
- * @property {*} coverImage - Ảnh cover đã map cho UI.
- * @property {Array} inlineImages - Ảnh inline trong nội dung bài viết.
+ * @property {Array} images - Gallery ảnh bài viết (đã sort theo sortOrder).
  * @property {Array} attachments - Tệp đính kèm; hiện để rỗng cho bài community.
  */
 
@@ -127,10 +126,10 @@ export function mapModerationPostListItem(dto) {
   const uiStatus = mapModerationUiStatus(dto.status);
   const authorLabel = dto.author?.displayName?.trim() || dto.author?.username || "Unknown";
   const createdAt = dto.createdAt;
-  const { coverImage, inlineImages } = mapModerationPostImages(dto.images ?? []);
+  const images = mapModerationPostImages(dto.images ?? []);
 
   return {
-    id: dto.id,
+    id: dto.id != null ? String(dto.id) : dto.id,
     type: "post",
     title: dto.title,
     excerpt: dto.excerpt,
@@ -148,8 +147,7 @@ export function mapModerationPostListItem(dto) {
     sortOrder: parseApiDate(createdAt)?.getTime() ?? 0,
     allowComments: true,
     moderation: mapModerationRecord(dto, uiStatus),
-    coverImage,
-    inlineImages,
+    images,
     attachments: [],
   };
 }

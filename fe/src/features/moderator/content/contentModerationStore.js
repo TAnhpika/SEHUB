@@ -96,8 +96,8 @@ function saveMockContentItems(items) {
  * @returns {Object[]} Mảng mới (immutable).
  */
 function patchMockItems(items, ids, patch) {
-  const idSet = new Set(ids);
-  return items.map((item) => (idSet.has(item.id) ? { ...item, ...patch } : item));
+  const idSet = new Set((ids ?? []).map((id) => String(id)));
+  return items.map((item) => (idSet.has(String(item.id)) ? { ...item, ...patch } : item));
 }
 
 /**
@@ -247,32 +247,40 @@ export function useContentModerationQueue() {
 
   const approveItems = useCallback(
     async (ids) => {
+      const uniqueIds = [...new Set((ids ?? []).map((id) => String(id)).filter(Boolean))];
       if (CONTENT_MODERATION_USE_MOCK) {
-        const next = approveMockItems(loadMockContentItems(), ids);
+        const next = approveMockItems(loadMockContentItems(), uniqueIds);
         saveMockContentItems(next);
         setItems(next);
         notifyUpdated();
-        return;
+        return { succeeded: uniqueIds, failed: [] };
       }
 
-      await approveModerationPosts(ids);
-      await refresh(sort, search);
+      try {
+        return await approveModerationPosts(uniqueIds);
+      } finally {
+        await refresh(sort, search);
+      }
     },
     [refresh, sort, search],
   );
 
   const rejectItems = useCallback(
     async (ids, reason) => {
+      const uniqueIds = [...new Set((ids ?? []).map((id) => String(id)).filter(Boolean))];
       if (CONTENT_MODERATION_USE_MOCK) {
-        const next = rejectMockItems(loadMockContentItems(), ids, reason);
+        const next = rejectMockItems(loadMockContentItems(), uniqueIds, reason);
         saveMockContentItems(next);
         setItems(next);
         notifyUpdated();
-        return;
+        return { succeeded: uniqueIds, failed: [] };
       }
 
-      await rejectModerationPosts(ids, reason);
-      await refresh(sort, search);
+      try {
+        return await rejectModerationPosts(uniqueIds, reason);
+      } finally {
+        await refresh(sort, search);
+      }
     },
     [refresh, sort, search],
   );

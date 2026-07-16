@@ -185,7 +185,7 @@ function ContentPostDetailPanel({
     const emptyDesc =
       mode === "featured"
         ? "Nhấp bài đang ghim hoặc kết quả tìm kiếm để xem nội dung trước khi ghim đầu feed / nổi bật sidebar."
-        : "Xem đầy đủ tiêu đề, nội dung, ảnh bìa, ảnh trong bài và file đính kèm.";
+        : "Xem đầy đủ tiêu đề, nội dung, ảnh bài viết và file đính kèm.";
 
     return (
       <div className={styles.detailEmpty}>
@@ -198,12 +198,7 @@ function ContentPostDetailPanel({
 
   const bodyText = item.content ?? item.excerpt;
   const hasAttachments = item.attachments?.length > 0;
-  const postImages =
-    item.inlineImages?.length > 0
-      ? item.inlineImages
-      : item.coverImage?.url
-        ? [{ url: item.coverImage.url, caption: item.coverImage.alt ?? "Ảnh 1" }]
-        : [];
+  const postImages = item.images ?? [];
   const hasPostImages = postImages.length > 0;
   const showModerationActions = mode === "queue" && item.status === "pending";
   const isFeaturedMode = mode === "featured";
@@ -281,10 +276,10 @@ function ContentPostDetailPanel({
               aria-label={`Ảnh bài viết (${postImages.length})`}
             >
               {postImages.map((image, index) => (
-                <figure key={image.url} className={styles.postFigure}>
+                <figure key={image.id ?? image.url} className={styles.postFigure}>
                   <img
                     src={image.url}
-                    alt={image.caption ?? `Ảnh ${index + 1}`}
+                    alt={image.alt ?? image.caption ?? `Ảnh ${index + 1}`}
                     className={styles.postImage}
                     loading="lazy"
                     decoding="async"

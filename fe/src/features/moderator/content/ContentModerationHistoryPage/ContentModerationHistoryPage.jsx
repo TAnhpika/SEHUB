@@ -387,10 +387,10 @@ function ContentModerationHistoryPage({ portal = "moderator" }) {
                               <p className={styles.contentTitle}>{item.title}</p>
                               <p className={styles.contentExcerpt}>{item.excerpt}</p>
                               <div className={styles.contentHints}>
-                                {item.coverImage?.url ? (
+                                {item.images?.length ? (
                                   <span className={styles.contentHint}>
                                     <FontAwesomeIcon icon={faImage} />
-                                    Ảnh bìa
+                                    {item.images.length} ảnh
                                   </span>
                                 ) : null}
                               </div>

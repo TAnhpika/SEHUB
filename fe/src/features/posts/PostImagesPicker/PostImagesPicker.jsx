@@ -107,14 +107,13 @@ function PostImagesPicker({ items, onChange, disabled = false, maxFiles = 12 }) 
           <FontAwesomeIcon icon={faImage} />
           Ảnh bài viết
         </span>
-        <p className={styles.hint}>Ảnh đầu tiên dùng làm ảnh bìa / xem trước trên feed.</p>
+        <p className={styles.hint}>Ảnh đầu dùng xem trước trên feed.</p>
       </div>
 
       <div className={styles.grid}>
         {items.map((item, index) => (
           <div key={item.key} className={styles.tile}>
             <img src={item.previewUrl} alt="" className={styles.thumb} />
-            {index === 0 ? <span className={styles.coverBadge}>Bìa</span> : null}
             <div className={styles.tileActions}>
               <button
                 type="button"

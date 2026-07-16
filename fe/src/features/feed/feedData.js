@@ -212,8 +212,6 @@ export async function submitPost({ title, content, tags, imageFiles = [] }) {
         sortOrder: dto.sortOrder ?? 0,
         url: resolveAssetUrl(dto.imagePath ?? dto.url),
       }));
-      post.coverImageUrl = post.images[0]?.url ?? post.coverImageUrl;
-      post.previewImageUrl = post.images[0]?.url ?? post.previewImageUrl;
     } catch (err) {
       imageUploadError = err.message ?? "Không tải được ảnh bài viết.";
     }

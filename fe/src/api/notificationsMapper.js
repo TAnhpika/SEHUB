@@ -43,6 +43,13 @@ function resolveNotificationLinkUrl(type, linkUrl, actorUsername, referenceId) {
     return `${linkUrl}?id=${encodeURIComponent(referenceId)}`;
   }
 
+  if (
+    referenceId &&
+    (linkUrl === "/moderator/content" || linkUrl === "/admin/moderation/content")
+  ) {
+    return `${linkUrl}?id=${encodeURIComponent(referenceId)}`;
+  }
+
   return linkUrl ?? null;
 }
 
