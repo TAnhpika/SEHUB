@@ -100,48 +100,9 @@ File PDF đính kèm bên dưới, mọi người tải về ôn nhé!`,
     major: "SE",
     studentId: "SE160221",
     tags: ["CO2013", "FE"],
-    coverImage: {
-      url: "https://picsum.photos/seed/sehub-co2013/960/480",
-      alt: "Ảnh bìa — đề CO2013",
-    },
-    attachments: [{ id: "fp-att-1", name: "CO2013_FE_HK231.pdf", sizeLabel: "5.1 MB", type: "pdf" }],
-    allowComments: true,
-    anonymous: false,
-  },
-  "fp-2": {
-    content: `Sinh viên lưu ý quy định mới về việc sử dụng máy tính cá nhân trong phòng thi thực hành áp dụng từ kỳ Fall 2025.
-
-Điểm chính:
-- Không cài phần mềm lạ trước giờ thi
-- Phải login tài khoản FPT cấp
-- Vi phạm sẽ bị hủy kết quả thi
-
-Chi tiết xem file đính kèm hoặc hỏi bên dưới.`,
-    semester: "Fall 2025",
-    major: "SE",
-    studentId: "—",
-    tags: ["MAN201", "Thông báo"],
-    coverImage: null,
-    attachments: [{ id: "fp-att-2", name: "MAN201_lab_rules.pdf", sizeLabel: "820 KB", type: "pdf" }],
-    allowComments: true,
-    anonymous: false,
-  },
-  "fp-3": {
-    content: `Tổng hợp slide tuần 1–8 kèm bài tập thực hành và link repo GitHub tham khảo.
-
-Phần khó nhất theo mình là Collections và Exception handling — nên ôn thêm lab 4–6.
-
-Chúc mọi người thi tốt!`,
-    semester: "Summer 2025",
-    major: "SE",
-    studentId: "SE160088",
-    tags: ["PRF192"],
-    coverImage: {
-      url: "https://picsum.photos/seed/sehub-prf-slide/960/480",
-      alt: "Slide PRF192",
-    },
-    inlineImages: [
-      { url: "https://picsum.photos/seed/sehub-prf-lab/720/405", caption: "Screenshot lab ArrayList" },
+    images: [
+      { url: "https://picsum.photos/seed/sehub-co2013/960/480", alt: "đề CO2013", caption: "Ảnh 1" },
+      { url: "https://picsum.photos/seed/sehub-prf-lab/720/405", alt: "Ảnh 2", caption: "Ảnh 2" }
     ],
     attachments: [{ id: "fp-att-3", name: "PRF192_midterm_slides.zip", sizeLabel: "3.4 MB", type: "zip" }],
     allowComments: true,
@@ -158,7 +119,7 @@ Ai cần thêm info inbox mình nhé!`,
     major: "SE",
     studentId: "SE150077",
     tags: ["Thực tập"],
-    coverImage: null,
+    images: [],
     attachments: [],
     allowComments: true,
     anonymous: false,
@@ -171,10 +132,9 @@ Lưu ý phần implement Queue bằng mảng vòng hay gặp ở FE.`,
     major: "SE",
     studentId: "SE160000",
     tags: ["CSD"],
-    coverImage: {
-      url: "https://picsum.photos/seed/sehub-csd-slide/960/480",
-      alt: "Slide CSD tuần 5–7",
-    },
+    images: [
+      { url: "https://picsum.photos/seed/sehub-csd-slide/960/480", alt: "Slide CSD tuần 5–7", caption: "Ảnh 1" }
+    ],
     attachments: [{ id: "sp-att-2", name: "CSD_week5-7.pdf", sizeLabel: "2.8 MB", type: "pdf" }],
     allowComments: true,
     anonymous: false,
@@ -187,9 +147,8 @@ Mình attach mindmap pattern mình tự vẽ khi ôn.`,
     major: "SE",
     studentId: "SE140556",
     tags: ["MAD", "FE"],
-    coverImage: null,
-    inlineImages: [
-      { url: "https://picsum.photos/seed/sehub-mad-map/720/405", caption: "Mindmap design pattern" },
+    images: [
+      { url: "https://picsum.photos/seed/sehub-mad-map/720/405", alt: "Ảnh 1", caption: "Ảnh 1" }
     ],
     attachments: [],
     allowComments: true,
@@ -204,7 +163,7 @@ Hướng dẫn đăng ký trên FAP: xem file PDF đính kèm.`,
     major: "—",
     studentId: "—",
     tags: ["Thông báo", "ĐKMH"],
-    coverImage: null,
+    images: [],
     attachments: [{ id: "sp-att-4", name: "Fall2025_registration.pdf", sizeLabel: "640 KB", type: "pdf" }],
     allowComments: false,
     anonymous: false,
@@ -217,7 +176,7 @@ Phần mô tả luồng ngoại lệ nên viết rõ, đừng gộp chung happy 
     major: "SE",
     studentId: "SE160033",
     tags: ["SWR302"],
-    coverImage: null,
+    images: [],
     attachments: [{ id: "sp-att-5", name: "SWR302_diagram_notes.docx", sizeLabel: "710 KB", type: "file" }],
     allowComments: true,
     anonymous: false,

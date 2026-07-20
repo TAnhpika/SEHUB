@@ -2,9 +2,8 @@ using Moq;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Feed;
-using SEHub.Application.Notifications;
 using SEHub.Application.Models;
-using SEHub.Application.Storage;
+using SEHub.Application.Notifications;
 using SEHub.Contracts.Feed;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
@@ -22,10 +21,7 @@ public sealed class PostServiceTests
     private readonly Mock<IUserProfileRepository> _profileRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IGamificationService> _gamificationService = new();
-    private readonly Mock<IImageCdnStorageService> _cdnStorage = new();
-    private readonly Mock<ICdnFolderSettings> _cdnFolders = new();
     private readonly Mock<IWorkflowNotificationService> _workflowNotifications = new();
-    private readonly Mock<IFileStorageService> _fileStorage = new();
     private readonly Mock<IPostTagRepository> _postTagRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
@@ -34,7 +30,6 @@ public sealed class PostServiceTests
 
     private PostService CreateSut()
     {
-        _cdnFolders.SetupGet(f => f.Posts).Returns(CdnFolders.Posts);
         _postTagRepository
             .Setup(r => r.GetTagNamesForPostAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
@@ -51,13 +46,9 @@ public sealed class PostServiceTests
             _profileRepository.Object,
             _currentUser.Object,
             _gamificationService.Object,
-            _cdnStorage.Object,
-            _cdnFolders.Object,
             _workflowNotifications.Object,
-            _fileStorage.Object,
             _postTagRepository.Object,
-            _unitOfWork.Object,
-            AutoMapperFactory.Create());
+            _unitOfWork.Object);
     }
 
     [Fact]
@@ -98,53 +89,15 @@ public sealed class PostServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_WithCoverPath_DoesNotPersistCoverOnPostEntity()
+    public async Task GetByIdAsync_WhenImagesExist_ReturnsOrderedGallery()
     {
-        const string storedPath = "posts/covers/abc123_photo.jpg";
-
-        _currentUser.SetupGet(u => u.UserId).Returns(AuthorId);
-        _likeRepository.Setup(r => r.CountByPostIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0);
-        _commentRepository.Setup(r => r.CountByPostIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0);
-        _imageRepository.Setup(r => r.GetByPostIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
-        _userRepository.Setup(r => r.GetByIdAsync(AuthorId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new UserAccount { Id = AuthorId, Username = "author", DisplayName = "Author" });
-        _profileRepository.Setup(r => r.GetByUserIdAsync(AuthorId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((UserProfile?)null);
-
-        Post? captured = null;
-        _postRepository
-            .Setup(r => r.AddAsync(It.IsAny<Post>(), It.IsAny<CancellationToken>()))
-            .Callback<Post, CancellationToken>((post, _) => captured = post)
-            .Returns(Task.CompletedTask);
-
-        var sut = CreateSut();
-        var result = await sut.CreateAsync(new CreatePostRequest
-        {
-            Title = "Cover Post",
-            Content = "Post with cover image.",
-            Tags = ["sehub"],
-            CoverImageUrl = storedPath,
-        });
-
-        captured.Should().NotBeNull();
-        result.CoverImageUrl.Should().BeNull();
-        _fileStorage.Verify(
-            s => s.GetSignedUrlAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Fact]
-    public async Task GetByIdAsync_WhenCoverStoredOnFirstPostImage_ReturnsPathWithoutReSigning()
-    {
-        const string storedPublicPath = "/uploads/posts/covers/abc123_photo.jpg";
+        const string firstUrl = "https://cdn.example/posts/first.jpg";
+        const string secondUrl = "https://cdn.example/posts/second.jpg";
         var post = new Post
         {
             Id = PostId,
             AuthorId = AuthorId,
-            Title = "Cover Post",
+            Title = "Gallery Post",
             Content = "Body",
             Status = PostStatus.Published,
             CreatedAt = DateTime.UtcNow,
@@ -159,9 +112,17 @@ public sealed class PostServiceTests
                 {
                     Id = Guid.NewGuid(),
                     PostId = PostId,
-                    Url = storedPublicPath,
+                    Url = firstUrl,
                     SortOrder = 0,
-                    PublicId = "cover",
+                    PublicId = "first",
+                },
+                new PostImage
+                {
+                    Id = Guid.NewGuid(),
+                    PostId = PostId,
+                    Url = secondUrl,
+                    SortOrder = 1,
+                    PublicId = "second",
                 }
             ]);
         _userRepository.Setup(r => r.GetByIdAsync(AuthorId, It.IsAny<CancellationToken>()))
@@ -172,10 +133,9 @@ public sealed class PostServiceTests
         var sut = CreateSut();
         var result = await sut.GetByIdAsync(PostId);
 
-        result.CoverImageUrl.Should().Be(storedPublicPath);
-        _fileStorage.Verify(
-            s => s.GetSignedUrlAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        result.Images.Should().HaveCount(2);
+        result.Images[0].ImagePath.Should().Be(firstUrl);
+        result.Images[1].ImagePath.Should().Be(secondUrl);
     }
 
     [Fact]
@@ -215,9 +175,9 @@ public sealed class PostServiceTests
     }
 
     [Fact]
-    public async Task GetPostsAsync_List_ReturnsPublicCoverPathWithoutSigning()
+    public async Task GetPostsAsync_List_ReturnsGalleryImagesOrderedBySortOrder()
     {
-        const string storedPath = "posts/covers/abc123_photo.jpg";
+        const string imageUrl = "https://cdn.example/posts/photo.jpg";
         var post = new Post
         {
             Id = PostId,
@@ -227,13 +187,13 @@ public sealed class PostServiceTests
             Status = PostStatus.Published,
             CreatedAt = DateTime.UtcNow,
         };
-        var coverImage = new PostImage
+        var postImage = new PostImage
         {
             Id = Guid.NewGuid(),
             PostId = PostId,
-            Url = storedPath,
+            Url = imageUrl,
             SortOrder = 0,
-            PublicId = "cover",
+            PublicId = "photo",
         };
 
         _postRepository
@@ -247,7 +207,7 @@ public sealed class PostServiceTests
             .ReturnsAsync(new Dictionary<Guid, int>());
         _imageRepository
             .Setup(r => r.GetByPostIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([coverImage]);
+            .ReturnsAsync([postImage]);
         _userRepository
             .Setup(r => r.GetByIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([new UserAccount { Id = AuthorId, Username = "author", DisplayName = "Author" }]);
@@ -259,10 +219,8 @@ public sealed class PostServiceTests
         var result = await sut.GetPostsAsync(new PostQueryParams { Page = 1, PageSize = 5 });
 
         result.Items.Should().ContainSingle();
-        result.Items[0].CoverImageUrl.Should().Be("/uploads/posts/covers/abc123_photo.jpg");
-        _fileStorage.Verify(
-            s => s.GetSignedUrlAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        result.Items[0].Images.Should().ContainSingle();
+        result.Items[0].Images[0].ImagePath.Should().Be(imageUrl);
     }
 
     [Fact]

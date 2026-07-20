@@ -407,13 +407,17 @@ a.contact-value:hover {
 }
 
 .cta-btn-light {
-  background: var(--color-surface) !important;
-  color: var(--color-primary) !important;
+  background: #ffffff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid transparent !important;
   border-radius: var(--radius-full) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
 }
 
 .cta-btn-light:hover {
-  background: var(--color-primary-light) !important;
+  background: #eff6ff !important;
+  color: #1e40af !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
 }
 
 .cta-btn-outline {

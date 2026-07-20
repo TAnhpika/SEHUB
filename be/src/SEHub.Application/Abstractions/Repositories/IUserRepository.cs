@@ -37,4 +37,7 @@ public interface IUserRepository
     Task UpdateDisplayNameAsync(Guid userId, string displayName, CancellationToken cancellationToken = default);
     Task UpdateLastSeenAtAsync(Guid userId, DateTime lastSeenAtUtc, CancellationToken cancellationToken = default);
     Task<DateTime?> GetLastSeenAtAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task SetModeratorWelcomePendingAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<DateTime?> GetModeratorWelcomePendingAtAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task ClearModeratorWelcomePendingAsync(Guid userId, CancellationToken cancellationToken = default);
 }

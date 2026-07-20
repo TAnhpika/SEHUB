@@ -377,6 +377,30 @@ public class UserRepository : IUserRepository
             .Select(u => u.LastSeenAt)
             .FirstOrDefaultAsync(cancellationToken);
 
+    public async Task SetModeratorWelcomePendingAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
+            ?? throw new InvalidOperationException("User not found.");
+        user.ModeratorWelcomePendingAt = DateTime.UtcNow;
+    }
+
+    public async Task<DateTime?> GetModeratorWelcomePendingAtAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        await _context.Users
+            .Where(u => u.Id == userId)
+            .Select(u => u.ModeratorWelcomePendingAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+    public async Task ClearModeratorWelcomePendingAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (user is null)
+        {
+            return;
+        }
+
+        user.ModeratorWelcomePendingAt = null;
+    }
+
     private async Task<UserAccount?> MapUserAsync(ApplicationUser? user, CancellationToken cancellationToken)
     {
         if (user is null) return null;

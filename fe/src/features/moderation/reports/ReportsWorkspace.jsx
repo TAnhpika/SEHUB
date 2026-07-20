@@ -102,12 +102,16 @@ function ReportsWorkspace({ portal = "admin" }) {
 
   useEffect(() => {
     const fromUrl = searchParams.get("id");
-    if (fromUrl && reports.some((r) => r.id === fromUrl)) {
-      setSelectedId(fromUrl);
-      const item = reports.find((r) => r.id === fromUrl);
-      if (item?.status === "resolved") setTab("resolved");
-      else if (item?.status === "pending") setTab("pending");
-    }
+    if (!fromUrl) return;
+
+    const item = reports.find((r) => r.id === fromUrl);
+    if (!item) return;
+
+    setSelectedId(fromUrl);
+    // Deep-link (chat / user / exam reports): switch filter if current category hides the item
+    setCategory((prev) => (prev === "all" || prev === item.category ? prev : item.category));
+    if (item.status === "resolved") setTab("resolved");
+    else if (item.status === "pending") setTab("pending");
   }, [searchParams, reports]);
 
   useEffect(() => {

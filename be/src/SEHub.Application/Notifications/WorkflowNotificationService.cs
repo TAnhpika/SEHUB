@@ -165,6 +165,7 @@ public interface IWorkflowNotificationService
         Guid userId,
         Guid feedbackId,
         Guid? actorUserId,
+        int? pointsAwarded = null,
         CancellationToken cancellationToken = default);
 
     Task NotifyUserFeedbackRejectedAsync(
@@ -185,6 +186,10 @@ public interface IWorkflowNotificationService
         string recipientUsername,
         Guid? paymentOrderId,
         Guid voucherCodeId,
+        CancellationToken cancellationToken = default);
+
+    Task EnsureModeratorWelcomeNotificationAsync(
+        Guid userId,
         CancellationToken cancellationToken = default);
 }
 
@@ -329,15 +334,59 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             ? exam.PaperCode
             : exam.RejectionReasonDetail ?? "Vui lòng xem chi tiết và chỉnh sửa.";
 
+        var linkUrl = BuildModeratorExamReviewResultLink(exam, approved);
+
         await _notificationService.CreateAsync(
             moderatorId,
             NotificationType.ExamReview,
             title,
             body,
-            "/moderator/exams/history",
+            linkUrl,
             actorUserId,
             exam.Id,
             cancellationToken);
+    }
+
+    public async Task EnsureModeratorWelcomeNotificationAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var pendingAt = await _userRepository.GetModeratorWelcomePendingAtAsync(userId, cancellationToken);
+        if (pendingAt is null)
+        {
+            return;
+        }
+
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+        if (user is null || !user.Role.Equals(RoleNames.Moderator, StringComparison.OrdinalIgnoreCase))
+        {
+            await _userRepository.ClearModeratorWelcomePendingAsync(userId, cancellationToken);
+            return;
+        }
+
+        await _notificationService.CreateAsync(
+            userId,
+            NotificationType.ModeratorWelcome,
+            "Bạn đã được cấp quyền Moderator",
+            "Chào mừng bạn đến workspace Kiểm duyệt SEHub. Bắt đầu với hàng đợi báo cáo và duyệt bài viết.",
+            "/moderator/reports",
+            null,
+            userId,
+            cancellationToken);
+
+        await _userRepository.ClearModeratorWelcomePendingAsync(userId, cancellationToken);
+    }
+
+    private static string BuildModeratorExamReviewResultLink(Exam exam, bool approved)
+    {
+        if (approved)
+        {
+            return "/moderator/exams/history";
+        }
+
+        return exam.ExamType == ExamType.Practice
+            ? $"/moderator/practice-exams/edit/{exam.Id}"
+            : $"/moderator/final-exams/edit/{exam.Id}";
     }
 
     public async Task NotifyModeratorsPostReportedAsync(
@@ -355,7 +404,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             NotificationType.Moderation,
             $"{actorName} báo cáo một bài viết",
             $"Lý do: {reasonLabel}",
-            "/moderator/reports",
+            $"/moderator/reports?id={reportId}",
             reporterUserId,
             reportId,
             cancellationToken);
@@ -453,7 +502,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         await NotifyRoleMembersAsync(
             [RoleNames.Moderator],
             NotificationType.Moderation,
-            $"{actorName} báo cáo cuộc trò chuyện",
+            $"{actorName} báo cáo đoạn chat",
             $"Lý do: {reasonLabel} — {preview}",
             $"/moderator/reports?id={reportId}",
             reporterUserId,
@@ -463,9 +512,9 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         await NotifyRoleMembersAsync(
             [RoleNames.Admin],
             NotificationType.Moderation,
-            $"{actorName} báo cáo cuộc trò chuyện",
+            $"{actorName} báo cáo đoạn chat",
             $"Lý do: {reasonLabel} — {preview}",
-            "/admin/moderation",
+            $"/admin/moderation?id={reportId}",
             reporterUserId,
             reportId,
             cancellationToken);
@@ -489,7 +538,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             NotificationType.Moderation,
             $"{actorName} báo cáo câu hỏi đề {exam.PaperCode}",
             $"Lý do: {reasonLabel} — {preview}",
-            "/moderator/reports",
+            $"/moderator/reports?id={reportId}",
             reporterUserId,
             reportId,
             cancellationToken);
@@ -622,13 +671,36 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
     {
         var actorName = await ResolveActorNameAsync(authorUserId, cancellationToken);
         var postLabel = BuildPostLabel(post);
+        var moderatorLink = $"/moderator/content?id={post.Id}";
+        var adminLink = $"/admin/moderation/content?id={post.Id}";
+
+        // #region agent log
+        try
+        {
+            var line = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                sessionId = "50d8cc",
+                hypothesisId = "A",
+                location = "WorkflowNotificationService.NotifyModeratorsPostPendingAsync",
+                message = "pending-post notification links",
+                data = new { postId = post.Id, moderatorLink, adminLink },
+                timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                runId = "post-fix"
+            });
+            await System.IO.File.AppendAllTextAsync(
+                @"c:\Users\VICTUS\source\repos\SEHUB\debug-50d8cc.log",
+                line + Environment.NewLine,
+                cancellationToken);
+        }
+        catch { /* debug ingest must not affect notify flow */ }
+        // #endregion
 
         await NotifyRoleMembersAsync(
             [RoleNames.Moderator],
             NotificationType.Moderation,
             $"{actorName} đăng bài chờ duyệt",
             postLabel,
-            "/moderator/content",
+            moderatorLink,
             authorUserId,
             post.Id,
             cancellationToken);
@@ -638,7 +710,7 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
             NotificationType.Moderation,
             $"{actorName} đăng bài chờ duyệt",
             postLabel,
-            "/admin/moderation/content",
+            adminLink,
             authorUserId,
             post.Id,
             cancellationToken);
@@ -818,13 +890,18 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         Guid userId,
         Guid feedbackId,
         Guid? actorUserId,
+        int? pointsAwarded = null,
         CancellationToken cancellationToken = default)
     {
+        var body = pointsAwarded is > 0
+            ? $"Cảm ơn bạn đã góp ý. Bạn nhận +{pointsAwarded.Value} điểm vì phản hồi hữu ích."
+            : "Cảm ơn bạn đã góp ý. Phản hồi của bạn đã được ghi nhận.";
+
         await _notificationService.CreateAsync(
             userId,
             NotificationType.Moderation,
             "Phản hồi của bạn đã được xử lý",
-            "Cảm ơn bạn đã góp ý. Bạn nhận +50 điểm vì phản hồi hữu ích.",
+            body,
             "/home/feedback",
             actorUserId,
             feedbackId,
@@ -901,13 +978,20 @@ public sealed class WorkflowNotificationService : IWorkflowNotificationService
         var userIds = await _userRepository.GetUserIdsByRolesAsync(roles, cancellationToken);
         foreach (var userId in userIds)
         {
+            // When the actor is also a role recipient (solo moderator / self-report),
+            // omit actorUserId so CreateAsync self-skip cannot drop the queue alert.
+            // Actor name is already baked into title/body.
+            var effectiveActorId = actorUserId.HasValue && actorUserId.Value == userId
+                ? null
+                : actorUserId;
+
             await _notificationService.CreateAsync(
                 userId,
                 type,
                 title,
                 body,
                 linkUrl,
-                actorUserId,
+                effectiveActorId,
                 referenceId,
                 cancellationToken);
         }

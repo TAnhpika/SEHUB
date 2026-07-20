@@ -42,8 +42,9 @@ function ReportReasonModal({
       return;
     }
 
+    const isOther = reason === "other";
     const trimmedDetail = detail.trim();
-    if (trimmedDetail.length < MIN_REPORT_DETAIL_LENGTH) {
+    if (isOther && trimmedDetail.length < MIN_REPORT_DETAIL_LENGTH) {
       setError(`Vui lòng mô tả chi tiết ít nhất ${MIN_REPORT_DETAIL_LENGTH} ký tự.`);
       return;
     }
@@ -52,7 +53,7 @@ function ReportReasonModal({
 
     setSubmitting(true);
     try {
-      await onSubmit({ reasonId: reason, reasonLabel, detail: trimmedDetail });
+      await onSubmit({ reasonId: reason, reasonLabel, detail: isOther ? trimmedDetail : "" });
       onClose({ successMessage });
     } catch (err) {
       setError(err.message ?? "Không gửi được báo cáo.");
@@ -107,25 +108,27 @@ function ReportReasonModal({
           </ul>
         </fieldset>
 
-        <label className={styles.field} htmlFor="report-detail">
-          <span className={styles.label}>
-            Mô tả chi tiết
-            <span className={styles.required} aria-hidden="true">
-              *
+        {reason === "other" && (
+          <label className={styles.field} htmlFor="report-detail">
+            <span className={styles.label}>
+              Mô tả chi tiết
+              <span className={styles.required} aria-hidden="true">
+                *
+              </span>
             </span>
-          </span>
-          <textarea
-            id="report-detail"
-            className={styles.textarea}
-            rows={4}
-            placeholder={detailPlaceholder}
-            value={detail}
-            onChange={(event) => {
-              setDetail(event.target.value);
-              setError("");
-            }}
-          />
-        </label>
+            <textarea
+              id="report-detail"
+              className={styles.textarea}
+              rows={4}
+              placeholder={detailPlaceholder}
+              value={detail}
+              onChange={(event) => {
+                setDetail(event.target.value);
+                setError("");
+              }}
+            />
+          </label>
+        )}
 
         {error ? (
           <p className={styles.error} role="alert">

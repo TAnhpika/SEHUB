@@ -529,6 +529,27 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
+  const refreshGamification = useCallback(async () => {
+    if (!getAccessToken() || USE_MOCK) {
+      return null;
+    }
+
+    try {
+      const me = await authApi.getMe();
+      let nextUser = null;
+      setUser((prev) => {
+        nextUser = applyMeEnrichment(prev, me);
+        if (nextUser) {
+          persistUser(nextUser);
+        }
+        return nextUser;
+      });
+      return nextUser;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -536,7 +557,8 @@ export function AuthProvider({ children }) {
       isBootstrapping,
       isPremium: resolveIsPremium(user),
       isAdmin: user?.role === "admin",
-      isModerator: user?.role === "moderator" || user?.role === "admin",
+      isModerator: user?.role === "moderator",
+      isStaff: user?.role === "admin" || user?.role === "moderator",
       aiTokens: getAiTokenSnapshot(user),
       spendAiExplainTokens,
       refreshAiTokens,
@@ -547,6 +569,7 @@ export function AuthProvider({ children }) {
       logout,
       activatePremium,
       markEmailVerified,
+      refreshGamification,
       profileIncompletePromptOpen,
       dismissProfileIncompletePrompt,
     }),
@@ -563,6 +586,7 @@ export function AuthProvider({ children }) {
       logout,
       activatePremium,
       markEmailVerified,
+      refreshGamification,
       profileIncompletePromptOpen,
       dismissProfileIncompletePrompt,
     ],

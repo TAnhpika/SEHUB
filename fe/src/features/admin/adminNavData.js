@@ -5,6 +5,8 @@ import {
   faClipboardList,
   faCommentDots,
   faCreditCard,
+  faStar,
+  faClockRotateLeft,
   faFileLines,
   faRobot,
   faTicket,
@@ -88,6 +90,18 @@ const ADMIN_NAV_TEMPLATE = [
             to: "/admin/moderation/content",
             badgeKey: "pending-posts",
             badgeTone: "amber",
+          },
+          {
+            id: "content-history",
+            label: "Lịch sử duyệt bài",
+            to: "/admin/moderation/content/history",
+            icon: faClockRotateLeft,
+          },
+          {
+            id: "featured-posts",
+            label: "Quản lý ghim bài",
+            to: "/admin/moderation/featured",
+            icon: faStar,
           },
           {
             id: "practice-submissions",
@@ -198,6 +212,8 @@ export function resolveAdminPageTitle(pathname) {
   if (pathname === "/admin") return "Dashboard";
   if (pathname.includes("/exams/new")) return "Tạo đề thi";
   if (pathname.includes("/exams/edit")) return "Sửa đề thi";
+  if (pathname.startsWith("/admin/moderation/content/history")) return "Lịch sử duyệt bài";
+  if (pathname.startsWith("/admin/moderation/featured")) return "Quản lý ghim bài";
   if (pathname.startsWith("/admin/moderation/content")) return "Bài viết chờ duyệt";
   if (pathname.startsWith("/admin/moderation/practice-submissions")) return "Bài nộp thực hành";
   if (pathname.startsWith("/admin/feedback")) return "Phản hồi / Báo lỗi";

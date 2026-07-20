@@ -19,6 +19,7 @@ import ContentPostDetailPanel from "@/features/moderator/content/components/Cont
 import ModeratorEmptyState from "@/features/moderator/components/ModeratorEmptyState/ModeratorEmptyState";
 import { ModeratorFeaturedWorkspaceSkeleton } from "@/features/moderator/components/ModeratorSkeleton/ModeratorSkeleton";
 import ModeratorPageShell from "@/features/moderator/components/ModeratorPageShell/ModeratorPageShell";
+import AdminPageLayout from "@/features/admin/shared/AdminPageLayout";
 import {
   enrichFeaturedPost,
   FEATURE_SEARCH_SORT_OPTIONS,
@@ -42,9 +43,15 @@ const STATS_EVENT = "sehub-moderator-stats-updated";
 const SEARCH_DEBOUNCE_MS = 350;
 const SEARCH_PAGE_SIZE = 5;
 
-const FEATURED_CRUMBS = [
+const FEATURED_CRUMBS_MOD = [
   { label: "Trang chủ", to: "/home" },
   { label: "Kiểm duyệt", to: "/moderator/content" },
+  { label: "Quản lý ghim bài" },
+];
+
+const FEATURED_CRUMBS_ADMIN = [
+  { label: "Dashboard", to: "/admin" },
+  { label: "Kiểm duyệt", to: "/admin/moderation" },
   { label: "Quản lý ghim bài" },
 ];
 
@@ -116,7 +123,7 @@ function SearchResultRow({ post, isSelected, onSelect }) {
   );
 }
 
-function FeaturedPostsPage() {
+function FeaturedPostsPage({ portal = "moderator" }) {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState("feed");
   const [feedPinned, setFeedPinned] = useState(USE_MOCK ? FEED_PINNED_POSTS_INITIAL : []);
@@ -393,16 +400,10 @@ function FeaturedPostsPage() {
   const activeEmpty =
     activeTab === "feed" ? "Chưa có bài ghim trên feed." : "Chưa có bài nổi bật.";
 
-  return (
-    <ModeratorPageShell
-      title="Quản lý ghim bài"
-      description="Chọn bài ở giữa → xem trước bên phải → ghim đầu feed hoặc nổi bật sidebar."
-      crumbs={FEATURED_CRUMBS}
-    >
-      {loading ? (
-        <ModeratorFeaturedWorkspaceSkeleton />
-      ) : (
-        <div className={styles.workspace}>
+  const workspaceBody = loading ? (
+    <ModeratorFeaturedWorkspaceSkeleton />
+  ) : (
+    <div className={styles.workspace}>
           <div className={styles.mainGrid}>
             <section className={styles.pinnedColumn} aria-label="Bài đang ghim">
               <div className={styles.tabBar} role="tablist" aria-label="Loại ghim">
@@ -541,7 +542,27 @@ function FeaturedPostsPage() {
             />
           </aside>
         </div>
-      )}
+  );
+
+  if (portal === "admin") {
+    return (
+      <AdminPageLayout
+        title="Quản lý ghim bài"
+        subtitle="Chọn bài ở giữa → xem trước bên phải → ghim đầu feed hoặc nổi bật sidebar."
+        breadcrumbs={FEATURED_CRUMBS_ADMIN}
+      >
+        {workspaceBody}
+      </AdminPageLayout>
+    );
+  }
+
+  return (
+    <ModeratorPageShell
+      title="Quản lý ghim bài"
+      description="Chọn bài ở giữa → xem trước bên phải → ghim đầu feed hoặc nổi bật sidebar."
+      crumbs={FEATURED_CRUMBS_MOD}
+    >
+      {workspaceBody}
     </ModeratorPageShell>
   );
 }

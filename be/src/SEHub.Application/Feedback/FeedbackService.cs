@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using SEHub.Application.Abstractions;
 using SEHub.Application.Abstractions.Repositories;
 using SEHub.Application.Common;
@@ -50,26 +51,35 @@ public sealed class FeedbackService : IFeedbackService
     private readonly IWorkflowNotificationService _workflowNotifications;
     private readonly IPointEngine _pointEngine;
     private readonly ILevelEngine _levelEngine;
+    private readonly IProfileSnapshotCache _snapshotCache;
+    private readonly IProfileActivityCache _activityCache;
     private readonly ICurrentUserService _currentUser;
     private readonly IFileStorageService _fileStorage;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<FeedbackService> _logger;
 
     public FeedbackService(
         IUserFeedbackRepository feedbackRepository,
         IWorkflowNotificationService workflowNotifications,
         IPointEngine pointEngine,
         ILevelEngine levelEngine,
+        IProfileSnapshotCache snapshotCache,
+        IProfileActivityCache activityCache,
         ICurrentUserService currentUser,
         IFileStorageService fileStorage,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ILogger<FeedbackService> logger)
     {
         _feedbackRepository = feedbackRepository;
         _workflowNotifications = workflowNotifications;
         _pointEngine = pointEngine;
         _levelEngine = levelEngine;
+        _snapshotCache = snapshotCache;
+        _activityCache = activityCache;
         _currentUser = currentUser;
         _fileStorage = fileStorage;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<FeedbackDto> SubmitAsync(
@@ -222,19 +232,34 @@ public sealed class FeedbackService : IFeedbackService
             && previousStatus != FeedbackStatus.Resolved
             && feedback.UserId is Guid submitterId)
         {
-            await _pointEngine.AwardByEventTypeAsync(
+            var award = await _pointEngine.AwardByEventTypeAsync(
                 submitterId,
                 GamificationConstants.EventFeedbackResolved,
                 $"feedback.resolved:{feedback.Id}",
                 "feedback",
                 feedback.Id,
                 cancellationToken);
-            await _levelEngine.RecalculateAsync(submitterId, cancellationToken);
+
+            if (award.Applied)
+            {
+                await _levelEngine.RecalculateAsync(submitterId, cancellationToken);
+                _snapshotCache.InvalidateStats(submitterId);
+                _activityCache.InvalidateUser(submitterId);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Feedback {FeedbackId} resolved but points were not applied for user {UserId} (amount={Amount})",
+                    feedback.Id,
+                    submitterId,
+                    award.Amount);
+            }
 
             await _workflowNotifications.NotifyUserFeedbackResolvedAsync(
                 submitterId,
                 feedback.Id,
                 actorUserId,
+                award.Applied ? award.Amount : null,
                 cancellationToken);
         }
         else if (status == FeedbackStatus.Rejected

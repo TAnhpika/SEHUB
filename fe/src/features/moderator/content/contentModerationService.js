@@ -53,6 +53,18 @@ export function getCachedPendingContentCount() {
 }
 
 /**
+ * Đồng bộ cache số bài pending từ stats đã tải (tránh gọi API lần nữa).
+ *
+ * @param {number} count - Số bài chờ duyệt mới nhất.
+ * @returns {void}
+ */
+export function syncCachedPendingContentCount(count) {
+  if (!USE_MOCK) {
+    cachedPendingCount = count;
+  }
+}
+
+/**
  * Làm mới số bài pending từ API thống kê Moderator và phát sự kiện cập nhật stats.
  *
  * No-op về giá trị khi `USE_MOCK` — trả về cache hiện tại.
@@ -157,29 +169,49 @@ export async function loadModerationPostDetail(postId) {
 /**
  * Duyệt một hoặc nhiều bài viết — gọi API `moderatePost` với action `approve`.
  *
- * Sau khi thành công, làm mới pending count và phát sự kiện cập nhật.
+ * Xử lý tuần tự (tránh race gamification/DbContext khi Promise.all song song).
+ * Vẫn cố duyệt hết các ID; chỉ throw khi tất cả thất bại hoặc có lỗi một phần.
  *
  * @async
  * @param {string[]} ids - Danh sách ID bài cần duyệt.
  * @param {string} [note="Đã duyệt — hiển thị trên feed cộng đồng."] - Ghi chú gửi lên API.
- * @returns {Promise<void>}
+ * @returns {Promise<{ succeeded: string[], failed: Array<{ id: string, error: Error }> }>}
  *
- * @throws {Error} Khi bất kỳ lệnh duyệt nào thất bại.
+ * @throws {Error} Khi không duyệt được bài nào, hoặc duyệt một phần (kèm số lượng).
  *
  * @example
  * await approveModerationPosts(['id-1', 'id-2']);
  */
 export async function approveModerationPosts(ids, note = "Đã duyệt — hiển thị trên feed cộng đồng.") {
-  await Promise.all(
-    ids.map((id) =>
-      adminApi.moderatePost(id, {
+  const uniqueIds = [...new Set((ids ?? []).map((id) => String(id)).filter(Boolean))];
+  const succeeded = [];
+  const failed = [];
+
+  for (const id of uniqueIds) {
+    try {
+      await adminApi.moderatePost(id, {
         action: "approve",
         note,
-      }),
-    ),
-  );
+      });
+      succeeded.push(id);
+    } catch (error) {
+      failed.push({ id, error });
+    }
+  }
+
   await refreshPendingContentCount();
   notifyUpdated();
+
+  if (succeeded.length === 0 && uniqueIds.length > 0) {
+    throw failed[0]?.error ?? new Error("Không duyệt được bài viết.");
+  }
+
+  if (failed.length > 0) {
+    const detail = failed[0]?.error?.message ?? "lỗi không xác định";
+    throw new Error(`Đã duyệt ${succeeded.length}/${uniqueIds.length} bài. Một số bài thất bại: ${detail}`);
+  }
+
+  return { succeeded, failed };
 }
 
 /**
@@ -188,24 +220,43 @@ export async function approveModerationPosts(ids, note = "Đã duyệt — hiể
  * @async
  * @param {string[]} ids - Danh sách ID bài cần từ chối.
  * @param {string} [reason] - Lý do từ chối; mặc định `DEFAULT_REJECT_REASON`.
- * @returns {Promise<void>}
+ * @returns {Promise<{ succeeded: string[], failed: Array<{ id: string, error: Error }> }>}
  *
- * @throws {Error} Khi bất kỳ lệnh từ chối nào thất bại.
+ * @throws {Error} Khi không từ chối được bài nào, hoặc từ chối một phần.
  *
  * @example
  * await rejectModerationPosts(['id-1'], 'Quảng cáo mua bán tài liệu.');
  */
 export async function rejectModerationPosts(ids, reason = DEFAULT_REJECT_REASON) {
-  await Promise.all(
-    ids.map((id) =>
-      adminApi.moderatePost(id, {
+  const uniqueIds = [...new Set((ids ?? []).map((id) => String(id)).filter(Boolean))];
+  const succeeded = [];
+  const failed = [];
+
+  for (const id of uniqueIds) {
+    try {
+      await adminApi.moderatePost(id, {
         action: "reject",
         note: reason,
-      }),
-    ),
-  );
+      });
+      succeeded.push(id);
+    } catch (error) {
+      failed.push({ id, error });
+    }
+  }
+
   await refreshPendingContentCount();
   notifyUpdated();
+
+  if (succeeded.length === 0 && uniqueIds.length > 0) {
+    throw failed[0]?.error ?? new Error("Không từ chối được bài viết.");
+  }
+
+  if (failed.length > 0) {
+    const detail = failed[0]?.error?.message ?? "lỗi không xác định";
+    throw new Error(`Đã từ chối ${succeeded.length}/${uniqueIds.length} bài. Một số bài thất bại: ${detail}`);
+  }
+
+  return { succeeded, failed };
 }
 
 /**

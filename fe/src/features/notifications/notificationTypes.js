@@ -38,6 +38,24 @@ export function isVisibleNotification(item) {
   return item.type !== "message";
 }
 
+/** Notifications that may include point awards — refresh auth gamification after them. */
+export function isGamificationNotification(item) {
+  if (!item) return false;
+  const type = String(item.type ?? "").toLowerCase();
+  if (type === "streak" || type === "badge" || type === "exam" || type === "examreview") {
+    return true;
+  }
+  if (type === "moderation") {
+    const haystack = `${item.title ?? ""} ${item.body ?? ""} ${item.linkUrl ?? ""}`.toLowerCase();
+    return (
+      haystack.includes("điểm") ||
+      haystack.includes("/home/feedback") ||
+      haystack.includes("đã được xử lý")
+    );
+  }
+  return false;
+}
+
 export function getNotificationIcon(type) {
   return TYPE_ICONS[type] ?? faBell;
 }

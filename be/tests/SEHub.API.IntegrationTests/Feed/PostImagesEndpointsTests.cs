@@ -73,7 +73,7 @@ public sealed class PostImagesEndpointsTests : IClassFixture<CustomWebApplicatio
         detailResponse.EnsureSuccessStatusCode();
         var detail = await detailResponse.Content.ReadFromJsonAsync<ApiResponse<PostDetailDto>>();
         detail!.Data!.Images.Should().HaveCount(1);
-        detail.Data.CoverImageUrl.Should().NotBeNullOrWhiteSpace();
+        detail.Data.Images[0].ImagePath.Should().NotBeNullOrWhiteSpace();
         detail.Data.Content.Should().NotContain("<img");
 
         var deleteResponse = await _client.DeleteAsync($"/api/v1/posts/{postId}/images/{imageId}");

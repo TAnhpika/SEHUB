@@ -27,6 +27,7 @@ function ReportFormModal({
   reasons,
   minDetailLength,
   detailPlaceholder = "Mô tả cụ thể vấn đề…",
+  otherReasonId = "other",
   footerNote = null,
   submitting = false,
   onSubmit,
@@ -52,8 +53,9 @@ function ReportFormModal({
       return;
     }
 
+    const isOther = reason === otherReasonId;
     const trimmedDetail = detail.trim();
-    if (trimmedDetail.length < minDetailLength) {
+    if (isOther && trimmedDetail.length < minDetailLength) {
       setError(`Vui lòng mô tả chi tiết ít nhất ${minDetailLength} ký tự.`);
       return;
     }
@@ -61,7 +63,7 @@ function ReportFormModal({
     const reasonLabel = reasons.find((item) => item.id === reason)?.label ?? reason;
 
     try {
-      await onSubmit({ reasonId: reason, reasonLabel, detail: trimmedDetail });
+      await onSubmit({ reasonId: reason, reasonLabel, detail: isOther ? trimmedDetail : "" });
     } catch (err) {
       setError(err?.message ?? "Không gửi được báo cáo.");
     }
@@ -113,25 +115,27 @@ function ReportFormModal({
           </ul>
         </fieldset>
 
-        <label className={styles.field} htmlFor="report-detail">
-          <span className={styles.label}>
-            Mô tả chi tiết
-            <span className={styles.required} aria-hidden="true">
-              *
+        {reason === otherReasonId && (
+          <label className={styles.field} htmlFor="report-detail">
+            <span className={styles.label}>
+              Mô tả chi tiết
+              <span className={styles.required} aria-hidden="true">
+                *
+              </span>
             </span>
-          </span>
-          <textarea
-            id="report-detail"
-            className={styles.textarea}
-            rows={4}
-            placeholder={detailPlaceholder}
-            value={detail}
-            onChange={(event) => {
-              setDetail(event.target.value);
-              setError("");
-            }}
-          />
-        </label>
+            <textarea
+              id="report-detail"
+              className={styles.textarea}
+              rows={4}
+              placeholder={detailPlaceholder}
+              value={detail}
+              onChange={(event) => {
+                setDetail(event.target.value);
+                setError("");
+              }}
+            />
+          </label>
+        )}
 
         {footerNote}
 

@@ -59,6 +59,8 @@ const AdminDocumentCatalogPage = lazy(() => import("@/features/admin/documents/A
 const AdminDocumentSubjectPage = lazy(() => import("@/features/admin/documents/AdminDocumentSubjectPage"));
 const AdminModerationPage = lazy(() => import("@/features/admin/moderation/AdminModerationPage"));
 const AdminContentModerationPage = lazy(() => import("@/features/admin/moderation/AdminContentModerationPage"));
+const AdminContentModerationHistoryPage = lazy(() => import("@/features/admin/moderation/AdminContentModerationHistoryPage"));
+const AdminFeaturedPostsPage = lazy(() => import("@/features/admin/moderation/AdminFeaturedPostsPage"));
 const AdminReportDetailPage = lazy(() => import("@/features/admin/moderation/AdminReportDetailPage"));
 const AdminBannedPage = lazy(() => import("@/features/admin/moderation/AdminBannedPage"));
 const AdminPaymentListPage = lazy(() => import("@/features/admin/payments/AdminPaymentListPage"));
@@ -74,9 +76,6 @@ const AddPracticeExamPage = lazy(() => import("@/features/moderator/practiceExam
 const ModeratorExamContributionHistoryPage = lazy(() => import("@/features/moderator/exams/ModeratorExamContributionHistoryPage/ModeratorExamContributionHistoryPage"));
 const ModeratorPracticeSubmissionsPage = lazy(() => import("@/features/moderator/practiceExams/ModeratorPracticeSubmissionsPage"));
 const AddFinalExamWizard = lazy(() => import("@/features/moderator/finalExams/AddFinalExamWizard"));
-const FinalExamInfoStep = lazy(() => import("@/features/moderator/finalExams/steps/FinalExamInfoStep"));
-const FinalExamQuestionsStep = lazy(() => import("@/features/moderator/finalExams/steps/FinalExamQuestionsStep"));
-const FinalExamReviewStep = lazy(() => import("@/features/moderator/finalExams/steps/FinalExamReviewStep"));
 const ViolatingAccountsPage = lazy(() => import("@/features/moderator/violations/ViolatingAccountsPage/ViolatingAccountsPage"));
 const ContentModerationPage = lazy(() => import("@/features/moderator/content/ContentModerationPage/ContentModerationPage"));
 const ContentModerationHistoryPage = lazy(() => import("@/features/moderator/content/ContentModerationHistoryPage/ContentModerationHistoryPage"));
@@ -314,6 +313,8 @@ function App() {
                 <Route path="documents" element={<AdminDocumentCatalogPage />} />
                 <Route path="documents/:courseCode" element={<AdminDocumentSubjectPage />} />
                 <Route path="moderation/content" element={<AdminContentModerationPage />} />
+                <Route path="moderation/content/history" element={<AdminContentModerationHistoryPage />} />
+                <Route path="moderation/featured" element={<AdminFeaturedPostsPage />} />
                 <Route
                   path="moderation/practice-submissions"
                   element={<AdminPracticeSubmissionsPage />}
@@ -344,16 +345,8 @@ function App() {
                 <Route path="exams/history" element={<ModeratorExamContributionHistoryPage />} />
                 <Route path="practice-exams/add" element={<AddPracticeExamPage />} />
                 <Route path="practice-exams/edit/:examId" element={<AddPracticeExamPage />} />
-                <Route path="final-exams/add" element={<AddFinalExamWizard />}>
-                  <Route index element={<FinalExamInfoStep />} />
-                  <Route path="questions" element={<FinalExamQuestionsStep />} />
-                  <Route path="review" element={<FinalExamReviewStep />} />
-                </Route>
-                <Route path="final-exams/edit/:examId" element={<AddFinalExamWizard />}>
-                  <Route index element={<FinalExamInfoStep />} />
-                  <Route path="questions" element={<FinalExamQuestionsStep />} />
-                  <Route path="review" element={<FinalExamReviewStep />} />
-                </Route>
+                <Route path="final-exams/add/*" element={<AddFinalExamWizard />} />
+                <Route path="final-exams/edit/:examId/*" element={<AddFinalExamWizard />} />
               </Route>
             </Route>
             <Route path="/landing" element={<Navigate to="/" replace />} />

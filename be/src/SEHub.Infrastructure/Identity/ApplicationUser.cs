@@ -16,6 +16,7 @@ public class ApplicationUser : IdentityUser<Guid>
     public bool IsBanned { get; set; }
     public DateTime? BanUntil { get; set; }
     public string? BanReason { get; set; }
+    public DateTime? ModeratorWelcomePendingAt { get; set; }
 
     public LevelConfig? Level { get; set; }
     public UserProfile? Profile { get; set; }

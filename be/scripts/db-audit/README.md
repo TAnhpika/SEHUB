@@ -11,7 +11,7 @@ Run **before** applying FK / constraint migrations from the Database Hardening p
 5. **`06_audit_schema_drift.sql`** — orphan DB columns / legacy fields not in EF model.
 6. **`07_audit_denormalized_drift.sql`** — denormalized column drift (QuestionCount, Points, …).
 7. **`08_audit_document_categories.sql`** — DocumentCategory vs Subjects consistency.
-8. **`09_audit_post_media.sql`** — CoverImageUrl vs PostImages consistency.
+8. **`09_audit_post_media.sql`** — PostImages gallery consistency (no CoverImageUrl column).
 9. **`10_audit_ban_consistency.sql`** — AspNetUsers ban flags vs UserBans.
 10. **`04_cleanup_optional.sql`** — only after reviewing audit output; run statements individually.
 

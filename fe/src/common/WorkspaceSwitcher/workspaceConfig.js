@@ -52,7 +52,7 @@ export const WORKSPACES = [
     desc: "Báo cáo, duyệt bài, chấm bài thực hành",
     to: MODERATOR_HOME_PATH,
     icon: faUserShield,
-    roles: ["admin", "moderator"],
+    roles: ["moderator"],
   },
   {
     id: "student",
@@ -83,8 +83,8 @@ export function getCurrentWorkspaceId(pathname) {
  * Lọc danh sách workspace mà người dùng hiện tại có thể chuyển tới.
  *
  * Quy tắc nghiệp vụ:
- * - `admin` thấy toàn bộ workspace.
- * - `moderator` không thấy workspace admin.
+ * - `admin` thấy workspace admin + student (không vào moderator).
+ * - `moderator` thấy workspace moderator + student.
  * - role còn lại chỉ thấy trang sinh viên.
  *
  * @param {{ role?: string } | null | undefined} user
@@ -98,7 +98,7 @@ export function getAccessibleWorkspaces(user) {
   const role = user?.role ?? "student";
 
   if (role === "admin") {
-    return WORKSPACES;
+    return WORKSPACES.filter((workspace) => workspace.id !== "moderator");
   }
 
   if (role === "moderator") {
