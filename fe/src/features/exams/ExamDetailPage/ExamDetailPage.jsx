@@ -6,7 +6,6 @@ import {
   faCheck,
   faChevronLeft,
   faChevronRight,
-  faComment,
   faExpand,
   faEye,
   faEyeSlash,
@@ -691,50 +690,48 @@ function ExamDetailPage({ page }) {
 
               <footer className={styles["question-toolbar"]}>
                 <div className={styles["toolbar-left"]}>
-                  <button
-                    type="button"
-                    className={`${styles["tool-btn"]} ${canStudyTools ? styles["tool-btn-clickable"] : ""}`}
-                    disabled={!canStudyTools || !currentQuestion || orderedQuestions.length < 2}
-                    aria-label="Xáo thứ tự câu hỏi"
-                    title={
-                      canStudyTools
-                        ? "Xáo thứ tự câu hỏi trong phiên ôn tập (Premium)"
-                        : "Premium để xáo câu hỏi"
-                    }
-                    onClick={handleShuffleQuestions}
-                  >
-                    <FontAwesomeIcon icon={faShuffle} />
-                  </button>
                   {isReviewExam ? (
-                    <ExamQuestionReportButton
-                      className={`${styles["tool-btn"]} ${styles["tool-btn-active"]}`}
-                      examId={apiExamId ?? exam.id}
-                      courseCode={exam.courseCode}
-                      questionIndex={currentIndex + 1}
-                      question={currentQuestion}
-                    />
-                  ) : (
-                    <button type="button" className={styles["tool-btn"]} disabled aria-label="Bình luận câu hỏi">
-                      <FontAwesomeIcon icon={faComment} />
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className={`${styles["tool-btn"]} ${canStudyTools ? styles["tool-btn-clickable"] : ""} ${correctAnswerRevealed ? styles["tool-btn-answers-revealed"] : ""}`}
-                    disabled={!canStudyTools}
-                    aria-label={correctAnswerRevealed ? "Ẩn đáp án đúng" : "Hiện đáp án đúng"}
-                    aria-pressed={correctAnswerRevealed}
-                    title={
-                      canStudyTools
-                        ? correctAnswerRevealed
-                          ? "Ẩn đáp án đúng — xem lại các lựa chọn bình thường"
-                          : "Hiện đáp án đúng sau khi tự suy nghĩ (Premium)"
-                        : "Premium để hiện đáp án đúng"
-                    }
-                    onClick={handleToggleCorrectAnswer}
-                  >
-                    <FontAwesomeIcon icon={correctAnswerRevealed ? faEyeSlash : faEye} />
-                  </button>
+                    <>
+                      <button
+                        type="button"
+                        className={`${styles["tool-btn"]} ${canStudyTools ? styles["tool-btn-clickable"] : ""}`}
+                        disabled={!canStudyTools || !currentQuestion || orderedQuestions.length < 2}
+                        aria-label="Xáo thứ tự câu hỏi"
+                        title={
+                          canStudyTools
+                            ? "Xáo thứ tự câu hỏi trong phiên ôn tập (Premium)"
+                            : "Premium để xáo câu hỏi"
+                        }
+                        onClick={handleShuffleQuestions}
+                      >
+                        <FontAwesomeIcon icon={faShuffle} />
+                      </button>
+                      <ExamQuestionReportButton
+                        className={`${styles["tool-btn"]} ${styles["tool-btn-active"]}`}
+                        examId={apiExamId ?? exam.id}
+                        courseCode={exam.courseCode}
+                        questionIndex={currentIndex + 1}
+                        question={currentQuestion}
+                      />
+                      <button
+                        type="button"
+                        className={`${styles["tool-btn"]} ${canStudyTools ? styles["tool-btn-clickable"] : ""} ${correctAnswerRevealed ? styles["tool-btn-answers-revealed"] : ""}`}
+                        disabled={!canStudyTools}
+                        aria-label={correctAnswerRevealed ? "Ẩn đáp án đúng" : "Hiện đáp án đúng"}
+                        aria-pressed={correctAnswerRevealed}
+                        title={
+                          canStudyTools
+                            ? correctAnswerRevealed
+                              ? "Ẩn đáp án đúng — xem lại các lựa chọn bình thường"
+                              : "Hiện đáp án đúng sau khi tự suy nghĩ (Premium)"
+                            : "Premium để hiện đáp án đúng"
+                        }
+                        onClick={handleToggleCorrectAnswer}
+                      >
+                        <FontAwesomeIcon icon={correctAnswerRevealed ? faEyeSlash : faEye} />
+                      </button>
+                    </>
+                  ) : null}
                 </div>
 
                 <div className={styles.pagination}>
