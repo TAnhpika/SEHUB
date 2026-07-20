@@ -255,7 +255,7 @@ public sealed class AuthServiceTests
     }
 
     [Fact]
-    public async Task LoginAsync_WhenRequireConfirmedEmailAndNotConfirmed_ThrowsEmailNotConfirmed()
+    public async Task LoginAsync_WhenRequireConfirmedEmailAndNotConfirmed_SucceedsAndReturnsEmailConfirmedFalse()
     {
         var user = CreateUser(emailConfirmed: false);
         _userRepository
@@ -264,16 +264,17 @@ public sealed class AuthServiceTests
         _userRepository
             .Setup(r => r.ValidatePasswordAsync(user.Id, "ValidPass1!", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
+        SetupSuccessfulLoginMocks(user);
 
         var sut = CreateSut(new AuthSettings { RequireConfirmedEmail = true });
-        var act = () => sut.LoginAsync(new LoginRequest
+        var result = await sut.LoginAsync(new LoginRequest
         {
             EmailOrUsername = "student@test.local",
             Password = "ValidPass1!"
         });
 
-        var exception = await act.Should().ThrowAsync<ForbiddenException>();
-        exception.Which.Message.Should().Be(ErrorCodes.EmailNotConfirmed);
+        result.AccessToken.Should().Be("access-token");
+        result.User.EmailConfirmed.Should().BeFalse();
     }
 
     [Fact]

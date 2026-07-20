@@ -254,15 +254,7 @@ public sealed class AuthService : IAuthService
 
 
 
-        if (_authSettings.RequireConfirmedEmail && !user.EmailConfirmed)
-
-        {
-
-            throw new ForbiddenException(ErrorCodes.EmailNotConfirmed);
-
-        }
-
-
+        // Allow login when email is unconfirmed; EmailConfirmedMiddleware blocks business APIs until verified.
 
         await EnsureNotBannedAsync(user.Id, cancellationToken);
 
@@ -299,16 +291,6 @@ public sealed class AuthService : IAuthService
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             user = await _userRepository.GetByIdAsync(user.Id, cancellationToken) ?? user;
-
-        }
-
-
-
-        if (_authSettings.RequireConfirmedEmail && !user.EmailConfirmed)
-
-        {
-
-            throw new ForbiddenException(ErrorCodes.EmailNotConfirmed);
 
         }
 
