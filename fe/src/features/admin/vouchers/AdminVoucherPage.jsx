@@ -354,10 +354,13 @@ function AdminVoucherPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th colSpan={6}>Đang tải…</th>
+                  <th colSpan={tab === "ftes" ? 8 : 6}>Đang tải…</th>
                 </tr>
               </thead>
-              <StaffGenericTableSkeleton columns={6} aria-label="Đang tải danh sách voucher" />
+              <StaffGenericTableSkeleton
+                columns={tab === "ftes" ? 8 : 6}
+                aria-label="Đang tải danh sách voucher"
+              />
             </table>
           </div>
         ) : tab === "ftes" ? (
@@ -370,7 +373,8 @@ function AdminVoucherPage() {
                     <th>Loại</th>
                     <th>Trạng thái</th>
                     <th>Sinh viên</th>
-                    <th>Import / Gán</th>
+                    <th>Import</th>
+                    <th>Gán</th>
                     <th>Hết hạn</th>
                     <th />
                   </tr>
@@ -397,29 +401,33 @@ function AdminVoucherPage() {
                           <td>
                             <StatusBadge status={statusMeta.status} label={statusMeta.label} />
                           </td>
-                          <td className={styles.cellMain}>
+                          <td>
                             {item.assignedUsername ? (
-                              userUrl ? (
-                                <Link to={userUrl} className={styles.link}>
-                                  @{item.assignedUsername}
-                                </Link>
-                              ) : (
-                                `@${item.assignedUsername}`
-                              )
+                              <div className={voucherStyles.studentCell}>
+                                {item.assignedDisplayName ? (
+                                  <span className={voucherStyles.studentName}>
+                                    {item.assignedDisplayName}
+                                  </span>
+                                ) : null}
+                                {userUrl ? (
+                                  <Link to={userUrl} className={voucherStyles.studentHandle}>
+                                    @{item.assignedUsername}
+                                  </Link>
+                                ) : (
+                                  <span className={voucherStyles.studentHandle}>
+                                    @{item.assignedUsername}
+                                  </span>
+                                )}
+                              </div>
                             ) : (
                               "—"
                             )}
-                            {item.assignedDisplayName ? (
-                              <span className={styles.cellSub}>{item.assignedDisplayName}</span>
-                            ) : null}
                           </td>
-                          <td>
-                            {item.importedAt}
-                            {item.assignedAt && item.assignedAt !== "—" ? (
-                              <span className={styles.cellSub}>gán {item.assignedAt}</span>
-                            ) : null}
+                          <td className={voucherStyles.dateCell}>{item.importedAt || "—"}</td>
+                          <td className={voucherStyles.dateCell}>
+                            {item.assignedAt && item.assignedAt !== "—" ? item.assignedAt : "—"}
                           </td>
-                          <td>{item.expiresAt}</td>
+                          <td className={voucherStyles.dateCell}>{item.expiresAt}</td>
                           <td>
                             <button
                               type="button"
@@ -437,7 +445,7 @@ function AdminVoucherPage() {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={7} style={{ color: "#434655", padding: "1.5rem" }}>
+                      <td colSpan={8} style={{ color: "#434655", padding: "1.5rem" }}>
                         Chưa có mã FTES. Hãy import lô mã partner.
                       </td>
                     </tr>
@@ -480,15 +488,19 @@ function AdminVoucherPage() {
                       };
                       return (
                         <tr key={grant.id}>
-                          <td className={styles.cellMain}>
-                            {userUrl ? (
-                              <Link to={userUrl} className={styles.link}>
-                                @{grant.username}
-                              </Link>
-                            ) : (
-                              `@${grant.username}`
-                            )}
-                            <span className={styles.cellSub}>{grant.displayName}</span>
+                          <td>
+                            <div className={voucherStyles.studentCell}>
+                              {grant.displayName ? (
+                                <span className={voucherStyles.studentName}>{grant.displayName}</span>
+                              ) : null}
+                              {userUrl ? (
+                                <Link to={userUrl} className={voucherStyles.studentHandle}>
+                                  @{grant.username}
+                                </Link>
+                              ) : (
+                                <span className={voucherStyles.studentHandle}>@{grant.username}</span>
+                              )}
+                            </div>
                           </td>
                           <td>
                             {grant.levelName} · −{grant.discountPercent}%

@@ -368,8 +368,25 @@
 
 .studentOptionActive,
 .studentOption:hover {
-  background: #eff6ff;
-  border-color: rgba(37, 99, 235, 0.25);
+  background: #fffbeb;
+  border-color: #f59e0b;
+  color: #78350f;
+}
+
+.studentOptionActive strong,
+.studentOption:hover strong {
+  color: #78350f;
+}
+
+.studentOptionActive .studentMeta,
+.studentOption:hover .studentMeta {
+  color: #92400e;
+}
+
+.studentOptionActive .studentAvatar,
+.studentOption:hover .studentAvatar {
+  color: #92400e;
+  background: #fef3c7;
 }
 
 .studentAvatar {
@@ -385,6 +402,38 @@
 .studentMeta {
   display: block;
   font-size: 0.75rem;
+  color: var(--moderator-text-muted);
+}
+
+.studentCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 9rem;
+}
+
+.studentName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--moderator-text);
+}
+
+.studentHandle {
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--moderator-primary);
+  text-decoration: none;
+}
+
+a.studentHandle:hover {
+  text-decoration: underline;
+}
+
+.dateCell {
+  white-space: nowrap;
+  font-size: 0.8125rem;
   color: var(--moderator-text-muted);
 }
 
