@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useToast } from "@/common/Toast/ToastProvider";
 import { useAuth } from "@/context";
 import { mapAccountPenaltyDto } from "@/features/account/accountPenaltyUtils";
 import { getGoogleClientId, requestGoogleIdToken } from "@/utils/googleAuth";
@@ -112,6 +113,7 @@ function readRememberedEmail(locationEmail) {
 export function useLoginForm() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { showToast } = useToast();
   const { login, googleLogin } = useAuth();
 
   const redirectTo = location.state?.from || "/home";
@@ -130,10 +132,23 @@ export function useLoginForm() {
 
   const navigateAfterLogin = useCallback(
     (loggedInUser) => {
+      if (loggedInUser?.emailConfirmed === false) {
+        showToast("Vui lòng xác minh email trước khi sử dụng các dịch vụ SEHub.");
+        navigate("/verify-email", {
+          replace: true,
+          state: {
+            email: loggedInUser.email,
+            from: isGuestOnlyPath(redirectTo) ? "/home" : redirectTo,
+            requestOtp: true,
+          },
+        });
+        return;
+      }
+
       const studentFallback = isGuestOnlyPath(redirectTo) ? "/home" : redirectTo;
       navigate(getRoleHomePath(loggedInUser, studentFallback), { replace: true });
     },
-    [navigate, redirectTo],
+    [navigate, redirectTo, showToast],
   );
 
   const persistRememberMe = useCallback(
@@ -180,15 +195,8 @@ export function useLoginForm() {
   );
 
   const handleLoginError = useCallback(
-    (error, identifier) => {
+    (error) => {
       const errorCode = error?.errors?.[0]?.code;
-      if (errorCode === "EMAIL_NOT_CONFIRMED") {
-        navigate("/verify-email", {
-          replace: true,
-          state: { email: identifier, from: redirectTo },
-        });
-        return;
-      }
 
       if (errorCode === "ACCOUNT_BANNED" && error?.data) {
         setBanPenalty(mapAccountPenaltyDto(error.data));
@@ -200,7 +208,7 @@ export function useLoginForm() {
       setSubmitError(error?.message ?? "Email hoặc mật khẩu không đúng.");
       setIsSubmitting(false);
     },
-    [navigate, redirectTo],
+    [],
   );
 
   const handleSubmit = useCallback(
@@ -225,7 +233,7 @@ export function useLoginForm() {
         });
         navigateAfterLogin(nextUser);
       } catch (error) {
-        handleLoginError(error, validation.values.email);
+        handleLoginError(error);
       }
     },
     [formValues, password, login, persistRememberMe, navigateAfterLogin, handleLoginError],
@@ -252,7 +260,7 @@ export function useLoginForm() {
         }
         navigateAfterLogin(nextUser);
       } catch (error) {
-        handleLoginError(error, account.username);
+        handleLoginError(error);
       }
     },
     [login, navigateAfterLogin, handleLoginError],
