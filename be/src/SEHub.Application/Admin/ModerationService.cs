@@ -11,6 +11,7 @@ using SEHub.Application.Users;
 using SEHub.Contracts.Admin;
 using SEHub.Contracts.Common;
 using SEHub.Contracts.Exams;
+using SEHub.Contracts.Feed;
 using SEHub.Domain.Entities;
 using SEHub.Domain.Enums;
 using SEHub.Domain.Exceptions;

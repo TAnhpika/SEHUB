@@ -6,8 +6,16 @@ export function isHtmlContent(source) {
   return Boolean(source && HTML_TAG_PATTERN.test(source));
 }
 
-function escapeHtml(text) {
+/** Decode entities that editors leave in plain-looking content (e.g. TipTap &nbsp;). */
+function decodeCommonEntities(text) {
   return text
+    .replace(/&nbsp;/gi, "\u00A0")
+    .replace(/&#160;/g, "\u00A0")
+    .replace(/&#x0*a0;/gi, "\u00A0");
+}
+
+function escapeHtml(text) {
+  return decodeCommonEntities(text)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")

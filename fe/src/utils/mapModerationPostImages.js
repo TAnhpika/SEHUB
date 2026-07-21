@@ -1,6 +1,8 @@
 import { resolveAssetUrl } from "@/api/assetUrl";
 
 /**
+ * Map ảnh moderation sang mảng dùng cho UI (list + panel chi tiết).
+ *
  * @param {Array<{ id?: string, sortOrder?: number, imagePath?: string, url?: string }>} images
  * @returns {Array<{ id: string, url: string, alt: string, caption?: string }>}
  */
